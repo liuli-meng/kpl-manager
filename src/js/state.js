@@ -18,7 +18,7 @@ function newState(teamName,icon){
     academy:[],history:[],transferList:[],listed:[],bids:[],
     pick:{}, // 当前 BP 选定的英雄 {top:'花木兰',...}
     series:null, // 当前系列赛 {used:[],mw,ow,max,stage,oppName,logs,myName,opName,idx}
-    coach:null,coachMarket:[], // 主教练 + 教练市场
+    coach:null,coachMarket:[],assistants:[], // 主教练 + 教练市场 + 助教组（上限2）
     aiRosterDefs:null,extraDefs:[],retiredDefs:[], // AI 转会生态：AI 队在册 def 映射 / 新星 def / 已退役 def
   };
 }
@@ -59,6 +59,7 @@ function aiRosterPower(roster){
   if(!roster||!roster.length)return 0;
   const best={};
   roster.forEach(p=>{
+    if(p.injury>0)return; // 伤停必须休息：不计入战力（青训递补顶替出战）
     const v=playerPower(p,p.sig);
     if(best[p.pos]==null||v>best[p.pos])best[p.pos]=v;
   });
@@ -86,6 +87,15 @@ function teamPower(s,picks){
     pow+=attrSum*c.styleBonus/100*w;
     pow*=1+c.bonus/100;
   }
+  // 助教组（上限2人）：与主教练加成叠加，幅度较小
+  if(s.assistants&&s.assistants.length){
+    s.assistants.forEach(a=>{
+      const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[a.style];
+      const attrSum=ls.reduce((t,p)=>t+p.attrs[a.style],0);
+      pow+=attrSum*a.styleBonus/100*w;
+      pow*=1+a.bonus/100;
+    });
+  }
   // 连胜/连败手感：±2%/场，上限 ±10%
   if(s.streak)pow*=1+clamp(s.streak,-5,5)*0.02;
   return Math.round(pow);
@@ -103,11 +113,23 @@ function activeBonds(s){
   return act;
 }
 function weeklyWage(s){
-  let sum=s.players.reduce((t,p)=>t+p.wage,0);
+  // 租借选手租金已一次性支付，工资由原俱乐部承担，不计入本队周薪
+  let sum=s.players.reduce((t,p)=>t+(p.loan?0:p.wage),0);
   if(s.coach)sum+=s.coach.wage;
+  (s.assistants||[]).forEach(a=>sum+=a.wage);
   return sum;
 }
 function save(){try{localStorage.setItem(slotKey(),JSON.stringify(S));}catch(e){console.warn('save fail',e);}}
+/* 赛制形态校验：当前阶段的分组结构是否存在且匹配。
+   r2 起分组是 {S,A,B}/{S,A}，没有 G1 是正常的——不能用「无 G1」当旧档特征，
+   否则打进 S 组后每次读档都会被误判成旧档、整体回滚到第一轮分组赛。 */
+function seasonShapeOk(s){
+  if(!s.groups||!Object.keys(s.groups).length)return false;
+  if(s.phase==='r1')return !!s.groups.G1;
+  if(s.phase==='r2'||s.phase==='card')return !!(s.groups.S&&s.groups.A&&s.groups.B);
+  if(['r3','playoff','champion','eliminated'].includes(s.phase))return !!(s.groups.S&&s.groups.A);
+  return true; // 未知阶段不强判
+}
 function migrateSave(){
   if(!S)return;
   S.aiRosters={}; // 名册更新后重建对手阵容
@@ -151,18 +173,20 @@ function migrateSave(){
   S.freeAgents=S.freeAgents||[];
   S.extraDefs=S.extraDefs||[]; // AI 转会生态：新星 def（aiRosterDefs 懒初始化自 AI_ROSTERS）
   S.retiredDefs=S.retiredDefs||[];
+  S.aiInj=S.aiInj||{}; // AI 伤停表（def id → 缺阵系列赛数）
+  S.assistants=S.assistants||[]; // 助教组（旧档迁移）
   // 总值化迁移：教练/名宿旧档 rarity → rating 评分（选手总值实时计算，无需迁移）
   const R2RATE={SSR:90,SR:80,R:70};
   [S.coach].concat(S.coachMarket||[],S.retiredCoaches||[]).forEach(c=>{
     if(c&&c.rating==null&&c.rarity)c.rating=R2RATE[c.rarity]||80;
   });
   // 旧赛制存档（无 groups）→ 重置为 KPL 2025 新赛制（保留队伍/资金/教练）
-  if(!S.groups||!S.groups.G1){
+  if(!S.phase)S.phase='r1';
+  if(!seasonShapeOk(S)){
     S.phase='r1';S.matchIdx=0;
     S.groups={};S.tables={};S.aiPower={};S.card=null;S.playoff=null;S.eliminated=[];
     S.stage='regular';S.champion=false;
   }
-  if(!S.phase)S.phase='r1';
   S.players.forEach(p=>{
     if(p.injury==null)p.injury=0;
     if(p.mvp==null)p.mvp=0;
@@ -179,10 +203,21 @@ function migrateSave(){
     HEROES.filter(h=>h.pos.includes(p.pos)).forEach(h=>{if(!p.heroPool.some(x=>x.n===h.n))p.heroPool.push({n:h.n,lv:2});});
     p.heroPool=p.heroPool.filter(x=>{const h=heroOf(x.n);return h&&h.pos.includes(p.pos);});
   });
+  // 其余选手集合同样按位置清洗英雄池（错位英雄数据修正后的存量清洗，如蒙犽误标中路）
+  const scrubPoolPos=p=>{if(p&&Array.isArray(p.heroPool))p.heroPool=p.heroPool.filter(x=>{const h=heroOf(x.n);return h&&h.pos.includes(p.pos);});};
+  [S.market,S.transferList,S.freeAgents,S.academy].forEach(list=>{if(Array.isArray(list))list.forEach(scrubPoolPos);});
+  Object.values(S.aiRosters||{}).forEach(r=>{if(Array.isArray(r))r.forEach(scrubPoolPos);});
+  // 青训新秀改名：清掉「清扬_2」式自增后缀（老档一次性清洗，新名走电竞 ID 字库）
+  const renameRookie=p=>{
+    if(p&&p.name&&/^.+_\d+$/.test(p.name)&&(p.isRookie||(p.tags||[]).includes('🌱')))p.name=genRookieName(S);
+  };
+  (S.players||[]).forEach(renameRookie);
+  (S.academy||[]).forEach(renameRookie);
 }
 function ensureSeason(s){
-  // 启动/读档后确保赛制状态完整（新档 initGroups 在 createTeam 调用；旧档迁移后这里补）
-  if(!s.groups||!s.groups.G1){
+  // 启动/读档后确保赛制状态完整（新档 initGroups 在 createTeam 调用）
+  // 与 migrateSave 同一判定：按阶段形态校验，S/A/B 阶段没有 G1 属于正常，绝不能因此重建
+  if(!seasonShapeOk(s)){
     s.stage='regular';
     initGroups(s);
     logEvent(s,'🔄 赛制升级为 KPL 2025 官方赛制（18队 · S/A/B 三组）');

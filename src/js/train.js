@@ -51,8 +51,29 @@ function doHeroTrain(s,pid){
 
 /* ================= 青训体系 ================= */
 const ROOKIE_NAMES=['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见','慕白','亦辰'];
+/* 电竞 ID 风格组名：字库两两组合（如 洛野/白柒/江辞），避免「清扬_2」式自增后缀 */
+const RK_A=['阿','小','白','苏','陆','沈','顾','洛','叶','凌','夜','莫','江','温','秦','池','祁','许','林','常'];
+const RK_B=['川','野','辞','屿','柒','晏','深','迟','昭','眠','遥','笙','秋','策','尘','澜','溪','澈','泠','桉'];
 let _rkSeq=0;
-function genRookie(){
+/* 收集当前档位已占用的选手名（含市场/挂牌/自由球员/AI阵容缓存），保证新秀名唯一 */
+function rookieUsedNames(s){
+  const used=new Set();
+  [s.players,s.academy].forEach(l=>(l||[]).forEach(p=>p&&p.name&&used.add(p.name)));
+  ['market','transferList','freeAgents'].forEach(k=>(s[k]||[]).forEach(p=>p&&p.name&&used.add(p.name)));
+  Object.values(s.aiRosters||{}).forEach(r=>(r||[]).forEach(p=>p&&p.name&&used.add(p.name)));
+  (s.extraDefs||[]).forEach(d=>d&&d.name&&used.add(d.name)); // 联盟新星 def 的名字也要占位，否则青训会撞名
+  return used;
+}
+function genRookieName(s){
+  const used=rookieUsedNames(s);
+  let guard=0;
+  while(guard++<60){
+    const n=Math.random()<0.35?pick(ROOKIE_NAMES):(pick(RK_A)+pick(RK_B));
+    if(!used.has(n)){used.add(n);return n;}
+  }
+  return pick(RK_A)+pick(RK_B)+pick(RK_B); // 三字兜底（如 洛川澈）
+}
+function genRookie(s){
   _rkSeq++;
   const pos=pick(POS_ORDER);
   const potential=rnd(2,5);
@@ -63,7 +84,7 @@ function genRookie(){
   const heroPool=[{n:sig,lv:2}];
   const cand=[...new Set(mainPool)].filter(h=>h!==sig);
   for(let i=0;i<3&&cand.length;i++){heroPool.push({n:cand.splice(Math.floor(Math.random()*cand.length),1)[0],lv:1});}
-  const name=pick(ROOKIE_NAMES)+'_'+_rkSeq;
+  const name=s?genRookieName(s):(pick(ROOKIE_NAMES)+'·'+_rkSeq);
   return {id:'rk'+_rkSeq,name,pos,team:null,tags:['🌱'],
     attrs,skill:{n:'潜力新星',t:pick(['lane','farm','team','mind']),d:'成长型选手，潜力可期'},
     sig,heroPool,career:'🎓 青训出品 · 未来之星',wage:rnd(2,4),energy:ENERGY_MAX,morale:rnd(70,90),injury:0,
@@ -72,7 +93,7 @@ function genRookie(){
 function recruitRookie(s){
   if(s.fund<30){toast('招募青训需 30万');return;}
   s.fund-=30;
-  const r=genRookie();
+  const r=genRookie(s);
   s.academy=[...(s.academy||[]),r];
   logEvent(s,'🎓 青训营招募新秀 '+r.name+'（'+POS[r.pos][0]+' · 潜力'+r.potential+'⭐）');
   save();renderAll();toast('新秀 '+r.name+' 加入青训营');
@@ -84,12 +105,13 @@ function trainRookie(s,id){
   if(s.fund<10){toast('青训培养需 10万');return;}
   s.fund-=10;
   s.academyTrained=true;
-  // 潜力越高成长越快
-  const gain=1+rnd(0,2)+(r.potential>=4?1:0);
+  // 潜力越高成长越快：2-4 起步 + 潜力加成（pot/2），平均 4~6/天 —— 约 3~4 周培养到晋升线（四维和300）
+  const gain=2+rnd(0,2)+Math.floor((r.potential||3)/2);
   const key=pick(['lane','farm','team','mind']);
   r.attrs[key]=clamp(r.attrs[key]+gain,40,95);
   r.morale=clamp(r.morale-3,20,100);
-  logEvent(s,'🎓 青训培养：'+r.name+' 的'+(POS[r.pos][1]+POS[r.pos][0])+'属性 +'+gain+'（潜力'+r.potential+'⭐）');
+  const label=(TRAIN_ITEMS.find(t=>t.k===key)||{}).n||'属性';
+  logEvent(s,'🎓 青训培养：'+r.name+'「'+label+'」+'+gain+'（潜力'+r.potential+'⭐）');
   save();renderAll();
 }
 function rookieReady(r){

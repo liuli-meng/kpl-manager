@@ -32,7 +32,10 @@ function buyPlayer(s,p){
   const cost=Math.round(valueOf(overall(p))*(p.discount||1));
   if(s.fund<cost){toast('资金不足');return false;}
   if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return false;}
-  if(weeklyWage(s)+p.wage>s.wageCap){toast('❌ 联盟注册被驳回：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万 超出工资帽 '+s.wageCap+'万，请先出售或裁减选手');return false;}
+  if(weeklyWage(s)+p.wage>s.wageCap){
+    const {over,tax}=overCapTax(s,p.wage);
+    if(!confirm('⚠️ 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return false;
+  }
   s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
   s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
   logEvent(s,`🤝 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
@@ -42,8 +45,10 @@ function buyPlayer(s,p){
 /* ================= 自由球员 / 青训名字池 =================
    与 18 队注册名单隔离，保证任何情况下联盟内一人一队 */
 const ACADEMY_NAMES=['弈秋','观澜','听松','照夜','惊蛰','谷雨','芒种','白秋','霜降','立夏','惊鸿照','初霁','疏桐','晚晴','归舟','远山','泊烟','沉璧','映雪','疏星','垂柳','鸣蝉','宿雨','斜阳','烟渚','兰舟','竹杖','芒鞋','蓑衣','钓叟','渔火','枫桥','钟声','客船','碧水','东流'];
+let _faSeq=0;
 function genFreeAgentDef(pos,band,usedNames){
-  const name=ACADEMY_NAMES.find(n=>!usedNames.has(n))||('新人'+Math.floor(Math.random()*90+10));
+  let name=usedNames?ACADEMY_NAMES.find(n=>!usedNames.has(n)):null;
+  if(!name&&usedNames){do{name='新人'+(++_faSeq);}while(usedNames.has(name));} // 自增序号兜底：名字空间耗尽也不会死循环
   if(usedNames)usedNames.add(name);
   // 档位即四维基准：star≈顶星(88+) / mid≈主力(78) / low≈轮换(69)，总值由 base 直出
   const BAND={star:[85,92],mid:[74,82],low:[66,73]}[band]||[74,82];

@@ -297,8 +297,8 @@ function playoffStep(s){
     s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,champ:p.final.r}]).slice(-12); // 王朝统计（连冠反制用）
     if(s.phase!=='eliminated')s.phase='champion'; // 玩家提前出局时：补完的联盟赛季不覆盖"止步"状态
     s.champion=p.final.r===s.teamName;
+    if(s.champion||p.final.a===s.teamName||p.final.b===s.teamName)recordSeason(s); // 冠军/亚军均入册荣誉室
     if(s.champion){
-      recordSeason(s);
       // 夺冠人气暴涨：全队商业价值提升（代言收入增加）
       s.players.forEach(p=>p.popularity=Math.min(99,(p.popularity||0)+5));
       logEvent(s,'📈 夺冠带来巨大曝光！全队选手人气+5，代言收入提升');
@@ -327,17 +327,21 @@ function playPoMatch(s,m,slot){
   save();renderAll();
   playoffStep(s);
 }
-function startPlayoff(){playoffStep(S);}
+/* 注意：startPlayoff 定义在 match.js（带转会期拦截），此处不得重复定义，
+   否则按加载顺序后者会覆盖、容易造成两处逻辑不一致 */
 /* 联盟分润：赛季末按季后赛名次分成（KPL 联盟承诺俱乐部分润不低于工资帽） */
 function leaguePayout(s,place){
   const map={'冠军':500,'亚军':300,'四强':150,'八强':80};
   const amt=map[place];
   if(amt){s.fund+=amt;logEvent(s,'🏦 联盟分润（'+place+'）：'+amt+'万');}
 }
-/* 季后赛出局名次判定 */
+/* 季后赛出局名次判定：只在真正出局的轮次返回名次（用于结算联盟分润）。
+   胜者组 R1 / 胜者组决赛失利只是掉入败者组，队伍仍存活——返回 null（leaguePayout 对 null 不结算），
+   否则会出现「输一场就领分润、之后真出局再领一次」的重复发放。 */
 function poPlace(slot,isFinal){
   if(isFinal)return '亚军';
-  if(/^wb[12]$|^lb[12]$|^lb2_/.test(slot))return '八强';
+  if(/^wb[12]$|^wf$/.test(slot))return null;
+  if(/^lb[12]$|^lb2_/.test(slot))return '八强';
   return '四强';
 }
 function nextDay(s){
@@ -359,11 +363,13 @@ function nextDay(s){
   }
   if(s.day%WAGE_EVERY===0)payWage(s);
   s.players.forEach(p=>{p.injury=Math.max(0,p.injury-1);p.energy=clamp(p.energy+10,0,ENERGY_MAX);}); // 伤情恢复 + 体力自然回复
+  tickLoans(s); // 租借倒计时：到期自动归队
   if(s.day%3===0){s.fund+=8;toast('签到奖励：赞助补贴 +8万');}
   if(Math.random()<0.65&&s.players.length){ // 名单被卖空时跳过随机事件（事件需要选手参与）
     const ev=pick(EVENTS);
-    const txt=ev.desc.replace('{p}',()=>pick(rosterAll(s)).name);
-    ev.fn(s);
+    const tp=pick(rosterAll(s)); // 公告文案与效果作用同一名选手
+    const txt=ev.desc.replace('{p}',()=>tp.name);
+    ev.fn(s,tp);
     logEvent(s,'🎲 【'+ev.t+'】'+txt);
   }
   save();
@@ -406,9 +412,10 @@ function dynastyStreak(s,teamName){
   return Math.min(streak,3);
 }
 /* ================= 赛季最佳阵容（一阵/二阵） =================
-   按位置评选：评分=招牌战力×状态系数（表现火热的选手可越级入选）；
+   按位置评选：排序分=招牌战力×状态系数（权重减半：火热可越级入选，但不虚高 20 分）；
+   展示的「评分」用 OVR 总值（1-99，与全游戏刻度一致），表现另用状态标签表达；
    新赛季开启时入册 s.awards（历届），联盟页实时展示当期评选 */
-function allStarScore(p){return playerPower(p,p.sig)*((p.val||100)/100);}
+function allStarScore(p){return playerPower(p,p.sig)*(1+((p.val||100)-100)/250);}
 function allStarTeams(s){
   const pool=s.players.map(p=>({p,team:s.teamName}));
   (s.leagueTeams||[]).forEach(n=>{
@@ -457,8 +464,27 @@ function newSeason(s){
     else p.retiring=p.age>=m.retire-1;
     p.energy=ENERGY_MAX;p.morale=clamp(p.morale+15,20,100);p.injury=0;
   });
-  // 青训新秀同步长一岁：满 18 岁才有晋升一线队资格（KPL 注册规则）
-  (s.academy||[]).forEach(r=>{r.age=(r.age||16)+1;});
+  // 赛季结算：表现溢价回归 + 黄金期后年龄贬值 + 续约涨薪（堵"身价只涨不跌"的无风险套利）
+  s.players.forEach(p=>{
+    const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
+    p.val=clamp(Math.round((p.val||100)*0.7+30),70,150); // 表现溢价逐年回归：不持续打出表现就跌回（||100：未上过场的替补没有 val，避免算出 NaN）
+    if(p.age>m.gold)p.val=clamp(p.val-(p.age-m.gold)*4,70,150); // 过黄金期：身价随年龄贬值
+    if(p.age>=m.retire-1)p.val=clamp(p.val-8,70,150); // 临近退役：额外折价
+    if(p.val>=120){ // 巅峰表现 → 续约涨薪（工资帽压力随成绩增长）
+      const nw=Math.min(Math.round(p.wage*1.15)+1,Math.round(wageOf(overall(p))*1.5));
+      if(nw>p.wage){p.wage=nw;logEvent(s,'💰 赛季结算：'+p.name+' 续约涨薪至 '+nw+'万/周');}
+    }
+  });
+  // 青训新秀同步长一岁：满 18 岁才有晋升一线队资格（KPL 注册规则）；每年自然成长（潜力越高长得越快）
+  (s.academy||[]).forEach(r=>{
+    r.age=(r.age||16)+1;
+    const bonus=r.potential>=4?2:1;
+    const keys=['lane','farm','team','mind'];
+    for(let i=0;i<2;i++){
+      const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];
+      r.attrs[k]=clamp(r.attrs[k]+bonus,40,95);
+    }
+  });
   retired.forEach(p=>{
     s.players=s.players.filter(x=>x.id!==p.id);
     const li=s.lineup.indexOf(p.id);
@@ -482,12 +508,23 @@ function newSeason(s){
       logEvent(s,'📌 版本针对：全联盟都在研究你——新版本削弱了核心 '+core.name+' 的招牌体系（属性-'+st+' · 士气-'+5*st+'%点 · 状态-10%）');
     }
   }
+  // 租借选手：新赛季开始前一律归队（租借不跨赛季）
+  (s.players||[]).filter(p=>p.loan).forEach(p=>{
+    aiAttachDef(s,p.id,p.loan.from);
+    logEvent(s,'📤 租借到期：'+p.name+' 返回 '+(p.loan.from||'原队')+'（新赛季阵容注册）');
+  });
+  if((s.players||[]).some(p=>p.loan)){
+    s.players=s.players.filter(p=>!p.loan);
+    s.lineup=s.lineup.filter(id=>s.players.some(p=>p.id===id));
+    s.aiRosters={};
+  }
   s.transferWindow=7; // 赛前转会期 7 天：自由组队，结束/到期后联赛才开打
   s.preseason=true;
   s.streak=0;
   aiTransferWindow(s); // AI 转会期：退役结算/缺位补强/明星流转/新星出道（联盟生态推进）
   buildTransferMarket(s); // 构建转会市场（AI 队选手 + 非卖品）
   s.aiRosters={}; // 对手阵容每赛季重建（年龄成长）
+  s.aiInj={}; // 新赛季伤病清零（新赛季阵容重建后原伤停表失效）
   logEvent(s,'📈 联盟调整工资帽：本周薪上限 '+s.wageCap+'万');
   logEvent(s,'📋 赛前转会期开启（7天）：可买断/挂牌/直签选手与教练，市场刷新免费；结束转会期后联赛开打');
   s.stage='regular';
@@ -543,13 +580,44 @@ function fireHost(s,id){
   s.hosts=(s.hosts||[]).filter(x=>x.id!==id);
   save();renderAll();toast('已解除主播合约');
 }
+/* 聘助教（上限2名，加成与主教练叠加）：助教池直聘，或退役名宿教练 6 折转任 */
+function hireAssistant(s,id){
+  if((s.assistants||[]).length>=2){toast('助教席已满（上限2人），请先解约一名');return;}
+  let a=ASSISTANT_POOL.find(x=>x.id===id);
+  let cost;
+  if(a){
+    if((s.assistants||[]).some(x=>x.id===a.id)){toast('已聘任该助教');return;}
+    cost=a.cost;
+  }else{
+    const r=(s.retiredCoaches||[]).find(x=>x.id===id);
+    if(!r||r.type!=='coach'){toast('该名宿不能转任助教');return;}
+    a={...r,type:'assistant'};
+    cost=Math.round(r.cost*0.6); // 名宿转任助教：6 折签约
+    s.retiredCoaches=s.retiredCoaches.filter(x=>x.id!==id);
+  }
+  if(s.fund<cost){toast('资金不足（签约费 '+cost+'万）');return;}
+  s.fund-=cost;
+  s.assistants=[...(s.assistants||[]),{...a,acqCost:cost}];
+  logEvent(s,'🤝 聘任助教 '+a.name+'（'+COACH_STYLE[a.style]+'型 · 全队战力+'+a.bonus+'% · 签约费 '+cost+'万）');
+  save();renderAll();toast(a.name+' 加入教练组！');
+}
+function fireAssistant(s,id){
+  const a=(s.assistants||[]).find(x=>x.id===id);
+  if(!a)return;
+  s.assistants=s.assistants.filter(x=>x.id!==id);
+  logEvent(s,'👋 助教 '+a.name+' 与俱乐部解约');
+  save();renderAll();
+}
 /* 签约自由球员（无球可打流向市场的选手） */
 function signFreeAgent(s,id){
   const p=(s.freeAgents||[]).find(x=>x.id===id);
   if(!p)return;
   if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return;}
   if(s.fund<p.signCost){toast('资金不足（签约费 '+p.signCost+'万）');return;}
-  if(weeklyWage(s)+p.wage>s.wageCap){toast('❌ 联盟注册被驳回：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万 超出工资帽 '+s.wageCap+'万，请先出售或裁减选手');return;}
+  if(weeklyWage(s)+p.wage>s.wageCap){
+    const {over,tax}=overCapTax(s,p.wage);
+    if(!confirm('⚠️ 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return;
+  }
   s.fund-=p.signCost;
   p.acqCost=p.signCost; // 买入价锚定（转售保护用）
   s.freeAgents=s.freeAgents.filter(x=>x.id!==id);

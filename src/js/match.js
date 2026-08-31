@@ -163,7 +163,7 @@ function renderPreMatch(){
   let swapPanel='';
   if(window._prepPos){
     const pos=window._prepPos,cur=ls.find(x=>x.pos===pos);
-    const cands=bn.filter(x=>x.pos===pos);
+    const cands=bn.filter(x=>x.pos===pos&&x.injury<=0); // 伤员不可登场
     swapPanel=`<div style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0">
       <div style="font-size:12px;font-weight:800;margin-bottom:6px">⇄ 替补 ${POS[pos][0]}（换下 ${cur?cur.name:'空缺'}）</div>
       ${cands.length?cands.map(p=>{const b=playerBest(p);return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)">
@@ -213,6 +213,7 @@ function renderPreMatch(){
 function prepChoosePos(pos){window._prepPos=pos;renderPreMatch();}
 function prepSwapIn(pid){
   const p=S.players.find(x=>x.id===pid);
+  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
   const cur=rosterLineup(S).find(x=>x.pos===p.pos);
   if(!cur)return;
   S.lineup[S.lineup.indexOf(cur.id)]=p.id;
@@ -269,10 +270,10 @@ function finishSeries(finalWin){
   const sr=S.series;
   S.series=null; // 先清系列赛状态，再走收尾链（playoffStep/playCardNext 可能立即开启下一场）
   // 体力按小局在 playGame 中逐局扣除，此处不再重复扣
-  // 赛后小概率有人受伤
+  // 赛后小概率有人受伤：伤停必须休息，受伤瞬间立即换替补（阵容页即时反映）
   if(Math.random()<0.08){
     const ls=rosterLineup(S);
-    if(ls.length){const p=pick(ls);p.injury=rnd(2,4);logEvent(S,'🤕 '+p.name+' 在比赛中受伤，将伤停'+p.injury+'天（战力打折）');}
+    if(ls.length){const p=pick(ls);p.injury=rnd(2,4);logEvent(S,'🤕 '+p.name+' 在比赛中受伤，将伤停'+p.injury+'天（必须休息）');autoFillLineup(S);}
   }
   const winGames=sr.mw; // 2026 KPL 奖金按胜小局数结算
   // 连胜/连败手感（常规赛与季后赛系列赛均计入）
@@ -286,10 +287,17 @@ function finishSeries(finalWin){
     const g=myGroup(S);
     const t=(g&&S.tables[g])?S.tables[g][S.teamName]:null;
     const m=S.schedule[S.matchIdx];
+    const ot=(g&&S.tables[g])?S.tables[g][m.opp]:null;
     m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;
     if(t){
       if(finalWin){t.w++;t.pts++;}else{t.l++;}
       t.pw+=sr.mw;
+    }
+    // 对手积分行同步记账：AI 赛程按轮转法生成（我的场次被排除，对手实际在另一轮与我交手），
+    // 不补记对手行其战绩将永远缺这场球（我赢它没记输、我输它没记赢），积分/排名/S-A-B 晋级全部失真
+    if(ot){
+      if(finalWin){ot.l++;}else{ot.w++;ot.pts++;}
+      ot.pw+=sr.ow;
     }
     const bonus=winGames*8;
     S.fund+=bonus;
@@ -317,9 +325,9 @@ function finishSeries(finalWin){
     const bonus=winGames*15;
     S.fund+=bonus;
     if(finalWin&&sr.poSlot==='总决赛')S.fund+=60;
-    if(!finalWin){
-      // 联盟分润：按出局名次
-      const place=poPlace(sr.poSlot,sr.poSlot==='总决赛');
+    if(!finalWin&&sr.poSlot!=='总决赛'){
+      // 联盟分润：按出局名次（总决赛败者的亚军分润由 playoffStep 冠军分支统一发放，此处不再发，避免双倍）
+      const place=poPlace(sr.poSlot,false);
       leaguePayout(S,place);
     }
     S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
@@ -327,7 +335,7 @@ function finishSeries(finalWin){
     title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':'出局');
     playoffStep(S);
   }
-  const r={win:finalWin,logs:sr.logs,opName:sr.opName,myTeam:true};
+  const r={win:finalWin,logs:sr.logs,opName:sr.opName};
   // 比赛复盘记录（含巅峰对决名场面标记）
   S.history=S.history||[];
   S.history.unshift({
@@ -346,8 +354,8 @@ function showMatchModal(r,title){
     <h2><span class="h-ic" style="background:${r.win?'rgba(67,220,156,.12)':'rgba(255,107,107,.12)'};color:${r.win?'var(--green)':'var(--red)'}">${ic(r.win?'check':'ban')}</span>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
     <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')||l.includes('✅')?'win':l.includes('❌')||l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
     <div class="center mt16">
-      ${r.myTeam?`<button class="btn primary" onclick="closeModal('app-modal');nextDay(S);goPage('club')">继续（推进一天）</button>`
-      :`<button class="btn gold" onclick="closeModal('app-modal');newSeason(S);goPage('club')">🚀 开启新赛季</button>`}
+      ${(S.phase==='champion'||S.phase==='eliminated')?`<button class="btn gold" onclick="closeModal('app-modal');newSeason(S);goPage('club')">🚀 开启新赛季（+130万资金）</button>`
+      :`<button class="btn primary" onclick="closeModal('app-modal');nextDay(S);goPage('club')">继续（推进一天）</button>`}
     </div>`;
   mb.classList.add('on');
 }

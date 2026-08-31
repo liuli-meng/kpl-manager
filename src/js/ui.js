@@ -155,11 +155,12 @@ function renderClub(){
   }else if(S.phase==='playoff'){
     const pf=S.playoff;
     if(pf){
-      const myIn=pf.final&&(pf.final.a===S.teamName||pf.final.b===S.teamName);
+      // 我方是否还有待打的季后赛场次（双败制：wb/wf 失利后仍在败者组，不能只看总决赛）
+      const myPending=[...pf.wb,...pf.lb,...pf.lb2,...pf.lb3,pf.wf,pf.lb4,pf.lbf,pf.final].some(m=>!m.r&&(m.a===S.teamName||m.b===S.teamName));
       const bracket=pf.wb.map((m,i)=>`<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:13px">胜者组：${m.a} vs ${m.b}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`).join('')
         +pf.lb.map((m,i)=>`<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:13px">败者组：${m.a} vs ${m.b}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`).join('');
       html+=`<div class="panel"><h3><span class="h-ic">${ic('trophy')}</span>季后赛 <span class="tag">10强 BO7 双败淘汰</span></h3>${bracket}
-        ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="startPlayoff()">${myIn?'进行下一场':'快进季后赛'}</button>`:''}
+        ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="startPlayoff()">${myPending?'进行下一场':'快进季后赛'}</button>`:''}
         ${pf.final.r?`<div class="hint mt8">总决赛：${pf.final.a} vs ${pf.final.b} · 冠军：${pf.final.r}</div>`:`<div class="hint mt8">总决赛：${pf.final.a?pf.final.a:'胜者组冠军'} vs ${pf.final.b?pf.final.b:'败者组冠军'}</div>`}
       </div>`;
     }
@@ -260,7 +261,7 @@ function renderLineup(){
     <div class="grid g5">${POS_ORDER.map(pos=>{
       const p=ls.find(x=>x.pos===pos);
       if(!p)return `<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;
-      return pcard(p,`<button class="btn sm" onclick="swapPlayer('${p.id}')">→ 换下（替补）</button>`);
+      return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')">💰 出售</button></div>`);
     }).join('')}</div></div>`;
   html+=`<div class="panel"><h3><span class="h-ic">${ic('users')}</span>替补席 <span class="tag">${bn.length}人</span></h3>
     ${bn.length?`<div class="grid g4">${bn.map(p=>pcard(p,`<button class="btn sm primary" onclick="swapPlayer('${p.id}')">↑ 放入首发</button><button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')">💰 出售（谈判）</button>`)).join('')}</div>`:'<div class="hint">暂无替补，快去转会市场谈判补充阵容！</div>'}
@@ -278,12 +279,17 @@ function renderLineup(){
 function swapPlayer(pid){
   const p=S.players.find(x=>x.id===pid);
   const inLineup=S.lineup.includes(pid);
+  if(!inLineup&&p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），不能进入首发');return;}
   if(inLineup){
-    // 找同位置替补
-    const bn=rosterBench(S).filter(x=>x.pos===p.pos);
-    if(!bn.length){toast('没有同位置的替补选手可替换');return;}
-    S.lineup[S.lineup.indexOf(pid)]=bn[0].id;
-    toast(`${p.name} 换下，${bn[0].name} 上场`);
+    // 有同位置替补则对位换人；没有也允许直接下场（位置空缺）——否则满员时卖不掉、工资帽腾不出，买不了新人的死锁
+    const bn=rosterBench(S).filter(x=>x.pos===p.pos&&x.injury<=0); // 伤员不可顶替上场
+    if(bn.length){
+      S.lineup[S.lineup.indexOf(pid)]=bn[0].id;
+      toast(`${p.name} 换下，${bn[0].name} 上场`);
+    }else{
+      S.lineup.splice(S.lineup.indexOf(pid),1);
+      toast(`${p.name} 已下场（${POS[p.pos][0]}空缺）——可出售/挂牌后补人，开赛前该位置必须有人`);
+    }
   }else{
     const cur=rosterLineup(S).find(x=>x.pos===p.pos);
     if(cur){S.lineup[S.lineup.indexOf(cur.id)]=pid;toast(`${cur.name} 换下，${p.name} 上场`);}
@@ -307,6 +313,26 @@ function renderMarket(){
   }else{
     coachHtml+=`<div class="hint" style="margin-bottom:10px">暂无主教练！签约一名教练提升全队战力（无教练全队战力打折扣）</div>`;
   }
+  // 助教席（上限2人，加成与主教练叠加；退役名宿可 6 折转任）
+  const asCnt=(S.assistants||[]).length;
+  coachHtml+=`<div style="margin:12px 0 6px;font-weight:800;font-size:12px">🧑‍🏫 助教席 <span class="tag">${asCnt}/2 · 与主教练叠加</span></div>`;
+  coachHtml+=asCnt?`<div class="g2">${S.assistants.map(a=>`
+    <div class="sponsor"><span class="s-icon">${ic('coach',14)}</span>
+      <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]}型 · 💠 ${a.skill.d} · 周薪 ${a.wage}万</div></div>
+      <button class="btn sm danger" onclick="fireAssistant(S,'${a.id}')">解约</button>
+    </div>`).join('')}</div>`
+    :`<div class="hint" style="margin-bottom:8px">未聘助教——每名助教提供小额全队加成，与主教练叠加（买替补工资帽之外的第二处长期开销）</div>`;
+  coachHtml+=`<div class="g3">${ASSISTANT_POOL.filter(a=>!(S.assistants||[]).some(x=>x.id===a.id)).map(a=>{
+    const oc=ovrColor(a.rating||75);
+    return `<div class="pcard ${ovrCls(a.rating||75)}" style="text-align:center">
+      <div style="margin:6px 0;color:var(--faint)">${ic('coach',20)}</div>
+      <div class="p-name" style="font-weight:800">${a.name}</div>
+      <div class="p-rarity" style="color:${oc};letter-spacing:0">${a.rating}评分 · ${COACH_STYLE[a.style]}型</div>
+      <div class="p-skill">💠 ${a.skill.d}</div>
+      <div class="p-foot"><span>签约费 <b>${a.cost}万</b></span><span>周薪 <b>${a.wage}万</b></span></div>
+      <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
+    </div>`;
+  }).join('')}</div>`;
   if(S.coachMarket.length){
     coachHtml+=`<div class="g3">${S.coachMarket.map(c=>{
       const oc=ovrColor(c.rating||80);
@@ -362,7 +388,24 @@ function renderMarket(){
     </div>`;
   }else{
     transferHtml=`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3><span class="h-ic">${ic('swap')}</span>转会市场 <span class="tag">转会窗已关闭</span></h3>
-      <div class="hint">KPL 转会窗在新赛季开启时开放 3 天：可买断其他俱乐部选手（非卖品除外）、挂牌交易、AI 竞价报价。</div></div>`;
+      <div class="hint">KPL 转会窗在新赛季开启时开放 7 天：可买断其他俱乐部选手（非卖品除外）、挂牌交易、AI 竞价报价。非转会期可在下方租借市场临时租人。</div></div>`;
+  }
+  // 租借市场（非转会期唯一的人员流动）：向 AI 队租替补，21 天自动归队
+  if(S.transferWindow<=0){
+    const myLoans=(S.players||[]).filter(p=>p.loan);
+    const cands=loanCandidates(S).slice(0,12);
+    transferHtml+=`<div class="panel ${foldCls('mloan')}" data-fold="mloan"><h3><span class="h-ic">${ic('users')}</span>租借市场 <span class="tag">租期 ${LOAN_DAYS} 天 · 名额 ${myLoans.length}/2 · 到期自动归队</span></h3>
+      <div class="hint" style="margin-bottom:8px">非转会期不能买卖，但可以租借：支付租金（身价 15%）即可租来应急/补位置，工资由原队承担；非卖品不外借，租借选手不能出售/挂牌。</div>
+      ${myLoans.length?`<div style="margin-bottom:8px">${myLoans.map(p=>`<div class="match" style="margin-bottom:5px;padding:7px 10px">
+        <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · 来自${p.loan.from})</span></span></div>
+        <div class="score" style="font-size:12px;min-width:0">剩余 <b class="gold">${p.loan.days}</b> 天</div>
+      </div>`).join('')}</div>`:''}
+      <div style="max-height:300px;overflow-y:auto">${cands.map(c=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+        <div class="vs"><span class="tname" style="font-size:13px">${c.p.name} <span style="color:var(--dim);font-size:10px">(${c.from} · ${POS[c.p.pos][0]} · 总值${overall(c.p)} · ${c.p.age}岁)</span></span></div>
+        <div class="score" style="font-size:13px;min-width:0">租金 ${c.rent}万</div>
+        <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${c.from}','${c.p.id}')">租借 21天</button>
+      </div>`).join('')||'<div class="hint">联盟暂无可租借的选手</div>'}</div>
+    </div>`;
   }
   // 自由球员与退役名宿：始终可见（不依赖转会窗）→ 侧栏
   sideHtml+=`<div class="panel ${foldCls('mfa')}" data-fold="mfa"><h3><span class="h-ic">${ic('users')}</span>自由球员 <span class="tag">各队无球可打的替补 · 低价直签</span></h3>
@@ -379,7 +422,10 @@ function renderMarket(){
       ?`<div class="match" style="margin-bottom:6px;padding:8px 10px">
         <div class="vs"><span class="tname" style="font-size:13px">${r.name} <span style="color:var(--dim);font-size:10px">(主教练 · +${r.bonus}%)</span></span></div>
         <div class="score" style="font-size:12px;min-width:0">${r.cost}万</div>
-        <button class="btn sm gold" style="margin:0" onclick="signRetired(S,'${r.id}')">聘为教练</button></div>`
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn sm gold" style="margin:0" onclick="signRetired(S,'${r.id}')">聘为教练</button>
+          <button class="btn sm primary" style="margin:0" onclick="hireAssistant(S,'${r.id}')" ${(S.assistants||[]).length>=2?'disabled':''}>聘为助教（6折）</button>
+        </div></div>`
       :`<div class="match" style="margin-bottom:6px;padding:8px 10px">
         <div class="vs"><span class="tname" style="font-size:13px">${r.name} <span style="color:var(--dim);font-size:10px">(主播 · 日收入${r.income}万)</span></span></div>
         <div class="score" style="font-size:12px;min-width:0">${r.cost}万</div>
@@ -510,7 +556,8 @@ function renderLeague(){
       ${pf.lb.map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
       ${pf.lb2.map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
       ${pf.lb3.map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
-      ${pMatch(pf.lb4,'败者组决赛')}
+      ${pMatch(pf.lb4,'败者组半决赛')}
+      ${pMatch(pf.lbf,'败者组决赛')}
       ${pMatch(pf.final,'🏆 总决赛')}
     </div>`;
   }
@@ -583,14 +630,14 @@ function renderUnion(){
     <span class="tag" style="min-width:38px;text-align:center">${POS[x.p.pos][1]}</span>
     <b style="font-size:12px;min-width:58px">${x.p.name}</b>
     <span style="font-size:11px;color:var(--dim)">${x.team}</span>
-    <b style="margin-left:auto;color:${gold?'var(--gold)':'var(--dim)'};font-size:11px">评分 ${Math.round(allStarScore(x.p))}</b></div>`;
+    <b style="margin-left:auto;color:${gold?'var(--gold)':'var(--dim)'};font-size:11px">评分 ${overall(x.p)} <span style="font-weight:600;color:${(x.p.val||100)>=110?'var(--green)':(x.p.val||100)<90?'var(--red)':'var(--faint)'}">${perfLabel(x.p)}</span></b></div>`;
   html+=`<div class="panel"><h3><span class="h-ic">${ic('medal')}</span>赛季最佳阵容 <span class="tag">按位置评选 · 实时</span></h3>
     <div style="display:flex;gap:16px;flex-wrap:wrap">
       <div style="flex:1;min-width:220px"><div class="gold" style="font-weight:800;margin-bottom:4px">🥇 一阵</div>${as.t1.map(x=>asRow(x,true)).join('')}</div>
       <div style="flex:1;min-width:220px"><div style="font-weight:800;margin-bottom:4px;color:var(--dim)">🥈 二阵</div>${as.t2.map(x=>asRow(x,false)).join('')}</div>
     </div>
     ${(S.awards||[]).length?`<div class="hint" style="margin-top:8px">历届一阵：${S.awards.map(a=>'S'+a.season+' '+a.first.map(f=>f.name).join('/')).join('　｜　')}</div>`:''}
-    <div class="hint mt8">评分=招牌英雄战力×状态系数（表现火热可越级入选）· 开启新赛季时评出并公告入册</div></div>`;
+    <div class="hint mt8">评分=选手总值 OVR（1-99，与卡面/教练同刻度）；评选排序按 招牌战力×状态（表现火热可越级入选）· 开启新赛季时评出并公告入册</div></div>`;
   $('#page-union').innerHTML=html;
 }
 /* 战队阵容弹窗：本队=注册名单（含替补），AI 队=当前真实阵容 */

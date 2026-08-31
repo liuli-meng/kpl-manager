@@ -88,6 +88,7 @@ function bpEffPreview(d){
   });
   const taken=takenSet(d),oppPicks={...d.oppPicks};
   (d.oppRoster||[]).forEach(p=>{
+    if(p.injury>0)return; // 伤员不计入对方可选估算
     if(oppPicks[p.pos])return;
     let best=null,bp=-1;
     (p.heroPool||[]).forEach(x=>{
@@ -125,26 +126,73 @@ function expandSteps(sr,isPeak){
   });
   return steps; // 18 手，side: M=我方 O=对方
 }
-/* 首发缺位时从替补席同位置自动递补（退役/转会后防呆） */
+/* 首发缺位时从替补席同位置自动递补（退役/转会后防呆）；伤停必须休息：健康替补自动顶替伤员 */
 function autoFillLineup(s){
   POS_ORDER.forEach(pos=>{
     const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
-    if(cur.some(p=>p.pos===pos))return;
-    const bench=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos);
-    if(bench){s.lineup.push(bench.id);logEvent(s,'🔁 '+bench.name+' 递补进入首发（'+POS[pos][0]+'）');}
+    const inPos=cur.find(p=>p.pos===pos);
+    if(inPos&&inPos.injury>0){ // 伤员自动下场（买替补/青训的价值所在）；无健康替补时留给 openBP 拦截
+      const fit=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&p.injury<=0);
+      if(fit){
+        s.lineup[s.lineup.indexOf(inPos.id)]=fit.id;
+        logEvent(s,'🤕 '+inPos.name+' 伤停（还剩'+inPos.injury+'天），'+fit.name+' 替补登场（'+POS[pos][0]+'）');
+        return;
+      }
+    }
+    if(!cur.some(p=>p.pos===pos)){
+      const bench=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos);
+      if(bench){s.lineup.push(bench.id);logEvent(s,'🔁 '+bench.name+' 递补进入首发（'+POS[pos][0]+'）');}
+    }
   });
 }
-/* 系列赛开始：对手阵容体力回满（体力衰减只在系列赛内逐局累积，跨系列赛恢复；AI 互比用构建值） */
+/* 系列赛开始：对手阵容体力回满（体力衰减只在系列赛内逐局累积，跨系列赛恢复；AI 互比用构建值）
+   伤病对称：AI 也会伤停（以缺阵系列赛数计），伤员由本队青训递补顶替——追打伤停队是合法战术 */
 function resetOppEnergy(s,opName){
   ensureAiRosters(s,opName);
-  (s.aiRosters[opName]||[]).forEach(p=>{p.energy=ENERGY_MAX;});
+  const r=s.aiRosters[opName]||[];
+  r.forEach(p=>{p.energy=ENERGY_MAX;});
+  if(!s.aiInj)s.aiInj={};
+  const inj=s.aiInj[opName]=s.aiInj[opName]||{};
+  r.forEach(p=>{
+    if(p.id.startsWith('ac_'))return; // 递补青训不再受伤
+    if(inj[p.id]>0){
+      inj[p.id]--;
+    }else if(Math.random()<0.06){
+      inj[p.id]=rnd(1,2); // 缺席 1-2 个系列赛
+      logEvent(s,'🤕 对方 '+p.name+' 赛前训练受伤，将缺阵 '+inj[p.id]+' 个系列赛');
+    }
+  });
+  POS_ORDER.forEach(pos=>{
+    const real=r.filter(p=>p.pos===pos&&!p.id.startsWith('ac_'));
+    const sick=real.some(p=>inj[p.id]>0);
+    const fill=r.find(p=>p.pos===pos&&p.id.startsWith('ac_'));
+    if(sick&&!fill){
+      const usedNames=rookieUsedNames(s); // 全局查重：避免与玩家/其他 AI 队青训重名
+      r.forEach(x=>usedNames.add(x.name));
+      const f=genPlayer(genAcademyDef(pos,usedNames,s.season));
+      r.push(f);
+      const who=real.find(p=>inj[p.id]>0);
+      logEvent(s,'🏥 '+opName+' 青训 '+f.name+' 顶替伤停的 '+who.name+'（'+POS[pos][0]+'）');
+    }else if(real.length&&!sick&&fill){
+      r.splice(r.indexOf(fill),1); // 伤愈且有健康主力在位：递补退场
+      // 注意：real 为空（该位置真实选手被玩家买走/租走）时不能删递补——他是顶空缺的，不是顶伤员的
+    }
+  });
+  s.aiPower[opName]=aiRosterPower(r);
 }
 function openBP(title,onConfirm){
   autoFillLineup(S);
   const ls=rosterLineup(S);
-  if(ls.length<POS_ORDER.length){
-    const miss=POS_ORDER.filter(pos=>!ls.some(x=>x.pos===pos)).map(pos=>POS[pos][0]).join('、');
-    toast('❌ '+miss+' 无人可用：请签约/提拔该位置选手，或使用训练页「位置改造」');
+  const noGo=POS_ORDER.filter(pos=>{
+    const p=ls.find(x=>x.pos===pos);
+    return !p||p.injury>0; // 伤停必须休息：无健康选手可出的位置拦下
+  });
+  if(noGo.length){
+    const detail=noGo.map(pos=>{
+      const p=ls.find(x=>x.pos===pos);
+      return POS[pos][0]+(p?'（'+p.name+' 伤停'+p.injury+'天）':'（无人）');
+    }).join('、');
+    toast('❌ '+detail+' 无法出战：伤停必须休息——签约替补 / 青训提拔 / 休息等伤愈');
     return;
   }
   const sr=S.series;
@@ -207,6 +255,7 @@ function threatOf(d,h,side){
   const roster=side==='opp'?(d.oppRoster||[]):d.ls;
   let bp=null;
   roster.forEach(p=>{
+    if(p.injury>0)return; // 伤员无法出战，不构成威胁
     if((p.heroPool||[]).some(x=>x.n===h)&&heroOf(h)&&heroOf(h).pos.includes(p.pos)){
       const pw=playerPower(p,h);if(bp==null||pw>bp)bp=pw;
     }
@@ -238,11 +287,11 @@ function aiDraftStep(d){
     if(best)d.oppBans.push(best);
     return;
   }
-  // AI 选人：挑剩余位置中（选手×英雄）战力最高的一手，稍带保护招牌倾向
+  // AI 选人：挑剩余位置中（选手×英雄）战力最高的一手，稍带保护招牌倾向；伤员跳过
   let bestPos=null,bestHero=null,bs=-1;
   POS_ORDER.forEach(pos=>{
     if(pos in d.oppPicks)return;
-    const p=(d.oppRoster||[]).find(x=>x.pos===pos);
+    const p=(d.oppRoster||[]).find(x=>x.pos===pos&&x.injury<=0);
     if(!p)return;
     const taken=takenSet(d),oppUsed=d.usedOpp||[]; // 全局BP：对方本系列赛己方用过的也不能再选
     let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
@@ -253,7 +302,7 @@ function aiDraftStep(d){
       if(score>bs){bs=score;bestPos=pos;bestHero=h.n;}
     });
   });
-  if(bestPos){d.oppPicks[bestPos]=bestHero;ensureHeroInPool((d.oppRoster||[]).find(x=>x.pos===bestPos),bestHero);}
+  if(bestPos){d.oppPicks[bestPos]=bestHero;ensureHeroInPool((d.oppRoster||[]).find(x=>x.pos===bestPos&&x.injury<=0),bestHero);}
 }
 /* ---------- 我方操作入口 ---------- */
 function bpBanPick(hero){
@@ -307,6 +356,17 @@ function autoPlayNext(){
   const sr=S.series;
   if(!sr)return;
   const isPeak=sr.max>=7&&sr.mw===3&&sr.ow===3&&sr.mw+sr.ow===6;
+  autoFillLineup(S); // 伤员自动换下/缺位递补
+  const noGo=POS_ORDER.filter(pos=>{
+    const p=rosterLineup(S).find(x=>x.pos===pos);
+    return !p||p.injury>0; // 伤停必须休息：无健康选手的位置拦下自动BP
+  });
+  if(noGo.length){
+    toast('❌ '+noGo.map(pos=>POS[pos][0]).join('、')+' 无法出战（伤停/无人）——自动BP暂停，请补齐阵容');
+    S.seriesAuto=false;
+    openBP('伤停 · 请补齐阵容后继续',playGame);
+    return;
+  }
   const ls=rosterLineup(S);
   if(!ls.length){toast('没有可用阵容');S.seriesAuto=false;return;}
   const d={sr,ls,isPeak,
@@ -359,6 +419,7 @@ function bpOpenSwap(){const d=window._draft;if(!d)return;d.swap=true;renderBP();
 function bpSwapIn(pid){
   const d=window._draft;if(!d)return;
   const p=S.players.find(x=>x.id===pid);
+  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
   const cur=rosterLineup(S).find(x=>x.pos===p.pos);
   if(!cur){toast('该位置没有首发');return;}
   S.lineup[S.lineup.indexOf(cur.id)]=p.id;
@@ -398,7 +459,7 @@ function bpSideColumn(d,mine){
     pickSlots=order.map(()=>bpSlot('pick blind','？？？','盲选')).join('');
   }else{
     pickSlots=order.map(pos=>{
-      const p=(mine?d.ls:d.oppRoster||[]).find(x=>x.pos===pos);
+      const p=(mine?d.ls:d.oppRoster||[]).find(x=>x.pos===pos&&(mine||x.injury<=0)); // 对方位显示健康选手（青训递补）
       const hero=mine?d.myPicks[pos]:picks[pos];
       return bpSlot('pick'+(hero?' filled':''),hero||'',(p?p.name:POS[pos][0]));
     }).join('');
@@ -464,7 +525,7 @@ function renderBP(){
     action=`<div class="hint" style="margin:10px 0 6px;color:var(--cyan)">⇄ 换替补：点击替补换下同位置首发（BP 进度保留，已选英雄由新选手接手）</div>
       ${POS_ORDER.map(pos=>{
         const cur=d.ls.find(x=>x.pos===pos);
-        const cands=bn.filter(x=>x.pos===pos);
+        const cands=bn.filter(x=>x.pos===pos&&x.injury<=0); // 伤员不可登场
         return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
           <span class="tag" style="min-width:58px;text-align:center">${POS[pos][1]} ${cur?cur.name:'空缺'}</span>
           ${cands.length?cands.map(p=>`<button class="btn sm" onclick="bpSwapIn('${p.id}')">${p.name} · 战力${playerPower(p)}</button>`).join(''):'<span class="dim" style="font-size:11px">该位置无替补</span>'}

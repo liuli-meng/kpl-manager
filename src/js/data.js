@@ -111,7 +111,7 @@ const HEROES=[
  {n:'后羿',pos:['ad'],t:'farm'},{n:'狄仁杰',pos:['ad'],t:'lane'},
  {n:'李元芳',pos:['ad','jg'],t:'farm'},{n:'艾琳',pos:['ad'],t:'lane'},
  {n:'黄忠',pos:['ad'],t:'team'},{n:'莱西奥',pos:['ad'],t:'team'},
- {n:'戈娅',pos:['ad'],t:'farm',hot:1},{n:'蒙犽',pos:['ad','mid'],t:'lane'},
+ {n:'戈娅',pos:['ad'],t:'farm',hot:1},{n:'蒙犽',pos:['ad'],t:'lane'},
  // ===== 游走 =====
  {n:'鬼谷子',pos:['sup'],t:'team'},{n:'张飞',pos:['sup'],t:'team',hot:1},
  {n:'大乔',pos:['sup','mid'],t:'farm'},{n:'盾山',pos:['sup'],t:'lane'},
@@ -281,6 +281,18 @@ const COACH_POOL=[
 ];
 const COACH_STYLE={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
 
+/* ================= 助教池（教练组第二块拼图，最多聘 2 名，加成与主教练叠加） =================
+   幅度小于主教练；退役名宿教练也可 6 折转任助教 */
+const ASSISTANT_POOL=[
+ {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:6,cost:90,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
+ {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:6,cost:90,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
+ {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:5,cost:70,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
+ {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:5,cost:70,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
+ {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:4,cost:55,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
+ {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:4,cost:55,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
+ {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:3,cost:40,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
+];
+
 /* ================= 转会市场：AI 战队选手池（u=非卖品） ================= */
 const AI_ROSTERS={
  '成都AG超玩会':{p:['top4','jg4','mid3','ad1','sup3'],u:['ad1','jg4']},
@@ -328,7 +340,7 @@ const CLUB_TEMPLATES=[
 /* ================= 2026 自由市场（真实 KPL 选手 · 合同到期/转会流拍） =================
    每个转会窗轮换上架 3 名，签一人少一人；传奇老将为"最后一舞"年龄 */
 const FA_2026=[
- {id:'fa26_1',name:'老帅',pos:'mid',rarity:'SSR',team:'传奇',tags:[],base:[90,84,88,93],skill:{n:'中单教科书',t:'lane',d:'对线属性额外+12%'},sig:'露娜',career:'AG超玩会 2017 年首冠中单，KPL 初代传奇，露娜/貂蝉双绝，意识至今顶级。'},
+ {id:'fa26_1',name:'老帅',pos:'mid',rarity:'SSR',team:'传奇',tags:[],base:[90,84,88,93],skill:{n:'中单教科书',t:'lane',d:'对线属性额外+12%'},sig:'貂蝉',career:'AG超玩会 2017 年首冠中单，KPL 初代传奇，露娜/貂蝉双绝，意识至今顶级。'},
  {id:'fa26_2',name:'Alan',pos:'mid',rarity:'SSR',team:'传奇',tags:[],base:[89,86,92,90],skill:{n:'决胜貂蝉',t:'team',d:'团战属性额外+12%'},sig:'貂蝉',career:'武汉eStarPro 2019 年世界冠军中单，决胜局貂蝉名场面载入史册。'},
  {id:'fa26_3',name:'虔诚',pos:'ad',rarity:'SSR',team:'传奇',tags:[],base:[90,88,86,89],skill:{n:'位移大师',t:'lane',d:'运营属性额外+12%'},sig:'马可波罗',career:'传奇射手，RNG.M 时期名震联盟，马可波罗教科书般的走位。'},
  {id:'fa26_4',name:'阿泰',pos:'sup',rarity:'SR',team:'传奇',tags:[],base:[82,88,84,90],skill:{n:'开团指挥',t:'team',d:'团战属性额外+10%'},sig:'太乙真人',career:'AG超玩会 2017 年冠军辅助，开团时机拿捏堪称教科书。'},
@@ -338,25 +350,26 @@ const FA_2026=[
 ];
 
 /* ================= 随机事件（含 KPL 真实事件） ================= */
+const mAmt=(p,v)=>{p.morale=clamp(p.morale+v,20,100);}; // 士气统一封顶 20~100（个别事件直接加减会溢出到 100+）
 const EVENTS=[
- // —— 日常随机 ——
- {t:'选手加练',desc:'{p} 深夜独自加练，手感火热。',good:true,fn:s=>{const p=pick(rosterAll(s));p.attrs[pick(['lane','farm','team'])]+=2;p.morale+=5;}},
+ // —— 日常随机 ——（fn 的第二参 p 由 nextDay 传入，保证公告文案与实际生效的是同一名选手）
+ {t:'选手加练',desc:'{p} 深夜独自加练，手感火热。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','farm','team']);p.attrs[k]=clamp(p.attrs[k]+2,40,99);mAmt(p,5);}},
  {t:'媒体专访',desc:'俱乐部接受专访，曝光度大增，收到一笔采访费。',good:true,fn:s=>s.fund+=12},
  {t:'粉丝应援',desc:'粉丝团自发应援，主场氛围拉满。',good:true,fn:s=>{s.fund+=15;moraleAll(s,3);}},
  {t:'商业活动',desc:'俱乐部参加官方商业活动，获得活动分成。',good:true,fn:s=>s.fund+=8},
- {t:'状态起伏',desc:'{p} 近期作息混乱，状态下滑。',good:false,fn:s=>{const p=pick(rosterAll(s));p.morale-=12;}},
+ {t:'状态起伏',desc:'{p} 近期作息混乱，状态下滑。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-12);}},
  {t:'舆论风波',desc:'社交媒体出现不利言论，队员心态受挫。',good:false,fn:s=>moraleAll(s,-6)},
- {t:'身体不适',desc:'{p} 感冒发烧，需要休息两天。',good:false,fn:s=>{const p=pick(rosterAll(s));p.energy=Math.min(p.energy,30);p.morale-=8;}},
+ {t:'身体不适',desc:'{p} 感冒发烧，需要休息两天。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.energy=Math.min(p.energy,30);mAmt(p,-8);}},
  {t:'赞助商洽谈',desc:'新赞助商对战队战绩满意，追加了赞助费！',good:true,fn:s=>s.fund+=20},
- {t:'战术研讨',desc:'教练组闭门研究新战术，团战配合更好了。',good:true,fn:s=>{const p=pick(rosterAll(s));p.attrs.team+=2;}},
- {t:'转会流言',desc:'{p} 被传出转会流言，本人表示不受影响。',good:false,fn:s=>{const p=pick(rosterAll(s));p.morale-=6;}},
+ {t:'战术研讨',desc:'教练组闭门研究新战术，团战配合更好了。',good:true,fn:s=>{const p=pick(rosterAll(s));p.attrs.team=clamp(p.attrs.team+2,40,99);}},
+ {t:'转会流言',desc:'{p} 被传出转会流言，本人表示不受影响。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-6);}},
  {t:'青训惊喜',desc:'青训队出了一个好苗子，俱乐部收到培养奖金。',good:true,fn:s=>s.fund+=8},
- {t:'老将觉醒',desc:'{p} 接受采访时表示要带新人拿冠军，士气大涨！',good:true,fn:s=>{const p=pick(rosterAll(s));p.morale+=12;}},
+ {t:'老将觉醒',desc:'{p} 接受采访时表示要带新人拿冠军，士气大涨！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,12);}},
  // —— KPL 真实事件 ——
- {t:'亚运征召',desc:'{p} 入选亚运会电竞国家队，为国争光！',good:true,fn:s=>{const p=pick(rosterAll(s));p.morale=100;p.attrs.mind=Math.min(99,p.attrs.mind+3);}},
- {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:s=>{const p=pick(rosterAll(s));s.fund+=25;p.morale+=10;}},
- {t:'版本更新·削弱',desc:'新版本上线，{p} 擅长的英雄被削弱，需要时间适应。',good:false,fn:s=>{const p=pick(rosterAll(s));p.morale-=8;p.attrs[pick(['lane','team'])]=Math.max(55,p.attrs[pick(['lane','team'])]-2);}},
- {t:'版本更新·加强',desc:'新版本上线，{p} 的招牌英雄迎来版本红利，手感火热！',good:true,fn:s=>{const p=pick(rosterAll(s));p.attrs[pick(['lane','team'])]=Math.min(99,p.attrs[pick(['lane','team'])]+2);p.morale+=6;}},
+ {t:'亚运征召',desc:'{p} 入选亚运会电竞国家队，为国争光！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.morale=100;p.attrs.mind=Math.min(99,p.attrs.mind+3);}},
+ {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));s.fund+=25;mAmt(p,10);}},
+ {t:'版本更新·削弱',desc:'新版本上线，{p} 擅长的英雄被削弱，需要时间适应。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);mAmt(p,-8);p.attrs[k]=Math.max(55,p.attrs[k]-2);}},
+ {t:'版本更新·加强',desc:'新版本上线，{p} 的招牌英雄迎来版本红利，手感火热！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);p.attrs[k]=Math.min(99,p.attrs[k]+2);mAmt(p,6);}},
  {t:'全明星周末',desc:'参加 KPL 全明星周末，选手们放松了心情。',good:true,fn:s=>moraleAll(s,8)},
  {t:'假赛风波',desc:'联盟严查假赛，俱乐部被要求配合调查，舆论压力巨大。',good:false,fn:s=>moraleAll(s,-10)},
  {t:'解说毒奶',desc:'著名解说公开"看好"你下一场的对手……',good:true,fn:s=>moraleAll(s,5)},
@@ -366,8 +379,8 @@ const EVENTS=[
  {t:'降薪传闻',desc:'俱乐部降薪传闻流出，队员人心浮动。',good:false,fn:s=>moraleAll(s,-8)},
  {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,fn:s=>{s.fund+=25;}},
  {t:'青训挂牌',desc:'青训队新秀在转会市场被争抢，俱乐部收到问价。',good:true,fn:s=>s.fund+=10},
- {t:'转会传闻',desc:'媒体爆料 {p} 收到豪门高额报价，人心浮动。',good:false,fn:s=>{const p=pick(rosterAll(s));p.willingness=Math.max(5,(p.willingness||50)-8);p.morale=clamp(p.morale-5,20,100);}},
- {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:s=>{const p=pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
+ {t:'转会传闻',desc:'媒体爆料 {p} 收到豪门高额报价，人心浮动。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.max(5,(p.willingness||50)-8);p.morale=clamp(p.morale-5,20,100);}},
+ {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
 ];
 
 /* ================= 比赛模拟（Elo 胜率） =================

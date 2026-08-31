@@ -39,7 +39,7 @@ function openSaveMgmt(){
   $('#app-modal-body').innerHTML=`
     <h2><span class="h-ic">${ic('doc')}</span>存档管理</h2>
     <div class="center" style="margin-bottom:12px">
-      ${[1,2,3].map(i=>`<div class="pack-btn ${i===curSlot?'style="border-color:var(--gold)"':''}" onclick="setSlot(${i})">
+      ${[1,2,3].map(i=>`<div class="pack-btn" ${i===curSlot?'style="border-color:var(--gold)"':''} onclick="setSlot(${i})">
         <b style="font-size:14px">槽${i}</b><span style="font-size:10px">${i===curSlot?'(当前)':occ(i)?'有档':'空槽'}</span></div>`).join('')}
     </div>
     <div class="hint" style="margin-bottom:8px">导出：点击"复制导出"得到存档代码并收藏；导入：粘贴代码后点"导入"（覆盖当前槽）。</div>
@@ -54,7 +54,7 @@ function openSaveMgmt(){
 function setSlot(i){
   curSlot=i;localStorage.setItem('esport_manager_curslot',String(i));
   if(load()){save();renderAll();closeModal('app-modal');toast('已切换到 槽'+i);}
-  else{S=null;closeModal('app-modal');toast('槽'+i+' 暂无存档，可在创建界面开局');}
+  else{S=null;closeModal('app-modal');initStart();toast('槽'+i+' 暂无存档，请创建新战队开局');}
 }
 function exportSave(){
   const t=$('#save-io');
