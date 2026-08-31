@@ -374,6 +374,72 @@ footer{position:fixed;bottom:0;left:0;right:0;background:rgba(4,6,13,.94);backdr
   .bp-center{width:100%;flex-direction:row;justify-content:center}
   .bp-hero{flex:1 1 42%}
 }
+
+/* ============================================================
+   设计感升级层（2026-08-31）：动效系统 + 电竞 HUD 氛围
+   原则：微交互 150ms / 转场 250ms / ease-out 曲线；
+   深色界面靠边框+辉光而非重阴影；颜色只用于传达意义；
+   动效克制、全部可被 prefers-reduced-motion 降级
+   ============================================================ */
+:root{
+  --ease:cubic-bezier(.25,1,.5,1);
+  --dur-ms:150ms; --dur-mid:250ms; --dur-long:500ms;
+}
+/* 全局动效基调：交互元素统一过渡 */
+a,button,.btn,.pcard,.match,.tag,.event-card,.stat,.hd-btn,.p-hero{
+  transition:border-color var(--dur-ms) var(--ease),background var(--dur-ms) var(--ease),
+    color var(--dur-ms) var(--ease),box-shadow var(--dur-ms) var(--ease),
+    filter var(--dur-ms) var(--ease),transform var(--dur-ms) var(--ease);
+}
+/* 卡片：悬浮抬升 + 边框辉光 */
+.pcard{will-change:transform}
+.pcard:hover{transform:translateY(-2px);border-color:var(--line2);box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 1px rgba(0,229,255,.10)}
+.pcard.ssr:hover{border-color:rgba(255,200,74,.75);box-shadow:0 8px 26px rgba(0,0,0,.5),0 0 22px rgba(255,200,74,.28)}
+/* 按钮按压反馈 + 主按钮辉光增强 */
+.btn:active:not(:disabled){transform:translateY(1px) scale(.98)}
+.btn.primary:hover{transform:translateY(-1px)}
+/* 金卡呼吸辉光（稀有度=奖赏，奖赏才配动效） */
+@keyframes ssrBreathe{0%,100%{box-shadow:0 0 10px rgba(255,200,74,.20)}50%{box-shadow:0 0 22px rgba(255,200,74,.45)}}
+.pcard.ssr{animation:ssrBreathe 3.2s ease-in-out infinite}
+/* 进度条：填充动效 + 周期扫光 */
+.progress i{transition:width var(--dur-long) var(--ease);position:relative;overflow:hidden}
+.progress i::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.30),transparent);
+  animation:shine 2.6s var(--ease) infinite}
+@keyframes shine{55%,100%{transform:translateX(100%)}}
+/* 页面切换：淡入+上浮（替代原有纯淡入） */
+section.page.on{animation:fadeUp var(--dur-mid) var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* 弹窗入场：缩放+淡入 */
+.modal-bg.on .modal{animation:popIn var(--dur-mid) var(--ease)}
+@keyframes popIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+/* toast 滑入 */
+#toast{transition:transform var(--dur-mid) var(--ease),opacity var(--dur-mid) var(--ease)}
+#toast:not(.on){transform:translateY(8px);opacity:0}
+/* header 转播条：细扫描线 + 队徽辉光 */
+header{position:relative;overflow:hidden}
+header::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,229,255,.028) 3px 4px)}
+.logo{filter:drop-shadow(0 0 10px rgba(0,229,255,.35));transition:filter var(--dur-ms) var(--ease)}
+header:hover .logo{filter:drop-shadow(0 0 16px rgba(0,229,255,.6))}
+/* 导航激活项辉光脉冲 */
+nav button.on .ic{animation:navPulse 2.6s ease-in-out infinite}
+@keyframes navPulse{0%,100%{filter:drop-shadow(0 0 4px rgba(0,229,255,.5))}50%{filter:drop-shadow(0 0 9px rgba(0,229,255,.9))}}
+/* 比赛行 hover：微推进 + 内辉光 */
+.match:hover{transform:translateX(2px);border-color:var(--line2);box-shadow:0 0 12px rgba(0,229,255,.06) inset}
+/* 日志行 hover 高亮（复盘浏览更顺） */
+.logbox div:hover{background:rgba(0,229,255,.05)}
+/* 事件卡 hover */
+.event-card:hover{border-color:var(--accent);transform:translateX(2px)}
+/* BP 台：已选槽位辉光 */
+.bp-slot.filled{border-color:rgba(0,229,255,.5);box-shadow:0 0 8px rgba(0,229,255,.15) inset}
+/* 俱乐部页大标题：渐变字光 */
+.banner .big{background:linear-gradient(90deg,#fff,var(--accent) 55%,var(--accent2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+/* 无障碍：偏好减少动效的用户关闭全部动画 */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
 </style>
 </head>
 <body>
