@@ -1,0 +1,31 @@
+# 持续集成：push/PR 自动跑测试 + 构建，并校验 game.html 与 src 一致
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 全量测试（静态审计 + 历史回归 + 冒烟）
+        run: npm test
+
+      - name: 模糊压测（15 赛季随机操作 + 不变量断言）
+        run: node tests/fuzz.js
+
+      - name: 构建 game.html
+        run: npm run build
+
+      - name: 校验构建产物与 src 一致（改了源码忘 build 会在这里拦截）
+        run: |
+          git diff --exit-code game.html
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::game.html 与 src 不一致，请先执行 npm run build"; exit 1 }

@@ -25,6 +25,7 @@ function makeDom() {
     getElementById: id => cachedEl('#' + id),
     querySelector: sel => cachedEl(sel),
     querySelectorAll: () => [],
+    addEventListener() {}, removeEventListener() {},
     localStorage: { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; }, removeItem: k => { delete store[k]; } },
     document: {
       querySelector: sel => cachedEl(sel), querySelectorAll: () => [], createElement: () => el(),

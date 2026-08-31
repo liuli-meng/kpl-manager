@@ -4522,6 +4522,13 @@ function applyClub(){
 }
 
 /* ================= 启动 ================= */
+/* 全局异常兜底：开发期控制台可观测，生产不白屏 */
+window.addEventListener('error', e => {
+  try{ console.error('[全局异常]', e.message, (e.filename||'')+':'+(e.lineno||'?')); toast('⚠️ 程序异常：'+(e.message||'未知错误')); }catch(_){}
+});
+window.addEventListener('unhandledrejection', e => {
+  try{ console.error('[未处理Promise拒绝]', e.reason); }catch(_){}
+});
 $$('nav button').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
 if(load()&&S&&S.teamName){
   ensureSeason(S); // 旧档自动迁移到 KPL 2025 赛制
