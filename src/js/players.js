@@ -39,6 +39,7 @@ function buyPlayer(s,p){
   s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
   s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
   logEvent(s,`🤝 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
+  try{SFX.gold();}catch(_){}
   save();renderAll();return true;
 }
 

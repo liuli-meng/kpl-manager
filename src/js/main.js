@@ -226,6 +226,82 @@ function applyClub(){
   save();
 }
 
+/* ================= 音效系统（WebAudio 合成短音，无资源文件；音量极小不打扰） ================= */
+let _ac=null,_sfxOn=true;
+try{_sfxOn=localStorage.getItem('km_sfx')!=='0';}catch(_){}
+function sfx(freq,dur,type,vol){
+  if(!_sfxOn)return;
+  try{
+    _ac=_ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended')_ac.resume();
+    const o=_ac.createOscillator(),g=_ac.createGain();
+    o.type=type||'sine';o.frequency.value=freq;
+    const t=_ac.currentTime;
+    g.gain.setValueAtTime(vol||0.04,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.12));
+    o.connect(g);g.connect(_ac.destination);
+    o.start(t);o.stop(t+(dur||0.12)+0.02);
+  }catch(_){}
+}
+const SFX={
+  click:()=>sfx(660,.05,'square',.022),
+  win:()=>{sfx(523,.11);setTimeout(()=>sfx(784,.15),95);},
+  lose:()=>sfx(311,.16,'triangle',.045),
+  gold:()=>{sfx(880,.07);setTimeout(()=>sfx(1174,.09),70);},
+};
+function toggleSfx(){
+  _sfxOn=!_sfxOn;
+  try{localStorage.setItem('km_sfx',_sfxOn?'1':'0');}catch(_){}
+  toast(_sfxOn?'🔊 音效已开启':'🔇 音效已关闭');
+  renderHeader();
+}
+/* 点击轻反馈（按钮/卡/BAN 位） */
+document.addEventListener('click',e=>{
+  try{if(e.target&&e.target.closest&&e.target.closest('button,.bp-hero,.pack-btn'))SFX.click();}catch(_){}
+});
+/* ================= 选手卡 3D 倾斜（仅指针设备；触屏与减弱动效自动跳过） ================= */
+let _tilt=null;
+document.addEventListener('mousemove',e=>{
+  try{
+    if(window.matchMedia&&(!window.matchMedia('(pointer:fine)').matches||window.matchMedia('(prefers-reduced-motion: reduce)').matches))return;
+    const c=e.target&&e.target.closest?e.target.closest('.pcard'):null;
+    if(c!==_tilt){if(_tilt){_tilt.style.transform='';_tilt.style.transition='';}_tilt=c;}
+    if(!c)return;
+    const r=c.getBoundingClientRect();
+    if(!r.width)return;
+    const px=(e.clientX-r.left)/r.width-.5,py=(e.clientY-r.top)/r.height-.5;
+    c.style.transition='transform 80ms linear';
+    c.style.transform='perspective(680px) rotateX('+(-py*7).toFixed(2)+'deg) rotateY('+(px*7).toFixed(2)+'deg) translateY(-2px)';
+  }catch(_){}
+});
+/* ================= 数字滚动动效（header 资金/战力平滑滚数，首次直接显示） ================= */
+window.__numPrev={};
+function tweenNum(el,key,to){
+  const from=(key in window.__numPrev)?window.__numPrev[key]:to;
+  window.__numPrev[key]=to;
+  if(from===to||el.dataset.anim==='1'){el.textContent=fmt(to);return;}
+  el.dataset.anim='1';
+  const t0=performance.now(),dur=380;
+  const step=now=>{
+    const k=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-k,3); // easeOutCubic
+    el.textContent=fmt(Math.round(from+(to-from)*e));
+    if(k<1)requestAnimationFrame(step);else{el.textContent=fmt(to);delete el.dataset.anim;}
+  };
+  requestAnimationFrame(step);
+}
+/* ================= 进场动画（首访一次：logo 聚拢 → 展开 → 淡出） ================= */
+function playIntro(){
+  try{if(localStorage.getItem('km_intro'))return;localStorage.setItem('km_intro','1');}catch(_){}
+  try{
+    const ov=document.createElement('div');
+    ov.id='intro-overlay';
+    const name=(S&&S.teamName)?S.teamName:'王者电竞经理';
+    const icon=(S&&S.icon)?S.icon:'⚔️';
+    ov.innerHTML='<div class="intro-inner"><div class="intro-ico">'+icon+'</div><div class="intro-name">'+name+'</div><div class="intro-sub">KPL MANAGER · SEASON '+((S&&S.season)||1)+'</div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('animationend',()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);});
+  }catch(_){}
+}
 /* ================= 启动 ================= */
 /* 全局异常兜底：控制台可观测 + 用户侧提示（不白屏、不静默） */
 window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档带走也无妨）
@@ -247,4 +323,5 @@ if(load()&&S&&S.teamName){
 }else{
   initStart();
 }
+playIntro(); // 进场动画（仅首访播放）
 

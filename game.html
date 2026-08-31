@@ -440,6 +440,29 @@ nav button.on .ic{animation:navPulse 2.6s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
+
+/* ============================================================
+   设计感升级层 v3.2：数字滚动 / BP 动态 / 进场动画
+   ============================================================ */
+/* 数字滚动：滚数字保持等宽对齐 */
+.stat b[data-num]{display:inline-block;font-variant-numeric:tabular-nums}
+/* BP 槽位填充：盖章式弹出（每手 BAN/PICK 落定都有反馈） */
+@keyframes slotStamp{0%{transform:scale(1.45) rotate(-5deg);opacity:0}60%{transform:scale(.93)}100%{transform:scale(1) rotate(0);opacity:1}}
+.bp-slot.filled{animation:slotStamp .3s var(--ease)}
+/* BP 选人点击：青色闪光 */
+@keyframes heroFlash{0%{box-shadow:0 0 0 rgba(0,229,255,0)}45%{box-shadow:0 0 20px rgba(0,229,255,.55)}100%{box-shadow:0 0 0 rgba(0,229,255,0)}}
+.bp-hero:active{animation:heroFlash .32s ease}
+/* 进场动画：logo 聚拢 → 展开 → 淡出（pointer-events 全程穿透，不挡交互） */
+#intro-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none;
+  background:radial-gradient(640px 420px at 50% 44%,rgba(0,229,255,.10),#04060d 72%);
+  animation:introFade .85s ease .8s forwards}
+#intro-overlay .intro-inner{text-align:center;animation:introZoom 1.05s var(--ease) both}
+#intro-overlay .intro-ico{font-size:58px;line-height:1;animation:introGlow 1.4s ease-in-out .2s}
+#intro-overlay .intro-name{font-size:22px;font-weight:800;letter-spacing:5px;margin-top:12px}
+#intro-overlay .intro-sub{font-size:10px;color:var(--dim);letter-spacing:7px;margin-top:6px}
+@keyframes introZoom{0%{transform:scale(.28);opacity:0}60%{transform:scale(1.07);opacity:1}100%{transform:scale(1)}}
+@keyframes introGlow{0%,100%{filter:drop-shadow(0 0 14px rgba(0,229,255,.4))}50%{filter:drop-shadow(0 0 28px rgba(0,229,255,.75))}}
+@keyframes introFade{to{opacity:0;visibility:hidden}}
 </style>
 </head>
 <body>
@@ -1167,6 +1190,7 @@ function buyPlayer(s,p){
   s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
   s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
   logEvent(s,`🤝 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
+  try{SFX.gold();}catch(_){}
   save();renderAll();return true;
 }
 
@@ -1565,6 +1589,7 @@ function negoSubmit(){
     logEvent(s,(n.freeAgent?'⚪ 签下自由球员 ':'💰 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
     if(fee>=300)logEvent(s,'💣 重磅转会！联盟震动');
     window._nego=null;closeModal('app-modal');
+    try{SFX.gold();}catch(_){}
     save();renderAll();toast('🎉 谈判成功！'+p.name+' 加盟');
     return;
   }
@@ -3676,6 +3701,7 @@ function finishSeries(finalWin){
 function startPlayoff(){if(S.preseason){toast('📋 转会期进行中，联赛尚未开始');return;}playoffStep(S);}
 function startCard(){if(S.preseason){toast('📋 转会期进行中，联赛尚未开始');return;}playCardNext(S);}
 function showMatchModal(r,title){
+  try{(r.win?SFX.win():SFX.lose());}catch(_){}
   const mb=$('#app-modal');$('#app-modal-body').innerHTML=`
     <h2><span class="h-ic" style="background:${r.win?'rgba(67,220,156,.12)':'rgba(255,107,107,.12)'};color:${r.win?'var(--green)':'var(--red)'}">${ic(r.win?'check':'ban')}</span>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
     <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')||l.includes('✅')?'win':l.includes('❌')||l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
@@ -3770,8 +3796,8 @@ function renderHeader(){
     <div class="logo">${S.icon}</div>
     <div class="hd-name">${S.teamName}<small>${S.phase==='champion'?'冠军俱乐部':'KPL 联赛 · 赛季'+S.season}</small></div>
     <div class="stats">
-      <div class="stat">${ic('coin',13)}<b>${fmt(S.fund)}</b><small>资金</small></div>
-      <div class="stat">${ic('bolt',13)}<b>${fmt(teamPower(S))}</b><small>总战力</small></div>
+      <div class="stat">${ic('coin',13)}<b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
+      <div class="stat">${ic('bolt',13)}<b data-num="power">${fmt(teamPower(S))}</b><small>总战力</small></div>
       <div class="stat">${ic('cal',13)}<b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
       <div class="stat ${weeklyWage(S)>S.wageCap?'red':''}">${ic('shield',13)}<b>${weeklyWage(S)}/${S.wageCap}万</b><small>周薪/帽</small></div>
       ${S.streak>=3?`<div class="stat gold">${ic('flame',13)}<b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red">${ic('flame',13)}<b>${-S.streak}连败</b><small>低迷</small></div>`:''}
@@ -3780,7 +3806,15 @@ function renderHeader(){
     </div>
     <button class="hd-btn" onclick="save();toast('存档成功')">${ic('doc',13)} 存档</button>
     <button class="hd-btn" onclick="openSaveMgmt()">${ic('doc',13)} 管理</button>
+    <button class="hd-btn" onclick="toggleSfx()" title="音效开关">${_sfxOn?'🔊':'🔇'}</button>
     <button class="hd-btn" onclick="resetGame()">${ic('swap',13)} 重开</button>`;
+  // 数字滚动：资金/战力平滑滚数（带 data-num 的 stat）
+  try{
+    document.querySelectorAll('#header [data-num]').forEach(el=>{
+      const key=el.dataset.num;
+      tweenNum(el,key,key==='fund'?S.fund:teamPower(S));
+    });
+  }catch(_){}
 }
 function renderClub(){
   const ls=rosterLineup(S);
@@ -4590,6 +4624,82 @@ function applyClub(){
   save();
 }
 
+/* ================= 音效系统（WebAudio 合成短音，无资源文件；音量极小不打扰） ================= */
+let _ac=null,_sfxOn=true;
+try{_sfxOn=localStorage.getItem('km_sfx')!=='0';}catch(_){}
+function sfx(freq,dur,type,vol){
+  if(!_sfxOn)return;
+  try{
+    _ac=_ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended')_ac.resume();
+    const o=_ac.createOscillator(),g=_ac.createGain();
+    o.type=type||'sine';o.frequency.value=freq;
+    const t=_ac.currentTime;
+    g.gain.setValueAtTime(vol||0.04,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.12));
+    o.connect(g);g.connect(_ac.destination);
+    o.start(t);o.stop(t+(dur||0.12)+0.02);
+  }catch(_){}
+}
+const SFX={
+  click:()=>sfx(660,.05,'square',.022),
+  win:()=>{sfx(523,.11);setTimeout(()=>sfx(784,.15),95);},
+  lose:()=>sfx(311,.16,'triangle',.045),
+  gold:()=>{sfx(880,.07);setTimeout(()=>sfx(1174,.09),70);},
+};
+function toggleSfx(){
+  _sfxOn=!_sfxOn;
+  try{localStorage.setItem('km_sfx',_sfxOn?'1':'0');}catch(_){}
+  toast(_sfxOn?'🔊 音效已开启':'🔇 音效已关闭');
+  renderHeader();
+}
+/* 点击轻反馈（按钮/卡/BAN 位） */
+document.addEventListener('click',e=>{
+  try{if(e.target&&e.target.closest&&e.target.closest('button,.bp-hero,.pack-btn'))SFX.click();}catch(_){}
+});
+/* ================= 选手卡 3D 倾斜（仅指针设备；触屏与减弱动效自动跳过） ================= */
+let _tilt=null;
+document.addEventListener('mousemove',e=>{
+  try{
+    if(window.matchMedia&&(!window.matchMedia('(pointer:fine)').matches||window.matchMedia('(prefers-reduced-motion: reduce)').matches))return;
+    const c=e.target&&e.target.closest?e.target.closest('.pcard'):null;
+    if(c!==_tilt){if(_tilt){_tilt.style.transform='';_tilt.style.transition='';}_tilt=c;}
+    if(!c)return;
+    const r=c.getBoundingClientRect();
+    if(!r.width)return;
+    const px=(e.clientX-r.left)/r.width-.5,py=(e.clientY-r.top)/r.height-.5;
+    c.style.transition='transform 80ms linear';
+    c.style.transform='perspective(680px) rotateX('+(-py*7).toFixed(2)+'deg) rotateY('+(px*7).toFixed(2)+'deg) translateY(-2px)';
+  }catch(_){}
+});
+/* ================= 数字滚动动效（header 资金/战力平滑滚数，首次直接显示） ================= */
+window.__numPrev={};
+function tweenNum(el,key,to){
+  const from=(key in window.__numPrev)?window.__numPrev[key]:to;
+  window.__numPrev[key]=to;
+  if(from===to||el.dataset.anim==='1'){el.textContent=fmt(to);return;}
+  el.dataset.anim='1';
+  const t0=performance.now(),dur=380;
+  const step=now=>{
+    const k=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-k,3); // easeOutCubic
+    el.textContent=fmt(Math.round(from+(to-from)*e));
+    if(k<1)requestAnimationFrame(step);else{el.textContent=fmt(to);delete el.dataset.anim;}
+  };
+  requestAnimationFrame(step);
+}
+/* ================= 进场动画（首访一次：logo 聚拢 → 展开 → 淡出） ================= */
+function playIntro(){
+  try{if(localStorage.getItem('km_intro'))return;localStorage.setItem('km_intro','1');}catch(_){}
+  try{
+    const ov=document.createElement('div');
+    ov.id='intro-overlay';
+    const name=(S&&S.teamName)?S.teamName:'王者电竞经理';
+    const icon=(S&&S.icon)?S.icon:'⚔️';
+    ov.innerHTML='<div class="intro-inner"><div class="intro-ico">'+icon+'</div><div class="intro-name">'+name+'</div><div class="intro-sub">KPL MANAGER · SEASON '+((S&&S.season)||1)+'</div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('animationend',()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);});
+  }catch(_){}
+}
 /* ================= 启动 ================= */
 /* 全局异常兜底：控制台可观测 + 用户侧提示（不白屏、不静默） */
 window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档带走也无妨）
@@ -4611,6 +4721,7 @@ if(load()&&S&&S.teamName){
 }else{
   initStart();
 }
+playIntro(); // 进场动画（仅首访播放）
 
 </script>
 </body>

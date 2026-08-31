@@ -33,6 +33,8 @@ function makeDom() {
     },
     window: null, confirm: () => true, alert() {}, toast() {}, location: { reload() {} },
     setTimeout: () => 0, clearTimeout() {},
+    requestAnimationFrame: () => 0, cancelAnimationFrame: () => 0,
+    performance: { now: () => Date.now() },
   };
   dom.window = dom;
   vm.createContext(dom);

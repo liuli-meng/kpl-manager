@@ -78,8 +78,8 @@ function renderHeader(){
     <div class="logo">${S.icon}</div>
     <div class="hd-name">${S.teamName}<small>${S.phase==='champion'?'冠军俱乐部':'KPL 联赛 · 赛季'+S.season}</small></div>
     <div class="stats">
-      <div class="stat">${ic('coin',13)}<b>${fmt(S.fund)}</b><small>资金</small></div>
-      <div class="stat">${ic('bolt',13)}<b>${fmt(teamPower(S))}</b><small>总战力</small></div>
+      <div class="stat">${ic('coin',13)}<b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
+      <div class="stat">${ic('bolt',13)}<b data-num="power">${fmt(teamPower(S))}</b><small>总战力</small></div>
       <div class="stat">${ic('cal',13)}<b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
       <div class="stat ${weeklyWage(S)>S.wageCap?'red':''}">${ic('shield',13)}<b>${weeklyWage(S)}/${S.wageCap}万</b><small>周薪/帽</small></div>
       ${S.streak>=3?`<div class="stat gold">${ic('flame',13)}<b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red">${ic('flame',13)}<b>${-S.streak}连败</b><small>低迷</small></div>`:''}
@@ -88,7 +88,15 @@ function renderHeader(){
     </div>
     <button class="hd-btn" onclick="save();toast('存档成功')">${ic('doc',13)} 存档</button>
     <button class="hd-btn" onclick="openSaveMgmt()">${ic('doc',13)} 管理</button>
+    <button class="hd-btn" onclick="toggleSfx()" title="音效开关">${_sfxOn?'🔊':'🔇'}</button>
     <button class="hd-btn" onclick="resetGame()">${ic('swap',13)} 重开</button>`;
+  // 数字滚动：资金/战力平滑滚数（带 data-num 的 stat）
+  try{
+    document.querySelectorAll('#header [data-num]').forEach(el=>{
+      const key=el.dataset.num;
+      tweenNum(el,key,key==='fund'?S.fund:teamPower(S));
+    });
+  }catch(_){}
 }
 function renderClub(){
   const ls=rosterLineup(S);

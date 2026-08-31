@@ -373,6 +373,7 @@ function negoSubmit(){
     logEvent(s,(n.freeAgent?'⚪ 签下自由球员 ':'💰 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
     if(fee>=300)logEvent(s,'💣 重磅转会！联盟震动');
     window._nego=null;closeModal('app-modal');
+    try{SFX.gold();}catch(_){}
     save();renderAll();toast('🎉 谈判成功！'+p.name+' 加盟');
     return;
   }

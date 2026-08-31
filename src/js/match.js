@@ -350,6 +350,7 @@ function finishSeries(finalWin){
 function startPlayoff(){if(S.preseason){toast('📋 转会期进行中，联赛尚未开始');return;}playoffStep(S);}
 function startCard(){if(S.preseason){toast('📋 转会期进行中，联赛尚未开始');return;}playCardNext(S);}
 function showMatchModal(r,title){
+  try{(r.win?SFX.win():SFX.lose());}catch(_){}
   const mb=$('#app-modal');$('#app-modal-body').innerHTML=`
     <h2><span class="h-ic" style="background:${r.win?'rgba(67,220,156,.12)':'rgba(255,107,107,.12)'};color:${r.win?'var(--green)':'var(--red)'}">${ic(r.win?'check':'ban')}</span>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
     <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')||l.includes('✅')?'win':l.includes('❌')||l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>

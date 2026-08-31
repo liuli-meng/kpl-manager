@@ -433,3 +433,26 @@ nav button.on .ic{animation:navPulse 2.6s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
+
+/* ============================================================
+   设计感升级层 v3.2：数字滚动 / BP 动态 / 进场动画
+   ============================================================ */
+/* 数字滚动：滚数字保持等宽对齐 */
+.stat b[data-num]{display:inline-block;font-variant-numeric:tabular-nums}
+/* BP 槽位填充：盖章式弹出（每手 BAN/PICK 落定都有反馈） */
+@keyframes slotStamp{0%{transform:scale(1.45) rotate(-5deg);opacity:0}60%{transform:scale(.93)}100%{transform:scale(1) rotate(0);opacity:1}}
+.bp-slot.filled{animation:slotStamp .3s var(--ease)}
+/* BP 选人点击：青色闪光 */
+@keyframes heroFlash{0%{box-shadow:0 0 0 rgba(0,229,255,0)}45%{box-shadow:0 0 20px rgba(0,229,255,.55)}100%{box-shadow:0 0 0 rgba(0,229,255,0)}}
+.bp-hero:active{animation:heroFlash .32s ease}
+/* 进场动画：logo 聚拢 → 展开 → 淡出（pointer-events 全程穿透，不挡交互） */
+#intro-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none;
+  background:radial-gradient(640px 420px at 50% 44%,rgba(0,229,255,.10),#04060d 72%);
+  animation:introFade .85s ease .8s forwards}
+#intro-overlay .intro-inner{text-align:center;animation:introZoom 1.05s var(--ease) both}
+#intro-overlay .intro-ico{font-size:58px;line-height:1;animation:introGlow 1.4s ease-in-out .2s}
+#intro-overlay .intro-name{font-size:22px;font-weight:800;letter-spacing:5px;margin-top:12px}
+#intro-overlay .intro-sub{font-size:10px;color:var(--dim);letter-spacing:7px;margin-top:6px}
+@keyframes introZoom{0%{transform:scale(.28);opacity:0}60%{transform:scale(1.07);opacity:1}100%{transform:scale(1)}}
+@keyframes introGlow{0%,100%{filter:drop-shadow(0 0 14px rgba(0,229,255,.4))}50%{filter:drop-shadow(0 0 28px rgba(0,229,255,.75))}}
+@keyframes introFade{to{opacity:0;visibility:hidden}}
