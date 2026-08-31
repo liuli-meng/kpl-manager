@@ -463,7 +463,11 @@ function newSeason(s){
     if(p.age>=m.retire)retired.push(p);
     else p.retiring=p.age>=m.retire-1;
     p.energy=ENERGY_MAX;p.morale=clamp(p.morale+15,20,100);p.injury=0;
+    if(!p.loan)p.contract=(p.contract||2)-1; // 合同年限递减（租借选手不参与续约）
   });
+  // 合同到期名单：转会期需玩家处理续约/放走
+  s.expiring=(s.players||[]).filter(p=>!p.loan&&(p.contract||0)<=0).map(p=>p.id);
+  if(s.expiring.length)logEvent(s,'📝 '+s.expiring.length+' 名选手合同到期，转会期内需处理续约（不处理将自动续约 1 年）');
   // 赛季结算：表现溢价回归 + 黄金期后年龄贬值 + 续约涨薪（堵"身价只涨不跌"的无风险套利）
   s.players.forEach(p=>{
     const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
@@ -620,6 +624,7 @@ function signFreeAgent(s,id){
   }
   s.fund-=p.signCost;
   p.acqCost=p.signCost; // 买入价锚定（转售保护用）
+  if(p.contract==null)p.contract=2; // 签约即给合同年限
   s.freeAgents=s.freeAgents.filter(x=>x.id!==id);
   s.players.push(p);
   logEvent(s,'⚪ 自由市场签下 '+p.name+'（无球可打选手 · 签约费 '+p.signCost+'万）');

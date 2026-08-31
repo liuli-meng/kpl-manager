@@ -152,4 +152,41 @@ return JSON.stringify({paused, done:S.series===null, progressed:S.matchIdx>0});
 `);
 T.check(r9 === '{"paused":true,"done":true,"progressed":true}', '伤停暂停/恢复异常: ' + r9);
 
+// ⑩ 合同续约系统
+const r10 = run(`
+S=newState('T10','⚔️');
+const _u10=new Set();
+['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u10))));
+S.lineup=S.players.map(p=>p.id);
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+S.transferWindow=3;S.fund=5000;
+// 造一名到期主力
+const p0=S.players[0];
+p0.contract=0;p0.val=120;
+const fund0=S.fund;
+renewPlayer(S,p0.id);
+const renewed=p0.contract===RENEW_YEARS&&S.fund<fund0&&S.expiring.every(x=>x!==p0.id);
+// 造一名到期替补 → 不续约放走
+const p1=S.players[1];
+p1.contract=0;
+releasePlayer(S,p1.id);
+const released=!S.players.some(x=>x.id===p1.id)&&S.freeAgents.some(x=>x.id===p1.id)&&S.freeAgents.some(x=>x.id===p1.id&&x.freeAgent);
+// 未处理 → 转会窗结束自动续约 1 年
+const p2=S.players[2];
+p2.contract=0;
+S.expiring.push(p2.id);
+endTransferWindow(S);
+const autoRenewed=p2.contract===1&&!S.expiring.length;
+// 新赛季：合同递减 + 到期收集（一致性：expiring 必须与合同<=0 的选手吻合）
+S.phase='champion';
+newSeason(S);
+const p3=S.players.find(p=>p.id===p0.id);
+const decremented=p3&&p3.contract===RENEW_YEARS-1;
+const expectExp=S.players.filter(p=>!p.loan&&(p.contract||0)<=0).map(p=>p.id);
+const expiringConsistent=expectExp.length===S.expiring.length&&expectExp.every(id=>S.expiring.includes(id));
+const renewedNotExpiring=!S.expiring.includes(p0.id);
+return JSON.stringify({renewed, released, autoRenewed, decremented, expiringConsistent, renewedNotExpiring});
+`);
+T.check(r10 === '{"renewed":true,"released":true,"autoRenewed":true,"decremented":true,"expiringConsistent":true,"renewedNotExpiring":true}', '合同续约异常: ' + r10);
+
 T.report();

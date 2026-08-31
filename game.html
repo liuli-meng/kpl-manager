@@ -1082,6 +1082,7 @@ function migrateSave(){
   S.players.forEach(p=>{
     if(p.injury==null)p.injury=0;
     if(p.mvp==null)p.mvp=0;
+    if(p.contract==null)p.contract=2; // 合同年限（旧档补 2 年）
     if(p.retiring==null)p.retiring=false;
     if(p.age==null)p.age=ageByPos(p.pos,false);
     if(!p.sig)p.sig=(HEROES.find(h=>h.pos[0]===p.pos)||{}).n||null;
@@ -1105,6 +1106,8 @@ function migrateSave(){
   };
   (S.players||[]).forEach(renameRookie);
   (S.academy||[]).forEach(renameRookie);
+  // 青训选手补合同字段（晋升时重置为 2）
+  (S.academy||[]).forEach(r=>{if(r.contract==null)r.contract=2;});
 }
 function ensureSeason(s){
   // 启动/读档后确保赛制状态完整（新档 initGroups 在 createTeam 调用）
@@ -1163,7 +1166,7 @@ function genPlayer(def){
   HEROES.filter(h=>h.pos.includes(def.pos)&&h.n!==def.sig).forEach(h=>heroPool.push({n:h.n,lv:2}));
   return {id:def.id,name:def.name,pos:def.pos,team:def.team||null,tags:def.tags||[],
     attrs,skill:def.skill,sig:def.sig,heroPool,career:def.career||'',wage,energy:ENERGY_MAX,morale:rnd(75,92),injury:0,
-    mvp:0,retiring:false,
+    mvp:0,retiring:false,contract:rnd(2,3), // 合同年限：到期后需续约（转会期处理）
     // 传奇老将：最后一舞（退役前1-2年），普通选手按位置出道年龄
     age:(def.team==='传奇')?(AGE_MODEL[def.pos]||AGE_MODEL.mid).retire-rnd(1,2):ageByPos(def.pos,def.tags&&def.tags.includes('🌱')),
     // 商业价值（代言收入）与转会意愿（0=想走 100=死忠）
@@ -1188,6 +1191,7 @@ function buyPlayer(s,p){
     if(!confirm('⚠️ 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return false;
   }
   s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
+  if(p.contract==null)p.contract=2; // 签约即给合同年限
   s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
   logEvent(s,`🤝 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
   try{SFX.gold();}catch(_){}
@@ -1346,6 +1350,24 @@ function aiTransferWindow(s){
       return true;
     });
   });
+  // ①.5 AI 续约决策：状态差（过黄金期/战力低迷）→ 不续约释放进自由池；状态好 → 续约留队
+  // 释放的选手本队不再签回（避免"换了个寂寞"），别队/玩家可捡漏
+  const releasedFrom={};
+  teams.forEach(tn=>{
+    map[tn]=map[tn].filter(pid=>{
+      const def=defOf(s,pid);
+      if(!def)return false;
+      const p=genSeasonPlayer(s,def);
+      const am=AGE_MODEL[p.pos]||AGE_MODEL.mid;
+      const badForm=(p.age>am.gold&&Math.random()<0.55)||(overall(p)<76&&Math.random()<0.5);
+      if(badForm){
+        releasedFrom[pid]=tn;
+        logEvent(s,'📤 '+tn+' 未与 '+p.name+'（'+p.age+'岁 · 总值'+overall(p)+'）续约，状态下滑进入自由市场');
+        return false;
+      }
+      return true; // 状态好：续约留队
+    });
+  });
   // ② 自由池：未被任何 AI 队签下的 def（原版无队选手、被放走的老将、待业新星）
   // 先清「幽灵注册」：玩家已买走的 def 若残留在某 AI 队注册表（旧档/并发路径），一律除名——
   // 否则该位置被幽灵占位，球队永远补不进真人（上场时 ownedIds 过滤又打不出战力）
@@ -1367,7 +1389,7 @@ function aiTransferWindow(s){
       const have=new Set(map[tn].map(id=>defOf(s,id)).filter(Boolean).map(d=>d.pos));
       const need=POS_ORDER.find(pos=>!have.has(pos));
       if(!need)break;
-      const cands=freePool.filter(d=>d.pos===need);
+      const cands=freePool.filter(d=>d.pos===need&&releasedFrom[d.id]!==tn); // 本队不签回刚放走的
       let def;
       if(cands.length){
         def=cands.sort((a,b)=>ovrOf(b)-ovrOf(a))[0];
@@ -1504,6 +1526,7 @@ function negoComplete(s,p,fee){
   const from=p.ownerTeam,isFA=p.freeAgent;
   delete p.ownerTeam;delete p.untouchable;delete p.freeAgent;delete p.signCost;
   if(fee!=null)p.acqCost=fee; // 买入价锚定（自由球员记 0，转售按保底价压）
+  if(p.contract==null)p.contract=2; // 签约即给合同年限
   s.players.push(p);
   aiDetachDef(s,p.id); // 从 AI 阵容除名（若为 def）：原队下个转会期自动补强
   if(isFA)s.freeAgents=(s.freeAgents||[]).filter(x=>x.id!==p.id);
@@ -1839,7 +1862,54 @@ function rejectBid(s,id){
   s.bids=(s.bids||[]).filter(x=>x.id!==id);
   save();renderAll();toast('已拒绝报价');
 }
+/* ================= 合同续约系统 =================
+   赛季末合同到期 → 转会期处理：续约 2 年（签字费=身价 18%×表现系数）或放走（进自由市场）。
+   转会窗结束仍未处理的自动续约 1 年（防误伤主力，想放走需主动点"不续约"）。 */
+const RENEW_YEARS=2;
+function renewCost(p){
+  const f=(p.val||100)>=125?1.25:(p.val||100)<90?0.75:1; // 表现火热更贵、低迷更便宜
+  return Math.max(10,Math.round(sellAskPrice(p)*0.18*f));
+}
+function renewPlayer(s,pid){
+  const p=s.players.find(x=>x.id===pid);
+  if(!p||p.contract>0){toast('该选手合同未到期');return;}
+  const cost=renewCost(p);
+  if(s.fund<cost){toast('资金不足（续约签字费 '+cost+'万）');return;}
+  s.fund-=cost;
+  const nw=Math.round(wageOf(overall(p))*((p.val||100)/100)); // 新周薪按表现重定
+  if(nw>p.wage)logEvent(s,'📈 '+p.name+' 续约涨薪：'+p.wage+'万 → '+nw+'万/周（表现好值得加薪）');
+  p.wage=Math.max(p.wage,nw);
+  p.contract=RENEW_YEARS;
+  p.morale=clamp(p.morale+5,20,100);
+  p.willingness=Math.min(100,(p.willingness||50)+10);
+  logEvent(s,'🤝 与 '+p.name+' 完成续约（'+RENEW_YEARS+' 年 · 签字费 '+cost+'万 · 周薪 '+p.wage+'万）');
+  s.expiring=(s.expiring||[]).filter(x=>x!==pid);
+  save();renderAll();toast(p.name+' 续约 '+RENEW_YEARS+' 年！');
+}
+function releasePlayer(s,pid){
+  const p=s.players.find(x=>x.id===pid);
+  if(!p||p.contract>0){toast('该选手合同未到期');return;}
+  s.players=s.players.filter(x=>x.id!==pid);
+  const li=s.lineup.indexOf(pid);if(li>=0)s.lineup.splice(li,1);
+  if(s.pick)delete s.pick[p.pos];
+  p.freeAgent=true;p.willingness=rnd(70,95);
+  p.signCost=Math.round(valueOf(overall(p))*0.7);
+  p.contract=1;
+  s.freeAgents=[...(s.freeAgents||[]).filter(x=>x.id!==pid),p];
+  s.expiring=(s.expiring||[]).filter(x=>x!==pid);
+  logEvent(s,'📤 未与 '+p.name+' 续约，进入自由市场（其他队可直签）');
+  save();renderAll();toast(p.name+' 进入自由市场');
+}
 function endTransferWindow(s){
+  // 合同到期未处理的自动续约 1 年（防误伤主力；想放走需在转会期主动点"不续约"）
+  (s.expiring||[]).slice().forEach(pid=>{
+    const p=s.players.find(x=>x.id===pid);
+    if(p&&!p.loan&&p.contract<=0){
+      p.contract=1;
+      logEvent(s,'📝 '+p.name+' 合同自动续约 1 年（转会期未处理）');
+    }
+  });
+  s.expiring=[];
   s.listed=[];
   s.bids=[];
   s.transferList=[];
@@ -2059,7 +2129,7 @@ function genRookie(s){
   return {id:'rk'+_rkSeq,name,pos,team:null,tags:['🌱'],
     attrs,skill:{n:'潜力新星',t:pick(['lane','farm','team','mind']),d:'成长型选手，潜力可期'},
     sig,heroPool,career:'🎓 青训出品 · 未来之星',wage:rnd(2,4),energy:ENERGY_MAX,morale:rnd(70,90),injury:0,
-    mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true};
+    mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true,contract:2};
 }
 function recruitRookie(s){
   if(s.fund<30){toast('招募青训需 30万');return;}
@@ -2096,6 +2166,7 @@ function promoteRookie(s,id){
   s.academy=s.academy.filter(x=>x.id!==id);
   r.isRookie=false;
   r.tags=['🌱'];
+  r.contract=2; // 晋升一线队签 2 年合同
   s.players.push(r);
   if(!s.lineup.includes(r.id)&&!s.players.some(p=>p.id!==r.id&&p.pos===r.pos&&s.lineup.includes(p.id))){
     // 该位置空缺时直接进首发
@@ -2604,7 +2675,11 @@ function newSeason(s){
     if(p.age>=m.retire)retired.push(p);
     else p.retiring=p.age>=m.retire-1;
     p.energy=ENERGY_MAX;p.morale=clamp(p.morale+15,20,100);p.injury=0;
+    if(!p.loan)p.contract=(p.contract||2)-1; // 合同年限递减（租借选手不参与续约）
   });
+  // 合同到期名单：转会期需玩家处理续约/放走
+  s.expiring=(s.players||[]).filter(p=>!p.loan&&(p.contract||0)<=0).map(p=>p.id);
+  if(s.expiring.length)logEvent(s,'📝 '+s.expiring.length+' 名选手合同到期，转会期内需处理续约（不处理将自动续约 1 年）');
   // 赛季结算：表现溢价回归 + 黄金期后年龄贬值 + 续约涨薪（堵"身价只涨不跌"的无风险套利）
   s.players.forEach(p=>{
     const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
@@ -2761,6 +2836,7 @@ function signFreeAgent(s,id){
   }
   s.fund-=p.signCost;
   p.acqCost=p.signCost; // 买入价锚定（转售保护用）
+  if(p.contract==null)p.contract=2; // 签约即给合同年限
   s.freeAgents=s.freeAgents.filter(x=>x.id!==id);
   s.players.push(p);
   logEvent(s,'⚪ 自由市场签下 '+p.name+'（无球可打选手 · 签约费 '+p.signCost+'万）');
@@ -3735,6 +3811,8 @@ function pcard(p,extra){
   const heroHtml=`<div class="p-hero">出战 <b>${picked||'未定'}</b>${poolHtml}</div>`;
   // 年龄阶段标签（黄金期/下滑期/即将退役）
   const stageHtml=(p.age&&p.pos)?`<div class="p-hero" style="color:${p.age>(AGE_MODEL[p.pos]||AGE_MODEL.mid).gold?'var(--red)':'var(--green)'}">${ageStage(p)} · ${p.age}岁</div>`:'';
+  // 合同状态（租借选手无合同）
+  const contractHtml=(p.contract==null||p.loan)?'':`<div class="p-hero" style="color:${p.contract>0?'var(--dim)':'var(--red)'}">${p.contract>0?('⏳ 合同'+p.contract+'年'):'⚠️ 合同到期 · 转会期续约'}</div>`;
   const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
   const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
   return `<div class="pcard ${ovrCls(o)}">
@@ -3742,6 +3820,7 @@ function pcard(p,extra){
     <div class="p-top"><span class="p-name">${p.name}${tags}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
     <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
     ${stageHtml}
+    ${contractHtml}
     ${heroHtml}
     ${endorseHtml}
     <div class="p-skill"><b>${p.skill.n}</b> · ${p.skill.d}</div>
@@ -4081,6 +4160,24 @@ function renderMarket(){
   let transferHtml='';
   let sideHtml='';
   if(S.transferWindow>0){
+    // 合同续约面板：合同到期的选手在转会期处理（续约 2 年 / 不续约放走）
+    const expRows=(S.expiring||[]).map(pid=>{
+      const p=S.players.find(x=>x.id===pid);
+      if(!p||p.loan)return '';
+      const cost=renewCost(p);
+      const nw=Math.round(wageOf(overall(p))*((p.val||100)/100));
+      return `<div class="match" style="margin-bottom:6px;padding:8px 10px;border-color:rgba(255,200,74,.35)">
+        <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁)</span></span>
+        <div class="power" style="font-size:10px">${perfLabel(p)} ${p.val||100}%</div></div>
+        <div class="score" style="font-size:12px;min-width:0">签字费 ${cost}万<br><span style="color:var(--dim)">周薪→${nw}万</span></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn sm gold" style="margin:0" onclick="renewPlayer(S,'${pid}')">续约 ${RENEW_YEARS}年</button>
+          <button class="btn sm danger" style="margin:0" onclick="releasePlayer(S,'${pid}')">不续约</button>
+        </div></div>`;
+    }).join('');
+    const renewPanel=expRows?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3><span class="h-ic">${ic('doc')}</span>合同续约 <span class="tag">合同到期 · 转会期处理 · 不处理自动续1年</span></h3>
+      <div class="hint" style="margin-bottom:8px">续约支付签字费（身价 18%，🔥火热更贵 / ❄️低迷更便宜）并按表现重定周薪；不续约则进入自由市场（AI 队可能签走）。</div>
+      ${expRows}</div>`:'';
     const rows=(S.transferList||[]).map(p=>{
       const price=buyoutPrice(p);
       const unt=p.untouchable?(p.willingness>=75?`<span style="color:var(--red);font-weight:800">非卖 · 忠诚${p.willingness}</span>`:`<span style="color:var(--gold);font-weight:800">松动 · 意愿${p.willingness}</span>`):'';
@@ -4106,7 +4203,7 @@ function renderMarket(){
         :`<button class="btn sm danger" style="margin:0" onclick="delistPlayer(S,'${item.id}')">撤牌</button>`}
       </div>`;
     }).join('');
-    transferHtml=`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3><span class="h-ic">${ic('swap')}</span>转会市场 <span class="tag">转会窗剩余 ${S.transferWindow} 天 · 31岁+退役</span></h3>
+    transferHtml=renewPanel+`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3><span class="h-ic">${ic('swap')}</span>转会市场 <span class="tag">转会窗剩余 ${S.transferWindow} 天 · 31岁+退役</span></h3>
       <div class="hint" style="margin-bottom:8px">多轮谈判：报价需同时打动俱乐部（转会费）和选手（年薪）；非卖品溢价强挖有失败风险；生涯暮年选手（29岁+）买来即巅峰末期</div>
       <div style="max-height:340px;overflow-y:auto">${rows||'<div class="hint">转会市场暂无选手</div>'}</div>
       <div class="hint" style="margin:10px 0 6px">我的挂牌（AI 队会来报价，转会窗关闭未成交自动撤牌）：</div>

@@ -17,6 +17,8 @@ function pcard(p,extra){
   const heroHtml=`<div class="p-hero">出战 <b>${picked||'未定'}</b>${poolHtml}</div>`;
   // 年龄阶段标签（黄金期/下滑期/即将退役）
   const stageHtml=(p.age&&p.pos)?`<div class="p-hero" style="color:${p.age>(AGE_MODEL[p.pos]||AGE_MODEL.mid).gold?'var(--red)':'var(--green)'}">${ageStage(p)} · ${p.age}岁</div>`:'';
+  // 合同状态（租借选手无合同）
+  const contractHtml=(p.contract==null||p.loan)?'':`<div class="p-hero" style="color:${p.contract>0?'var(--dim)':'var(--red)'}">${p.contract>0?('⏳ 合同'+p.contract+'年'):'⚠️ 合同到期 · 转会期续约'}</div>`;
   const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
   const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
   return `<div class="pcard ${ovrCls(o)}">
@@ -24,6 +26,7 @@ function pcard(p,extra){
     <div class="p-top"><span class="p-name">${p.name}${tags}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
     <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
     ${stageHtml}
+    ${contractHtml}
     ${heroHtml}
     ${endorseHtml}
     <div class="p-skill"><b>${p.skill.n}</b> · ${p.skill.d}</div>
@@ -363,6 +366,24 @@ function renderMarket(){
   let transferHtml='';
   let sideHtml='';
   if(S.transferWindow>0){
+    // 合同续约面板：合同到期的选手在转会期处理（续约 2 年 / 不续约放走）
+    const expRows=(S.expiring||[]).map(pid=>{
+      const p=S.players.find(x=>x.id===pid);
+      if(!p||p.loan)return '';
+      const cost=renewCost(p);
+      const nw=Math.round(wageOf(overall(p))*((p.val||100)/100));
+      return `<div class="match" style="margin-bottom:6px;padding:8px 10px;border-color:rgba(255,200,74,.35)">
+        <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁)</span></span>
+        <div class="power" style="font-size:10px">${perfLabel(p)} ${p.val||100}%</div></div>
+        <div class="score" style="font-size:12px;min-width:0">签字费 ${cost}万<br><span style="color:var(--dim)">周薪→${nw}万</span></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn sm gold" style="margin:0" onclick="renewPlayer(S,'${pid}')">续约 ${RENEW_YEARS}年</button>
+          <button class="btn sm danger" style="margin:0" onclick="releasePlayer(S,'${pid}')">不续约</button>
+        </div></div>`;
+    }).join('');
+    const renewPanel=expRows?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3><span class="h-ic">${ic('doc')}</span>合同续约 <span class="tag">合同到期 · 转会期处理 · 不处理自动续1年</span></h3>
+      <div class="hint" style="margin-bottom:8px">续约支付签字费（身价 18%，🔥火热更贵 / ❄️低迷更便宜）并按表现重定周薪；不续约则进入自由市场（AI 队可能签走）。</div>
+      ${expRows}</div>`:'';
     const rows=(S.transferList||[]).map(p=>{
       const price=buyoutPrice(p);
       const unt=p.untouchable?(p.willingness>=75?`<span style="color:var(--red);font-weight:800">非卖 · 忠诚${p.willingness}</span>`:`<span style="color:var(--gold);font-weight:800">松动 · 意愿${p.willingness}</span>`):'';
@@ -388,7 +409,7 @@ function renderMarket(){
         :`<button class="btn sm danger" style="margin:0" onclick="delistPlayer(S,'${item.id}')">撤牌</button>`}
       </div>`;
     }).join('');
-    transferHtml=`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3><span class="h-ic">${ic('swap')}</span>转会市场 <span class="tag">转会窗剩余 ${S.transferWindow} 天 · 31岁+退役</span></h3>
+    transferHtml=renewPanel+`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3><span class="h-ic">${ic('swap')}</span>转会市场 <span class="tag">转会窗剩余 ${S.transferWindow} 天 · 31岁+退役</span></h3>
       <div class="hint" style="margin-bottom:8px">多轮谈判：报价需同时打动俱乐部（转会费）和选手（年薪）；非卖品溢价强挖有失败风险；生涯暮年选手（29岁+）买来即巅峰末期</div>
       <div style="max-height:340px;overflow-y:auto">${rows||'<div class="hint">转会市场暂无选手</div>'}</div>
       <div class="hint" style="margin:10px 0 6px">我的挂牌（AI 队会来报价，转会窗关闭未成交自动撤牌）：</div>

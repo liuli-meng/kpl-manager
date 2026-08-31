@@ -12,7 +12,7 @@ function genPlayer(def){
   HEROES.filter(h=>h.pos.includes(def.pos)&&h.n!==def.sig).forEach(h=>heroPool.push({n:h.n,lv:2}));
   return {id:def.id,name:def.name,pos:def.pos,team:def.team||null,tags:def.tags||[],
     attrs,skill:def.skill,sig:def.sig,heroPool,career:def.career||'',wage,energy:ENERGY_MAX,morale:rnd(75,92),injury:0,
-    mvp:0,retiring:false,
+    mvp:0,retiring:false,contract:rnd(2,3), // 合同年限：到期后需续约（转会期处理）
     // 传奇老将：最后一舞（退役前1-2年），普通选手按位置出道年龄
     age:(def.team==='传奇')?(AGE_MODEL[def.pos]||AGE_MODEL.mid).retire-rnd(1,2):ageByPos(def.pos,def.tags&&def.tags.includes('🌱')),
     // 商业价值（代言收入）与转会意愿（0=想走 100=死忠）
@@ -37,6 +37,7 @@ function buyPlayer(s,p){
     if(!confirm('⚠️ 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return false;
   }
   s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
+  if(p.contract==null)p.contract=2; // 签约即给合同年限
   s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
   logEvent(s,`🤝 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
   try{SFX.gold();}catch(_){}

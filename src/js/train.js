@@ -88,7 +88,7 @@ function genRookie(s){
   return {id:'rk'+_rkSeq,name,pos,team:null,tags:['🌱'],
     attrs,skill:{n:'潜力新星',t:pick(['lane','farm','team','mind']),d:'成长型选手，潜力可期'},
     sig,heroPool,career:'🎓 青训出品 · 未来之星',wage:rnd(2,4),energy:ENERGY_MAX,morale:rnd(70,90),injury:0,
-    mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true};
+    mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true,contract:2};
 }
 function recruitRookie(s){
   if(s.fund<30){toast('招募青训需 30万');return;}
@@ -125,6 +125,7 @@ function promoteRookie(s,id){
   s.academy=s.academy.filter(x=>x.id!==id);
   r.isRookie=false;
   r.tags=['🌱'];
+  r.contract=2; // 晋升一线队签 2 年合同
   s.players.push(r);
   if(!s.lineup.includes(r.id)&&!s.players.some(p=>p.id!==r.id&&p.pos===r.pos&&s.lineup.includes(p.id))){
     // 该位置空缺时直接进首发

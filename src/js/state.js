@@ -193,6 +193,7 @@ function migrateSave(){
   S.players.forEach(p=>{
     if(p.injury==null)p.injury=0;
     if(p.mvp==null)p.mvp=0;
+    if(p.contract==null)p.contract=2; // 合同年限（旧档补 2 年）
     if(p.retiring==null)p.retiring=false;
     if(p.age==null)p.age=ageByPos(p.pos,false);
     if(!p.sig)p.sig=(HEROES.find(h=>h.pos[0]===p.pos)||{}).n||null;
@@ -216,6 +217,8 @@ function migrateSave(){
   };
   (S.players||[]).forEach(renameRookie);
   (S.academy||[]).forEach(renameRookie);
+  // 青训选手补合同字段（晋升时重置为 2）
+  (S.academy||[]).forEach(r=>{if(r.contract==null)r.contract=2;});
 }
 function ensureSeason(s){
   // 启动/读档后确保赛制状态完整（新档 initGroups 在 createTeam 调用）
