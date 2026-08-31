@@ -119,7 +119,10 @@ function weeklyWage(s){
   (s.assistants||[]).forEach(a=>sum+=a.wage);
   return sum;
 }
-function save(){try{localStorage.setItem(slotKey(),JSON.stringify(S));}catch(e){console.warn('save fail',e);}}
+function save(){
+  try{localStorage.setItem(slotKey(),JSON.stringify(S));}
+  catch(e){console.warn('save fail',e);try{toast('⚠️ 存档失败：'+(e.message||'存储不可用'));}catch(_){}}
+}
 /* 赛制形态校验：当前阶段的分组结构是否存在且匹配。
    r2 起分组是 {S,A,B}/{S,A}，没有 G1 是正常的——不能用「无 G1」当旧档特征，
    否则打进 S 组后每次读档都会被误判成旧档、整体回滚到第一轮分组赛。 */
@@ -226,7 +229,7 @@ function ensureSeason(s){
 }
 function load(){
   try{const d=localStorage.getItem(slotKey());if(d){S=JSON.parse(d);migrateSave();return true;}}
-  catch(e){console.warn('load fail',e);}
+  catch(e){console.warn('load fail',e);try{toast('⚠️ 存档读取失败，已重新开局');}catch(_){}}
   return false;
 }
 

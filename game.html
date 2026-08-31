@@ -919,7 +919,10 @@ function weeklyWage(s){
   (s.assistants||[]).forEach(a=>sum+=a.wage);
   return sum;
 }
-function save(){try{localStorage.setItem(slotKey(),JSON.stringify(S));}catch(e){console.warn('save fail',e);}}
+function save(){
+  try{localStorage.setItem(slotKey(),JSON.stringify(S));}
+  catch(e){console.warn('save fail',e);try{toast('⚠️ 存档失败：'+(e.message||'存储不可用'));}catch(_){}}
+}
 /* 赛制形态校验：当前阶段的分组结构是否存在且匹配。
    r2 起分组是 {S,A,B}/{S,A}，没有 G1 是正常的——不能用「无 G1」当旧档特征，
    否则打进 S 组后每次读档都会被误判成旧档、整体回滚到第一轮分组赛。 */
@@ -1026,7 +1029,7 @@ function ensureSeason(s){
 }
 function load(){
   try{const d=localStorage.getItem(slotKey());if(d){S=JSON.parse(d);migrateSave();return true;}}
-  catch(e){console.warn('load fail',e);}
+  catch(e){console.warn('load fail',e);try{toast('⚠️ 存档读取失败，已重新开局');}catch(_){}}
   return false;
 }
 
@@ -4522,13 +4525,19 @@ function applyClub(){
 }
 
 /* ================= 启动 ================= */
-/* 全局异常兜底：开发期控制台可观测，生产不白屏 */
-window.addEventListener('error', e => {
-  try{ console.error('[全局异常]', e.message, (e.filename||'')+':'+(e.lineno||'?')); toast('⚠️ 程序异常：'+(e.message||'未知错误')); }catch(_){}
-});
-window.addEventListener('unhandledrejection', e => {
-  try{ console.error('[未处理Promise拒绝]', e.reason); }catch(_){}
-});
+/* 全局异常兜底：控制台可观测 + 用户侧提示（不白屏、不静默） */
+window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档带走也无妨）
+function _reportErr(tag,msg){
+  try{
+    window.__errLog.push({t:Date.now(),tag,m:String(msg||'').slice(0,200)});
+    window.__errLog=window.__errLog.slice(-20);
+    console.error('['+tag+']',msg);
+    if(S)try{logEvent(S,'⚠️ 程序异常：'+String(msg||'').slice(0,80));}catch(_){}
+    toast('⚠️ 出现异常：'+(String(msg||'未知错误').slice(0,60))+'（建议先导出存档）');
+  }catch(_){}
+}
+window.addEventListener('error', e => _reportErr('全局异常', e.message||'未知错误'));
+window.addEventListener('unhandledrejection', e => _reportErr('Promise拒绝', e.reason));
 $$('nav button').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
 if(load()&&S&&S.teamName){
   ensureSeason(S); // 旧档自动迁移到 KPL 2025 赛制

@@ -227,13 +227,19 @@ function applyClub(){
 }
 
 /* ================= 启动 ================= */
-/* 全局异常兜底：开发期控制台可观测，生产不白屏 */
-window.addEventListener('error', e => {
-  try{ console.error('[全局异常]', e.message, (e.filename||'')+':'+(e.lineno||'?')); toast('⚠️ 程序异常：'+(e.message||'未知错误')); }catch(_){}
-});
-window.addEventListener('unhandledrejection', e => {
-  try{ console.error('[未处理Promise拒绝]', e.reason); }catch(_){}
-});
+/* 全局异常兜底：控制台可观测 + 用户侧提示（不白屏、不静默） */
+window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档带走也无妨）
+function _reportErr(tag,msg){
+  try{
+    window.__errLog.push({t:Date.now(),tag,m:String(msg||'').slice(0,200)});
+    window.__errLog=window.__errLog.slice(-20);
+    console.error('['+tag+']',msg);
+    if(S)try{logEvent(S,'⚠️ 程序异常：'+String(msg||'').slice(0,80));}catch(_){}
+    toast('⚠️ 出现异常：'+(String(msg||'未知错误').slice(0,60))+'（建议先导出存档）');
+  }catch(_){}
+}
+window.addEventListener('error', e => _reportErr('全局异常', e.message||'未知错误'));
+window.addEventListener('unhandledrejection', e => _reportErr('Promise拒绝', e.reason));
 $$('nav button').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
 if(load()&&S&&S.teamName){
   ensureSeason(S); // 旧档自动迁移到 KPL 2025 赛制
