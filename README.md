@@ -8,6 +8,15 @@ LOL 电竞经理式的 KPL 俱乐部经营游戏：签约/转会谈判、训练�
 
 GitHub: <https://github.com/liuli-meng/kpl-manager>
 
+## 🎮 在线试玩（GitHub Pages）
+
+点链接直接进游戏，无需下载安装（push main 自动构建部署）：
+
+- 在线玩：<https://liuli-meng.github.io/kpl-manager/>
+- 本地玩：仓库页 `Code → Download ZIP` → 解压后**双击 `game.html`** 即可
+
+存档都存浏览器 localStorage，在线/本地互不影响，各玩各的。
+
 ## 项目定位与边界
 
 **纯前端单文件同人游戏**：无后端、无数据库、无网络请求，存档在浏览器 localStorage（3 槽）。

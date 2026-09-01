@@ -232,7 +232,67 @@ function aiTransferWindow(s){
     logEvent(s,'🧑‍🏫 换帅！'+c.name+'（全队战力+'+c.bonus+'%）执教 '+tn+(cur.name?'，'+cur.name+' 回流名宿市场':''));
   });
   if(coachMoved)s.aiRosters={}; // 教练加成变化：名册缓存战力失效
+  // ⑦ AI 青训培养：AI 队也有自家青训营——概率培养底子，达标的自动晋升替换队内弱首发
+  //    （补上"AI 永不培养青训"的生态缺口，新秀在联盟里有真实成长与上位路径）
+  s.aiAcademy=s.aiAcademy||{};
+  let rookMoved=false;
+  order.forEach(tn=>{
+    if(Math.random()>=0.4)return; // 40% 概率参与青训运作（弱队优先，order 已按战力升序）
+    if(!s.aiAcademy[tn]||!s.aiAcademy[tn].length){
+      const pool=[];
+      for(let k=0;k<rnd(1,2);k++){
+        const def=genAiRookieDef(s,tn);
+        s.extraDefs.push(def);
+        pool.push(def.id);
+      }
+      s.aiAcademy[tn]=pool;
+      logEvent(s,'🎓 '+tn+' 青训营开班，签入 '+pool.length+' 名新秀（'+pool.map(id=>defOf(s,id).name).join('、')+'）');
+    }
+    // 培养一名新秀（随机属性 +2~4，与玩家青训培养同量级）
+    const id=s.aiAcademy[tn][rnd(0,s.aiAcademy[tn].length-1)];
+    const r=defOf(s,id);
+    if(!r)return;
+    const key=pick(['lane','farm','team','mind']);
+    const idx=['lane','farm','team','mind'].indexOf(key);
+    r.base[idx]=clamp((r.base[idx]||70)+rnd(2,4),40,95);
+    const rSum=sumBase(r);
+    logEvent(s,'📈 '+tn+' 培养青训 '+r.name+'（'+POS[r.pos][0]+'）「'+TRAIN_ITEMS.find(t=>t.k===key).n+'」+2~4');
+    // 达标晋升：四维和≥300 且队内该位置首发弱于新秀 → 替换上位（老将离队寻找下家）
+    if(rSum>=300){
+      const rOvr=overall(genSeasonPlayer(s,r));
+      const oldIdx=map[tn].findIndex(pid=>{const d=defOf(s,pid);return d&&d.pos===r.pos;});
+      if(oldIdx>=0){
+        const oldDef=defOf(s,map[tn][oldIdx]);
+        if(oldDef&&overall(genSeasonPlayer(s,oldDef))<rOvr){
+          map[tn][oldIdx]=r.id;
+          rookMoved=true;
+          logEvent(s,'🚀 '+tn+' 新秀 '+r.name+'（'+rOvr+'总值）晋升一线队，'+oldDef.name+' 离队寻找下家');
+          return; // 晋升替换完成，本队不再继续
+        }
+      }else if(map[tn].length<5){
+        map[tn].push(r.id);
+        rookMoved=true;
+        logEvent(s,'🚀 '+tn+' 新秀 '+r.name+'（'+rOvr+'总值）晋升一线队（'+POS[r.pos][0]+'）');
+      }
+    }
+  });
+  if(rookMoved)s.aiRosters={}; // 名册缓存失效
 }
+/* AI 青训新秀 def（四维底子 60-70 起，培养 2-4 次可达 300 晋升线；名字全局查重） */
+function genAiRookieDef(s,teamName){
+  const used=rookieUsedNames(s);
+  PLAYER_POOL.concat(s.extraDefs).forEach(d=>used.add(d.name));
+  let name;
+  const guard=()=>{let g=0;while(g++<60){const n=Math.random()<0.5?(pick(['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见'])+'·'+teamName.slice(0,2)):(pick(RK_A)+pick(RK_B));if(!used.has(n)){used.add(n);return n;}}return '青训·'+teamName.slice(0,2);};
+  name=guard();
+  const pos=pick(POS_ORDER);
+  const b=v=>clamp(v+rnd(-3,3),58,76);
+  return {id:'aiq'+gameYear(s)+'_'+rnd(1000,9999)+'_'+teamName.slice(0,2),name,pos,team:teamName,tags:['🌱'],
+    base:[b(70),b(68),b(70),b(68)],
+    skill:{n:'潜力新星',t:pick(['lane','farm','team','mind']),d:'AI 青训出品，达标自动晋升'},
+    sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:'🎓 '+teamName+' 青训营培养的新生代。'};
+}
+function sumBase(d){return (d.base||[0,0,0,0]).reduce((t,v)=>t+v,0);}
 /* 构建转会市场：各 AI 队选手（含非卖品与意愿） */
 function buildTransferMarket(s){
   s.transferList=[];
@@ -747,8 +807,48 @@ function endPreseason(s){
   save();renderAll();
   toast('联赛正式开始！去俱乐部页查看赛程');
 }
-/* 刷新自由市场：转会窗内每日首次免费（可重复刷但按 5 万/次收费） */
-function refreshMarket(s){
+/* 跳过剩余转会期：每天自动训练核心选手 + 培养青训（不浪费天数），AI 报价照常走，
+   天数走完后自动结束转会期并开赛（与 endPreseason 的阵容校验一致） */
+function skipTransferWindow(s){
+  const left=s.transferWindow||0;
+  if(left<=0){toast('当前不在转会期');return;}
+  if(!confirm('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，80万/次）\n· 培养一名青训（潜力优先，100万/次）\n资金不足的天数自动跳过；AI 报价照常进行。'))return;
+  autoFillLineup(s);
+  const miss=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos));
+  if(miss.length){toast('❌ '+miss.map(pos=>POS[pos][0]).join('、')+' 位置无人，无法开赛，请先签约选手');return;}
+  let guard=0;
+  while(s.transferWindow>0&&guard++<30){
+    if(!s.trained)autoDoTrain(s);
+    if(!s.academyTrained)autoTrainRookie(s);
+    const bidsBefore=(s.bids||[]).length;
+    nextDay(s); // 内部处理 AI 报价 / 转会窗关闭自动开赛 / 发薪 / 随机事件
+    // 挂牌选手被 AI 报价：暂停跳过、保留剩余天数，优先去谈判（接受/拒绝/撤牌）
+    if((s.bids||[]).length>bidsBefore){
+      logEvent(s,'📩 转会期出现新报价，跳过流程暂停——请到转会市场处理（接受/拒绝/撤牌）');
+      save();renderAll();
+      toast('📩 有 AI 报价！已暂停跳过，去转会市场谈判');
+      goPage('market');
+      return;
+    }
+  }
+  logEvent(s,'⏩ 跳过转会期剩余天数：已自动完成训练与青训培养，联赛正式开始');
+  save();renderAll();
+  toast('⏩ 转会期跳过完成，联赛开始！');
+}
+function autoDoTrain(s){
+  if(s.fund<80)return;
+  const p=s.players.filter(x=>x.injury<=0&&x.energy>=10).sort((a,b)=>overall(b)-overall(a))[0];
+  if(!p)return;
+  const key=['lane','farm','team','mind'].sort((a,b)=>p.attrs[a]-p.attrs[b])[0]; // 练最弱属性
+  doTrain(s,p.id,key);
+}
+function autoTrainRookie(s){
+  if(s.fund<100)return;
+  const r=(s.academy||[]).filter(x=>!rookieReady(x)).sort((a,b)=>(b.potential||0)-(a.potential||0))[0];
+  if(!r)return;
+  trainRookie(s,r.id);
+}
+/* 刷新自由市场：转会窗内每日首次免费（可重复刷但按 5 万/次收费） */function refreshMarket(s){
   const inWindow=s.transferWindow>0;
   const free=inWindow&&!s.marketRefreshed;
   if(!free){

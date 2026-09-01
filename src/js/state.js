@@ -29,6 +29,10 @@ function newState(teamName,icon){
 function rosterAll(s){return s.players;}
 function rosterLineup(s){return s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);}
 function rosterBench(s){return s.players.filter(p=>!s.lineup.includes(p.id));}
+/* 夺冠阵容快照：冠军/亚军入册时记录当时的首发名单（荣誉室可回看"这冠是谁打下来的"） */
+function titleRoster(s){
+  try{return rosterLineup(s).map(p=>p.name).join('、')||'—';}catch(e){return '';}
+}
 function moraleAll(s,v){s.players.forEach(p=>p.morale=clamp(p.morale+v,20,100));}
 /* 选手当前选用英雄（未 BP 时默认招牌） */
 function pickedHero(s,p){return (s.pick&&s.pick[p.pos])||p.sig;}

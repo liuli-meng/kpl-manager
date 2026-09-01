@@ -62,6 +62,62 @@ const out = vm.runInContext(`
   const d9=window._draft;renderBP();
   if(!document.querySelector('#app-modal-body').innerHTML.includes('盲选'))fail('BO9 巅峰对决界面未显示盲选');
   log('⑤BO9 决赛：4:4 → 第 9 局巅峰对决（盲选）判定 OK');
+  // ⑥ 跳过剩余转会期：自动训练核心 + 自动青训培养
+  S=newState('测试队','⚔️');
+  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  S.lineup=S.players.map(p=>p.id);
+  S.academy=[genRookie(S)];
+  S.preseason=true;S.transferWindow=4;S.trained=false;S.academyTrained=false;
+  S.eventLog=[];
+  const fundBefore=S.fund;
+  skipTransferWindow(S);
+  if(S.transferWindow!==0)fail('跳过后天数应清零: '+S.transferWindow);
+  if(S.preseason)fail('跳过后应自动开赛（preseason 应为 false）');
+  if(S.phase!=='r1')fail('跳过后应进入常规赛: '+S.phase);
+  const hasTrain=S.eventLog.some(e=>/训练完成/.test(e.txt));
+  const hasRookie=S.eventLog.some(e=>/青训培养/.test(e.txt));
+  if(!hasTrain)fail('跳过期间未自动训练核心选手');
+  if(!hasRookie)fail('跳过期间未自动培养青训');
+  const spent=fundBefore-S.fund;
+  const trainDays=S.eventLog.filter(e=>/训练完成/.test(e.txt)).length;
+  const rookieDays=S.eventLog.filter(e=>/青训培养/.test(e.txt)).length;
+  if(trainDays<1||rookieDays<1)fail('跳过期间训练/青训执行天数异常: 训练'+trainDays+' 培养'+rookieDays);
+  log('⑥跳过转会期：'+S.transferWindow+'→0 天，自动训练 '+trainDays+' 天 + 青训培养 '+rookieDays+' 天（净支出 '+spent+' 万，含每日赞助收入）→ 联赛开赛 OK');
+  // ⑦ AI 青训培养：转会期 AI 队概率培养自家青训（底子成长），达标晋升替换弱首发
+  S=newState('测试队','⚔️');
+  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  S.lineup=S.players.map(p=>p.id);
+  S.annualPts={};S.ewc=null;S.annual=null;S.challenger=null;
+  S.eventLog=[];
+  let acLogs=0;
+  for(let i=0;i<6;i++){ // 多赛季转会期，青训培养/晋升必然出现
+    const before=S.eventLog.length;
+    aiTransferWindow(S);
+    acLogs+=S.eventLog.slice(before).filter(e=>/培养青训/.test(e.txt)).length;
+  }
+  if(!Object.keys(S.aiAcademy||{}).length)fail('AI 青训营未建立: '+JSON.stringify(S.aiAcademy));
+  if(acLogs<1)fail('AI 青训培养未发生');
+  const promoteLogs=S.eventLog.some(e=>/晋升一线队/.test(e.txt));
+  log('⑦AI 青训培养：'+Object.keys(S.aiAcademy).length+' 队有青训营 · 培养 '+acLogs+' 人次'+(promoteLogs?' · 有新秀晋升一线队':'（晋升需多赛季累积）'));
+  // ⑧ 跳过转会期遇报价中断（挂牌后跳过：无报价→跳过完；有报价→暂停保留天数并跳转会页）
+  S=newState('测试队','⚔️');
+  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  S.lineup=S.players.map(p=>p.id);
+  const bench=S.players.find(p=>!S.lineup.includes(p.id));
+  if(!bench){const fa=genPlayer(genFreeAgentDef('mid','low',new Set()));fa.contract=2;S.players.push(fa);}
+  const bench2=S.players.find(p=>!S.lineup.includes(p.id));
+  S.preseason=true;S.transferWindow=5;S.trained=false;S.academyTrained=false;
+  listPlayer(S,bench2.id);
+  skipTransferWindow(S);
+  if(S.transferWindow>0&&!(S.bids||[]).length)fail('中断跳过但无报价记录');
+  if(S.transferWindow===0&&S.preseason)fail('跳过完成后应已开赛');
+  log('⑧跳过遇报价：'+(S.transferWindow>0?('暂停保留 '+S.transferWindow+' 天（有报价待处理）'):'无报价跳过完并开赛'));
+  // ⑨ 荣誉室夺冠阵容快照
+  S.honors=[];
+  S.champion=true;
+  recordSeason(S);
+  if(!S.honors.length||!S.honors[0].roster)fail('荣誉室缺夺冠阵容快照');
+  log('⑨荣誉室夺冠阵容：'+S.honors[0].title+' — '+S.honors[0].roster);
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()

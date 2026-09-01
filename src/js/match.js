@@ -263,7 +263,7 @@ function playGame(){
 function recordSeason(s){
   try{
     s.honors=s.honors||[];
-    s.honors.push({season:s.season,title:(s.champion?(splitLabel(s)+' 总冠军'):(splitLabel(s)+' 亚军')),champion:!!s.champion});
+    s.honors.push({season:s.season,title:(s.champion?(splitLabel(s)+' 总冠军'):(splitLabel(s)+' 亚军')),champion:!!s.champion,roster:titleRoster(s)});
     s.honors=s.honors.slice(-20);
   }catch(e){}
 }

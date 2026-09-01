@@ -132,6 +132,9 @@ function renderClub(){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           <button class="btn" style="flex:1;min-width:140px" onclick="nextDay(S)">⏭ 推进一天（剩余 ${Math.max(0,S.transferWindow-1)} 天）</button>
+          <button class="btn gold" style="flex:1;min-width:140px" onclick="skipTransferWindow(S)">⏩ 跳过剩余 ${Math.max(0,S.transferWindow)} 天（自动训练/培养）</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           <button class="btn gold" style="flex:1;min-width:140px" onclick="endPreseason(S)">✅ 结束转会期 · 开始赛季</button>
         </div>
       </div>`;
@@ -313,7 +316,7 @@ function renderBiz(){
       const badge=h.champion?'冠军':'亚军';
       const txt=h.champion?'夺冠':'亚军';
       return `<div class="sponsor" style="margin-bottom:6px"><span class="s-icon">${badge}</span>
-        <div><div class="s-name">${h.title||('赛季'+h.season)}</div><div class="s-desc">${txt}</div></div></div>`;
+        <div><div class="s-name">${h.title||('赛季'+h.season)}</div><div class="s-desc">${txt}${h.roster?` · 夺冠阵容：<span class="cyan">${h.roster}</span>`:''}</div></div></div>`;
     }).join('');
   }else{
     html+=`<div class="hint">还没有冠军记录，努力冲击总冠军吧！</div>`;

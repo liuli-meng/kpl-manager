@@ -727,7 +727,7 @@ function finishChallenger(s){
   if(prize){s.fund+=prize;logEvent(s,'🏦 挑战者杯奖金：+'+prize+'万');}
   if(c.champ===s.teamName||runner===s.teamName){
     s.honors=s.honors||[];
-    s.honors.push({season:s.season,title:gameYear(s)+' 挑战者杯 '+(c.champ===s.teamName?'冠军':'亚军'),champion:c.champ===s.teamName});
+    s.honors.push({season:s.season,title:gameYear(s)+' 挑战者杯 '+(c.champ===s.teamName?'冠军':'亚军'),champion:c.champ===s.teamName,roster:titleRoster(s)});
     s.honors=s.honors.slice(-20);
   }
   awardFMVP(s,c.champ,gameYear(s)+' 挑战者杯');
@@ -797,7 +797,7 @@ function finishEWC(s){
   if(prize){s.fund+=prize;logEvent(s,'🏦 EWC 赛事奖金（美元折算）：+'+prize+'万');}
   if(e.champ===s.teamName||runner===s.teamName){
     s.honors=s.honors||[];
-    s.honors.push({season:s.season,title:gameYear(s)+' EWC 电竞世界杯 '+(e.champ===s.teamName?'冠军':'亚军'),champion:e.champ===s.teamName});
+    s.honors.push({season:s.season,title:gameYear(s)+' EWC 电竞世界杯 '+(e.champ===s.teamName?'冠军':'亚军'),champion:e.champ===s.teamName,roster:titleRoster(s)});
     s.honors=s.honors.slice(-20);
   }
   awardFMVP(s,e.champ,gameYear(s)+' EWC 电竞世界杯');
@@ -947,7 +947,7 @@ function finishAnnual(s,silent){
     if(prize){s.fund+=prize;logEvent(s,'🏦 年度总决赛奖金：+'+prize+'万');}
     if(p.champ===s.teamName||runner===s.teamName){
       s.honors=s.honors||[];
-      s.honors.push({season:s.season,title:gameYear(s)+' KPL年度总决赛 '+(p.champ===s.teamName?'冠军':'亚军'),champion:p.champ===s.teamName});
+      s.honors.push({season:s.season,title:gameYear(s)+' KPL年度总决赛 '+(p.champ===s.teamName?'冠军':'亚军'),champion:p.champ===s.teamName,roster:titleRoster(s)});
       s.honors=s.honors.slice(-20);
     }
     awardFMVP(s,p.champ,gameYear(s)+' KPL 年度总决赛');
