@@ -58,17 +58,17 @@ const _curve=(pts,o)=>{
   return pts[pts.length-1][1];
 };
 /* 总值→签约身价（万）：锚定旧经济（顶星≈260 / 主力≈130 / 轮换≈55） */
-const VALUE_PTS=[[40,6],[50,14],[60,30],[66,45],[72,65],[76,100],[80,140],[84,185],[88,240],[92,285],[96,335],[99,400]];
+const VALUE_PTS=[[40,60],[50,140],[60,300],[66,450],[72,650],[76,1000],[80,1400],[84,1850],[88,2400],[92,2850],[96,3350],[99,4000]];
 const valueOf=o=>_curve(VALUE_PTS,o);
 /* 总值→周薪曲线（万） */
-const WAGE_PTS=[[40,1.2],[50,2],[60,3.5],[66,5],[72,7.5],[76,10],[80,14],[85,21],[90,28],[96,35],[99,40]];
+const WAGE_PTS=[[40,12],[50,20],[60,35],[66,50],[72,75],[76,100],[80,140],[85,210],[90,280],[96,350],[99,400]];
 const wageOf=o=>_curve(WAGE_PTS,o);
 const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
                    {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
-const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:10,cost:0},
-                {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:25,cost:150},
-                {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:55,cost:400},
-                {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:110,cost:1000}];
+const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:100,cost:0},
+                {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:250,cost:1500},
+                {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:550,cost:4000},
+                {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:1100,cost:10000}];
 const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
 
 /* ================= 英雄池（KPL 常用英雄 · 含摇摆位） =================
@@ -266,31 +266,31 @@ const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7}; // BO5/BO7：系列赛总局数�
 /* ================= 教练池（真实 KPL 主教练） =================
    bonus: 全队战力%  style: 侧重属性(对应属性额外加成)  wage: 周薪  cost: 签约费 */
 const COACH_POOL=[
- {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:32,cost:320,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
- {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:32,cost:320,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
- {id:'co3',name:'久哲',rating:90,style:'lane',bonus:9,styleBonus:6,wage:30,cost:300,skill:{n:'五冠哲神',d:'全队战力+9%，对线属性额外+6%（Hero王朝奠基人）'}},
- {id:'co4',name:'林',rating:90,style:'team',bonus:8,styleBonus:5,wage:28,cost:280,skill:{n:'赛训总监',d:'全队战力+8%，团战属性额外+5%（男人哥）'}},
- {id:'co5',name:'老林',rating:80,style:'farm',bonus:5,styleBonus:4,wage:16,cost:150,skill:{n:'赛训大师',d:'全队战力+5%，运营属性额外+4%'}},
- {id:'co6',name:'月光',rating:80,style:'mind',bonus:5,styleBonus:4,wage:15,cost:140,skill:{n:'月之BP',d:'全队战力+5%，心态属性额外+4%'}},
- {id:'co7',name:'Gemini',rating:80,style:'mind',bonus:5,styleBonus:4,wage:14,cost:130,skill:{n:'毒奶玄学',d:'全队战力+5%，心态属性额外+4%（比赛毒奶对手）'}},
- {id:'co8',name:'花楼',rating:80,style:'lane',bonus:4,styleBonus:3,wage:14,cost:120,skill:{n:'稳健BP',d:'全队战力+4%，对线属性额外+3%'}},
- {id:'co9',name:'张角',rating:80,style:'farm',bonus:4,styleBonus:3,wage:13,cost:115,skill:{n:'战术大师',d:'全队战力+4%，运营属性额外+3%'}},
- {id:'co10',name:'Awoke',rating:80,style:'team',bonus:4,styleBonus:3,wage:13,cost:115,skill:{n:'冠军赛训',d:'全队战力+4%，团战属性额外+3%'}},
- {id:'co11',name:'奶茶',rating:70,style:'mind',bonus:2,styleBonus:2,wage:8,cost:55,skill:{n:'鸡汤教练',d:'全队战力+2%，心态属性额外+2%'}},
- {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:7,cost:50,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
+ {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:320,cost:3200,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
+ {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:320,cost:3200,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
+ {id:'co3',name:'久哲',rating:90,style:'lane',bonus:9,styleBonus:6,wage:300,cost:3000,skill:{n:'五冠哲神',d:'全队战力+9%，对线属性额外+6%（Hero王朝奠基人）'}},
+ {id:'co4',name:'林',rating:90,style:'team',bonus:8,styleBonus:5,wage:280,cost:2800,skill:{n:'赛训总监',d:'全队战力+8%，团战属性额外+5%（男人哥）'}},
+ {id:'co5',name:'老林',rating:80,style:'farm',bonus:5,styleBonus:4,wage:160,cost:1500,skill:{n:'赛训大师',d:'全队战力+5%，运营属性额外+4%'}},
+ {id:'co6',name:'月光',rating:80,style:'mind',bonus:5,styleBonus:4,wage:150,cost:1400,skill:{n:'月之BP',d:'全队战力+5%，心态属性额外+4%'}},
+ {id:'co7',name:'Gemini',rating:80,style:'mind',bonus:5,styleBonus:4,wage:140,cost:1300,skill:{n:'毒奶玄学',d:'全队战力+5%，心态属性额外+4%（比赛毒奶对手）'}},
+ {id:'co8',name:'花楼',rating:80,style:'lane',bonus:4,styleBonus:3,wage:140,cost:1200,skill:{n:'稳健BP',d:'全队战力+4%，对线属性额外+3%'}},
+ {id:'co9',name:'张角',rating:80,style:'farm',bonus:4,styleBonus:3,wage:130,cost:1150,skill:{n:'战术大师',d:'全队战力+4%，运营属性额外+3%'}},
+ {id:'co10',name:'Awoke',rating:80,style:'team',bonus:4,styleBonus:3,wage:130,cost:1150,skill:{n:'冠军赛训',d:'全队战力+4%，团战属性额外+3%'}},
+ {id:'co11',name:'奶茶',rating:70,style:'mind',bonus:2,styleBonus:2,wage:80,cost:550,skill:{n:'鸡汤教练',d:'全队战力+2%，心态属性额外+2%'}},
+ {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:70,cost:500,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
 ];
 const COACH_STYLE={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
 
 /* ================= 助教池（教练组第二块拼图，最多聘 2 名，加成与主教练叠加） =================
    幅度小于主教练；退役名宿教练也可 6 折转任助教 */
 const ASSISTANT_POOL=[
- {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:6,cost:90,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
- {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:6,cost:90,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
- {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:5,cost:70,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
- {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:5,cost:70,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
- {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:4,cost:55,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
- {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:4,cost:55,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
- {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:3,cost:40,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
+ {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:60,cost:900,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
+ {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:60,cost:900,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
+ {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:50,cost:700,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
+ {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:50,cost:700,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
+ {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:40,cost:550,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
+ {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:40,cost:550,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
+ {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:30,cost:400,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
 ];
 
 /* ================= 转会市场：AI 战队选手池（u=非卖品） ================= */
@@ -317,24 +317,24 @@ const AI_ROSTERS={
 /* ================= 原版俱乐部模板（豪门/中坚/草根预算差异化） =================
    budget: 初始资金  cap: 工资帽  coach: 教练  players: 首发  seed: 战力种子(开局分组用) */
 const CLUB_TEMPLATES=[
- {name:'成都AG超玩会',icon:'🔥',budget:1500,cap:150,coach:'co1',seed:640,players:['top4','jg4','mid3','ad1','sup3'],desc:'银河战舰 · 2025三冠王朝 · 预算拉满'},
- {name:'重庆狼队',icon:'🐺',budget:1400,cap:145,coach:'co2',seed:620,players:['top6','jg5','mid4','ad2','sup4'],desc:'六冠豪门 · 野核体系 · 顶级预算'},
- {name:'武汉eStarPro',icon:'⭐',budget:1300,cap:140,coach:'co3',seed:600,players:['top3','jg3','mid1','ad3','sup2'],desc:'eStar王朝 · 三冠主力全保留'},
- {name:'北京WB',icon:'🐻',budget:1000,cap:125,coach:'co5',seed:580,players:['top5','jg2','mid6','ad4','sup5'],desc:'追光者 · 暖阳领衔 · 中坚预算'},
- {name:'广州TTG',icon:'🥏',budget:900,cap:118,coach:'co8',seed:540,players:['top12','jg13','mid2','ad11','sup13'],desc:'九尾带队 · 法刺体系'},
- {name:'南京Hero久竞',icon:'💀',budget:950,cap:120,coach:'co10',seed:460,players:['top9','jg6','mid5','ad12','sup6'],desc:'久竞传奇 · 久诚回归 · 中游预算'},
- {name:'苏州KSG',icon:'🐯',budget:850,cap:112,coach:'co9',seed:500,players:['top14','jg7','mid13','ad9','sup12'],desc:'新锐崛起 · 稳扎稳打'},
- {name:'上海EDG.M',icon:'⚡',budget:600,cap:100,coach:'co11',seed:440,players:['top10','jg16','mid15','ad14','sup15'],desc:'平民战队 · 挑战者之路 · 低预算高目标'},
- {name:'北京JDG',icon:'🐆',budget:950,cap:120,coach:'co4',seed:570,players:['top11','jg12','mid12','ad10','sup10'],desc:'劲旅 · 轩染领衔 · 顶配中坚'},
- {name:'济南RW侠',icon:'🗡️',budget:900,cap:118,coach:'co6',seed:560,players:['top1','jg1','mid10','ad7','sup11'],desc:'传奇飞牛坐镇 · 老牌侠客'},
- {name:'佛山DRG',icon:'🐉',budget:850,cap:112,coach:'co7',seed:500,players:['top7','jg8','mid8','ad5','sup8'],desc:'龙魂新锐 · 百兽野心'},
+ {name:'成都AG超玩会',icon:'🔥',budget:15000,cap:1500,coach:'co1',seed:640,players:['top4','jg4','mid3','ad1','sup3'],desc:'银河战舰 · 2025三冠王朝 · 预算拉满'},
+ {name:'重庆狼队',icon:'🐺',budget:14000,cap:1450,coach:'co2',seed:620,players:['top6','jg5','mid4','ad2','sup4'],desc:'六冠豪门 · 野核体系 · 顶级预算'},
+ {name:'武汉eStarPro',icon:'⭐',budget:13000,cap:1400,coach:'co3',seed:600,players:['top3','jg3','mid1','ad3','sup2'],desc:'eStar王朝 · 三冠主力全保留'},
+ {name:'北京WB',icon:'🐻',budget:10000,cap:1250,coach:'co5',seed:580,players:['top5','jg2','mid6','ad4','sup5'],desc:'追光者 · 暖阳领衔 · 中坚预算'},
+ {name:'广州TTG',icon:'🥏',budget:9000,cap:1180,coach:'co8',seed:540,players:['top12','jg13','mid2','ad11','sup13'],desc:'九尾带队 · 法刺体系'},
+ {name:'南京Hero久竞',icon:'💀',budget:9500,cap:1200,coach:'co10',seed:460,players:['top9','jg6','mid5','ad12','sup6'],desc:'久竞传奇 · 久诚回归 · 中游预算'},
+ {name:'苏州KSG',icon:'🐯',budget:8500,cap:1120,coach:'co9',seed:500,players:['top14','jg7','mid13','ad9','sup12'],desc:'新锐崛起 · 稳扎稳打'},
+ {name:'上海EDG.M',icon:'⚡',budget:6000,cap:1000,coach:'co11',seed:440,players:['top10','jg16','mid15','ad14','sup15'],desc:'平民战队 · 挑战者之路 · 低预算高目标'},
+ {name:'北京JDG',icon:'🐆',budget:9500,cap:1200,coach:'co4',seed:570,players:['top11','jg12','mid12','ad10','sup10'],desc:'劲旅 · 轩染领衔 · 顶配中坚'},
+ {name:'济南RW侠',icon:'🗡️',budget:9000,cap:1180,coach:'co6',seed:560,players:['top1','jg1','mid10','ad7','sup11'],desc:'传奇飞牛坐镇 · 老牌侠客'},
+ {name:'佛山DRG',icon:'🐉',budget:8500,cap:1120,coach:'co7',seed:500,players:['top7','jg8','mid8','ad5','sup8'],desc:'龙魂新锐 · 百兽野心'},
  {name:'深圳DYG',icon:'🦅',budget:800,cap:110,coach:'co4',seed:480,players:['top13','jg14','mid7','ad6','sup14'],desc:'小义引擎 · 重塑荣光'},
- {name:'长沙TES.A',icon:'🌪️',budget:700,cap:105,coach:'co6',seed:450,players:['top8','jg15','mid14','ad13','sup9'],desc:'滔搏青春风暴 · 稳中求进'},
- {name:'杭州LGD.NBW',budget:650,cap:100,coach:'co7',seed:430,icon:'🐧',players:['top15','jg17','mid16','ad8','sup16'],desc:'大鹅新军 · 敢打敢拼'},
- {name:'上海RNG.M',icon:'👑',budget:600,cap:100,coach:'co4',seed:420,players:['top16','jg11','mid17','ad15','sup7'],desc:'皇族余晖 · 重建之路'},
- {name:'西安WE',icon:'🦂',budget:550,cap:95,coach:'co6',seed:410,players:['top17','jg18','mid9','ad16','sup17'],desc:'蓝色风暴 · 草根逆袭'},
- {name:'桐乡情久',icon:'🧧',budget:520,cap:95,coach:'co7',seed:400,players:['top18','jg19','mid11','ad17','sup18'],desc:'新军冲击 · 从零开始'},
- {name:'常山UUG',icon:'🐃',budget:500,cap:92,coach:'co4',seed:390,players:['top19','jg10','mid18','ad18','sup19'],desc:'升班马 · 一切从零'},
+ {name:'长沙TES.A',icon:'🌪️',budget:7000,cap:1050,coach:'co6',seed:450,players:['top8','jg15','mid14','ad13','sup9'],desc:'滔搏青春风暴 · 稳中求进'},
+ {name:'杭州LGD.NBW',budget:6500,cap:1000,coach:'co7',seed:430,icon:'🐧',players:['top15','jg17','mid16','ad8','sup16'],desc:'大鹅新军 · 敢打敢拼'},
+ {name:'上海RNG.M',icon:'👑',budget:6000,cap:1000,coach:'co4',seed:420,players:['top16','jg11','mid17','ad15','sup7'],desc:'皇族余晖 · 重建之路'},
+ {name:'西安WE',icon:'🦂',budget:5500,cap:950,coach:'co6',seed:410,players:['top17','jg18','mid9','ad16','sup17'],desc:'蓝色风暴 · 草根逆袭'},
+ {name:'桐乡情久',icon:'🧧',budget:5200,cap:950,coach:'co7',seed:400,players:['top18','jg19','mid11','ad17','sup18'],desc:'新军冲击 · 从零开始'},
+ {name:'常山UUG',icon:'🐃',budget:5000,cap:920,coach:'co4',seed:390,players:['top19','jg10','mid18','ad18','sup19'],desc:'升班马 · 一切从零'},
 ];
 
 /* ================= 2026 自由市场（真实 KPL 选手 · 合同到期/转会流拍） =================
@@ -354,31 +354,31 @@ const mAmt=(p,v)=>{p.morale=clamp(p.morale+v,20,100);}; // 士气统一封顶 20
 const EVENTS=[
  // —— 日常随机 ——（fn 的第二参 p 由 nextDay 传入，保证公告文案与实际生效的是同一名选手）
  {t:'选手加练',desc:'{p} 深夜独自加练，手感火热。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','farm','team']);p.attrs[k]=clamp(p.attrs[k]+2,40,99);mAmt(p,5);}},
- {t:'媒体专访',desc:'俱乐部接受专访，曝光度大增，收到一笔采访费。',good:true,fn:s=>s.fund+=12},
- {t:'粉丝应援',desc:'粉丝团自发应援，主场氛围拉满。',good:true,fn:s=>{s.fund+=15;moraleAll(s,3);}},
- {t:'商业活动',desc:'俱乐部参加官方商业活动，获得活动分成。',good:true,fn:s=>s.fund+=8},
+ {t:'媒体专访',desc:'俱乐部接受专访，曝光度大增，收到一笔采访费。',good:true,fn:s=>s.fund+=120},
+ {t:'粉丝应援',desc:'粉丝团自发应援，主场氛围拉满。',good:true,fn:s=>{s.fund+=150;moraleAll(s,3);}},
+ {t:'商业活动',desc:'俱乐部参加官方商业活动，获得活动分成。',good:true,fn:s=>s.fund+=80},
  {t:'状态起伏',desc:'{p} 近期作息混乱，状态下滑。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-12);}},
  {t:'舆论风波',desc:'社交媒体出现不利言论，队员心态受挫。',good:false,fn:s=>moraleAll(s,-6)},
  {t:'身体不适',desc:'{p} 感冒发烧，需要休息两天。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.energy=Math.min(p.energy,30);mAmt(p,-8);}},
- {t:'赞助商洽谈',desc:'新赞助商对战队战绩满意，追加了赞助费！',good:true,fn:s=>s.fund+=20},
+ {t:'赞助商洽谈',desc:'新赞助商对战队战绩满意，追加了赞助费！',good:true,fn:s=>s.fund+=200},
  {t:'战术研讨',desc:'教练组闭门研究新战术，团战配合更好了。',good:true,fn:s=>{const p=pick(rosterAll(s));p.attrs.team=clamp(p.attrs.team+2,40,99);}},
  {t:'转会流言',desc:'{p} 被传出转会流言，本人表示不受影响。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-6);}},
- {t:'青训惊喜',desc:'青训队出了一个好苗子，俱乐部收到培养奖金。',good:true,fn:s=>s.fund+=8},
+ {t:'青训惊喜',desc:'青训队出了一个好苗子，俱乐部收到培养奖金。',good:true,fn:s=>s.fund+=80},
  {t:'老将觉醒',desc:'{p} 接受采访时表示要带新人拿冠军，士气大涨！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,12);}},
  // —— KPL 真实事件 ——
  {t:'亚运征召',desc:'{p} 入选亚运会电竞国家队，为国争光！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.morale=100;p.attrs.mind=Math.min(99,p.attrs.mind+3);}},
- {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));s.fund+=25;mAmt(p,10);}},
+ {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));s.fund+=250;mAmt(p,10);}},
  {t:'版本更新·削弱',desc:'新版本上线，{p} 擅长的英雄被削弱，需要时间适应。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);mAmt(p,-8);p.attrs[k]=Math.max(55,p.attrs[k]-2);}},
  {t:'版本更新·加强',desc:'新版本上线，{p} 的招牌英雄迎来版本红利，手感火热！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);p.attrs[k]=Math.min(99,p.attrs[k]+2);mAmt(p,6);}},
  {t:'全明星周末',desc:'参加 KPL 全明星周末，选手们放松了心情。',good:true,fn:s=>moraleAll(s,8)},
  {t:'假赛风波',desc:'联盟严查假赛，俱乐部被要求配合调查，舆论压力巨大。',good:false,fn:s=>moraleAll(s,-10)},
  {t:'解说毒奶',desc:'著名解说公开"看好"你下一场的对手……',good:true,fn:s=>moraleAll(s,5)},
  {t:'对手换帅',desc:'下个对手官宣换帅，新阵容磨合期战斗力存疑。',good:true,fn:s=>moraleAll(s,4)},
- {t:'巅峰对决名场面',desc:'训练赛复刻当年巅峰对决的名场面，全队沸腾！',good:true,fn:s=>{moraleAll(s,6);s.fund+=5;}},
- {t:'主场扩容',desc:'俱乐部主场升级完成，门票收入大涨。',good:true,fn:s=>s.fund+=20},
+ {t:'巅峰对决名场面',desc:'训练赛复刻当年巅峰对决的名场面，全队沸腾！',good:true,fn:s=>{moraleAll(s,6);s.fund+=50;}},
+ {t:'主场扩容',desc:'俱乐部主场升级完成，门票收入大涨。',good:true,fn:s=>s.fund+=200},
  {t:'降薪传闻',desc:'俱乐部降薪传闻流出，队员人心浮动。',good:false,fn:s=>moraleAll(s,-8)},
- {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,fn:s=>{s.fund+=25;}},
- {t:'青训挂牌',desc:'青训队新秀在转会市场被争抢，俱乐部收到问价。',good:true,fn:s=>s.fund+=10},
+ {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,fn:s=>{s.fund+=250;}},
+ {t:'青训挂牌',desc:'青训队新秀在转会市场被争抢，俱乐部收到问价。',good:true,fn:s=>s.fund+=100},
  {t:'转会传闻',desc:'媒体爆料 {p} 收到豪门高额报价，人心浮动。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.max(5,(p.willingness||50)-8);p.morale=clamp(p.morale-5,20,100);}},
  {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
 ];

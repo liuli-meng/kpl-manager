@@ -5,8 +5,8 @@ function doTrain(s,pid,attr){
   if(!p)return;
   if(s.trained){toast('本日已进行过行动');return;}
   if(p.energy<10){toast(`${p.name} 体力不足`);return;}
-  if(s.fund<8){toast('资金不足（训练需 8万）');return;}
-  s.fund-=8;p.energy-=10;s.trained=true;
+  if(s.fund<80){toast('资金不足（训练需 80万）');return;}
+  s.fund-=80;p.energy-=10;s.trained=true;
   const gain=1+rnd(0,1);
   p.attrs[attr]=clamp(p.attrs[attr]+gain,40,99);
   p.morale=clamp(p.morale-2,20,100);
@@ -26,7 +26,7 @@ function doHeroTrain(s,pid){
   if(!p)return;
   if(s.trained){toast('本日已进行过行动');return;}
   if(p.energy<15){toast(`${p.name} 体力不足`);return;}
-  if(s.fund<15){toast('资金不足（英雄特训需 15万）');return;}
+  if(s.fund<150){toast('资金不足（英雄特训需 150万）');return;}
   // 找熟练度最低的英雄提升
   const upgradable=(p.heroPool||[]).filter(h=>h.lv<3);
   let msg;
@@ -43,7 +43,7 @@ function doHeroTrain(s,pid){
     p.heroPool.push({n:h,lv:0});
     msg=`🎮 英雄特训：${p.name} 学会了新英雄「${h}」（生疏）！`;
   }
-  s.fund-=15;p.energy-=15;s.trained=true;
+  s.fund-=150;p.energy-=15;s.trained=true;
   p.morale=clamp(p.morale-2,20,100);
   logEvent(s,msg);
   save();renderAll();
@@ -91,8 +91,8 @@ function genRookie(s){
     mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true,contract:2};
 }
 function recruitRookie(s){
-  if(s.fund<30){toast('招募青训需 30万');return;}
-  s.fund-=30;
+  if(s.fund<300){toast('招募青训需 300万');return;}
+  s.fund-=300;
   const r=genRookie(s);
   s.academy=[...(s.academy||[]),r];
   logEvent(s,'🎓 青训营招募新秀 '+r.name+'（'+POS[r.pos][0]+' · 潜力'+r.potential+'⭐）');
@@ -102,8 +102,8 @@ function trainRookie(s,id){
   if(s.academyTrained){toast('今日已培养过青训选手');return;}
   const r=(s.academy||[]).find(x=>x.id===id);
   if(!r)return;
-  if(s.fund<10){toast('青训培养需 10万');return;}
-  s.fund-=10;
+  if(s.fund<100){toast('青训培养需 100万');return;}
+  s.fund-=100;
   s.academyTrained=true;
   // 潜力越高成长越快：2-4 起步 + 潜力加成（pot/2），平均 4~6/天 —— 约 3~4 周培养到晋升线（四维和300）
   const gain=2+rnd(0,2)+Math.floor((r.potential||3)/2);
@@ -142,7 +142,7 @@ function convertPos(s,pid,newPos){
   const p=s.players.find(x=>x.id===pid);
   if(!p)return;
   if(p.pos===newPos){toast('已经是该位置');return;}
-  const cost=30;
+  const cost=300;
   if(s.fund<cost){toast('位置改造需要 '+cost+'万');return;}
   if(s.lineup.includes(pid)&&s.lineup.some(id=>{
     const o=s.players.find(x=>x.id===id);return o&&o.id!==pid&&o.pos===newPos;

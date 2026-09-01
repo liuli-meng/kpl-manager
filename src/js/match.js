@@ -226,7 +226,7 @@ function prepSwapIn(pid){
 function playGame(){
   const sr=S.series;
   // 有效战力结算：BAN/选人质量/红蓝 counter 全部折算进胜负（详见 bpEffective）
-  const isLastPeak=sr.max>=7&&sr.mw+sr.ow>=6; // 巅峰对决：无 BP，不吃任何修正
+  const isLastPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：无 BP，不吃任何修正（BO7 第7局 / BO9 第9局）
   const v=bpEffective({myBans:sr.myBans,oppBans:sr.oppBans,oppPicks:sr.oppPicks,side:sr.side,isPeak:isLastPeak,opName:sr.opName,opRoster:ensureAiRosters(S,sr.opName)||[],used:sr.used,usedOpp:sr.usedOpp});
   const g=singleGame(v.my,v.op);
   // 每小局双方消耗体力（8/局）：系列赛越深越考验轮换——替补体力满员是翻盘资本
@@ -234,10 +234,11 @@ function playGame(){
   rosterLineup(S).forEach(p=>{p.energy=clamp(p.energy-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;}); // caps：出场记录（转售保护期解锁用）
   opR.forEach(p=>p.energy=clamp(p.energy-8,0,ENERGY_MAX));
   if(g.w)sr.mw++;else sr.ow++;
-  const isPeak=sr.max>=7&&sr.mw===3&&sr.ow===3&&sr.mw+sr.ow===6;
+  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
   const tag=isPeak?' 巅峰对决（盲选）':'';
   const mvp=gamePerform(g.w);
   if(mvp){const mp=S.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
+  if(mvp)sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id); // 系列赛各局 MVP 记录（FMVP 评选用）
   sr.logs.push('第'+(sr.mw+sr.ow)+'局 '+(g.w?'✅':'❌')+' 我方 '+g.myK+'-'+g.opK+' '+(g.w?'击败':'憾负')+' '+sr.opName+' ｜ 总比分 '+sr.mw+':'+sr.ow+tag+' '+(sr.side==='red'?'红方':'蓝方')+' '+pick(CASTER)+(mvp?' ｜ MVP：'+mvp.name+'（'+mvp.k+'/'+mvp.d+'/'+mvp.a+'）':''));
   // 文字直播（借鉴 esports-manager 事件解说体系）
   sr.logs.push(...genMatchStory(sr,g));
@@ -262,12 +263,13 @@ function playGame(){
 function recordSeason(s){
   try{
     s.honors=s.honors||[];
-    s.honors.push({season:s.season,title:(s.champion?('🏆 赛季'+s.season+' 总冠军'):('赛季'+s.season+' 亚军')),champion:!!s.champion});
+    s.honors.push({season:s.season,title:(s.champion?(splitLabel(s)+' 总冠军'):(splitLabel(s)+' 亚军')),champion:!!s.champion});
     s.honors=s.honors.slice(-20);
   }catch(e){}
 }
 function finishSeries(finalWin){
   const sr=S.series;
+  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
   S.series=null; // 先清系列赛状态，再走收尾链（playoffStep/playCardNext 可能立即开启下一场）
   // 体力按小局在 playGame 中逐局扣除，此处不再重复扣
   // 赛后小概率有人受伤：伤停必须休息，受伤瞬间立即换替补（阵容页即时反映）
@@ -299,9 +301,9 @@ function finishSeries(finalWin){
       if(finalWin){ot.l++;}else{ot.w++;ot.pts++;}
       ot.pw+=sr.ow;
     }
-    const bonus=winGames*8;
+    const bonus=winGames*80;
     S.fund+=bonus;
-    if(finalWin&&Math.random()<0.5)S.fund+=20;
+    if(finalWin&&Math.random()<0.5)S.fund+=200;
     S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
     logEvent(S,'⚔️ '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
     S.matchIdx++;
@@ -311,7 +313,7 @@ function finishSeries(finalWin){
   }else if(sr.stage==='card'){
     const m=sr.cardMatch;
     m.r=finalWin?sr.myName:sr.opName;
-    const bonus=winGames*12;
+    const bonus=winGames*120;
     S.fund+=bonus;
     S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
     logEvent(S,'卡位赛：'+S.teamName+' '+(finalWin?'晋级':'遗憾落败')+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
@@ -322,9 +324,9 @@ function finishSeries(finalWin){
   }else if(sr.stage==='po'){
     const m=sr.poMatch;
     m.r=finalWin?sr.myName:sr.opName;
-    const bonus=winGames*15;
+    const bonus=winGames*150;
     S.fund+=bonus;
-    if(finalWin&&sr.poSlot==='总决赛')S.fund+=60;
+    if(finalWin&&sr.poSlot==='总决赛')S.fund+=600;
     if(!finalWin&&sr.poSlot!=='总决赛'){
       // 联盟分润：按出局名次（总决赛败者的亚军分润由 playoffStep 冠军分支统一发放，此处不再发，避免双倍）
       const place=poPlace(sr.poSlot,false);
@@ -334,14 +336,27 @@ function finishSeries(finalWin){
     logEvent(S,'🏆 季后赛（'+sr.poSlot+'）：'+S.teamName+' '+(finalWin?'晋级':'出局')+' '+sr.mw+':'+sr.ow+(sr.poSlot==='总决赛'&&finalWin?'——夺得总冠军！':'')+'（奖金 '+bonus+'万）');
     title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':'出局');
     playoffStep(S);
+  }else if(sr.stage==='cup'){
+    // 杯赛系列赛（EWC / 年度总决赛：擂台赛·突围赛·淘汰赛）
+    const m=sr.cupMatch;
+    m.r=finalWin?sr.myName:sr.opName;
+    if(m.a===sr.myName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;} // 擂台赛积分按 a/b 记小局
+    const bonus=winGames*120;
+    S.fund+=bonus;
+    S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
+    logEvent(S,'🌍 '+sr.cupLabel+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
+    title=sr.cupLabel+(finalWin?' · 晋级':' · 落败');
+    if(S.phase==='ewc')ewcStep(S);
+    else if(S.phase==='challenger')challengerStep(S);
+    else annualStep(S);
   }
   const r={win:finalWin,logs:sr.logs,opName:sr.opName};
   // 比赛复盘记录（含巅峰对决名场面标记）
   S.history=S.history||[];
   S.history.unshift({
-    opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):PHASE_NAME[S.phase],
+    opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
     score:sr.mw+':'+sr.ow,win:finalWin,logs:sr.logs,
-    peak:sr.max>=7&&sr.mw+sr.ow===7 // 打满第7局=巅峰对决名场面（终局比分已是4:3，不能再用3:3判断）
+    peak:sr.max>=7&&sr.mw+sr.ow===sr.max // 打满最后一局（BO7 4:3 / BO9 5:4）= 巅峰对决名场面
   });
   S.history=S.history.slice(0,20);
   save();renderAll();
@@ -355,8 +370,9 @@ function showMatchModal(r,title){
     <h2><span class="h-ic" style="background:${r.win?'rgba(67,220,156,.12)':'rgba(255,107,107,.12)'};color:${r.win?'var(--green)':'var(--red)'}">${ic(r.win?'check':'ban')}</span>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
     <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')||l.includes('✅')?'win':l.includes('❌')||l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
     <div class="center mt16">
-      ${(S.phase==='champion'||S.phase==='eliminated')?`<button class="btn gold" onclick="closeModal('app-modal');newSeason(S);goPage('club')">🚀 开启新赛季（+130万资金）</button>`
-      :`<button class="btn primary" onclick="closeModal('app-modal');nextDay(S);goPage('club')">继续（推进一天）</button>`}
+      ${(S.phase==='champion'||S.phase==='eliminated')?`<button class="btn gold" onclick="closeModal('app-modal');advanceCalendar(S)">${calendarNextLabel(S)}</button>`
+      :(S.preseason?`<button class="btn gold" onclick="closeModal('app-modal');goPage('market')">📋 进入转会期（组队备战）</button>`
+      :`<button class="btn primary" onclick="closeModal('app-modal');nextDay(S);goPage('club')">继续（推进一天）</button>`)}
     </div>`;
   mb.classList.add('on');
 }

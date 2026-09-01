@@ -3,7 +3,7 @@ function ensureAiRosters(s,teamName){
   s.aiRosters=s.aiRosters||{};
   if(s.aiRosters[teamName])return s.aiRosters[teamName];
   const map=aiRosterDefMap(s);
-  const ids=map[teamName];
+  const ids=map[teamName]||(s.ewcDefMap||{})[teamName]; // ewcDefMap：EWC 海外队选手（杯赛期间可正常 BP/结算）
   if(!ids)return [];
   s.aiPower=s.aiPower||{};
   const ownedIds=new Set(s.players.map(p=>p.id));
@@ -26,7 +26,8 @@ function ensureAiRosters(s,teamName){
     roster.push(p);
   });
   s.aiRosters[teamName]=roster;
-  s.aiPower[teamName]=aiRosterPower(roster); // AI 战力=真实阵容结算（与玩家 teamPower 同刻度）
+  s.aiPower[teamName]=aiRosterPower(roster,s,teamName); // AI 战力=真实阵容结算（与玩家 teamPower 同刻度）
+  if(s.challDefMap&&s.challDefMap[teamName])s.aiPower[teamName]=Math.round(s.aiPower[teamName]*1.05); // 挑战者的祝福：低赛道队 vs KPL +5%（玩家对局同规则）
   return roster;
 }
 /* AI 选手随赛季年龄成长/衰减（与玩家 newSeason 同规则），联赛会随赛季演化
@@ -78,16 +79,17 @@ function aiDetachDef(s,pid){ // def 被玩家签走：从所有 AI 队除名，�
   const map=aiRosterDefMap(s);
   for(const tn in map)map[tn]=map[tn].filter(id=>id!==pid);
 }
-function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额合法才接收）
+function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额合法才接收）；返回是否入册
   const def=defOf(s,pid);
-  if(!def)return;
+  if(!def)return false;
   const map=aiRosterDefMap(s);
-  if(!map[teamName]||map[teamName].length>=5)return;
-  if(map[teamName].some(id=>{const d=defOf(s,id);return d&&d.pos===def.pos;}))return;
+  if(!map[teamName]||map[teamName].length>=5)return false;
+  if(map[teamName].some(id=>{const d=defOf(s,id);return d&&d.pos===def.pos;}))return false;
   aiDetachDef(s,pid);
   const arr=map[teamName]; // aiDetachDef 会整体替换各队数组，必须在除名后重取引用，否则 push 到孤儿数组、该选手从联盟消失
   arr.push(pid);
   s.aiRosters={}; // 名册缓存失效：该选手立即为买方出战、原队除名（与 negoComplete 同步，否则整个赛季缓存都是旧的）
+  return true;
 }
 /* 新星出道：生成一名新秀 def 进入联盟流转（补真实选手的退役折损）
    底子随赛季水涨船高（每赛季+2，封顶+12）：新生代一代比一代强，联盟整体缓慢上探 */
@@ -214,6 +216,22 @@ function aiTransferWindow(s){
     if(tn){map[tn].push(def.id);logEvent(s,'🌟 新星出道：'+def.name+'（'+POS[def.pos][0]+'）加盟 '+tn);}
     else{logEvent(s,'🌟 新星出道：'+def.name+'（'+POS[def.pos][0]+'）进入自由市场');}
   }
+  // ⑥ 教练组流动：AI 队也会换帅——从名宿市场挖更好的教练（与玩家抢人），旧帅下岗回流市场
+  //    弱队优先、只升不降；换帅后 aiRosterPower 按新教练加成结算（不再是一刀切的固定班底）
+  s.retiredCoaches=s.retiredCoaches||[];
+  let coachMoved=false;
+  order.forEach(tn=>{
+    if(Math.random()>=0.45)return; // 每队每赛季 45% 概率寻求换帅
+    const cur=aiCoachState(s)[tn]||{bonus:6};
+    const c=s.retiredCoaches.filter(r=>r.type!=='host'&&r.bonus>cur.bonus).sort((a,b)=>b.bonus-a.bonus)[0];
+    if(!c)return;
+    s.retiredCoaches=s.retiredCoaches.filter(r=>r.id!==c.id);
+    if(cur.name)s.retiredCoaches.push({...cur,type:'coach'}); // 旧帅回流名宿市场，玩家可签
+    aiCoachState(s)[tn]={id:c.id,name:c.name,rating:c.rating,bonus:c.bonus,styleBonus:c.styleBonus,style:c.style};
+    coachMoved=true;
+    logEvent(s,'🧑‍🏫 换帅！'+c.name+'（全队战力+'+c.bonus+'%）执教 '+tn+(cur.name?'，'+cur.name+' 回流名宿市场':''));
+  });
+  if(coachMoved)s.aiRosters={}; // 教练加成变化：名册缓存战力失效
 }
 /* 构建转会市场：各 AI 队选手（含非卖品与意愿） */
 function buildTransferMarket(s){
@@ -552,9 +570,26 @@ function completeSale(s,p,fee,team){
   if(s.pick)delete s.pick[p.pos];
   s.listed=(s.listed||[]).filter(x=>x.id!==p.id);
   s.bids=(s.bids||[]).filter(x=>x.id!==p.id);
-  aiAttachDef(s,p.id,team); // 买入方 AI 队在册（若为 def），下赛季起为他出战
+  // 兜底注册 def：市场/自由签来的选手（genFreeAgentDef）没有 def 存档，出售时必须补建，
+  // 否则买入方 AI 队「查无此人」，选手直接从联盟蒸发（转会市场/对手阵容都找不到）
+  if(!defOf(s,p.id)){
+    (s.extraDefs=s.extraDefs||[]).push({
+      id:p.id,name:p.name,pos:p.pos,team:p.team||null,tags:p.tags||[],
+      base:[p.attrs.lane,p.attrs.farm,p.attrs.team,p.attrs.mind],skill:p.skill,sig:p.sig,
+      career:p.career||''});
+  }
+  const attached=aiAttachDef(s,p.id,team); // 买入方 AI 队在册（若为 def），下赛季起为他出战
+  const tl=(s.transferList||[]).find(x=>x.id===p.id);
+  if(tl){tl.ownerTeam=team;tl.untouchable=false;} // 转会市场条目同步归属新东家
+  else if(!attached){
+    // 买家阵容已满（5人/位置被占）时无法即时入册：把他挂进转会市场归属买家，
+    // 保证随时找得到，下个转会期 AI 会按缺位补强把他签进阵容
+    const entry={...p,ownerTeam:team,untouchable:false,willingness:Math.max(p.willingness||60,70)};
+    delete entry.signCost;delete entry.freeAgent;
+    (s.transferList=s.transferList||[]).push(entry);
+  }
   logEvent(s,'💰 '+p.name+' 转会至 '+team+'（转会费 '+fee+'万）');
-  if(fee>=300)logEvent(s,'💣 重磅转会！联盟震动');
+  if(fee>=3000)logEvent(s,'💣 重磅转会！联盟震动');
 }
 
 /* 玩家挂牌 / 撤牌 */
@@ -571,9 +606,11 @@ function listPlayer(s,pid){
   save();renderAll();
 }
 function delistPlayer(s,pid){
+  const p=s.players.find(x=>x.id===pid);
   s.listed=(s.listed||[]).filter(x=>x.id!==pid);
-  s.bids=(s.bids||[]).filter(x=>x.id!==pid);
-  toast('已撤牌');
+  s.bids=(s.bids||[]).filter(x=>x.id!==pid); // 有报价也可撤牌：撤牌即作废所有未接受报价
+  logEvent(s,'↩️ '+(p?p.name:'选手')+'撤牌，报价作废，选手留队');
+  toast((p?p.name+' ':'')+'已撤牌（未成交报价一并作废）');
   save();renderAll();
 }
 /* 转会期内每天 AI 队可能报价 */
@@ -648,7 +685,7 @@ function rejectBid(s,id){
 const RENEW_YEARS=2;
 function renewCost(p){
   const f=(p.val||100)>=125?1.25:(p.val||100)<90?0.75:1; // 表现火热更贵、低迷更便宜
-  return Math.max(10,Math.round(sellAskPrice(p)*0.18*f));
+  return Math.max(100,Math.round(sellAskPrice(p)*0.18*f));
 }
 function renewPlayer(s,pid){
   const p=s.players.find(x=>x.id===pid);
@@ -715,8 +752,8 @@ function refreshMarket(s){
   const inWindow=s.transferWindow>0;
   const free=inWindow&&!s.marketRefreshed;
   if(!free){
-    if(s.fund<5){toast('资金不足（刷新需 5 万）');return;}
-    s.fund-=5;
+    if(s.fund<50){toast('资金不足（刷新需 50 万）');return;}
+    s.fund-=50;
   }
   const usedNames=rookieUsedNames(s); // 全局查重：市场生成的选手不与联盟任何人重名
   s.market=[];
@@ -771,7 +808,7 @@ function untouchableSet(){
   for(const tn in AI_ROSTERS)AI_ROSTERS[tn].u.forEach(id=>U.add(id));
   return U;
 }
-function loanRent(p){return Math.max(8,Math.round(valueOf(overall(p))*0.15));}
+function loanRent(p){return Math.max(80,Math.round(valueOf(overall(p))*0.15));}
 function loanCandidates(s){
   const U=untouchableSet();
   const map=aiRosterDefMap(s);

@@ -12,7 +12,7 @@ const dom = {
   localStorage: {getItem: () => null, setItem(){}, removeItem(){}},
   document: {querySelector: () => el(), querySelectorAll: () => [], createElement: () => el(), execCommand: () => {}, body: el(), addEventListener(){}, removeEventListener(){}},
   window: null, confirm: () => true, alert(){}, toast(){}, location: {reload(){}},
-  setTimeout: () => 0, clearTimeout(){},
+  setTimeout: () => 0, clearTimeout(){}, addEventListener(){}, removeEventListener(){},
 };
 dom.window = dom;
 vm.createContext(dom);

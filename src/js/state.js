@@ -9,9 +9,9 @@ let S=null; // 全局状态
 
 function newState(teamName,icon){
   return {
-    teamName,icon,season:1,day:1,fund:800,sponsorLv:0,
+    teamName,icon,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
     honors:[], // 历史荣誉（多赛季）
-    stage:'regular',phase:'r1',matchIdx:0,wageCap:90,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
+    stage:'regular',phase:'r1',matchIdx:0,wageCap:900,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
     players:[],lineup:[],market:[],
     schedule:[],groups:{},tables:{},aiPower:{},card:null,playoff:null,eliminated:[],
     eventLog:[],trained:false,marketRefreshed:false,academyTrained:false,champion:false,
@@ -20,6 +20,10 @@ function newState(teamName,icon){
     series:null, // 当前系列赛 {used:[],mw,ow,max,stage,oppName,logs,myName,opName,idx}
     coach:null,coachMarket:[],assistants:[], // 主教练 + 教练市场 + 助教组（上限2）
     aiRosterDefs:null,extraDefs:[],retiredDefs:[], // AI 转会生态：AI 队在册 def 映射 / 新星 def / 已退役 def
+    split:'spring',annualPts:{}, // 年度赛历：春/夏双赛段 + 年度积分（春夏累计，前12进年总）
+    ewc:null,annual:null, // EWC 电竞世界杯 / KPL 年度总决赛 赛段状态
+    challenger:null, // 挑战者杯（春→挑杯→EWC→夏→年总）
+    fmvpHonor:[],cardLosers:[], // 历届 FMVP / 卡位赛败者（年度积分名次判定用）
   };
 }
 function rosterAll(s){return s.players;}
@@ -53,9 +57,21 @@ function playerPower(p,heroId){
 }
 /* AI 队战力：与 teamPower 同刻度（五位置最强者求和 × 士气系数）。
    体力由 playerPower 实时读取：构建时=满体力（联赛模拟用），系列赛中用实时值（逐局衰减）。
-   AI 无玩家侧教练/羁绊，用 AI_STAFF 折算职业队平均教练班底水平。 */
-const AI_STAFF=1.06;
-function aiRosterPower(roster){
+   AI 教练班底：持久化在 s.aiCoaches（队名→教练），初始按原版俱乐部模板落位
+   （豪门名帅/草根平淡），每个赛季转会期 AI 队会从名宿市场挖角更好的教练（与玩家抢人）；
+   无记录的队按职业队平均班底 +6% 折算（旧版 AI_STAFF 等价值，旧档懒初始化兼容）。 */
+function aiCoachState(s){
+  if(!s.aiCoaches){
+    s.aiCoaches={};
+    (typeof CLUB_TEMPLATES!=='undefined'?CLUB_TEMPLATES:[]).forEach(t=>{
+      const c=COACH_POOL.find(x=>x.id===t.coach);
+      if(c)s.aiCoaches[t.name]={id:c.id,name:c.name,rating:c.rating,bonus:c.bonus,styleBonus:c.styleBonus,style:c.style};
+    });
+  }
+  return s.aiCoaches;
+}
+function aiCoachBonus(s,tn){return (s&&s.aiCoaches&&s.aiCoaches[tn])?s.aiCoaches[tn].bonus:6;}
+function aiRosterPower(roster,s,tn){
   if(!roster||!roster.length)return 0;
   const best={};
   roster.forEach(p=>{
@@ -68,7 +84,7 @@ function aiRosterPower(roster){
   if(!cnt)return 0;
   roster.forEach(p=>mSum+=(p.morale||80));
   const morale=clamp(mSum/roster.length/100,0.82,1.1);
-  return Math.round(sum*morale*AI_STAFF);
+  return Math.round(sum*morale*(1+aiCoachBonus(s,tn)/100));
 }
 /* picks 可选：BP 进行中实时结算用（未选位置回退招牌）；缺省走 S.pick */
 function teamPower(s,picks){
@@ -178,6 +194,27 @@ function migrateSave(){
   S.retiredDefs=S.retiredDefs||[];
   S.aiInj=S.aiInj||{}; // AI 伤停表（def id → 缺阵系列赛数）
   S.assistants=S.assistants||[]; // 助教组（旧档迁移）
+  // 年度赛历迁移：旧档默认处于春季赛（春夏/EWC/年总为新引入赛段）
+  S.split=S.split||'spring';
+  S.annualPts=S.annualPts||{};
+  if(S.ewc===undefined)S.ewc=null;
+  if(S.annual===undefined)S.annual=null;
+  S.fmvpHonor=S.fmvpHonor||[];
+  S.cardLosers=S.cardLosers||[];
+  if(S.challenger===undefined)S.challenger=null; // 挑战者杯赛段
+  // 经济扩倍迁移（2026-09 身价体系 ×10）：旧档货币字段统一放大，保证与新的千万级身价同刻度
+  if(!S.moneyScaled){
+    const mul=x=>(typeof x==='number')?Math.round(x*10):x;
+    S.fund=mul(S.fund);S.wageCap=mul(S.wageCap);
+    const scaleList=arr=>{if(Array.isArray(arr))arr.forEach(o=>{if(o&&typeof o==='object'){o.wage=mul(o.wage);o.cost=mul(o.cost);o.income=mul(o.income);o.acqCost=mul(o.acqCost);o.signCost=mul(o.signCost);}});};
+    scaleList(S.players);scaleList(S.coachMarket);scaleList(S.retiredCoaches);scaleList(S.assistants);
+    scaleList(S.market);scaleList(S.freeAgents);scaleList(S.transferList);scaleList(S.hosts);
+    if(S.coach){S.coach.wage=mul(S.coach.wage);S.coach.cost=mul(S.coach.cost);}
+    (S.listed||[]).forEach(x=>x.price=mul(x.price));
+    (S.bids||[]).forEach(x=>x.bid=mul(x.bid));
+    S.moneyScaled=true;
+    try{logEvent(S,'💰 经济体系升级：全联盟身价/工资/资金 ×10（顶星身价千万级）');}catch(e){}
+  }
   // 总值化迁移：教练/名宿旧档 rarity → rating 评分（选手总值实时计算，无需迁移）
   const R2RATE={SSR:90,SR:80,R:70};
   [S.coach].concat(S.coachMarket||[],S.retiredCoaches||[]).forEach(c=>{

@@ -53,7 +53,7 @@ function bpEffective(v){
   const myLs=rosterLineup(S);
   let my=teamPower(S,v.myPicks||null);
   // 对方战力：有真实阵容时实时结算（与玩家同刻度、含体力衰减），否则退回静态值
-  let op=(v.opRoster&&v.opRoster.length)?aiRosterPower(v.opRoster):powerOf(S,v.opName);
+  let op=(v.opRoster&&v.opRoster.length)?aiRosterPower(v.opRoster,S,v.opName):powerOf(S,v.opName);
   const notes=[];
   if(!v.isPeak){
     let banCut=0;
@@ -117,7 +117,7 @@ function kplDraftSteps(){
   ];
 }
 function expandSteps(sr,isPeak){
-  if(isPeak)return [{s:'M',t:'pick',n:1},{s:'M',t:'pick',n:1},{s:'M',t:'pick',n:1},{s:'M',t:'pick',n:1},{s:'M',t:'pick',n:1}];
+  if(isPeak)return [{side:'M',type:'pick'},{side:'M',type:'pick'},{side:'M',type:'pick'},{side:'M',type:'pick'},{side:'M',type:'pick'}];
   const myIsBlue=(sr.side!=='red');
   const steps=[];
   kplDraftSteps().forEach(st=>{
@@ -178,7 +178,7 @@ function resetOppEnergy(s,opName){
       // 注意：real 为空（该位置真实选手被玩家买走/租走）时不能删递补——他是顶空缺的，不是顶伤员的
     }
   });
-  s.aiPower[opName]=aiRosterPower(r);
+  s.aiPower[opName]=aiRosterPower(r,s,opName);
 }
 function openBP(title,onConfirm){
   autoFillLineup(S);
@@ -196,7 +196,7 @@ function openBP(title,onConfirm){
     return;
   }
   const sr=S.series;
-  const isPeak=sr&&sr.max>=7&&sr.mw===3&&sr.ow===3&&sr.mw+sr.ow===6;
+  const isPeak=sr&&sr.max>=7&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：BO7 3:3 / BO9 4:4
   window._draft={
     onConfirm,sr,ls,title,isPeak,
     used:(sr&&!isPeak&&sr.used)?sr.used.slice():[],
@@ -355,7 +355,7 @@ function bpAutoAll(){
 function autoPlayNext(){
   const sr=S.series;
   if(!sr)return;
-  const isPeak=sr.max>=7&&sr.mw===3&&sr.ow===3&&sr.mw+sr.ow===6;
+  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
   autoFillLineup(S); // 伤员自动换下/缺位递补
   const noGo=POS_ORDER.filter(pos=>{
     const p=rosterLineup(S).find(x=>x.pos===pos);

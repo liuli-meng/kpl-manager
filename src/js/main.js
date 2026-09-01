@@ -113,7 +113,7 @@ function initStart(){
         ${icons.map((ic,i)=>`<div class="pack-btn ic-pick" data-i="${i}" ${i===0?'style="border-color:var(--cyan)"':''} onclick="pickIcon(${i})">
           <b style="font-size:22px">${ic}</b></div>`).join('')}
       </div>
-      <div class="hint" style="margin-bottom:14px;text-align:center">初始资金 800万 · 工资帽 90万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
+      <div class="hint" style="margin-bottom:14px;text-align:center">初始资金 8000万 · 工资帽 900万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
       <div class="center"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
     </div>
     <div id="tab-club-body" style="display:none">
@@ -178,7 +178,7 @@ function createTeam(){
   // 赛前转会期：先组队再开赛
   S.preseason=true;S.transferWindow=7;
   buildTransferMarket(S);refreshMarket(S);
-  logEvent(S,`战队 ${name} 成立！初始资金800万，目标：KPL 总冠军！`);
+  logEvent(S,`战队 ${name} 成立！初始资金8000万，目标：KPL 总冠军！`);
   logEvent(S,'🎁 开局直签 5 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容');
   logEvent(S,'📋 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
   logEvent(S,'📋 KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
