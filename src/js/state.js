@@ -9,7 +9,7 @@ let S=null; // 全局状态
 
 function newState(teamName,icon){
  return {
- teamName,icon,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
+ teamName,icon,crest:null,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
  honors:[], // 历史荣誉（多赛季）
  stage:'regular',phase:'r1',matchIdx:0,wageCap:900,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
  players:[],lineup:[],market:[],
@@ -177,6 +177,7 @@ function migrateSave(){
  if(S.series&&!S.series.side)S.series.side='blue';
  S.pick=S.pick||{};
  S.coach=S.coach||null;
+ if(S.crest===undefined)S.crest=null; // 自建/改队徽的品牌（外形+配色+缩写），无则用俱乐部原版/哈希
  S.coachMarket=S.coachMarket||[];
  S.honors=S.honors||[];
  if(!S.wageCap)S.wageCap=90;

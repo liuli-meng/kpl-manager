@@ -104,10 +104,11 @@ function renderHeader(){
 function renderClub(){
  const ls=rosterLineup(S);
  let html=`
- <div class="banner">
+ <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
  <div class="dim" style="font-size:12px">${splitLabel(S)} · 第${S.day}天 · ${PHASE_NAME[S.phase]||S.phase}${myGroup(S)?' · '+myGroup(S)+'组':''}${(S.phase==='playoff'||S.phase==='annual'&&S.annual&&S.annual.stage==='po')?' · 双败淘汰':''}${S.phase==='ewc'?' · 8强单败':''}</div></div>
+ <button class="btn sm" style="margin-left:4px;flex:none" onclick="openCrestEdit()" title="自选外形/配色/缩写，风格同 18 支真实俱乐部">改队徽</button>
  <div style="margin-left:auto;text-align:right">
  <div class="gold" style="font-size:18px;font-weight:800">${fmt(S.fund)}</div>
  <div class="dim" style="font-size:11px">俱乐部资金</div>
@@ -211,6 +212,17 @@ function renderClub(){
  ${!e.champ?`<button class="btn primary" style="width:100%" onclick="startCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:`<div class="hint mt8">冠军：${e.champ}${e.champ===S.teamName?' ——世界之巅！':''} · 赛后进入夏季赛转会期</div>`}
  <div class="hint mt8">KPL 春季赛冠亚军（直邀，冠军=KPL名额/亚军=英雄亚冠ACL名额）+ 6 支海外劲旅 · 冠军奖金 540 万并评 FMVP</div>
  </div>`;
+ }else if(S.phase==='asiad'){
+ const a=S.ag;
+ const row=m=>`<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:13px">${m.a||'待定'} vs ${m.b||'待定'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+ const mine=a.squad.filter(x=>x.mine).length;
+ html+=`<div class="panel"><h3>亚运会 · 王者荣耀项目 <span class="tag">${gameYear(S)} 名古屋 · 8强 BO7 单败</span></h3>
+ <div class="hint" style="margin-bottom:8px"><b>中国代表队</b>（KPL 各位置当季最强，战力 ${a.myPow}）：${a.squad.map(x=>`<span class="tag" style="margin-right:4px${x.mine?';border-color:var(--gold);color:var(--gold)':''}">${POS[x.pos][1]} ${x.name}${x.mine?' ★':''}</span>`).join('')}</div>
+ ${a.qf.map(row).join('')}${a.sf.filter(m=>m.a).map(row).join('')}${a.final.a?row(a.final):''}
+ ${a.champ?`<div class="hint mt8">冠军：<b class="gold">${a.champ}</b> —— 中国队成绩：${a.medal}${a.mvp?' · MVP '+a.mvp:''} · 随后进入年度总决赛</div>`
+ :`<button class="btn primary" style="width:100%" onclick="asiadStep(S)">推进亚运会赛程（BO7 单败）</button>`}
+ <div class="hint mt8">教练席在国家队手里，你只负责放人：麾下入选选手按奖牌档位回流人气/身价/士气（金牌 +8/+6、银牌 +5/+4、铜牌 +3/+2），协会另发奖金；代价是年总开局体力不满。最强对手：韩国。</div>
+ </div>`;
  }else if(S.phase==='annual'){
  const a=S.annual;
  const cupRow=m=>`<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:13px">${m.a} vs ${m.b}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
@@ -248,7 +260,7 @@ function renderClub(){
  <div style="font-size:40px;color:var(--gold)"></div>
  <h3 style="justify-content:center">${splitLabel(S)} 总冠军：${S.playoff?S.playoff.champ:'—'}</h3>
  ${S.champion?'<div class="green" style="font-size:16px;font-weight:800;margin:8px 0">你是冠军！王朝就此建立！</div>':'<div class="dim">冠军属于对手，继续积蓄力量！</div>'}
- <div class="hint" style="margin:6px 0">${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':'接下来：KPL 年度总决赛（年度积分前12）'}</div>
+ <div class="hint" style="margin:6px 0">${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → KPL 年度总决赛':'接下来：KPL 年度总决赛（年度积分前12）'}</div>
  <button class="btn gold mt12" onclick="advanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
  }else if(S.phase==='eliminated'){
@@ -256,7 +268,7 @@ function renderClub(){
  <div style="font-size:40px;color:var(--faint)"></div>
  <h3 style="justify-content:center">${splitLabel(S)} 止步</h3>
  <div class="dim" style="margin:8px 0">未能晋级后续阶段（B组后2名 / 卡位赛失利 / 季后赛出局）</div>
- <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':'接下来：年度总决赛（前12晋级）'}</div>
+ <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → 年度总决赛':'接下来：年度总决赛（前12晋级）'}</div>
  <button class="btn gold mt12" onclick="advanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
  }
@@ -446,24 +458,23 @@ function renderMarket(){
  let transferHtml='';
  let sideHtml='';
  if(S.transferWindow>0){
- // 合同续约面板：合同到期的选手在转会期处理（续约 2 年 / 不续约放走）
+ // 合同续约面板：到期选手必须处理（谈判/放走），最后一年可提前谈（防合同年自由身）
+ const renewRow=(p,tag)=>`<div class="match" style="margin-bottom:6px;padding:8px 10px;${p.contract<=0?'border-color:rgba(217,164,65,.45)':''}">
+ <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁)</span></span>
+ <div class="power" style="font-size:10px">${tag} · 周薪 ${p.wage}万 · 心理价位 ≈${renewAskWage(p,2)}万</div></div>
+ <div style="display:flex;gap:4px">
+ <button class="btn sm gold" style="margin:0" onclick="openRenewNego(S,'${p.id}')">续约谈判</button>
+ ${p.contract<=0?`<button class="btn sm danger" style="margin:0" onclick="releasePlayer(S,'${p.id}')">不续约</button>`:''}
+ </div></div>`;
  const expRows=(S.expiring||[]).map(pid=>{
  const p=S.players.find(x=>x.id===pid);
  if(!p||p.loan)return '';
- const cost=renewCost(p);
- const nw=Math.round(wageOf(overall(p))*((p.val||100)/100));
- return `<div class="match" style="margin-bottom:6px;padding:8px 10px;border-color:rgba(255,200,74,.35)">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁)</span></span>
- <div class="power" style="font-size:10px">${perfLabel(p)} ${p.val||100}%</div></div>
- <div class="score" style="font-size:12px;min-width:0">签字费 ${cost}万<br><span style="color:var(--dim)">周薪→${nw}万</span></div>
- <div style="display:flex;gap:4px">
- <button class="btn sm gold" style="margin:0" onclick="renewPlayer(S,'${pid}')">续约 ${RENEW_YEARS}年</button>
- <button class="btn sm danger" style="margin:0" onclick="releasePlayer(S,'${pid}')">不续约</button>
- </div></div>`;
+ return renewRow(p,'合同到期');
  }).join('');
- const renewPanel=expRows?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3>合同续约 <span class="tag">合同到期 · 转会期处理 · 不处理自动续1年</span></h3>
- <div class="hint" style="margin-bottom:8px">续约支付签字费（身价 18%，火热更贵 / 低迷更便宜）并按表现重定周薪；不续约则进入自由市场（AI 队可能签走）。</div>
- ${expRows}</div>`:'';
+ const earlyRows=(S.players||[]).filter(p=>!p.loan&&(p.contract===1)&&!(S.expiring||[]).includes(p.id)).map(p=>renewRow(p,'最后一年')).join('');
+ const renewPanel=(expRows||earlyRows)?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3>合同续约 <span class="tag">年限 1-4 年可谈 · 报价定周薪</span></h3>
+ <div class="hint" style="margin-bottom:8px">续约 = 谈判：选年限 + 出周薪报价，经纪人按心理价位博弈（长约溢价 / 老将抬价 / 三轮谈崩伤士气），签字费按年限递增。到期不处理将自动续约 1 年；「最后一年」可提前谈，拖到合同年有自由身离队风险。</div>
+ ${expRows}${earlyRows}</div>`:'';
  const rows=(S.transferList||[]).map(p=>{
  const price=buyoutPrice(p);
  const unt=p.untouchable?(p.willingness>=75?`<span style="color:var(--red);font-weight:800">非卖 · 忠诚${p.willingness}</span>`:`<span style="color:var(--gold);font-weight:800">松动 · 意愿${p.willingness}</span>`):'';
@@ -790,4 +801,77 @@ function showSquad(teamName){
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('wide');
  $('#app-modal').classList.add('on');
+}
+/* ===== 队徽生成器：开局自建 + 俱乐部页改队徽 共用（风格同真实 KPL 俱乐部） ===== */
+let _crShape='shield',_crSw=0,_crTxt='';
+function _crReset(){_crShape='shield';_crSw=0;_crTxt='';}
+function _crBrandFor(name){
+ const c=CREST_SWATCHES[_crSw]||CREST_SWATCHES[0];
+ const n=String(name||'').trim();
+ const txt=(_crTxt.trim()||shortMark(n)||'新队').slice(0,4);
+ return {sh:_crShape,c1:c[0],c2:c[1],c3:c[2],txt};
+}
+function crestBuilderHTML(previewName){
+ const c=CREST_SWATCHES[_crSw]||CREST_SWATCHES[0];
+ const shapeBtns=CREST_SHAPE_LIST.map(sh=>{
+  const b=crestOf({sh,c1:c[0],c2:c[1],c3:c[2],txt:'KK'},34);
+  return `<button type="button" class="btn sm cr-shape ${sh===_crShape?'primary':''}" data-sh="${sh}" onclick="crShape('${sh}')" title="外形：${sh}">${b}</button>`;
+ }).join('');
+ const swBtns=CREST_SWATCHES.map((x,i)=>`<button type="button" class="cr-sw ${i===_crSw?'on':''}" data-i="${i}" onclick="crSw(${i})" title="配色${i+1}（主色 ${x[0]}）" style="background:${x[0]}"></button>`).join('');
+ return `<div class="cr-top">
+ <div id="cr-preview">${crestOf(_crBrandFor(previewName),64)}</div>
+ <div class="cr-tip dim">你的战队与 18 支真实 KPL 俱乐部同用一套队徽引擎<br>执教原版俱乐部保留官方主色（AG 红金 / 狼队黑金 / eStar 星空蓝…）</div>
+ </div>
+ <div class="dim" style="font-size:11px;margin:2px 0 6px">徽章外形</div>
+ <div class="cr-row">${shapeBtns}</div>
+ <div class="dim" style="font-size:11px;margin:4px 0 6px">主队配色</div>
+ <div class="cr-row">${swBtns}</div>
+ <div class="center dim" style="font-size:11px;margin:8px 0 6px">队徽缩写（≤4 字符，留空自动取队名）</div>
+ <div class="center"><input id="cr-txt" maxlength="4" value="${_escTxt(_crTxt)}" placeholder="如 AG / WOLF / 无名" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:170px;text-align:center" oninput="crTxt(this.value)"></div>`;
+}
+function refreshCrUI(){
+ const b=document.getElementById('cr-builder');
+ if(!b)return;
+ const name=function(){
+  const i=document.getElementById('new-team-name');
+  if(i&&String(i.value||'').trim())return i.value.trim();
+  return (typeof S!=='undefined'&&S&&S.teamName)?S.teamName:'';
+ }();
+ const p=document.getElementById('cr-preview');
+ if(p)p.innerHTML=crestOf(_crBrandFor(name),64);
+ b.querySelectorAll('.cr-shape').forEach(x=>x.classList.toggle('primary',x.dataset.sh===_crShape));
+ b.querySelectorAll('.cr-sw').forEach(x=>x.classList.toggle('on',parseInt(x.dataset.i,10)===_crSw));
+}
+function crShape(sh){_crShape=sh;refreshCrUI();}
+function crSw(i){_crSw=i;refreshCrUI();}
+function crTxt(v){_crTxt=String(v||'').trim().slice(0,4);refreshCrUI();}
+/* 俱乐部页「改队徽」弹窗：真实俱乐部可一键恢复官方原版 */
+function openCrestEdit(){
+ if(!S)return;
+ const cur=S.crest||crestBrand(S.teamName,S.icon)||autoBrand(S.teamName,S.icon);
+ _crShape=cur.sh||'shield';
+ const hit=CREST_SWATCHES.findIndex(x=>x[0]===cur.c1);
+ _crSw=hit<0?0:hit;
+ _crTxt=(cur.txt&&cur.txt!==shortMark(S.teamName))?String(cur.txt).slice(0,4):'';
+ $('#app-modal-body').innerHTML=`
+ <h2>${crest(S.icon,S.teamName,24)} ${S.teamName} · 自定义队徽</h2>
+ <div id="cr-builder">${crestBuilderHTML(S.teamName)}</div>
+ <div class="center mt16" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+ <button class="btn sm" onclick="closeModal('app-modal')">取消</button>
+ ${TEAM_BRAND[S.teamName]?`<button class="btn sm" onclick="resetCrest()">恢复官方原版队徽</button>`:''}
+ <button class="btn gold" onclick="saveCrest()">保存队徽</button>
+ </div>`;
+ $('#app-modal').classList.add('on');
+}
+function saveCrest(){
+ if(!S)return;
+ const b=_crBrandFor(S.teamName);
+ S.crest={sh:b.sh,c1:b.c1,c2:b.c2,c3:b.c3,txt:b.txt};
+ save();closeModal('app-modal');renderAll();toast('队徽已更新，各处同步生效');
+}
+function resetCrest(){
+ if(!S)return;
+ S.crest=null;
+ save();closeModal('app-modal');renderAll();
+ toast(TEAM_BRAND[S.teamName]?'已恢复官方原版队徽':'已恢复默认队徽');
 }

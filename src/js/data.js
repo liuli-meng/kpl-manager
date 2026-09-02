@@ -7,18 +7,94 @@ const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 
 const POS={top:['对抗路','对'],jg:['打野','野'],mid:['中路','中'],ad:['发育路','发'],sup:['游走','游']};
 const POS_ORDER=['top','jg','mid','ad','sup'];
-/* ================= 队徽：纹章盾（FM 式） =================
- 全联盟同一盾形，俱乐部专属深色底 + 下半暗段 + 白色单字纹章；颜色由队名哈希确定，同队永远同色。 */
-const CREST_COLORS=['#7d3a47','#31507d','#2f6b4f','#7d5a2a','#4f3a7d','#2a6b6b','#7d3a6b','#4a5568','#5c7d2a','#7d2f2f'];
-function crestColor(name){let h=5381;const s=String(name||'KPL');for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return CREST_COLORS[h%CREST_COLORS.length];}
-function crest(icon,team,size){
- const s=size||22,t=String(icon||'K').slice(0,1),col=crestColor(team||icon),fs=Math.round(s*0.46);
- return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 32 34" style="vertical-align:middle;flex:none" aria-hidden="true">'
- +'<path d="M16 1 30 5.5V17c0 8.2-5.6 13.6-14 16C7.6 30.6 2 25.2 2 17V5.5Z" fill="'+col+'"/>'
- +'<path d="M2 17c0 8.2 5.6 13.6 14 16 8.4-2.4 14-7.8 14-16v-2.5H2Z" fill="rgba(0,0,0,.22)"/>'
- +'<path d="M16 1 30 5.5V17c0 8.2-5.6 13.6-14 16C7.6 30.6 2 25.2 2 17V5.5Z" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"/>'
- +'<text x="16" y="22.5" text-anchor="middle" font-size="'+fs+'" font-weight="700" fill="#fff">'+t+'</text></svg>';
+/* ================= 队徽系统 v5：KPL 真实战队品牌 =================
+ 18 支真实队伍各配一套品牌：徽章外形 + 主色/副色/描边色 + 队徽缩写文字（拉丁简称）。
+ 自建战队走同一套生成器（开局/改队徽可自选外形+配色+缩写），质感同真实战队；
+ 无品牌登记的队（K甲/挑战者/虚拟队）由队名哈希取一套配色与外形，同队永远同款。 */
+const CREST_SHAPES={
+ shield:'M20 2 37 8.5V24c0 9.2-7.3 15.6-17 18.2C10.3 39.6 3 33.2 3 24V8.5Z',
+ hex:'M20 2 35.5 10.8v22.4L20 42 4.5 33.2V10.8Z',
+ round:'M20 6C28.84 6 36 13.16 36 22s-7.16 16-16 16S4 30.84 4 22 11.16 6 20 6Z',
+ square:'M5 4h30a4 4 0 0 1 4 4v28a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4Z',
+ diamond:'M20 2 38 22 20 42 2 22Z',
+ banner:'M4 5h32v21c0 9-7.3 15.3-16 17.9C11.3 41.3 4 35 4 26Z',
+};
+const CREST_SHAPE_LIST=Object.keys(CREST_SHAPES);
+const TEAM_BRAND={
+ '成都AG超玩会':{sh:'shield',c1:'#DF2A2A',c2:'#7A0C0C',c3:'#F6C445',txt:'AG'},
+ '重庆狼队':{sh:'hex',c1:'#15171B',c2:'#F2C41B',c3:'#F2C41B',txt:'WOLF'},
+ '武汉eStarPro':{sh:'round',c1:'#101F3E',c2:'#F0A81C',c3:'#F0A81C',txt:'eStar'},
+ '北京WB':{sh:'banner',c1:'#6A2FA0',c2:'#2F1150',c3:'#E8C766',txt:'WB'},
+ '济南RW侠':{sh:'diamond',c1:'#D8232A',c2:'#16181C',c3:'#FFFFFF',txt:'RW'},
+ '广州TTG':{sh:'round',c1:'#0E9CE8',c2:'#074A77',c3:'#FFFFFF',txt:'TTG'},
+ '杭州LGD.NBW':{sh:'square',c1:'#E02B3C',c2:'#4A050E',c3:'#FFFFFF',txt:'LGD'},
+ '苏州KSG':{sh:'shield',c1:'#F2581F',c2:'#57150B',c3:'#FFD24A',txt:'KSG'},
+ '佛山DRG':{sh:'shield',c1:'#16346E',c2:'#081226',c3:'#E0A93B',txt:'DRG'},
+ '南京Hero久竞':{sh:'shield',c1:'#5B2A8C',c2:'#241040',c3:'#F0C24B',txt:'HERO'},
+ '上海EDG.M':{sh:'square',c1:'#1B3F8F',c2:'#0A1633',c3:'#CFE0FF',txt:'EDG'},
+ '深圳DYG':{sh:'hex',c1:'#FF7A00',c2:'#241100',c3:'#FFFFFF',txt:'DYG'},
+ '北京JDG':{sh:'banner',c1:'#E1251B',c2:'#6E0F0C',c3:'#FFFFFF',txt:'JDG'},
+ '长沙TES.A':{sh:'square',c1:'#C8102E',c2:'#0E0E10',c3:'#FFFFFF',txt:'TES'},
+ '上海RNG.M':{sh:'round',c1:'#F5B335',c2:'#241500',c3:'#FFFFFF',txt:'RNG'},
+ '西安WE':{sh:'shield',c1:'#1D4F9C',c2:'#0A1D3F',c3:'#FFFFFF',txt:'WE'},
+ '桐乡情久':{sh:'shield',c1:'#8E1B33',c2:'#2A0A14',c3:'#E6C789',txt:'QJ'},
+ '常山UUG':{sh:'hex',c1:'#0E8A6A',c2:'#05332A',c3:'#BFE8D8',txt:'UUG'},
+};
+/* 自建战队可选主色盘（每项=主/副/描边 三件套），副色与描边自动配套 */
+const CREST_SWATCHES=[
+ ['#DF2A2A','#7A0C0C','#F6C445'],['#F2581F','#57150B','#FFD24A'],['#F2C41B','#4A3800','#15171B'],
+ ['#3FAE4E','#0F3D1C','#D9F2DC'],['#0E9CE8','#074A77','#FFFFFF'],['#1B3F8F','#0A1633','#CFE0FF'],
+ ['#6A2FA0','#2F1150','#E8C766'],['#E02B3C','#4A050E','#FFFFFF'],['#8E1B33','#2A0A14','#E6C789'],
+ ['#0E8A6A','#05332A','#BFE8D8'],['#FF7A00','#241100','#FFFFFF'],['#16346E','#081226','#E0A93B'],
+];
+const _escTxt=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const _lum=hex=>{ // 0..1 近似亮度，决定纹章文字用白还是深墨
+ const n=parseInt(hex.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;
+ return 0.2126*r+0.7152*g+0.0722*b;
+};
+/* 队徽缩写：优先队名里已含的拉丁缩写（AG/eStarPro 取末段字母），否则取中文名主体 1-2 字 */
+function shortMark(name,icon){
+ const s=String(name||'');
+ const lat=(s.match(/[A-Za-z0-9]+/g)||[]).filter(x=>x.length>=2);
+ if(lat.length)return lat[lat.length-1].slice(0,4);
+ const cn=s.split(/[·|｜\-—]/).pop().replace(/[^一-鿿A-Za-z0-9]/g,'');
+ if(cn)return cn.slice(0,2);
+ return String(icon||'KPL').slice(0,2);
 }
+function autoBrand(name,icon){
+ let h=5381;const s=String(name||icon||'KPL');
+ for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;
+ const c=CREST_SWATCHES[h%CREST_SWATCHES.length];
+ return {sh:CREST_SHAPE_LIST[h%CREST_SHAPE_LIST.length],c1:c[0],c2:c[1],c3:c[2],txt:shortMark(name,icon)};
+}
+function crestBrand(name,icon){
+ // 自己队优先用自定义队徽（即使队名撞了真实俱乐部名）
+ if(typeof S!=='undefined'&&S&&S.teamName&&name===S.teamName&&S.crest)return S.crest;
+ if(name&&TEAM_BRAND[name])return TEAM_BRAND[name];
+ return autoBrand(name,icon);
+}
+function teamColor(name){const b=crestBrand(name,'队');return b.c1;}
+let _crUid=0;
+function crestOf(b,s){ // 核心渲染：直接给品牌对象（生成器预览 / 正式队徽共用）
+ const z=s||22,w=Math.round(z),h=Math.round(z*44/40);
+ const body=CREST_SHAPES[b.sh]||CREST_SHAPES.shield,uid='cr'+(++_crUid);
+ const ink=_lum(b.c1)>0.6?'#15171B':'#FFFFFF';
+ let txt=_escTxt(b.txt||'KPL');
+ let fs=txt.length<=2?16.5:txt.length===3?14:txt.length===4?12.5:10.5;
+ if(z<=20)fs*=1.18; // 小尺寸（积分表）文字加大，靠色块认队
+ const yy=z<=20?25.5:24;
+ return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 40 44" style="vertical-align:middle;flex:none" aria-hidden="true">'
+ +'<clipPath id="'+uid+'"><path d="'+body+'"/></clipPath>'
+ +'<path d="'+body+'" fill="'+b.c1+'"/>'
+ +'<g clip-path="url(#'+uid+')">'
+ +'<path d="M-2 27.5L42 22v4L-2 31.5Z" fill="'+b.c3+'" opacity=".9"/>'
+ +'<path d="M-2 31.5L42 26v20H-2Z" fill="'+b.c2+'"/>'
+ +'</g>'
+ +'<path d="'+body+'" fill="none" stroke="'+b.c3+'" stroke-width="2" stroke-opacity=".95"/>'
+ +'<text x="20" y="'+yy+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="800" letter-spacing="-0.5" fill="'+ink+'">'+txt+'</text>'
+ +'</svg>';
+}
+function crest(icon,team,size){return crestOf(crestBrand(team,icon),size||22);}
 /* ================= 总值体系（FC26 式 OVR） =================
  选手唯一评价=总值（0-99）：按位置加权四维实时计算，训练/年龄/表现即时反映在数字上。
  身价、周薪、签约费、市场档位全部由总值曲线出；卡面色阶：90+ 金 / 80+ 蓝 / 其余灰蓝。 */

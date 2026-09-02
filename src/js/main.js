@@ -91,7 +91,7 @@ function upgradeSponsor(){
 
 /* ================= 开局 ================= */
 function initStart(){
- const icons=['剑','龙','狮','箭','浪','焰','电','冠'];
+ _crReset(); // 新档：队徽生成器回默认（盾形·红金配色）
  const clubs=CLUB_TEMPLATES.map((c,i)=>`<div class="club-card" data-ci="${i}" onclick="pickClub(${i})" style="cursor:pointer;background:var(--card2);border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center;transition:.15s">
  <div>${crest(c.icon,c.name,32)}</div>
  <div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
@@ -106,14 +106,10 @@ function initStart(){
  </div>
  <div id="tab-self-body">
  <div class="center" style="margin-bottom:12px">
- <span class="dim">战队名称：</span><input id="new-team-name" maxlength="8" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:180px" placeholder="输入队名">
+ <span class="dim">战队名称：</span><input id="new-team-name" maxlength="8" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:180px" placeholder="输入队名" oninput="refreshCrUI()">
  </div>
- <div class="center dim" style="margin-bottom:8px">选择队标：</div>
- <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
- ${icons.map((em,i)=>`<div class="pack-btn ic-pick" data-i="${i}" ${i===0?'style="border-color:var(--cyan)"':''} onclick="pickIcon(${i})">
- ${crest(em,em,30)}</div>`).join('')}
- </div>
- <div class="hint" style="margin-bottom:14px;text-align:center">初始资金 8000万 · 工资帽 900万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
+ <div id="cr-builder">${crestBuilderHTML('')}</div>
+ <div class="hint" style="margin:6px 0 14px;text-align:center">初始资金 8000万 · 工资帽 900万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
  <div class="center"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
  </div>
  <div id="tab-club-body" style="display:none">
@@ -137,15 +133,12 @@ function pickClub(i){
  $('#club-pick-tip').textContent='已选择：'+CLUB_TEMPLATES[i].name;
  $('#club-apply-btn').disabled=false;
 }
-function pickIcon(i){
- $$('.ic-pick').forEach(b=>b.style.borderColor='');
- document.querySelector('.ic-pick[data-i="'+i+'"]').style.borderColor='var(--cyan)';
-}
 function createTeam(){
  const name=$('#new-team-name').value.trim()||'无名战队';
- const idx=Array.from($$('.ic-pick')).findIndex(b=>b.style.borderColor==='var(--cyan)');
- const icon=['剑','龙','狮','箭','浪','焰','电','冠'][idx<0?0:idx];
- S=newState(name,icon);
+ const b=_crBrandFor(name);
+ if(!b.txt)b.txt=shortMark(name)||'队';
+ S=newState(name,(b.txt||'队').slice(0,1));
+ S.crest={sh:b.sh,c1:b.c1,c2:b.c2,c3:b.c3,txt:b.txt};
  // 直签开局：使用独立的自由球员池（与 18 队注册名单不重叠，保证全联盟一人一队）
  const usedNames=new Set();
  POS_ORDER.forEach((pos,i)=>{

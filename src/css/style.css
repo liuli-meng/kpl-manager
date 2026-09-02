@@ -333,3 +333,16 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
+
+/* ===== 队徽生成器（开局自建 / 改队徽） ===== */
+.cr-top{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:4px 0 6px}
+.cr-top #cr-preview{flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+.cr-tip{font-size:11px;line-height:1.7;text-align:left;max-width:280px}
+.cr-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}
+.cr-shape{min-width:54px;padding:7px 8px;border-radius:4px}
+.cr-sw{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0;flex:none}
+.cr-sw:hover{border-color:var(--accent);transform:scale(1.08)}
+.cr-sw.on{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 2px rgba(217,164,65,.25)}
+@media (max-width:640px){
+  .cr-top #cr-preview{width:96px;height:auto}
+}
