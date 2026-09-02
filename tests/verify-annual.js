@@ -92,8 +92,17 @@ const out = vm.runInContext(`
     if(S.phase!=='champion'&&S.phase!=='eliminated')fail('夏季赛未正常收官: phase='+S.phase);
     const summerPts=S.annualPts[S.teamName]||0;
     log('夏季赛收官: 冠军='+(S.playoff&&S.playoff.champ)+' 年度积分累计='+summerPts);
-    // ===== 夏季结束 → 年度总决赛 =====
+    // ===== 夏季结束 → 亚运年先打亚运会 → 年度总决赛 =====
     advanceCalendar(S);
+    if(isAsiadYear(S)){
+      if(S.phase!=='asiad')fail('亚运年夏季赛后应进入亚运会: phase='+S.phase);
+      if(!S.ag||!S.ag.squad.length)fail('亚运会未生成中国代表队名单');
+      let ag=0;
+      while(S.phase==='asiad'&&!S.ag.champ&&ag++<20){asiadStep(S);renderLeague();} // 渲染冒烟：亚运面板模板
+      if(!S.ag.champ)fail('亚运会未产生冠军: phase='+S.phase);
+      if(!S.ag.medal)fail('亚运会未判定中国队奖牌');
+      log('亚运会收官: 冠军='+S.ag.champ+' 中国队='+S.ag.medal+(S.ag.mvp?' MVP='+S.ag.mvp:''));
+    }
     if(S.phase!=='annual'){fail('夏季赛后未进入年总: phase='+S.phase);}
     renderClub();renderLeague(); // 渲染冒烟：年总擂台赛面板模板
     let g3=0;
@@ -185,11 +194,19 @@ const out = vm.runInContext(`
         if(!S.series&&!['champion','eliminated'].includes(S.phase))break;
       }else break;
     }
-    advanceCalendar(S); // 夏季结束 → 年总判定
+    advanceCalendar(S); // 夏季结束 → 亚运年先进亚运会 → 年总判定
+    if(isAsiadYear(S)){
+      let ag2=0;
+      while(S.phase==='asiad'&&ag2++<20)asiadStep(S); // 弱队陪跑：亚运→无缘年总→AI 补完年总→年度轮换一气呵成（ag 已归零）
+      if(S.phase!=='r1'||S.season!==2)fail('弱队场景亚运后应完成年度轮换: phase='+S.phase+' season='+S.season);
+      const agTitle=(S.titleHistory||[]).slice().reverse().find(h=>h.event==='亚运会');
+      if(!agTitle)fail('亚运会未记入赛事史');
+      log('弱队夏季止步 → 亚运会观赛（冠军='+agTitle.champ+'）→ 无缘年总 → AI 补完年总');
+    }
     if(S.phase!=='r1'||S.season!==2)fail('无缘年总应直接年度轮换: phase='+S.phase+' season='+S.season);
     if(!S.annual||!S.annual.po||!S.annual.po.champ)fail('年总应由 AI 补完产生冠军');
     log('弱队夏季止步 → 无缘年总 → AI 补完年总（圣龙杯='+S.annual.po.champ+'）→ '+splitLabel(S));
-  }catch(e){fail('异常: '+(e&&e.stack||e).toString().slice(0,300));}
+  }catch(err){fail('异常: '+(err&&err.message||err));}
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()

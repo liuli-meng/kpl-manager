@@ -521,6 +521,7 @@ function openSellNego(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已挂牌，请先撤牌或等待报价');return;}
  const ask=sellAskPrice(p);
  const cap=sellCeiling(p);
@@ -747,25 +748,127 @@ function renewCost(p){
  const f=(p.val||100)>=125?1.25:(p.val||100)<90?0.75:1; // 表现火热更贵、低迷更便宜
  return Math.max(100,Math.round(sellAskPrice(p)*0.18*f));
 }
-function renewPlayer(s,pid){
+function renewPlayer(s,pid,years,offerWage){
  const p=s.players.find(x=>x.id===pid);
- if(!p||p.contract>0){toast('该选手合同未到期');return;}
- const cost=renewCost(p);
+ if(!p||p.loan||(p.contract||0)>1){toast('该选手合同未到期');return;}
+ const y=Math.min(4,Math.max(1,years||RENEW_YEARS));
+ const cost=renewCostN(p,y);
  if(s.fund<cost){toast('资金不足（续约签字费 '+cost+'万）');return;}
  s.fund-=cost;
- const nw=Math.round(wageOf(overall(p))*((p.val||100)/100)); // 新周薪按表现重定
+ const nw=offerWage?Math.round(offerWage):Math.round(wageOf(overall(p))*((p.val||100)/100)); // 报价成交按谈定周薪，否则按表现重定
  if(nw>p.wage)logEvent(s,' '+p.name+' 续约涨薪：'+p.wage+'万 → '+nw+'万/周（表现好值得加薪）');
- p.wage=Math.max(p.wage,nw);
- p.contract=RENEW_YEARS;
- p.morale=clamp(p.morale+5,20,100);
+ else if(nw<p.wage)logEvent(s,' '+p.name+' 接受降薪续约：'+p.wage+'万 → '+nw+'万/周');
+ p.wage=Math.max(1,nw);
+ p.contract=y;
+ p.morale=clamp(p.morale+6,20,100);
  p.willingness=Math.min(100,(p.willingness||50)+10);
- logEvent(s,' 与 '+p.name+' 完成续约（'+RENEW_YEARS+' 年 · 签字费 '+cost+'万 · 周薪 '+p.wage+'万）');
+ logEvent(s,' 与 '+p.name+' 完成续约（'+y+' 年 · 签字费 '+cost+'万 · 周薪 '+nw+'万）');
  s.expiring=(s.expiring||[]).filter(x=>x!==pid);
- save();renderAll();toast(p.name+' 续约 '+RENEW_YEARS+' 年！');
+ save();renderAll();toast(p.name+' 续约 '+y+' 年！');
+}
+/* ================= 续约谈判（合同可谈，非固定价） =================
+ 年限 1-4 年自由谈：锁得越久经纪人要价越高（长约溢价），
+ 老将/闹情绪选手会抬价；报价低于心理价位会被拒，最多三轮，谈崩伤士气。 */
+function renewAskWage(p,years){
+ let w=wageOf(overall(p))*((p.val||100)/100);
+ w*=1+0.09*((years||2)-1);
+ const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
+ if(p.age>=m.gold)w*=1.05;
+ if((p.morale||50)<40)w*=1.05;
+ return Math.max(5,Math.round(w/5)*5);
+}
+function renewCostN(p,years){return Math.max(50,Math.round(renewCost(p)*(0.55+0.45*((years||2)-1))));}
+let _nego=null;
+function openRenewNego(s,pid){
+ const p=s.players.find(x=>x.id===pid);
+ if(!p||p.loan){_nego=null;return;}
+ if((p.contract||0)>1){_nego=null;toast('合同还剩 '+p.contract+' 年，最后一年再谈不迟');return;}
+ _nego={pid,years:2,attempt:0,ask:renewAskWage(p,2),offer:null};
+ renderRenewNego();
+}
+function renewNegoYears(y){
+ if(!_nego)return;
+ _nego.years=y;_nego.offer=null;_nego.ask=renewAskWage(S.players.find(x=>x.id===_nego.pid),y);
+ renderRenewNego();
+}
+function renewNegoOffer(d){
+ if(!_nego)return;
+ _nego.offer=Math.max(5,(_nego.offer!=null?_nego.offer:_nego.ask)+d);
+ renderRenewNego();
+}
+function renewNegoOfferInput(v){
+ if(!_nego)return;
+ const n=parseInt(v,10);
+ if(!isNaN(n))_nego.offer=Math.max(5,Math.min(9999,n));
+}
+function renderRenewNego(){
+ if(!_nego||!S)return;
+ const p=S.players.find(x=>x.id===_nego.pid);
+ if(!p){closeModal('app-modal');return;}
+ const y=_nego.years,ask=_nego.ask;
+ const offer=Math.max(5,Math.round((_nego.offer!=null?_nego.offer:ask)/5)*5);
+ _nego.offer=offer;
+ const cost=renewCostN(p,y);
+ const r=offer/ask;
+ const chance=r>=1.2?['基本会接受','var(--green)']:r>=1.05?['大概率接受','var(--green)']:r>=0.95?['五五开','var(--gold)']:r>=0.85?['大概率被拒','var(--red)']:['必被拒','var(--red)'];
+ const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
+ const ageTag=p.age>=m.gold?'<span class="red">下滑期 · 要价偏高</span>':p.age<=22?'<span class="green">上升期</span>':'黄金期';
+ $('#app-modal-body').innerHTML=`
+ <h2>续约谈判 · ${p.name} <span class="tag">${POS[p.pos][0]} · 总值 ${overall(p)}</span></h2>
+ <div class="hint" style="margin-bottom:10px">${p.age}岁 · ${ageTag} · 表现 ${p.val||100}% · 当前周薪 ${p.wage}万 · 现合同 ${p.contract>0?'最后 1 年':'已到期'}${_nego.attempt?'<br><span class="red">已拒绝 '+_nego.attempt+' 次（满 3 次谈崩，士气受损）</span>':''}</div>
+ <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+ <span class="dim" style="font-size:12px">合同年限：</span>
+ ${[1,2,3,4].map(k=>`<button class="btn sm ${k===y?'primary':''}" style="min-width:44px" onclick="renewNegoYears(${k})">${k}年</button>`).join('')}
+ </div>
+ <div class="hint" style="margin-bottom:10px">经纪人心理价位 <b class="gold">≈ ${ask}万/周</b>（长约溢价 · 签字费 ${cost}万）· 接受度 <b style="color:${chance[1]}">${chance[0]}</b></div>
+ <div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+ <span class="dim" style="font-size:12px">周薪报价：</span>
+ <button class="btn sm" onclick="renewNegoOffer(-10)">-10</button>
+ <button class="btn sm" onclick="renewNegoOffer(-5)">-5</button>
+ <input id="nego-offer" type="number" min="5" value="${offer}" onchange="renewNegoOfferInput(this.value)" style="width:76px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:3px;padding:6px 8px;font-size:14px;text-align:center">
+ <button class="btn sm" onclick="renewNegoOffer(5)">+5</button>
+ <button class="btn sm" onclick="renewNegoOffer(10)">+10</button>
+ <span class="dim" style="font-size:12px">万/周</span>
+ </div>
+ <div class="center" style="display:flex;gap:8px;justify-content:center">
+ <button class="btn primary" onclick="submitRenewNego()">提出报价</button>
+ <button class="btn" onclick="closeModal('app-modal')">先不谈</button>
+ </div>`;
+ $('#app-modal').classList.add('on');
+}
+function submitRenewNego(){
+ if(!_nego||!S)return;
+ const p=S.players.find(x=>x.id===_nego.pid);
+ if(!p){closeModal('app-modal');return;}
+ const y=_nego.years,offer=_nego.offer,ask=_nego.ask,cost=renewCostN(p,y);
+ if(S.fund<cost){toast('资金不足（签字费 '+cost+'万）');return;}
+ const r=offer/ask;
+ let prob=r>=1.2?0.98:r>=1.05?0.85:r>=0.95?0.55:r>=0.85?0.25:0.05;
+ prob=clamp(prob+((p.morale||50)-50)/500,0.02,0.99);
+ if(rnd(1,100)<=Math.round(prob*100)){
+ renewPlayer(S,p.id,y,offer);
+ _nego=null;
+ closeModal('app-modal');
+ return;
+ }
+ _nego.attempt++;
+ if(_nego.attempt>=3){
+ p.morale=clamp(p.morale-4,20,100);
+ logEvent(S,' 与 '+p.name+' 的续约谈判破裂（三轮未谈拢，士气受损）');
+ _nego=null;
+ save();renderAll();closeModal('app-modal');
+ toast('谈判破裂：'+p.name+' 坚持要价 '+ask+'万/周');
+ return;
+ }
+ _nego.ask=Math.max(5,Math.round(_nego.ask*1.07/5)*5);
+ _nego.offer=null;
+ renderRenewNego();
+ toast(p.name+' 的经纪人嫌低了，要价涨到 '+_nego.ask+'万/周');
 }
 function releasePlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p||p.contract>0){toast('该选手合同未到期');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能放走');return;}
  s.players=s.players.filter(x=>x.id!==pid);
  const li=s.lineup.indexOf(pid);if(li>=0)s.lineup.splice(li,1);
  if(s.pick)delete s.pick[p.pos];

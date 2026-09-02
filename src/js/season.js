@@ -3,7 +3,8 @@
  常规赛4阶段：第一轮(3组单循环BO5)→第二轮(S/A/B)→卡位赛(BO7含巅峰对决)→第三轮(S/A单循环BO5)
  季后赛：S组6队(前4进胜者组)+A组前4 → 10队 BO7 双败淘汰，总决赛第7局巅峰对决
  常规赛胜者积1分；2026起奖金按胜小局数结算 */
-const PHASE_NAME={r1:'常规赛·第一轮',r2:'常规赛·第二轮',card:'卡位赛',r3:'常规赛·第三轮',playoff:'季后赛',champion:'赛季结束',eliminated:'赛季结束',challenger:'挑战者杯',ewc:'EWC 电竞世界杯',annual:'KPL 年度总决赛'};
+const PHASE_NAME={r1:'常规赛·第一轮',r2:'常规赛·第二轮',card:'卡位赛',r3:'常规赛·第三轮',playoff:'季后赛',champion:'赛季结束',eliminated:'赛季结束',challenger:'挑战者杯',ewc:'EWC 电竞世界杯',asiad:'亚运会',annual:'KPL 年度总决赛'};
+const isAsiadYear=s=>gameYear(s)%4===2; // 亚运会四年一届（2026 名古屋 / 2030 / 2034…），夏赛后、年总前举行
 /* ================= 年度赛历（春季赛 → EWC 电竞世界杯 → 夏季赛 → KPL 年度总决赛） =================
  真实 KPL 年历建模：一年两个联赛赛段（春/夏，赛制相同），夏季赛前穿插 EWC 国际杯赛
  （春季冠亚军分别以 KPL冠军 / 英雄亚冠ACL 身份直邀 8 强），年末年度积分前 12 打年总
@@ -463,6 +464,9 @@ function newSeason(s){
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
  s.academyTrained=false;
+ // 亚运会状态归零：仅当届有效（防 agDone 跨年残留导致下一届亚运年不触发）
+ s.agDone=false;s.ag=null;s.natSquad=null;s.natCampIds=[];s.natAnnounced=false;
+ s.players.forEach(p=>{p.natCamp=false;p.natFill=false;});
  // 年龄增长：黄金期属性成长，下滑期按位置衰减，达到位置退役年龄离队
  const retired=[];
  s.players.forEach(p=>{
@@ -555,9 +559,41 @@ function startSplit(s,split){
  s.aiRosters={}; // 对手阵容重建
  s.aiInj={}; // 伤停清零
  initGroups(s);
+ if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s); // 亚运年夏季：先宣布国家队征召（集训缺席整季）
  logEvent(s,' '+splitLabel(s)+' 赛前转会期开启（7天）：可买断/挂牌/直签选手与教练，市场刷新免费；结束转会期后联赛开打');
  logEvent(s,' '+splitLabel(s)+' 开始！18队 S/A/B 赛制，目标：'+SPLIT_NAME[split]+'总冠军（年度积分 +'+ANNUAL_PTS[split].p1+'）！');
  save();renderAll();
+}
+/* ================= 亚运会·国家队征召（亚运年夏季赛前宣布） =================
+ 真实逻辑：名单在夏赛开打前公布，入选选手整个夏季赛在国家队集训/出征，缺席俱乐部比赛。
+ 俱乐部损失核心战力，但可用替补/转会/青训顶位；亚运结束后选手归队并带回奖牌加成。 */
+function natCamping(s,p){return !!(p&&p.natCamp&&!s.agDone&&s.split==='summer');}
+function announceNatCamp(s){
+ s.natAnnounced=true;
+ const squad=agSelectSquad(s); // 全联盟各位置总值最高（实时阵容）
+ const owned=new Set(s.players.map(p=>p.id));
+ const mine=squad.filter(p=>owned.has(p.id));
+ s.natSquad=squad.map(p=>({name:p.name,pos:p.pos,mine:owned.has(p.id),ovr:overall(p)}));
+ s.natCampIds=mine.map(p=>p.id);
+ mine.forEach(p=>{p.natCamp=true;});
+ autoFillLineup(s); // 集训选手立刻换下首发（缺位由替补/借调顶上）
+ if(mine.length){
+ const names=mine.map(p=>p.name+'（'+POS[p.pos][0]+'）').join('、');
+ logEvent(s,' 国家队征召：'+names+' 入选中国代表队！夏赛期间集训+出征名古屋亚运会，缺席俱乐部整个夏季赛（可买替补/提拔青训顶位）');
+ }else{
+ logEvent(s,' '+gameYear(s)+' 亚运年：中国代表队集结完毕（本队无选手入选，不受影响）');
+ }
+}
+function promoteNatFill(s,pos){
+ if(typeof genAcademyDef!=='function'||typeof genSeasonPlayer!=='function')return null;
+ const used=new Set();
+ s.players.forEach(p=>used.add(p.name));
+ (s.academy||[]).forEach(r=>used.add(r.name));
+ const def=genAcademyDef(pos,used,s.season);
+ const p=genSeasonPlayer(s,def);
+ p.natFill=true;p.natCamp=false;p.contract=1;
+ s.players.push(p);
+ return p;
 }
 
 /* ================= 年度积分结算（官方名次档） =================
@@ -610,10 +646,12 @@ function awardFMVP(s,champ,event){
 /* ===== 年度赛历推进（赛季结束按钮统一入口）：春→EWC→夏→年总→下一年 ===== */
 function calendarNextLabel(s){
  if(s.split==='spring')return ' 前往挑战者杯（32队 · KPL全员）';
+ if(isAsiadYear(s)&&!s.agDone)return ' 出征亚运会（中国代表队征召）';
  return annualRank(s).slice(0,12).includes(s.teamName)?' 前往 KPL 年度总决赛':' 年度收官 · 开启新赛季';
 }
 function advanceCalendar(s){
  if(s.split==='spring'){setupChallenger(s);return;} // 春 → 挑战者杯 → EWC → 夏 → 年总
+ if(isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;} // 亚运年：夏 → 亚运会 → 年总
  setupAnnual(s); // 内部判定是否晋级（未晋级自动补完 AI 赛程并年度轮换）
 }
 /* ================= 挑战者杯（2026 KPL 春季赛后最高关注度杯赛） =================
@@ -803,6 +841,112 @@ function finishEWC(s){
  awardFMVP(s,e.champ,gameYear(s)+' EWC 电竞世界杯');
  s.ewcDone=true;
  startSplit(s,'summer'); // EWC 收官 → 夏季赛转会期（年中不老化）
+}
+/* ================= 亚运会（四年一届 · 国家队征召） =================
+ 真实建模简化：中国代表队由 KPL 联盟各位置当赛季总值最高者组成（含玩家队选手），
+ 韩国为最强对手，8 队 BO7 单败淘汰。玩家不直接操控国家队（教练席不在你手里），
+ 但麾下入选选手会带回来奖牌加成：人气/身价/士气 + 协会奖金，代价是年总体力下滑。 */
+const AG_NATIONS=[['韩国',470],['中国台北',432],['越南',427],['泰国',416],['日本',400],['沙特阿拉伯',385],['印度',365]];
+const AG_CITY='名古屋';
+function agSelectSquad(s){
+ const pool=[];
+ (s.players||[]).forEach(p=>{if(!p.loan&&!p.retiring)pool.push(p);});
+ AI_TEAMS.forEach(t=>ensureAiRosters(s,t.name).forEach(p=>pool.push(p)));
+ return POS_ORDER.map(pos=>pool.filter(p=>p.pos===pos).sort((a,b)=>overall(b)-overall(a))[0]).filter(Boolean);
+}
+function setupAsianGames(s){
+ // 名单以夏初宣布的 natSquad 为准（征召后中途转会不换人）；残缺时按当前最强兜底补位
+ const ownedIds=new Set((s.players||[]).map(p=>p.id));
+ let squad=[];
+ const nat=(s.natSquad||[]).map(x=>x.name);
+ if(nat.length){
+ squad=nat.map(n=>{
+ const own=(s.players||[]).find(p=>p.name===n);
+ if(own&&!own.retiring)return own;
+ for(const t of AI_TEAMS){const q=ensureAiRosters(s,t.name).find(p=>p.name===n);if(q)return q;}
+ return null;
+ }).filter(Boolean);
+ }
+ if(squad.length<5)squad=agSelectSquad(s); // 兜底：名单残缺（退役/异常）按当前最强补
+ const myPow=Math.round(squad.reduce((m,p)=>m+playerPower(p),0));
+ s.aiPower=s.aiPower||{};
+ s.aiPower['中国代表队']=myPow;
+ AG_NATIONS.forEach(([n,pw])=>{s.aiPower[n]=pw+(gameYear(s)-2026)*3;}); // 海外对手逐年小幅变强
+ const others=shuffle(AG_NATIONS.map(([n])=>n).slice());
+ s.ag={squad:squad.map(p=>({name:p.name,pos:p.pos,mine:ownedIds.has(p.id),ovr:overall(p)})),
+ myPow,qf:[{a:'中国代表队',b:others[0],r:null},{a:'韩国',b:others[1],r:null},{a:others[2],b:others[3],r:null},{a:others[4],b:others[5],r:null}],
+ sf:[{a:null,b:null,r:null},{a:null,b:null,r:null}],final:{a:null,b:null,r:null},champ:null,mvp:null,medal:null};
+ s.phase='asiad';
+ const mineCnt=s.ag.squad.filter(x=>x.mine).length;
+ logEvent(s,' '+gameYear(s)+' '+AG_CITY+'亚运会开幕！中国代表队由 KPL 各位置当季最强组成（战力 '+myPow+'）');
+ logEvent(s,' 中国代表队名单：'+s.ag.squad.map(x=>POS[x.pos][1]+' '+x.name+(x.mine?'（本队）':'')).join('、')+' —— 最强对手：韩国');
+ if(mineCnt)logEvent(s,' 你队有 '+mineCnt+' 名选手被征召！赛程由国家队教练组指挥，成绩将以奖牌加成形式回流俱乐部');
+ save();renderAll();
+}
+function asiadStep(s){
+ const a=s.ag;if(!a||a.champ)return;
+ const done=[];
+ const play=m=>{const r=simSeriesResult(s,m.a,m.b,7);m.r=r.win?m.a:m.b;m.ms=r.mw;m.es=r.ow;done.push(m);};
+ if(a.qf.some(m=>!m.r)){a.qf.forEach(m=>{if(!m.r)play(m);});}
+ else if(a.sf.some(m=>!m.r)){a.sf.forEach((m,i)=>{if(m.a===null)m.a=a.qf[i*2].r;if(m.b===null)m.b=a.qf[i*2+1].r;if(!m.r)play(m);});}
+ else if(!a.final.r){
+ if(a.final.a===null)a.final.a=a.sf[0].r;
+ if(a.final.b===null)a.final.b=a.sf[1].r;
+ play(a.final);
+ }else{finishAsianGames(s);return;}
+ done.forEach(m=>logEvent(s,' 亚运会淘汰赛（BO7）：'+m.a+' '+(m.ms||0)+':'+(m.es||0)+' '+m.b+'，'+m.r+' 晋级'));
+ if(a.final.r)finishAsianGames(s);
+ else{save();renderAll();}
+}
+function finishAsianGames(s){
+ const a=s.ag;if(!a||a.champ)return;
+ a.champ=a.final.r;
+ const loserOf=m=>m.r===m.a?m.b:m.a;
+ const runner=loserOf(a.final);
+ const bronzes=a.sf.map(loserOf).filter(Boolean);
+ a.medal=a.champ==='中国代表队'?'金牌':runner==='中国代表队'?'银牌':bronzes.includes('中国代表队')?'铜牌':'无';
+ s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:null,event:'亚运会',champ:a.champ}]).slice(-16);
+ logEvent(s,' '+gameYear(s)+' 亚运会王者荣耀项目落幕：'+a.champ+' 金牌 · '+(runner==='中国代表队'?'中国队':'韩国等队')+' 银牌');
+ if(a.champ==='中国代表队')logEvent(s,' 中国代表队登顶亚洲之巅——国旗升起时刻，整个 KPL 都在看！');
+ else if(a.medal==='无')logEvent(s,' 中国队无缘领奖台，舆论哗然');
+ // MVP：冠军队内战力最高者；中国队夺冠时从征召名单里定
+ if(a.champ==='中国代表队'){
+ const best=agSelectSquad(s).slice().sort((x,y)=>overall(y)-overall(x))[0];
+ if(best){a.mvp=best.name;logEvent(s,' 亚运会 MVP：'+best.name+'（'+POS[best.pos][0]+'）当选');}
+ }
+ // 奖牌回流俱乐部：本队入选选手按奖牌档位获得人气/身价/士气，协会发奖金；代价是年总体力下滑
+ const mine=a.squad.filter(x=>x.mine);
+ const add={'金牌':[8,6],'银牌':[5,4],'铜牌':[3,2],'无':[1,0]}[a.medal];
+ const prizeBase={'金牌':400,'银牌':200,'铜牌':100,'无':50}[a.medal];
+ mine.forEach(x=>{
+ const p=(s.players||[]).find(y=>y.name===x.name);
+ if(!p)return;
+ p.popularity=Math.min(99,(p.popularity||0)+add[0]);
+ p.val=clamp((p.val||100)+add[1],70,150);
+ p.morale=clamp(p.morale+5,20,100);
+ p.energy=clamp((p.energy==null?100:p.energy)-15,30,100); // 国家队征召消耗：年总开局体力不满
+ });
+ if(mine.length){
+ const prize=Math.round(prizeBase*mine.length/5);
+ if(prize){s.fund+=prize;logEvent(s,' 协会发放亚运会奖金：+'+prize+'万（'+mine.length+' 名选手入选 · '+a.medal+'档）');}
+ logEvent(s,' 亚运会加成：'+mine.map(x=>x.name).join('、')+' 人气+'+add[0]+' · 身价+'+add[1]+'（征召消耗体力，年总开局体力不满）');
+ if(a.mvp&&mine.some(x=>x.name===a.mvp)){
+ const p=(s.players||[]).find(y=>y.name===a.mvp);
+ if(p){p.popularity=Math.min(99,(p.popularity||0)+10);p.val=clamp((p.val||100)+5,70,150);
+ logEvent(s,' 亚运会 MVP 是你的 '+a.mvp+'！专属冠军皮肤安排（人气+10 · 身价+5）');}
+ }
+ }
+ s.agDone=true;
+ // 集训归队：清除征召标记 + 撤掉青训临时借调（亚运后恢复完整阵容打年总）
+ s.players.forEach(p=>{p.natCamp=false;});
+ s.natCampIds=[];
+ const fills=s.players.filter(p=>p.natFill);
+ if(fills.length){
+ fills.forEach(p=>{const li=s.lineup.indexOf(p.id);if(li>=0)s.lineup.splice(li,1);});
+ s.players=s.players.filter(p=>!p.natFill);
+ logEvent(s,' 集训借调青训归位：'+fills.map(p=>p.name).join('、')+' 返回青训营，征召选手全员归队备战年总');
+ }
+ setupAnnual(s);
 }
 /* ================= KPL 年度总决赛（年末最高规格） =================
  年度积分前 12 入围：擂台赛（大师组=积分前6 × 精英组=后6，组外单循环 BO5，每队6场）

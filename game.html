@@ -1730,6 +1730,7 @@ function openSellNego(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已挂牌，请先撤牌或等待报价');return;}
  const ask=sellAskPrice(p);
  const cap=sellCeiling(p);
@@ -2076,6 +2077,7 @@ function submitRenewNego(){
 function releasePlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p||p.contract>0){toast('该选手合同未到期');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能放走');return;}
  s.players=s.players.filter(x=>x.id!==pid);
  const li=s.lineup.indexOf(pid);if(li>=0)s.lineup.splice(li,1);
  if(s.pick)delete s.pick[p.pos];
@@ -2903,6 +2905,9 @@ function newSeason(s){
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
  s.academyTrained=false;
+ // 亚运会状态归零：仅当届有效（防 agDone 跨年残留导致下一届亚运年不触发）
+ s.agDone=false;s.ag=null;s.natSquad=null;s.natCampIds=[];s.natAnnounced=false;
+ s.players.forEach(p=>{p.natCamp=false;p.natFill=false;});
  // 年龄增长：黄金期属性成长，下滑期按位置衰减，达到位置退役年龄离队
  const retired=[];
  s.players.forEach(p=>{
@@ -2995,9 +3000,41 @@ function startSplit(s,split){
  s.aiRosters={}; // 对手阵容重建
  s.aiInj={}; // 伤停清零
  initGroups(s);
+ if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s); // 亚运年夏季：先宣布国家队征召（集训缺席整季）
  logEvent(s,' '+splitLabel(s)+' 赛前转会期开启（7天）：可买断/挂牌/直签选手与教练，市场刷新免费；结束转会期后联赛开打');
  logEvent(s,' '+splitLabel(s)+' 开始！18队 S/A/B 赛制，目标：'+SPLIT_NAME[split]+'总冠军（年度积分 +'+ANNUAL_PTS[split].p1+'）！');
  save();renderAll();
+}
+/* ================= 亚运会·国家队征召（亚运年夏季赛前宣布） =================
+ 真实逻辑：名单在夏赛开打前公布，入选选手整个夏季赛在国家队集训/出征，缺席俱乐部比赛。
+ 俱乐部损失核心战力，但可用替补/转会/青训顶位；亚运结束后选手归队并带回奖牌加成。 */
+function natCamping(s,p){return !!(p&&p.natCamp&&!s.agDone&&s.split==='summer');}
+function announceNatCamp(s){
+ s.natAnnounced=true;
+ const squad=agSelectSquad(s); // 全联盟各位置总值最高（实时阵容）
+ const owned=new Set(s.players.map(p=>p.id));
+ const mine=squad.filter(p=>owned.has(p.id));
+ s.natSquad=squad.map(p=>({name:p.name,pos:p.pos,mine:owned.has(p.id),ovr:overall(p)}));
+ s.natCampIds=mine.map(p=>p.id);
+ mine.forEach(p=>{p.natCamp=true;});
+ autoFillLineup(s); // 集训选手立刻换下首发（缺位由替补/借调顶上）
+ if(mine.length){
+ const names=mine.map(p=>p.name+'（'+POS[p.pos][0]+'）').join('、');
+ logEvent(s,' 国家队征召：'+names+' 入选中国代表队！夏赛期间集训+出征名古屋亚运会，缺席俱乐部整个夏季赛（可买替补/提拔青训顶位）');
+ }else{
+ logEvent(s,' '+gameYear(s)+' 亚运年：中国代表队集结完毕（本队无选手入选，不受影响）');
+ }
+}
+function promoteNatFill(s,pos){
+ if(typeof genAcademyDef!=='function'||typeof genSeasonPlayer!=='function')return null;
+ const used=new Set();
+ s.players.forEach(p=>used.add(p.name));
+ (s.academy||[]).forEach(r=>used.add(r.name));
+ const def=genAcademyDef(pos,used,s.season);
+ const p=genSeasonPlayer(s,def);
+ p.natFill=true;p.natCamp=false;p.contract=1;
+ s.players.push(p);
+ return p;
 }
 
 /* ================= 年度积分结算（官方名次档） =================
@@ -3259,8 +3296,19 @@ function agSelectSquad(s){
  return POS_ORDER.map(pos=>pool.filter(p=>p.pos===pos).sort((a,b)=>overall(b)-overall(a))[0]).filter(Boolean);
 }
 function setupAsianGames(s){
- const squad=agSelectSquad(s);
+ // 名单以夏初宣布的 natSquad 为准（征召后中途转会不换人）；残缺时按当前最强兜底补位
  const ownedIds=new Set((s.players||[]).map(p=>p.id));
+ let squad=[];
+ const nat=(s.natSquad||[]).map(x=>x.name);
+ if(nat.length){
+ squad=nat.map(n=>{
+ const own=(s.players||[]).find(p=>p.name===n);
+ if(own&&!own.retiring)return own;
+ for(const t of AI_TEAMS){const q=ensureAiRosters(s,t.name).find(p=>p.name===n);if(q)return q;}
+ return null;
+ }).filter(Boolean);
+ }
+ if(squad.length<5)squad=agSelectSquad(s); // 兜底：名单残缺（退役/异常）按当前最强补
  const myPow=Math.round(squad.reduce((m,p)=>m+playerPower(p),0));
  s.aiPower=s.aiPower||{};
  s.aiPower['中国代表队']=myPow;
@@ -3330,6 +3378,15 @@ function finishAsianGames(s){
  }
  }
  s.agDone=true;
+ // 集训归队：清除征召标记 + 撤掉青训临时借调（亚运后恢复完整阵容打年总）
+ s.players.forEach(p=>{p.natCamp=false;});
+ s.natCampIds=[];
+ const fills=s.players.filter(p=>p.natFill);
+ if(fills.length){
+ fills.forEach(p=>{const li=s.lineup.indexOf(p.id);if(li>=0)s.lineup.splice(li,1);});
+ s.players=s.players.filter(p=>!p.natFill);
+ logEvent(s,' 集训借调青训归位：'+fills.map(p=>p.name).join('、')+' 返回青训营，征召选手全员归队备战年总');
+ }
  setupAnnual(s);
 }
 /* ================= KPL 年度总决赛（年末最高规格） =================
@@ -3745,21 +3802,31 @@ function expandSteps(sr,isPeak){
  });
  return steps; // 18 手，side: M=我方 O=对方
 }
-/* 首发缺位时从替补席同位置自动递补（退役/转会后防呆）；伤停必须休息：健康替补自动顶替伤员 */
+/* 首发缺位时从替补席同位置自动递补（退役/转会后防呆）；伤停/国家队集训必须休息：
+ 健康替补自动顶替；亚运年夏季若该位置无人可替，临时借调青训顶位（star 被征召时的买人/提拔价值） */
+function natBusy(s,p){return !!(p&&(p.injury>0||(p.natCamp&&!s.agDone&&s.split==='summer')));}
 function autoFillLineup(s){
  POS_ORDER.forEach(pos=>{
  const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
  const inPos=cur.find(p=>p.pos===pos);
- if(inPos&&inPos.injury>0){ // 伤员自动下场（买替补/青训的价值所在）；无健康替补时留给 openBP 拦截
- const fit=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&p.injury<=0);
+ if(inPos&&natBusy(s,inPos)){ // 伤员/集训自动下场；无健康替补时留给 openBP 拦截
+ const fit=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p));
  if(fit){
  s.lineup[s.lineup.indexOf(inPos.id)]=fit.id;
- logEvent(s,' '+inPos.name+' 伤停（还剩'+inPos.injury+'天），'+fit.name+' 替补登场（'+POS[pos][0]+'）');
+ logEvent(s,' '+inPos.name+(inPos.natCamp?' 国家队集训中，缺席夏季赛；':' 伤停（还剩'+inPos.injury+'天），')+fit.name+' 顶替首发（'+POS[pos][0]+'）');
+ return;
+ }
+ if(inPos.natCamp&&typeof promoteNatFill==='function'){ // 集训无人可替：青训临时借调（保证 5 人建制）
+ const tmp=promoteNatFill(s,pos);
+ if(tmp){
+ s.lineup[s.lineup.indexOf(inPos.id)]=tmp.id;
+ logEvent(s,' '+inPos.name+' 国家队集训缺阵，青训 '+tmp.name+' 临时借调顶位（'+POS[pos][0]+'）——集训结束归队');
  return;
  }
  }
+ }
  if(!cur.some(p=>p.pos===pos)){
- const bench=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos);
+ const bench=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p));
  if(bench){s.lineup.push(bench.id);logEvent(s,' '+bench.name+' 递补进入首发（'+POS[pos][0]+'）');}
  }
  });
@@ -4590,8 +4657,9 @@ function pcard(p,extra){
  const o=overall(p),oc=ovrColor(o); // 总值实时计算，训练/年龄/表现即时反映
  const hpCls=p.injury>0?`<div class="p-hp">伤停 ${p.injury}天</div>`:(p.morale<40?'<div class="p-hp">状态差</div>':'');
  const tags=(p.tags||[]).map(t=>`<span class="p-tag">${t}</span>`).join('');
+ const campTag=(typeof natCamping==='function'&&natCamping(S,p))?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">国家队·集训</span>`:'';
  const teamHtml=p.team?` · <span style="color:var(--dim)">${p.team}</span>`:'';
- const potHtml=p.potential?` · 潜力${''.repeat(p.potential)}`:'';
+ const potHtml=p.potential?` · 潜力${'★'.repeat(p.potential)}`:'';
  // 英雄池压缩为计数摘要，避免长列表刷屏
  const poolCnt=(p.heroPool||[]).reduce((m,h)=>{m[h.lv]=(m[h.lv]||0)+1;return m;},{});
  const poolHtml=`<span style="color:var(--faint)"> · 池 ${['绝活','熟练','一般'].map((n,i)=>poolCnt[3-i]?`${n}${poolCnt[3-i]}`:'').filter(Boolean).join('/')}</span>`;
@@ -4606,7 +4674,7 @@ function pcard(p,extra){
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
- <div class="p-top"><span class="p-name">${p.name}${tags}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
+ <div class="p-top"><span class="p-name">${p.name}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
  <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
  ${stageHtml}
  ${contractHtml}
@@ -4966,6 +5034,7 @@ function swapPlayer(pid){
  const p=S.players.find(x=>x.id===pid);
  const inLineup=S.lineup.includes(pid);
  if(!inLineup&&p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），不能进入首发');return;}
+ if(!inLineup&&typeof natCamping==='function'&&natCamping(S,p)){toast(p.name+' 正在国家队集训（缺席整个夏季赛），不能进入首发');return;}
  if(inLineup){
  // 有同位置替补则对位换人；没有也允许直接下场（位置空缺）——否则满员时卖不掉、工资帽腾不出，买不了新人的死锁
  const bn=rosterBench(S).filter(x=>x.pos===p.pos&&x.injury<=0); // 伤员不可顶替上场

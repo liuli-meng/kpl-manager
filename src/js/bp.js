@@ -126,21 +126,31 @@ function expandSteps(sr,isPeak){
  });
  return steps; // 18 手，side: M=我方 O=对方
 }
-/* 首发缺位时从替补席同位置自动递补（退役/转会后防呆）；伤停必须休息：健康替补自动顶替伤员 */
+/* 首发缺位时从替补席同位置自动递补（退役/转会后防呆）；伤停/国家队集训必须休息：
+ 健康替补自动顶替；亚运年夏季若该位置无人可替，临时借调青训顶位（star 被征召时的买人/提拔价值） */
+function natBusy(s,p){return !!(p&&(p.injury>0||(p.natCamp&&!s.agDone&&s.split==='summer')));}
 function autoFillLineup(s){
  POS_ORDER.forEach(pos=>{
  const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
  const inPos=cur.find(p=>p.pos===pos);
- if(inPos&&inPos.injury>0){ // 伤员自动下场（买替补/青训的价值所在）；无健康替补时留给 openBP 拦截
- const fit=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&p.injury<=0);
+ if(inPos&&natBusy(s,inPos)){ // 伤员/集训自动下场；无健康替补时留给 openBP 拦截
+ const fit=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p));
  if(fit){
  s.lineup[s.lineup.indexOf(inPos.id)]=fit.id;
- logEvent(s,' '+inPos.name+' 伤停（还剩'+inPos.injury+'天），'+fit.name+' 替补登场（'+POS[pos][0]+'）');
+ logEvent(s,' '+inPos.name+(inPos.natCamp?' 国家队集训中，缺席夏季赛；':' 伤停（还剩'+inPos.injury+'天），')+fit.name+' 顶替首发（'+POS[pos][0]+'）');
+ return;
+ }
+ if(inPos.natCamp&&typeof promoteNatFill==='function'){ // 集训无人可替：青训临时借调（保证 5 人建制）
+ const tmp=promoteNatFill(s,pos);
+ if(tmp){
+ s.lineup[s.lineup.indexOf(inPos.id)]=tmp.id;
+ logEvent(s,' '+inPos.name+' 国家队集训缺阵，青训 '+tmp.name+' 临时借调顶位（'+POS[pos][0]+'）——集训结束归队');
  return;
  }
  }
+ }
  if(!cur.some(p=>p.pos===pos)){
- const bench=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos);
+ const bench=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p));
  if(bench){s.lineup.push(bench.id);logEvent(s,' '+bench.name+' 递补进入首发（'+POS[pos][0]+'）');}
  }
  });

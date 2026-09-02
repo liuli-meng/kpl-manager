@@ -7,8 +7,9 @@ function pcard(p,extra){
  const o=overall(p),oc=ovrColor(o); // 总值实时计算，训练/年龄/表现即时反映
  const hpCls=p.injury>0?`<div class="p-hp">伤停 ${p.injury}天</div>`:(p.morale<40?'<div class="p-hp">状态差</div>':'');
  const tags=(p.tags||[]).map(t=>`<span class="p-tag">${t}</span>`).join('');
+ const campTag=(typeof natCamping==='function'&&natCamping(S,p))?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">国家队·集训</span>`:'';
  const teamHtml=p.team?` · <span style="color:var(--dim)">${p.team}</span>`:'';
- const potHtml=p.potential?` · 潜力${''.repeat(p.potential)}`:'';
+ const potHtml=p.potential?` · 潜力${'★'.repeat(p.potential)}`:'';
  // 英雄池压缩为计数摘要，避免长列表刷屏
  const poolCnt=(p.heroPool||[]).reduce((m,h)=>{m[h.lv]=(m[h.lv]||0)+1;return m;},{});
  const poolHtml=`<span style="color:var(--faint)"> · 池 ${['绝活','熟练','一般'].map((n,i)=>poolCnt[3-i]?`${n}${poolCnt[3-i]}`:'').filter(Boolean).join('/')}</span>`;
@@ -23,7 +24,7 @@ function pcard(p,extra){
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
- <div class="p-top"><span class="p-name">${p.name}${tags}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
+ <div class="p-top"><span class="p-name">${p.name}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
  <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
  ${stageHtml}
  ${contractHtml}
@@ -383,6 +384,7 @@ function swapPlayer(pid){
  const p=S.players.find(x=>x.id===pid);
  const inLineup=S.lineup.includes(pid);
  if(!inLineup&&p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），不能进入首发');return;}
+ if(!inLineup&&typeof natCamping==='function'&&natCamping(S,p)){toast(p.name+' 正在国家队集训（缺席整个夏季赛），不能进入首发');return;}
  if(inLineup){
  // 有同位置替补则对位换人；没有也允许直接下场（位置空缺）——否则满员时卖不掉、工资帽腾不出，买不了新人的死锁
  const bn=rosterBench(S).filter(x=>x.pos===p.pos&&x.injury<=0); // 伤员不可顶替上场
