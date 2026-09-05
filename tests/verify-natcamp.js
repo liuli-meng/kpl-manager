@@ -50,6 +50,17 @@ const out = vm.runInContext(`
   releasePlayer(S,p.id);
   if(S.players.length!==n0)fail('⑤集训选手被出售/放走');
   else log('⑤集训期间不可出售/放走');
+  // ⑤b 青训借调顶位（natFill）同样禁售——卖掉会破坏 5 人建制（2026-09-05 排查修复）
+  const fill=S.players.find(x=>x.natFill);
+  if(fill){
+    openSellNego(S,fill.id);
+    if(window._sellNego)fail('⑤b 借调顶位可被出售（应拦截）');
+    else log('⑤b 借调顶位出售已拦截');
+    const n1=S.players.length;
+    releasePlayer(S,fill.id);
+    if(S.players.length!==n1)fail('⑤b 借调顶位被放走');
+    else log('⑤b 借调顶位不可放走（合同守卫）');
+  }
 
   // 夏季赛全败打完：全程确认王牌不在首发
   S.preseason=false;S.transferWindow=0;

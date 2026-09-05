@@ -522,6 +522,7 @@ function openSellNego(s,pid){
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
+ if(p.natFill){toast(p.name+' 是亚运集训期的借调顶位，归还青训前不能出售');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已挂牌，请先撤牌或等待报价');return;}
  const ask=sellAskPrice(p);
  const cap=sellCeiling(p);
