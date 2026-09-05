@@ -948,3 +948,38 @@ function resetCrest(){
  save();closeModal('app-modal');renderAll();
  toast(TEAM_BRAND[S.teamName]?'已恢复官方原版队徽':'已恢复默认队徽');
 }
+
+/* ================= 可排序数据表（点表头排序，再点反向） =================
+ 纯 DOM 排序：页面重渲染后排序状态自然重置，无额外状态要维护。
+ 单元格取 textContent 参与比较：纯数字/带万/亿单位/百分比自动按数值，其余按字符串。 */
+function thSortVal(txt){
+ const t=String(txt).replace(/[^0-9.万亿千%-]/g,'');
+ let n=parseFloat(t);
+ if(isNaN(n))return String(txt).trim();
+ if(/万亿|千万/.test(t))n*=10000;else if(/亿/.test(t))n*=100000000;else if(/万/.test(t))n*=10000;
+ else if(/千/.test(t))n*=1000;
+ return n;
+}
+document.addEventListener('click',e=>{
+ const th=e.target&&e.target.closest&&e.target.closest('table.tbl th');
+ if(th&&th.parentNode.rowIndex===0)thSort(th); // 只响应首行表头
+});
+function thSort(th){
+ const table=th.closest('table');
+ if(!table)return;
+ const dir=th.dataset.dir==='asc'?'desc':'asc';
+ table.querySelectorAll('th[data-dir]').forEach(x=>{if(x!==th)x.dataset.dir='';});
+ th.dataset.dir=dir;
+ const headRow=th.parentNode;
+ const rows=[].slice.call(table.rows).filter(r=>r!==headRow);
+ const idx=[].slice.call(headRow.cells).indexOf(th);
+ rows.sort((a,b)=>{
+ const va=thSortVal(a.cells[idx]?a.cells[idx].textContent:'');
+ const vb=thSortVal(b.cells[idx]?b.cells[idx].textContent:'');
+ const cmp=(typeof va==='number'&&typeof vb==='number')?va-vb:String(va).localeCompare(String(vb),'zh');
+ return dir==='asc'?cmp:-cmp;
+ });
+ const body=rows[0]&&rows[0].parentNode;
+ if(body)rows.forEach(r=>body.appendChild(r)); // appendChild 移动已有节点即完成重排
+ toast('已按「'+th.textContent.trim()+'」'+(dir==='asc'?'升序':'降序'));
+}

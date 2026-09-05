@@ -346,3 +346,6 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 @media (max-width:640px){
   .cr-top #cr-preview{width:96px;height:auto}
 }
+/* 可排序表：全部 .tbl 表头可点（事件委托于 ui.js） */
+.tbl th{cursor:pointer;user-select:none}
+.tbl th:hover{color:var(--cyan)}

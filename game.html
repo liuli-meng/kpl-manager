@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#141416">
 <title>王者电竞经理 · KPL 篇</title>
 <link rel="icon" href="data:,">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 /* ============================================================
    王者电竞经理 · 设计系统 v4 「TOUCHLINE」FM 经理模式风
@@ -354,6 +356,9 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 @media (max-width:640px){
   .cr-top #cr-preview{width:96px;height:auto}
 }
+/* 可排序表：全部 .tbl 表头可点（事件委托于 ui.js） */
+.tbl th{cursor:pointer;user-select:none}
+.tbl th:hover{color:var(--cyan)}
 </style>
 </head>
 <body>
@@ -3365,6 +3370,7 @@ function recordSeasonAwards(s){
 function newSeason(s){
  /* 年度轮换（仅在年度总决赛结束后调用）：年龄/合同/退役/工资帽结算 + 开启新赛季春季赛。
  夏季赛不经过此函数（年中不做年龄与合同结算），由 startSplit 直接开启。 */
+ try{localStorage.setItem(slotKey()+'_auto',JSON.stringify(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
  recordSeasonAwards(s); // 上赛季最佳阵容入册（趁阵容还没跨季老化）
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
@@ -6063,6 +6069,41 @@ function resetCrest(){
  save();closeModal('app-modal');renderAll();
  toast(TEAM_BRAND[S.teamName]?'已恢复官方原版队徽':'已恢复默认队徽');
 }
+
+/* ================= 可排序数据表（点表头排序，再点反向） =================
+ 纯 DOM 排序：页面重渲染后排序状态自然重置，无额外状态要维护。
+ 单元格取 textContent 参与比较：纯数字/带万/亿单位/百分比自动按数值，其余按字符串。 */
+function thSortVal(txt){
+ const t=String(txt).replace(/[^0-9.万亿千%-]/g,'');
+ let n=parseFloat(t);
+ if(isNaN(n))return String(txt).trim();
+ if(/万亿|千万/.test(t))n*=10000;else if(/亿/.test(t))n*=100000000;else if(/万/.test(t))n*=10000;
+ else if(/千/.test(t))n*=1000;
+ return n;
+}
+document.addEventListener('click',e=>{
+ const th=e.target&&e.target.closest&&e.target.closest('table.tbl th');
+ if(th&&th.parentNode.rowIndex===0)thSort(th); // 只响应首行表头
+});
+function thSort(th){
+ const table=th.closest('table');
+ if(!table)return;
+ const dir=th.dataset.dir==='asc'?'desc':'asc';
+ table.querySelectorAll('th[data-dir]').forEach(x=>{if(x!==th)x.dataset.dir='';});
+ th.dataset.dir=dir;
+ const headRow=th.parentNode;
+ const rows=[].slice.call(table.rows).filter(r=>r!==headRow);
+ const idx=[].slice.call(headRow.cells).indexOf(th);
+ rows.sort((a,b)=>{
+ const va=thSortVal(a.cells[idx]?a.cells[idx].textContent:'');
+ const vb=thSortVal(b.cells[idx]?b.cells[idx].textContent:'');
+ const cmp=(typeof va==='number'&&typeof vb==='number')?va-vb:String(va).localeCompare(String(vb),'zh');
+ return dir==='asc'?cmp:-cmp;
+ });
+ const body=rows[0]&&rows[0].parentNode;
+ if(body)rows.forEach(r=>body.appendChild(r)); // appendChild 移动已有节点即完成重排
+ toast('已按「'+th.textContent.trim()+'」'+(dir==='asc'?'升序':'降序'));
+}
 </script>
 <script>
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
@@ -6117,9 +6158,24 @@ function openSaveMgmt(){
  <button class="btn sm" onclick="save();exportSaveFile()"> 下载存档文件</button>
  <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
+ <button class="btn sm" onclick="restoreAutoBackup()" ${localStorage.getItem(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>`;
  $('#app-modal').classList.add('on');
+}
+/* 赛季轮转自动备份的恢复：把 _auto 快照写回当前槽（覆盖前先把它再挪一份，防二次误操作） */
+function restoreAutoBackup(){
+ const raw=localStorage.getItem(slotKey()+'_auto');
+ if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
+ if(!confirm('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
+ try{
+ const cur=localStorage.getItem(slotKey());
+ if(cur)localStorage.setItem(slotKey()+'_pre_restored',cur);
+ S=JSON.parse(raw);
+ if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ migrateSave();save();renderAll();closeModal('app-modal');
+ toast('已恢复到上赛季末（覆盖前进度存在「恢复前备份」，可再次恢复找回）');
+ }catch(e){toast('恢复失败：备份不可用');}
 }
 function setSlot(i){
  curSlot=i;localStorage.setItem('esport_manager_curslot',String(i));
@@ -6466,6 +6522,15 @@ function playIntro(){
 /* ================= 启动 ================= */
 /* 全局异常兜底：控制台可观测 + 用户侧提示（不白屏、不静默） */
 window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档带走也无妨）
+/* PWA 离线可玩（借鉴开源浏览器游戏 Goooool.net 模式）：仅 https/localhost 注册 service worker；
+ file:// 双击场景自动跳过，不影响单文件玩法 */
+(function(){
+ try{
+ if(!('serviceWorker' in navigator))return;
+ if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')return;
+ window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+ }catch(e){}
+})();
 function _reportErr(tag,msg){
  try{
  window.__errLog.push({t:Date.now(),tag,m:String(msg||'').slice(0,200)});

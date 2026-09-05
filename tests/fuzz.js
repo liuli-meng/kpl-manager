@@ -1,9 +1,17 @@
 // 模糊压测：多赛季随机操作（买卖/租借/训练/转位置/推进天数/打系列赛）+ 每步不变量断言
 // 运行：node tests/fuzz.js   （约 1-2 分钟，CI 里可加超时）
+// 可复现：随机种子注入沙箱 Math.random（mulberry32），失败时按提示 --seed=xxx 精确复现同一序列
+const vm = require('vm');
 const { makeDom, makeTester } = require('./harness');
 
+const seedArg = (process.argv.find(a => a.startsWith('--seed=')) || '').split('=')[1];
+const seed = seedArg ? (parseInt(seedArg, 10) || 1) : (Math.floor(Math.random() * 1e9) || 1);
+console.log('  fuzz 种子: ' + seed + '（复现：node tests/fuzz.js --seed=' + seed + '）');
+
 const { dom } = makeDom();
-const run = snippet => require('vm').runInContext('(function(){\n' + snippet + '\n})()', dom);
+// 种子化沙箱随机（mulberry32，公有领域算法）：以原 Math 为原型换掉 random，其余方法保留
+vm.runInContext('this.Math=(function(a){var f=function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};var M=Object.create(Math);M.random=f;return M;})(' + seed + ')', dom);
+const run = snippet => vm.runInContext('(function(){\n' + snippet + '\n})()', dom);
 
 const out = run(`
   const errs=[], notes=[];

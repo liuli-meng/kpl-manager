@@ -50,9 +50,24 @@ function openSaveMgmt(){
  <button class="btn sm" onclick="save();exportSaveFile()"> 下载存档文件</button>
  <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
+ <button class="btn sm" onclick="restoreAutoBackup()" ${localStorage.getItem(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>`;
  $('#app-modal').classList.add('on');
+}
+/* 赛季轮转自动备份的恢复：把 _auto 快照写回当前槽（覆盖前先把它再挪一份，防二次误操作） */
+function restoreAutoBackup(){
+ const raw=localStorage.getItem(slotKey()+'_auto');
+ if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
+ if(!confirm('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
+ try{
+ const cur=localStorage.getItem(slotKey());
+ if(cur)localStorage.setItem(slotKey()+'_pre_restored',cur);
+ S=JSON.parse(raw);
+ if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ migrateSave();save();renderAll();closeModal('app-modal');
+ toast('已恢复到上赛季末（覆盖前进度存在「恢复前备份」，可再次恢复找回）');
+ }catch(e){toast('恢复失败：备份不可用');}
 }
 function setSlot(i){
  curSlot=i;localStorage.setItem('esport_manager_curslot',String(i));
@@ -399,6 +414,15 @@ function playIntro(){
 /* ================= 启动 ================= */
 /* 全局异常兜底：控制台可观测 + 用户侧提示（不白屏、不静默） */
 window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档带走也无妨）
+/* PWA 离线可玩（借鉴开源浏览器游戏 Goooool.net 模式）：仅 https/localhost 注册 service worker；
+ file:// 双击场景自动跳过，不影响单文件玩法 */
+(function(){
+ try{
+ if(!('serviceWorker' in navigator))return;
+ if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')return;
+ window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+ }catch(e){}
+})();
 function _reportErr(tag,msg){
  try{
  window.__errLog.push({t:Date.now(),tag,m:String(msg||'').slice(0,200)});

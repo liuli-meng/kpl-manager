@@ -25,10 +25,13 @@ jobs:
       - name: 构建单文件 game.html
         run: npm run build
 
-      - name: 准备站点根目录（game.html → index.html）
+      - name: 准备站点根目录（game.html → index.html + PWA 文件）
         run: |
           New-Item -ItemType Directory -Force site
           Copy-Item game.html site/index.html
+          Copy-Item manifest.webmanifest site/
+          Copy-Item sw.js site/
+          Copy-Item icon.svg site/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
