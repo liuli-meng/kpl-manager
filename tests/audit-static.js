@@ -43,6 +43,29 @@ const out = vm_run(dom, `
   PLAYER_POOL.forEach(d=>{if(ids[d.id])dupId.push(d.id);ids[d.id]=1;});
   const badSig=PLAYER_POOL.filter(d=>{const h=heroOf(d.sig);return !h||!h.pos.includes(d.pos);}).map(d=>d.name+'('+d.sig+')');
   if(dupId.length||badSig.length)R.push('选手池重复id='+JSON.stringify(dupId)+' 招牌错位='+JSON.stringify(badSig));
+  // Schema 校验：静态表字段完整性/取值范围（人工维护易漏字段）
+  const schBad=[];
+  HEROES.forEach(h=>{
+    if(!h.n||!Array.isArray(h.pos)||!h.pos.length||!TYPE_NAME[h.t])schBad.push('英雄'+(h.n||'?')+':字段残缺');
+    (h.pos||[]).forEach(pp=>{if(!POS[pp])schBad.push('英雄'+h.n+':未知位置'+pp);});
+  });
+  PLAYER_POOL.concat(FA_2026).forEach(d=>{
+    if(!d.id||!d.name||!POS[d.pos]||!Array.isArray(d.base)||d.base.length!==4||d.base.some(v=>typeof v!=='number'||v<40||v>99)
+      ||!d.skill||!d.skill.n||!d.skill.t||!d.skill.d||!heroOf(d.sig))schBad.push('选手'+(d.name||d.id||'?')+':字段残缺/越界');
+  });
+  COACH_POOL.concat(ASSISTANT_POOL).forEach(c=>{
+    if(!c.id||!c.name||!(c.rating>=60&&c.rating<=99)||!(c.bonus>=0&&c.bonus<=15)||!COACH_STYLE[c.style]||!c.skill||!c.skill.d)schBad.push('教练'+(c.name||c.id||'?')+':字段残缺/越界');
+  });
+  EVENTS.forEach((e,i)=>{
+    if(!e.t||!e.desc||typeof e.fn!=='function')schBad.push('事件#'+i+'('+(e.t||'无名')+'):字段残缺');
+  });
+  SPONSORS.forEach((sp,i)=>{
+    if(!sp.name||!(sp.income>=0)||(i<SPONSORS.length-1&&!(SPONSORS[i+1].cost>=sp.cost)))schBad.push('赞助#'+i+':字段/档位价格非递增');
+  });
+  if(schBad.length)R.push('Schema:'+JSON.stringify(schBad.slice(0,6)));
+  // Map 索引一致性：HERO_BY_NAME/defIndex 与数据表必须一一对应（索引防呆）
+  HEROES.forEach(h=>{if(HERO_BY_NAME[h.n]!==h)R.push('英雄索引不一致:'+h.n);});
+  PLAYER_POOL.concat(FA_2026).forEach(d=>{if(defIndex()[d.id]!==d)R.push('def索引不一致:'+d.id);});
   const rosterBad=[];
   Object.keys(AI_ROSTERS).forEach(tn=>{
     const r=AI_ROSTERS[tn];

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "build": "powershell -ExecutionPolicy Bypass -File build.ps1",
-    "test": "node tests/audit-static.js && node tests/verify-regression.js && node tests/verify-ai-coach.js && node tests/verify-annual.js && node tests/verify-fixes.js && node tests/verify-contract.js && node tests/verify-natcamp.js && node tests/verify-achieve.js && node smoke.js",
+    "test": "node tests/audit-static.js && node tests/verify-regression.js && node tests/verify-ai-coach.js && node tests/verify-annual.js && node tests/verify-fixes.js && node tests/verify-contract.js && node tests/verify-natcamp.js && node tests/verify-achieve.js && node tests/verify-save.js && node smoke.js",
     "fuzz": "node tests/fuzz.js",
     "sim": "node sim.js"
   },

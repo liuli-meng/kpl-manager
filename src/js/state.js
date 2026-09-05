@@ -1,6 +1,10 @@
 
 /* ================= 游戏状态与存档 ================= */
 const SAVE_KEY='esport_manager_save_v3';
+const SAVE_VERSION=3; // 存档结构版本：结构变更时在 MIGRATIONS 追加迁移步骤并递增，旧档读入自动升级
+const MIGRATIONS={
+ // 3→4 示例：(s)=>{...}；migrateSave 按 v 逐级执行到 SAVE_VERSION
+};
 let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
 function slotKey(){return SAVE_KEY+(curSlot>1?'_'+curSlot:'');}
 function b64e(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
@@ -9,7 +13,7 @@ let S=null; // 全局状态
 
 function newState(teamName,icon){
  return {
- teamName,icon,crest:null,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
+ teamName,icon,crest:null,v:SAVE_VERSION,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
  honors:[], // 历史荣誉（多赛季）
  stage:'regular',phase:'r1',matchIdx:0,wageCap:900,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
  players:[],lineup:[],market:[],
@@ -37,7 +41,7 @@ function titleRoster(s){
 function moraleAll(s,v){s.players.forEach(p=>p.morale=clamp(p.morale+v,20,100));}
 /* 选手当前选用英雄（未 BP 时默认招牌） */
 function pickedHero(s,p){return (s.pick&&s.pick[p.pos])||p.sig;}
-function heroOf(heroId){return HEROES.find(x=>x.n===heroId)||null;}
+function heroOf(heroId){return HERO_BY_NAME[heroId]||null;} // Map 索引（data.js 建），原线性 find 是最热查询
 function heroAtPos(heroId,pos){const h=heroOf(heroId);return h&&h.pos.includes(pos)?h:null;}
 function playerPower(p,heroId){
  const a=p.attrs;
@@ -157,6 +161,13 @@ function seasonShapeOk(s){
 }
 function migrateSave(){
  if(!S)return;
+ // 存档版本迁移：无 v 字段的旧档视为 v3；逐级执行 MIGRATIONS 到当前版本
+ if(S.v==null)S.v=3;
+ while(S.v<SAVE_VERSION){
+ const step=MIGRATIONS[S.v];
+ try{if(step)step(S);}catch(e){console.warn('migrate '+S.v+' fail',e);}
+ S.v++;
+ }
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){

@@ -571,6 +571,9 @@ const HEROES=[
  {n:'刘禅',pos:['sup'],t:'team'},
 ];
 const TYPE_NAME={lane:'对线型',farm:'运营型',team:'团战型',mind:'心态型'};
+/* 英雄按名索引：heroOf 是最热查询（战力结算/BP/渲染每步都查），静态表建 Map 一次 */
+const HERO_BY_NAME={};
+HEROES.forEach(h=>{HERO_BY_NAME[h.n]=h;});
 
 /* ================= 选手池（KPL 真实选手 + 主播 + K甲新秀） =================
  name: 选手ID, team: 所属战队（羁绊依据）, tags: 主播 / K甲新秀
@@ -890,6 +893,10 @@ function checkAchievements(s){
 
 /* ================= 游戏状态与存档 ================= */
 const SAVE_KEY='esport_manager_save_v3';
+const SAVE_VERSION=3; // 存档结构版本：结构变更时在 MIGRATIONS 追加迁移步骤并递增，旧档读入自动升级
+const MIGRATIONS={
+ // 3→4 示例：(s)=>{...}；migrateSave 按 v 逐级执行到 SAVE_VERSION
+};
 let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
 function slotKey(){return SAVE_KEY+(curSlot>1?'_'+curSlot:'');}
 function b64e(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
@@ -898,7 +905,7 @@ let S=null; // 全局状态
 
 function newState(teamName,icon){
  return {
- teamName,icon,crest:null,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
+ teamName,icon,crest:null,v:SAVE_VERSION,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
  honors:[], // 历史荣誉（多赛季）
  stage:'regular',phase:'r1',matchIdx:0,wageCap:900,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
  players:[],lineup:[],market:[],
@@ -926,7 +933,7 @@ function titleRoster(s){
 function moraleAll(s,v){s.players.forEach(p=>p.morale=clamp(p.morale+v,20,100));}
 /* 选手当前选用英雄（未 BP 时默认招牌） */
 function pickedHero(s,p){return (s.pick&&s.pick[p.pos])||p.sig;}
-function heroOf(heroId){return HEROES.find(x=>x.n===heroId)||null;}
+function heroOf(heroId){return HERO_BY_NAME[heroId]||null;} // Map 索引（data.js 建），原线性 find 是最热查询
 function heroAtPos(heroId,pos){const h=heroOf(heroId);return h&&h.pos.includes(pos)?h:null;}
 function playerPower(p,heroId){
  const a=p.attrs;
@@ -1046,6 +1053,13 @@ function seasonShapeOk(s){
 }
 function migrateSave(){
  if(!S)return;
+ // 存档版本迁移：无 v 字段的旧档视为 v3；逐级执行 MIGRATIONS 到当前版本
+ if(S.v==null)S.v=3;
+ while(S.v<SAVE_VERSION){
+ const step=MIGRATIONS[S.v];
+ try{if(step)step(S);}catch(e){console.warn('migrate '+S.v+' fail',e);}
+ S.v++;
+ }
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){
@@ -1341,7 +1355,17 @@ function aiRosterDefMap(s){
  }
  return s.aiRosterDefs;
 }
-function defOf(s,pid){return PLAYER_POOL.find(d=>d.id===pid)||FA_2026.find(d=>d.id===pid)||(s.extraDefs||[]).find(d=>d.id===pid)||null;}
+/* 选手 def 查找：静态池（PLAYER_POOL+FA_2026）建 Map 一次，动态池（extraDefs 联盟新生/引援）保持线性 */
+let _defIdx=null;
+function defIndex(){
+ if(!_defIdx){
+ _defIdx={};
+ PLAYER_POOL.forEach(d=>{_defIdx[d.id]=d;});
+ FA_2026.forEach(d=>{_defIdx[d.id]=d;});
+ }
+ return _defIdx;
+}
+function defOf(s,pid){return defIndex()[pid]||(s.extraDefs||[]).find(d=>d.id===pid)||null;}
 function aiDetachDef(s,pid){ // def 被玩家签走：从所有 AI 队除名，原队转会期自动补强
  if(!defOf(s,pid))return;
  const map=aiRosterDefMap(s);
@@ -5653,10 +5677,13 @@ function openSaveMgmt(){
  ${[1,2,3].map(i=>`<div class="pack-btn" ${i===curSlot?'style="border-color:var(--gold)"':''} onclick="setSlot(${i})">
  <b style="font-size:14px">槽${i}</b><span style="font-size:10px">${i===curSlot?'(当前)':occ(i)?'有档':'空槽'}</span></div>`).join('')}
  </div>
- <div class="hint" style="margin-bottom:8px">导出：点击"复制导出"得到存档代码并收藏；导入：粘贴代码后点"导入"（覆盖当前槽）。</div>
- <textarea id="save-io" style="width:100%;min-height:90px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font-size:11px;resize:vertical"></textarea>
- <div class="center mt8" style="display:flex;gap:8px;justify-content:center">
+ <div class="hint" style="margin-bottom:8px">导出：点「下载存档文件」存成 .json（推荐，不易丢）或「复制导出」得到存档代码；导入：选本地存档文件，或粘贴代码后点「导入」（覆盖当前槽）。</div>
+ <textarea id="save-io" style="width:100%;min-height:90px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font-size:11px;resize:vertical" placeholder="也可把存档代码粘贴到这里"></textarea>
+ <input type="file" id="save-file" accept=".json,application/json" style="display:none" onchange="importSaveFile(this)">
+ <div class="center mt8" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn sm" onclick="save();exportSave()"> 复制导出</button>
+ <button class="btn sm" onclick="save();exportSaveFile()"> 下载存档文件</button>
+ <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>`;
@@ -5679,9 +5706,45 @@ function importSave(){
  if(!v){toast('请先粘贴存档代码');return;}
  try{
  const d=JSON.parse(b64d(v));
- if(!d||!d.teamName)throw new Error('bad');
- S=d;migrateSave();save();renderAll();closeModal('app-modal');toast('导入成功！');
+ applyImport(d,'粘贴代码');
  }catch(e){toast('导入失败：存档代码无效');}
+}
+/* 存档文件导出：下载 .json（含版本号与导出时间，跨设备备份推荐方式） */
+function pickSaveFile(){$('#save-file').click();}
+function exportSaveFile(){
+ try{
+ save();
+ const wrap={kplSave:true,v:SAVE_VERSION,exported:new Date().toISOString().slice(0,10),team:S.teamName,season:S.season,data:S};
+ const blob=new Blob([JSON.stringify(wrap)],{type:'application/json'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='KPL存档_'+(S.teamName||'无名')+'_'+gameYear(S)+'年_槽'+curSlot+'.json';
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+ toast('存档文件已下载（'+a.download+'）');
+ }catch(e){toast('导出失败：'+(e.message||e));}
+}
+/* 存档文件导入：兼容两种格式——本游戏的包装格式{kplSave,data}与裸存档对象（含旧版剪贴板代码解出的对象） */
+function importSaveFile(inp){
+ const f=inp.files&&inp.files[0];
+ if(!f)return;
+ const rd=new FileReader();
+ rd.onload=()=>{
+ try{
+ const d=JSON.parse(rd.result);
+ applyImport(d,'文件「'+f.name+'」');
+ }catch(e){toast('导入失败：不是有效的存档文件');}
+ };
+ rd.readAsText(f);
+ inp.value='';
+}
+/* 导入共用：解包→版本校验→注入→迁移→落盘（剪贴板代码与文件导入共用） */
+function applyImport(d,from){
+ if(d&&d.kplSave&&d.data)d=d.data; // 文件包装格式→裸存档
+ if(!d||!d.teamName||!d.players){toast('导入失败：'+from+' 不是有效存档');return;}
+ if(d.v&&d.v>SAVE_VERSION){toast('导入失败：存档版本（v'+d.v+'）比当前游戏更新，请先更新游戏');return;}
+ S=d;migrateSave();save();renderAll();closeModal('app-modal');
+ toast('已从'+from+'导入：'+S.teamName+'（'+gameYear(S)+'年 · v'+S.v+'）');
 }
 function resetGame(){
  if(confirm('确定重新开始？将清空当前槽存档')){

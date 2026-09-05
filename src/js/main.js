@@ -42,10 +42,13 @@ function openSaveMgmt(){
  ${[1,2,3].map(i=>`<div class="pack-btn" ${i===curSlot?'style="border-color:var(--gold)"':''} onclick="setSlot(${i})">
  <b style="font-size:14px">槽${i}</b><span style="font-size:10px">${i===curSlot?'(当前)':occ(i)?'有档':'空槽'}</span></div>`).join('')}
  </div>
- <div class="hint" style="margin-bottom:8px">导出：点击"复制导出"得到存档代码并收藏；导入：粘贴代码后点"导入"（覆盖当前槽）。</div>
- <textarea id="save-io" style="width:100%;min-height:90px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font-size:11px;resize:vertical"></textarea>
- <div class="center mt8" style="display:flex;gap:8px;justify-content:center">
+ <div class="hint" style="margin-bottom:8px">导出：点「下载存档文件」存成 .json（推荐，不易丢）或「复制导出」得到存档代码；导入：选本地存档文件，或粘贴代码后点「导入」（覆盖当前槽）。</div>
+ <textarea id="save-io" style="width:100%;min-height:90px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font-size:11px;resize:vertical" placeholder="也可把存档代码粘贴到这里"></textarea>
+ <input type="file" id="save-file" accept=".json,application/json" style="display:none" onchange="importSaveFile(this)">
+ <div class="center mt8" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn sm" onclick="save();exportSave()"> 复制导出</button>
+ <button class="btn sm" onclick="save();exportSaveFile()"> 下载存档文件</button>
+ <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>`;
@@ -68,9 +71,45 @@ function importSave(){
  if(!v){toast('请先粘贴存档代码');return;}
  try{
  const d=JSON.parse(b64d(v));
- if(!d||!d.teamName)throw new Error('bad');
- S=d;migrateSave();save();renderAll();closeModal('app-modal');toast('导入成功！');
+ applyImport(d,'粘贴代码');
  }catch(e){toast('导入失败：存档代码无效');}
+}
+/* 存档文件导出：下载 .json（含版本号与导出时间，跨设备备份推荐方式） */
+function pickSaveFile(){$('#save-file').click();}
+function exportSaveFile(){
+ try{
+ save();
+ const wrap={kplSave:true,v:SAVE_VERSION,exported:new Date().toISOString().slice(0,10),team:S.teamName,season:S.season,data:S};
+ const blob=new Blob([JSON.stringify(wrap)],{type:'application/json'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='KPL存档_'+(S.teamName||'无名')+'_'+gameYear(S)+'年_槽'+curSlot+'.json';
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+ toast('存档文件已下载（'+a.download+'）');
+ }catch(e){toast('导出失败：'+(e.message||e));}
+}
+/* 存档文件导入：兼容两种格式——本游戏的包装格式{kplSave,data}与裸存档对象（含旧版剪贴板代码解出的对象） */
+function importSaveFile(inp){
+ const f=inp.files&&inp.files[0];
+ if(!f)return;
+ const rd=new FileReader();
+ rd.onload=()=>{
+ try{
+ const d=JSON.parse(rd.result);
+ applyImport(d,'文件「'+f.name+'」');
+ }catch(e){toast('导入失败：不是有效的存档文件');}
+ };
+ rd.readAsText(f);
+ inp.value='';
+}
+/* 导入共用：解包→版本校验→注入→迁移→落盘（剪贴板代码与文件导入共用） */
+function applyImport(d,from){
+ if(d&&d.kplSave&&d.data)d=d.data; // 文件包装格式→裸存档
+ if(!d||!d.teamName||!d.players){toast('导入失败：'+from+' 不是有效存档');return;}
+ if(d.v&&d.v>SAVE_VERSION){toast('导入失败：存档版本（v'+d.v+'）比当前游戏更新，请先更新游戏');return;}
+ S=d;migrateSave();save();renderAll();closeModal('app-modal');
+ toast('已从'+from+'导入：'+S.teamName+'（'+gameYear(S)+'年 · v'+S.v+'）');
 }
 function resetGame(){
  if(confirm('确定重新开始？将清空当前槽存档')){

@@ -74,7 +74,17 @@ function aiRosterDefMap(s){
  }
  return s.aiRosterDefs;
 }
-function defOf(s,pid){return PLAYER_POOL.find(d=>d.id===pid)||FA_2026.find(d=>d.id===pid)||(s.extraDefs||[]).find(d=>d.id===pid)||null;}
+/* 选手 def 查找：静态池（PLAYER_POOL+FA_2026）建 Map 一次，动态池（extraDefs 联盟新生/引援）保持线性 */
+let _defIdx=null;
+function defIndex(){
+ if(!_defIdx){
+ _defIdx={};
+ PLAYER_POOL.forEach(d=>{_defIdx[d.id]=d;});
+ FA_2026.forEach(d=>{_defIdx[d.id]=d;});
+ }
+ return _defIdx;
+}
+function defOf(s,pid){return defIndex()[pid]||(s.extraDefs||[]).find(d=>d.id===pid)||null;}
 function aiDetachDef(s,pid){ // def 被玩家签走：从所有 AI 队除名，原队转会期自动补强
  if(!defOf(s,pid))return;
  const map=aiRosterDefMap(s);

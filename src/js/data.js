@@ -182,6 +182,9 @@ const HEROES=[
  {n:'刘禅',pos:['sup'],t:'team'},
 ];
 const TYPE_NAME={lane:'对线型',farm:'运营型',team:'团战型',mind:'心态型'};
+/* 英雄按名索引：heroOf 是最热查询（战力结算/BP/渲染每步都查），静态表建 Map 一次 */
+const HERO_BY_NAME={};
+HEROES.forEach(h=>{HERO_BY_NAME[h.n]=h;});
 
 /* ================= 选手池（KPL 真实选手 + 主播 + K甲新秀） =================
  name: 选手ID, team: 所属战队（羁绊依据）, tags: 主播 / K甲新秀
