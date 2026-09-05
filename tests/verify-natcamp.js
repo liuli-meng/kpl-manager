@@ -90,8 +90,26 @@ const out = vm.runInContext(`
   if(!S.ag)fail('⑦未进入亚运会: phase='+S.phase);
   else{
     let ag=0;
+    // 对阵逻辑：中韩分处上下半区（最强对手只能在决赛相遇），MVP 必须出自实际出征名单
+    const qfCn=S.ag.qf.findIndex(m=>m.a==='中国代表队'||m.b==='中国代表队');
+    const qfKr=S.ag.qf.findIndex(m=>m.a==='韩国'||m.b==='韩国');
+    if(qfCn<0||qfKr<0)fail('⑩对阵表缺中国或韩国');
+    else if(Math.floor(qfCn/2)===Math.floor(qfKr/2))fail('⑩中韩同半区（应在决赛才可能相遇）: QF'+qfCn+'/QF'+qfKr);
+    else log('⑩中韩分处上下半区（QF'+(qfCn+1)+'/QF'+(qfKr+1)+'），半决赛不会相遇');
     const pop0=p.popularity||0,val0=p.val,eng0=p.energy==null?100:p.energy;
+    const squadRef=S.ag.squad; // 按引用捕获（弱队收官当拍可能触发年总补完+跨年，S.ag 会被清空）
+    let mvpCapture=null;
+    const _le=logEvent;
+    logEvent=function(s,txt){if(!mvpCapture&&txt.indexOf('亚运会 MVP')>=0)mvpCapture=txt;_le(s,txt);}; // 跨年日志洪水会挤出 eventLog，实时捕获
     while(S.phase==='asiad'&&ag++<20)asiadStep(S);
+    logEvent=_le;
+    const agEntry=(S.titleHistory||[]).filter(t=>t.event==='亚运会').pop();
+    if(!agEntry)fail('⑩赛事史无亚运会记录');
+    else if(agEntry.champ==='中国代表队'){
+      const mvpName=(mvpCapture&&mvpCapture.match(/MVP：(.+?)（/)||[])[1];
+      if(!mvpName||!squadRef.some(x=>x.name===mvpName))fail('⑩MVP 不在实际出征名单: '+mvpName);
+      else log('⑩中国队夺金，MVP='+mvpName+' 出自实际出征名单');
+    }else log('⑩中国队未夺金（冠军='+agEntry.champ+'），MVP 不评属正常');
     const back=S.players.find(x=>x.name==='测试王牌');
     if(!back)fail('⑦亚运后未归队');
     else if(back.natCamp)fail('⑦归队后 natCamp 未清除');

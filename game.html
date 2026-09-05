@@ -3368,9 +3368,10 @@ function setupAsianGames(s){
  s.aiPower=s.aiPower||{};
  s.aiPower['中国代表队']=myPow;
  AG_NATIONS.forEach(([n,pw])=>{s.aiPower[n]=pw+(gameYear(s)-2026)*3;}); // 海外对手逐年小幅变强
- const others=shuffle(AG_NATIONS.map(([n])=>n).slice());
+ // 韩国固定在下半区 QF4（与中国的 QF1 隔开：两队最强，只能在决赛相遇）；抽签池排除韩国防重复参赛
+ const others=shuffle(AG_NATIONS.filter(([n])=>n!=='韩国').map(([n])=>n).slice());
  s.ag={squad:squad.map(p=>({name:p.name,pos:p.pos,mine:ownedIds.has(p.id),ovr:overall(p)})),
- myPow,qf:[{a:'中国代表队',b:others[0],r:null},{a:'韩国',b:others[1],r:null},{a:others[2],b:others[3],r:null},{a:others[4],b:others[5],r:null}],
+ myPow,qf:[{a:'中国代表队',b:others[0],r:null},{a:others[2],b:others[3],r:null},{a:others[4],b:others[5],r:null},{a:'韩国',b:others[1],r:null}],
  sf:[{a:null,b:null,r:null},{a:null,b:null,r:null}],final:{a:null,b:null,r:null},champ:null,mvp:null,medal:null};
  s.phase='asiad';
  const mineCnt=s.ag.squad.filter(x=>x.mine).length;
@@ -3405,9 +3406,10 @@ function finishAsianGames(s){
  logEvent(s,' '+gameYear(s)+' 亚运会王者荣耀项目落幕：'+a.champ+' 金牌 · '+(runner==='中国代表队'?'中国队':'韩国等队')+' 银牌');
  if(a.champ==='中国代表队')logEvent(s,' 中国代表队登顶亚洲之巅——国旗升起时刻，整个 KPL 都在看！');
  else if(a.medal==='无')logEvent(s,' 中国队无缘领奖台，舆论哗然');
- // MVP：冠军队内战力最高者；中国队夺冠时从征召名单里定
+ // MVP：冠军队内战力最高者；中国队夺冠时从「实际出征名单」（锁定快照）里评——不能用当下重选，
+ // 否则夏窗后的联盟变化可能评出一个没入选国家队的选手
  if(a.champ==='中国代表队'){
- const best=agSelectSquad(s).slice().sort((x,y)=>overall(y)-overall(x))[0];
+ const best=a.squad.slice().sort((x,y)=>y.ovr-x.ovr)[0];
  if(best){a.mvp=best.name;logEvent(s,' 亚运会 MVP：'+best.name+'（'+POS[best.pos][0]+'）当选');}
  }
  // 奖牌回流俱乐部：本队入选选手按奖牌档位获得人气/身价/士气，协会发奖金；代价是年总体力下滑
