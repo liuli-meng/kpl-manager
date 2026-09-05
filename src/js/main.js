@@ -108,7 +108,10 @@ function applyImport(d,from){
  if(d&&d.kplSave&&d.data)d=d.data; // 文件包装格式→裸存档
  if(!d||!d.teamName||!d.players){toast('导入失败：'+from+' 不是有效存档');return;}
  if(d.v&&d.v>SAVE_VERSION){toast('导入失败：存档版本（v'+d.v+'）比当前游戏更新，请先更新游戏');return;}
- S=d;migrateSave();save();renderAll();closeModal('app-modal');
+ S=d;
+ // 时代联盟按档重装：era 档装该时代；导入现代档时必须还原默认联盟（否则浏览器里装过的时代残留错装）
+ if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ migrateSave();save();renderAll();closeModal('app-modal');
  toast('已从'+from+'导入：'+S.teamName+'（'+gameYear(S)+'年 · v'+S.v+'）');
 }
 function resetGame(){
@@ -129,19 +132,25 @@ function upgradeSponsor(){
 }
 
 /* ================= 开局 ================= */
-function initStart(){
- _crReset(); // 新档：队徽生成器回默认（盾形·红金配色）
- const clubs=CLUB_TEMPLATES.map((c,i)=>`<div class="club-card" data-ci="${i}" onclick="pickClub(${i})" style="cursor:pointer;background:var(--card2);border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center;transition:.15s">
+function clubCardHTML(c,i){
+ return `<div class="club-card" data-ci="${i}" onclick="pickClub(${i})" style="cursor:pointer;background:var(--card2);border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center;transition:.15s">
  <div>${crest(c.icon,c.name,32)}</div>
  <div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
  <div class="hint" style="font-size:10px;line-height:1.5">预算 ${c.budget}万 · 工资帽 ${c.cap}万<br>${c.desc}</div>
- </div>`).join('');
+ </div>`;
+}
+function initStart(){
+ _crReset(); // 新档：队徽生成器回默认（盾形·红金配色）
+ installEra(null);_eraSel=null; // 开局界面从默认（现役）联盟起步
+ const clubs=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
+ const eraBtns=Object.keys(KPL_ERAS).map(id=>`<button class="btn sm" id="era-btn-${id}" onclick="pickEra('${id}')">${KPL_ERAS[id].name}</button>`).join('');
  $('#start-modal-body').innerHTML=`
  <h2>王者电竞经理 · KPL 篇</h2>
  <div class="center dim" style="font-size:12px;margin-bottom:14px">化身战队经理：签约选手、经营俱乐部、征战联赛、冲击总冠军</div>
- <div class="center" style="margin-bottom:12px;display:flex;gap:8px;justify-content:center">
+ <div class="center" style="margin-bottom:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn sm primary" id="tab-self" onclick="switchStartTab('self')">创建我的俱乐部</button>
- <button class="btn sm" id="tab-club" onclick="switchStartTab('club')">执教原版俱乐部</button>
+ <button class="btn sm" id="tab-club" onclick="switchStartTab('club')">执教现役俱乐部</button>
+ <button class="btn sm" id="tab-era" onclick="switchStartTab('era')">历代联盟</button>
  </div>
  <div id="tab-self-body">
  <div class="center" style="margin-bottom:12px">
@@ -152,27 +161,77 @@ function initStart(){
  <div class="center"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
  </div>
  <div id="tab-club-body" style="display:none">
- <div class="hint" style="margin-bottom:10px;text-align:center">直接执教一支真实 KPL 俱乐部——豪门预算拉满，草根从零挑战，继承该队首发阵容与主教练</div>
+ <div class="hint" style="margin-bottom:10px;text-align:center">直接执教一支现役 KPL 俱乐部——豪门预算拉满，草根从零挑战，继承该队首发阵容与主教练</div>
  <div class="grid g4" style="gap:8px">${clubs}</div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="club-pick-tip"> 点击选择俱乐部</div>
  <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyClub()" id="club-apply-btn" disabled>执教所选俱乐部</button></div>
+ </div>
+ <div id="tab-era-body" style="display:none">
+ <div class="hint" style="margin-bottom:10px;text-align:center">2K 经典球队式开档：选择一个 KPL 时代，扮演那个时代的真实俱乐部——联盟对手、阵容、教练全部回到当年（明星阵容按史实收录，年代久远的席位由游戏演绎；赛制沿用现行年度赛历）</div>
+ <div class="center" style="margin-bottom:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${eraBtns}</div>
+ <div class="hint" id="era-desc" style="margin:0 0 10px;text-align:center;color:var(--cyan)">点击上方选择时代</div>
+ <div class="grid g4" id="era-clubs" style="gap:8px"></div>
+ <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="era-pick-tip"> 先选时代，再选俱乐部</div>
+ <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyEraClub()" id="era-apply-btn" disabled>执教所选时代俱乐部</button></div>
  </div>`;
  $('#start-modal').classList.add('on');
 }
-let _clubPick=-1;
+let _clubPick=-1,_eraSel=null;
 function switchStartTab(tab){
  $('#tab-self').className=tab==='self'?'btn sm primary':'btn sm';
  $('#tab-club').className=tab==='club'?'btn sm primary':'btn sm';
+ $('#tab-era').className=tab==='era'?'btn sm primary':'btn sm';
  $('#tab-self-body').style.display=tab==='self'?'':'none';
  $('#tab-club-body').style.display=tab==='club'?'':'none';
+ $('#tab-era-body').style.display=tab==='era'?'':'none';
+ if(tab==='club'&&_eraActive){ // 从时代标签切回现役：还原现役联盟并重建卡片
+  installEra(null);_eraSel=null;_clubPick=-1;
+  const grid=document.querySelector('#tab-club-body .grid');
+  if(grid)grid.innerHTML=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
+  const tip=$('#club-pick-tip');if(tip)tip.textContent=' 点击选择俱乐部';
+  const btn=$('#club-apply-btn');if(btn)btn.disabled=true;
+ }
+ if(tab==='era'){ // 时代按钮高亮与实际选择对齐（切走时可能已被重置）
+  Object.keys(KPL_ERAS).forEach(k=>{
+   const b=document.getElementById('era-btn-'+k);
+   if(b)b.className=k===_eraSel?'btn sm primary':'btn sm';
+  });
+  const eb=$('#era-apply-btn');if(eb)eb.disabled=!(_eraSel&&_clubPick>=0);
+ }
+}
+/* 历代联盟：选时代（安装该时代联盟）→ 选俱乐部 → 复用 applyClub 开档流程 */
+function pickEra(id){
+ installEra(id);_eraSel=null;_clubPick=-1;
+ // 安装成功才记录选择（未知的 era id 保持未选状态）
+ if(_eraActive===id)_eraSel=id;
+ Object.keys(KPL_ERAS).forEach(k=>{
+  const b=document.getElementById('era-btn-'+k);
+  if(b)b.className=k===_eraSel?'btn sm primary':'btn sm';
+ });
+ $('#era-desc').textContent=_eraSel?KPL_ERAS[id].desc:'该时代不可用';
+ $('#era-clubs').innerHTML=_eraSel?CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join(''):'';
+ $('#era-pick-tip').textContent=_eraSel?' 点击选择俱乐部':' 该时代不可用';
+ const ebtn=$('#era-apply-btn');if(ebtn)ebtn.disabled=true;
 }
 function pickClub(i){
  _clubPick=i;
  $$('.club-card').forEach(c=>{c.style.borderColor=parseInt(c.dataset.ci)===i?'var(--cyan)':'var(--line)';});
- $('#club-pick-tip').textContent='已选择：'+CLUB_TEMPLATES[i].name;
- $('#club-apply-btn').disabled=false;
+ const tip=$('#club-pick-tip'),etip=$('#era-pick-tip');
+ const name=CLUB_TEMPLATES[i]?CLUB_TEMPLATES[i].name:'';
+ if(tip)tip.textContent='已选择：'+name;
+ if(etip)etip.textContent='已选择：'+name;
+ const btn=$('#club-apply-btn'),ebtn=$('#era-apply-btn');
+ if(btn)btn.disabled=false;
+ if(ebtn)ebtn.disabled=false;
+}
+function applyEraClub(){
+ if(!_eraSel){toast('请先选择时代');return;}
+ if(_clubPick<0){toast('请先选择俱乐部');return;}
+ applyClub();
 }
 function createTeam(){
+ // 自建队只开现役联盟：用户可能浏览过「历代联盟」标签（联盟被装成时代数据），必须先还原
+ installEra(null);_eraSel=null;
  const name=$('#new-team-name').value.trim()||'无名战队';
  const b=_crBrandFor(name);
  if(!b.txt)b.txt=shortMark(name)||'队';
@@ -220,11 +279,12 @@ function createTeam(){
  toast(' 赛前转会期开启（7天）：先组队，再开赛');
  save();
 }
-/* 执教原版俱乐部：继承豪门/草根的预算、工资帽、教练与首发阵容 */
+/* 执教原版俱乐部：继承豪门/草根的预算、工资帽、教练与首发阵容（含历代联盟时代俱乐部） */
 function applyClub(){
  if(_clubPick<0){toast('请先选择俱乐部');return;}
  const tmpl=CLUB_TEMPLATES[_clubPick];
  S=newState(tmpl.name,tmpl.icon);
+ S.era=_eraSel||null; // 历代联盟时代标记（读档时重装该时代联盟）
  S.fund=tmpl.budget;
  S.wageCap=tmpl.cap;
  S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
@@ -252,7 +312,8 @@ function applyClub(){
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
  logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${lineup.map(id=>S.players.find(p=>p.id===id).name).join(' / ')}`);
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
- logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
+ if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
+ else logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');

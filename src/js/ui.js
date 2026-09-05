@@ -731,9 +731,63 @@ function unionTeams(){
  });
  return teams;
 }
+function setUnionMode(m){window._unionMode=m;renderUnion();}
+/* ================= 历代联盟：真实 KPL 史册（据公开赛事报道整理） + 本存档征战史 ================= */
+function renderUnionHistory(){
+ const H=KPL_HISTORY;
+ // FMVP 累计榜：由历届表实时汇总，不需要单独维护
+ const fmvpCnt={};
+ H.seasons.concat(H.finals,H.cups).forEach(r=>{if(r.fmvp)fmvpCnt[r.fmvp]=(fmvpCnt[r.fmvp]||0)+1;});
+ const fmvpTop=Object.keys(fmvpCnt).map(n=>({n,c:fmvpCnt[n]})).sort((a,b)=>b.c-a.c||a.n.localeCompare(b.n)).slice(0,8);
+ const champCell=n=>n?crest('队',n,18)+' <b>'+n+'</b>':'—';
+ let html=`<div class="panel"><h3>历代联盟 <span class="tag">KPL 2016-2026 · 据公开赛事报道整理</span></h3>
+ <div class="hint">十年联盟史：${H.seasons.length} 届联赛、${H.finals.length} 届年度总决赛、${H.cups.length} 座杯赛，数据更新至 2026 年挑战者杯。</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" onclick="setUnionMode('now')">← 返回联盟现况</button></div></div>`;
+ const champRow=(r,evCol)=>`<tr><td>${r.y}</td>${evCol?`<td>${r.ev}</td>`:''}<td>${champCell(r.champ)}</td><td>${r.ru?crest('队',r.ru,18)+' '+r.ru:'—'}</td><td class="gold">${r.score||'—'}</td><td>${r.fmvp||'—'}</td><td style="font-size:11px;color:var(--dim)">${r.note||''}</td></tr>`;
+ html+=`<div class="panel"><h3>历届联赛冠军 <span class="tag">银龙杯</span></h3>
+ <table class="tbl"><tr><th>赛季</th><th>冠军</th><th>亚军</th><th>决赛比分</th><th>FMVP</th><th>注</th></tr>
+ ${H.seasons.map(r=>champRow(r,false)).join('')}</table></div>`;
+ html+=`<div class="panel"><h3>年度总决赛 <span class="tag">圣龙杯 · 2024 年起</span></h3>
+ <table class="tbl"><tr><th>年份</th><th>冠军</th><th>亚军</th><th>决赛比分</th><th>FMVP</th><th>注</th></tr>
+ ${H.finals.map(r=>champRow(r,false)).join('')}</table></div>`;
+ html+=`<div class="panel"><h3>历届杯赛 <span class="tag">冠军杯 · 世界冠军杯 · 冬冠 · 挑战者杯</span></h3>
+ <table class="tbl"><tr><th>年份</th><th>赛事</th><th>冠军</th><th>亚军</th><th>决赛比分</th><th>FMVP</th><th>注</th></tr>
+ ${H.cups.map(r=>champRow(r,true)).join('')}</table></div>`;
+ html+=`<div class="panel"><h3>FMVP 榜 <span class="tag">历届总决赛 MVP · 按次数</span></h3>
+ <div style="display:flex;gap:8px;flex-wrap:wrap">${fmvpTop.map((f,i)=>`<span class="tag" style="padding:6px 10px"><b class="${i===0?'gold':''}">${f.n}</b> × ${f.c}</span>`).join('')}</div>
+ <div class="hint mt8">由上方历届表实时汇总——Fly 六夺 FMVP 位列历史第一。</div></div>`;
+ html+=`<div class="panel"><h3>王朝时代</h3>
+ <div class="grid g2">${H.dynasties.map(d=>`<div style="border:1px solid var(--line);border-radius:4px;padding:10px">
+ <div style="display:flex;align-items:center;gap:8px">${crest('队',d.t,20)} <b>${d.n}</b><span class="tag" style="margin-left:auto">${d.y}</span></div>
+ <div class="hint" style="margin-top:6px">${d.d}</div></div>`).join('')}</div></div>`;
+ html+=`<div class="panel"><h3>联盟版图变迁</h3>
+ ${H.eras.map(e=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)">
+ <div><b class="cyan">${e.t}</b> <span class="tag">${e.y}</span></div>
+ <div class="hint" style="margin-top:4px">${e.d}</div></div>`).join('')}</div>`;
+ html+=`<div class="panel"><h3>名队沿革 <span class="tag">含已离开联盟的队伍</span></h3>
+ <table class="tbl"><tr><th>战队</th><th>征战时期</th><th>沿革</th></tr>
+ ${H.clubs.map(c=>`<tr><td>${crest('队',c.n,18)} <b>${c.n}</b></td><td style="white-space:nowrap;color:var(--dim)">${c.era}</td><td style="font-size:11px">${c.d}</td></tr>`).join('')}</table></div>`;
+ // 本存档征战史：你治下的联盟正在书写的「历代」
+ const th=(S.titleHistory||[]).slice(),fh=S.fmvpHonor||[];
+ let myHtml='';
+ if(th.length){
+  myHtml=`<table class="tbl"><tr><th>年份</th><th>赛事</th><th>冠军</th></tr>
+  ${th.map(t=>`<tr class="${t.champ===S.teamName?'me':''}"><td>第${t.season||S.season||1}年</td><td>${t.event||'—'}</td><td>${t.champ===S.teamName?'<b class="gold">'+_escTxt(t.champ)+'（你）</b>':crest('队',t.champ,18)+' '+t.champ}</td></tr>`).join('')}</table>`;
+ }else{
+  myHtml='<div class="hint">尚无征战记录——开启新赛季后，你经历的每一届赛事冠军都会收录于此。</div>';
+ }
+ if(fh.length){
+  myHtml+=`<div class="hint" style="margin-top:8px">历届 FMVP：${fh.slice(0,6).map(f=>_escTxt(f.year+' '+f.event+' '+f.name+'（'+f.team+'）')).join('　｜　')}</div>`;
+ }
+ html+=`<div class="panel"><h3>本存档征战史 <span class="tag">你的联盟 · 历届冠军</span></h3>${myHtml}
+ <div class="hint mt8">上方史册记录的是现实 KPL 2016-2026；这里记录的是你治下联盟正在书写的历代。</div></div>`;
+ return html;
+}
 function renderUnion(){
+ if((window._unionMode||'now')==='hist'){$('#page-union').innerHTML=renderUnionHistory();return;}
  const teams=unionTeams().sort((a,b)=>b.power-a.power);
- let html=`<div class="panel"><h3>战队总览 <span class="tag">18 队 · 点击查看阵容</span></h3>
+ let html=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn sm" onclick="setUnionMode('hist')">历代联盟 →</button></div>`+
+ `<div class="panel"><h3>战队总览 <span class="tag">18 队 · 点击查看阵容</span></h3>
  <table class="tbl"><tr><th>#</th><th>战队</th><th>总战力</th><th>平均总值</th><th>核心选手</th><th>战绩</th></tr>
  ${teams.map((t,i)=>{
  const avg=t.roster.length?Math.round(t.roster.reduce((a,p)=>a+overall(p),0)/t.roster.length):0;

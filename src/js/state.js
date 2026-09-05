@@ -161,6 +161,7 @@ function seasonShapeOk(s){
 }
 function migrateSave(){
  if(!S)return;
+ S.era=(S.era&&KPL_ERAS[S.era])?S.era:null; // 历代联盟时代标记（读档时已在 load() 重装）
  // 存档版本迁移：无 v 字段的旧档视为 v3；逐级执行 MIGRATIONS 到当前版本
  if(S.v==null)S.v=3;
  while(S.v<SAVE_VERSION){
@@ -289,7 +290,10 @@ function ensureSeason(s){
  }
 }
 function load(){
- try{const d=localStorage.getItem(slotKey());if(d){S=JSON.parse(d);migrateSave();return true;}}
+ try{const d=localStorage.getItem(slotKey());if(d){S=JSON.parse(d);
+ // 时代联盟按档重装：era 档装该时代；现代档也必须还原默认联盟（否则上一档的时代数据残留错装）
+ if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ migrateSave();return true;}}
  catch(e){console.warn('load fail',e);try{toast(' 存档读取失败，已重新开局');}catch(_){}}
  return false;
 }

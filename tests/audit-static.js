@@ -86,6 +86,79 @@ const out = vm_run(dom, `
   if(tplBad.length)R.push('俱乐部模板:'+JSON.stringify(tplBad));
   const coachBad=COACH_POOL.concat(ASSISTANT_POOL).filter(c=>!['lane','farm','team','mind'].includes(c.style)).map(c=>c.name);
   if(coachBad.length)R.push('教练风格:'+JSON.stringify(coachBad));
+  // 历代联盟（2K 经典球队式）：安装每个时代 → 结构校验 + 时代新档全流程
+  const eraBad=[];
+  const coachBaseCnt=COACH_POOL.length; // 时代安装前教练池基准（泄漏检测用）
+  Object.keys(KPL_ERAS).forEach(id=>{
+    try{
+      installEra(id);
+      const era=KPL_ERAS[id];
+      if(AI_TEAMS.length!==18)eraBad.push(id+':队伍数'+AI_TEAMS.length);
+      if(CLUB_TEMPLATES.length<10)eraBad.push(id+':执教模板过少');
+      const defIds=new Set(),defNames=new Set();
+      PLAYER_POOL.forEach(d=>{
+        if(defIds.has(d.id))eraBad.push(id+':def id重复'+d.id);
+        if(defNames.has(d.name))eraBad.push(id+':选手重名'+d.name);
+        defIds.add(d.id);defNames.add(d.name);
+        const sig=heroOf(d.sig);
+        if(!d.id||!d.name||!POS[d.pos]||!Array.isArray(d.base)||d.base.length!==4||d.base.some(v=>typeof v!=='number'||v<40||v>99)
+          ||!d.skill||!d.skill.n||!d.skill.t||!d.skill.d||!sig||!sig.pos.includes(d.pos))eraBad.push(id+':def残缺/招牌错位:'+(d.name||d.id));
+      });
+      Object.keys(AI_ROSTERS).forEach(tn=>{
+        const r=AI_ROSTERS[tn];
+        if(r.p.length!==5){eraBad.push(id+':'+tn+'阵容'+r.p.length+'人');return;}
+        const poss=r.p.map(pid=>{const d=PLAYER_POOL.find(x=>x.id===pid);return d?d.pos:'?';});
+        if(poss.includes('?'))eraBad.push(id+':'+tn+'未知def');
+        else if(poss.filter((p,i)=>poss.indexOf(p)!==i).length)eraBad.push(id+':'+tn+'位置重复');
+        if(!AI_TEAMS.some(t=>t.name===tn))eraBad.push(id+':阵容队名不在联盟:'+tn);
+      });
+      era.clubs.forEach(c=>{
+        if(!COACH_POOL.find(x=>x.id===c.coach))eraBad.push(id+':'+c.name+'教练id无效');
+        if(!AI_TEAMS.some(t=>t.name===c.name))eraBad.push(id+':模板球队不在联盟:'+c.name);
+        const poss=c.players.map(pid=>{const d=PLAYER_POOL.find(x=>x.id===pid);return d?d.pos:'?';});
+        if(poss.includes('?')||poss.filter((p,i)=>poss.indexOf(p)!==i).length)eraBad.push(id+':'+c.name+'模板首发非法');
+      });
+      // 时代新档：执教该时代最后一支俱乐部 → 分组/市场/迁移/全页渲染
+      const tmpl=CLUB_TEMPLATES[CLUB_TEMPLATES.length-1];
+      S=newState(tmpl.name,tmpl.icon||'队');
+      S.era=id;S.fund=tmpl.budget;S.wageCap=tmpl.cap;
+      S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+      tmpl.players.forEach(pid=>{const d=PLAYER_POOL.find(x=>x.id===pid);if(d)S.players.push(genPlayer(d));});
+      S.lineup=POS_ORDER.map(pos=>{
+        const cand=S.players.filter(p=>p.pos===pos).sort((a,b)=>playerPower(b)-playerPower(a));
+        return cand[0]?cand[0].id:null;
+      }).filter(Boolean);
+      S.seedPower=teamPower(S)||400;
+      initGroups(S);
+      buildTransferMarket(S);refreshMarket(S);
+      if(!S.groups.G1||S.groups.G1.length!==6)eraBad.push(id+':分组异常');
+      if(!S.leagueTeams||S.leagueTeams.length!==18)eraBad.push(id+':联盟名录'+((S.leagueTeams||[]).length)+'队');
+      migrateSave();
+      let eErr='';
+      try{['club','lineup','market','train','league','union','biz'].forEach(p=>renderPage(p));}catch(e){eErr=e.message;}
+      if(eErr)eraBad.push(id+':渲染异常 '+eErr);
+    }catch(e){eraBad.push(id+':异常 '+(e.message||e));}
+  });
+  installEra(null); // 还原默认联盟，后续断言基于现役数据
+  if(AI_TEAMS.length!==18||CLUB_TEMPLATES.length!==18)eraBad.push('还原现役联盟失败');
+  if(COACH_POOL.length!==coachBaseCnt)eraBad.push('时代教练池泄漏: 基准'+coachBaseCnt+'→'+COACH_POOL.length+'（installEra(null) 必须还原教练池）');
+  if(_eraActive)eraBad.push('还原后 _eraActive 残留:'+_eraActive);
+  if(!defIndex()['top1'])eraBad.push('def 索引未随联盟还原失效重建');
+  if(eraBad.length)R.push('历代联盟:'+JSON.stringify(eraBad.slice(0,8)));
+  // 历代联盟史册：行字段完整性 + 杯赛唯一性（人工维护易漏）
+  const histBad=[];
+  KPL_HISTORY.seasons.concat(KPL_HISTORY.finals).forEach(r=>{
+    if(!r.y||!r.champ||!r.ru)histBad.push('历届:'+(r.y||'?'));
+  });
+  const cupKeys=new Set();
+  KPL_HISTORY.cups.forEach(r=>{
+    if(!r.y||!r.ev||!r.champ)histBad.push('杯赛:'+(r.y||'?'));
+    else{const k=r.y+r.ev;if(cupKeys.has(k))histBad.push('杯赛重复:'+k);cupKeys.add(k);}
+  });
+  KPL_HISTORY.clubs.forEach(c=>{if(!c.n||!c.era||!c.d)histBad.push('名队:'+(c.n||'?'));});
+  KPL_HISTORY.eras.forEach(e=>{if(!e.t||!e.y||!e.d)histBad.push('版图:'+(e.t||'?'));});
+  KPL_HISTORY.dynasties.forEach(d=>{if(!d.n||!d.t||!d.y||!d.d)histBad.push('王朝:'+(d.n||'?'));});
+  if(histBad.length)R.push('历代联盟:'+JSON.stringify(histBad.slice(0,6)));
   // 存档往返 + 渲染
   S=newState('往返队','⚔️');
   const _u=new Set();
@@ -98,7 +171,9 @@ const out = vm_run(dom, `
   const back=JSON.parse(JSON.stringify(S));
   S=back;migrateSave();
   let renderErr='';
-  try{['club','lineup','market','train','league','union','biz'].forEach(p=>renderPage(p));}catch(e){renderErr=e.message;}
+  try{['club','lineup','market','train','league','union','biz'].forEach(p=>renderPage(p));
+  window._unionMode='hist';renderPage('union');window._unionMode='now';renderPage('union'); // 历代联盟史册 + 现况两种形态都要能渲染
+  }catch(e){renderErr=e.message;}
   const numOk=[S.fund,weeklyWage(S),teamPower(S)].every(v=>typeof v==='number'&&!isNaN(v));
   return JSON.stringify({issues:R, roundtrip:renderErr||'OK', numOk});
 })()
