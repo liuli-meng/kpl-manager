@@ -139,6 +139,7 @@ function createTeam(){
  if(!b.txt)b.txt=shortMark(name)||'队';
  S=newState(name,(b.txt||'队').slice(0,1));
  S.crest={sh:b.sh,c1:b.c1,c2:b.c2,c3:b.c3,txt:b.txt};
+ S.selfBuilt=true; // 自建俱乐部开局（成就「白手起家」条件；执教原版不触发）
  // 直签开局：使用独立的自由球员池（与 18 队注册名单不重叠，保证全联盟一人一队）
  const usedNames=new Set();
  POS_ORDER.forEach((pos,i)=>{

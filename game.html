@@ -387,7 +387,9 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 
 <script>
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const fmt=n=>n>=10000?(n/10000).toFixed(1)+"万":String(Math.round(n));
+const fmt=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n));
+/* 金额专用：≤9999万 带万单位，≥1亿 换算为亿（调用点不要再手动拼「万」） */
+const fmtWan=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n))+"万";
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2200);}
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
@@ -832,6 +834,56 @@ const EVENTS=[
  分母 220：削弱纯战力碾压（BP/选人/版本强势才能真正左右胜负，弱队靠 BP 有翻盘空间） */
 function winChance(my,opp){return 1/(1+Math.pow(10,(opp-my)/220));}
 const CASTER=['一拉三！','极限操作！','名场面预定！','这波运营拉满！','经典绕后，丝血反杀！','水晶不倒，战斗不止！','教科书级团战！','来了！又是他！','反手就是一记大招！','这波决策太顶了！'];
+
+/* ================= 成就系统（生涯里程碑） =================
+ 巡检挂在 save() 上：每次状态落盘时统一评估，条件全部由当前状态可推导
+ （冠军史 titleHistory / 荣誉室 honors / FMVP 名人堂 / 名册 / 资金 / 连胜），
+ 解锁一次永久入册 s.achieved（id→解锁年份）。测试/旧档免迁移：缺字段懒补。 */
+const ACHIEVEMENTS=[
+ // —— 俱乐部 ——
+ {id:'found',icon:'创',name:'白手起家',desc:'以自建俱乐部开启征程',test:s=>!!s.selfBuilt},
+ {id:'coach',icon:'教',name:'良师入帐',desc:'签下第一名主教练',test:s=>!!s.coach},
+ // —— 比赛 ——
+ {id:'first_win',icon:'胜',name:'旗开得胜',desc:'拿下队史首场系列赛胜利',test:s=>(s.history||[]).some(h=>h.win)},
+ {id:'streak10',icon:'焰',name:'势如破竹',desc:'单赛季取得 10 连胜',test:s=>(s.streak||0)>=10},
+ // —— 冠军 ——
+ {id:'first_title',icon:'冠',name:'首冠时刻',desc:'夺得队史第一个冠军',test:s=>(s.honors||[]).some(h=>h.champion)},
+ {id:'t_spring',icon:'春',name:'银龙加冕',desc:'夺得春季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='春季赛'&&t.champ===s.teamName)},
+ {id:'t_summer',icon:'夏',name:'夏季赛登顶',desc:'夺得夏季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='夏季赛'&&t.champ===s.teamName)},
+ {id:'t_chall',icon:'挑',name:'挑战者之证',desc:'夺得挑战者杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='挑战者杯'&&t.champ===s.teamName)},
+ {id:'t_ewc',icon:'世',name:'世界之巅',desc:'夺得 EWC 电竞世界杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='EWC'&&t.champ===s.teamName)},
+ {id:'t_annual',icon:'龙',name:'圣龙王朝',desc:'捧起 KPL 年度总决赛圣龙杯',test:s=>(s.titleHistory||[]).some(t=>t.event==='年总'&&t.champ===s.teamName)},
+ {id:'defend',icon:'卫',name:'卫冕成功',desc:'连续两次夺冠（联盟已开始研究你）',test:s=>typeof dynastyStreak==='function'&&dynastyStreak(s,s.teamName)>=2},
+ {id:'triple_year',icon:'三',name:'一年三冠',desc:'同一自然年包揽三项冠军',test:s=>(s.titleHistory||[]).filter(t=>t.champ===s.teamName&&t.season===s.season).length>=3},
+ {id:'asiad_gold',icon:'金',name:'亚洲之巅',desc:'亚运会中国代表队夺得金牌',test:s=>(s.titleHistory||[]).some(t=>t.event==='亚运会'&&t.champ==='中国代表队')},
+ // —— 青训 ——
+ {id:'youth_first',icon:'训',name:'青训出道',desc:'首名青训生晋升一线队',test:s=>(s.players||[]).some(p=>p.academyGrad)},
+ {id:'youth_champ',icon:'承',name:'自家血统',desc:'青训生随队夺得冠军',test:s=>(s.honors||[]).some(h=>h.champion&&h.roster&&(s.players||[]).some(p=>p.academyGrad&&h.roster.includes(p.name)))},
+ {id:'youth_fmvp',icon:'面',name:'青训门面',desc:'青训生当选赛事 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName&&(s.players||[]).some(p=>p.academyGrad&&p.name===f.name))},
+ // —— 经营 ——
+ {id:'star90',icon:'星',name:'手握巨星',desc:'阵中拥有总值 ≥90 的选手',test:s=>(s.players||[]).some(p=>overall(p)>=90)},
+ {id:'big_sale',icon:'售',name:'天价交易',desc:'单笔出售选手回收 ≥2500万',test:s=>(s.maxSale||0)>=2500},
+ {id:'rich',icon:'财',name:'亿万豪门',desc:'俱乐部资金突破 2 亿',test:s=>(s.fund||0)>=20000},
+ {id:'five_year',icon:'恒',name:'长情经营',desc:'迎来第五个赛季',test:s=>gameYear(s)>=2030},
+ // —— 选手个人 ——
+ {id:'own_fmvp',icon:'M',name:'本队 FMVP',desc:'本队选手当选决赛 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName)},
+ {id:'mvp10',icon:'杀',name:'MVP 收割机',desc:'队内选手生涯 MVP ≥10 次',test:s=>(s.players||[]).some(p=>(p.mvp||0)>=10)},
+ {id:'nat_call',icon:'征',name:'国家征召',desc:'有选手入选亚运中国代表队',test:s=>(s.natSquad||[]).some(x=>x.mine)},
+ {id:'hot_form',icon:'火',name:'状态火热',desc:'有选手表现系数达到 140%+',test:s=>(s.players||[]).some(p=>(p.val||100)>=140)},
+];
+function checkAchievements(s){
+ if(!s)return;
+ s.achieved=s.achieved||{};
+ const unlock=s.achieved;
+ ACHIEVEMENTS.forEach(a=>{
+ if(unlock[a.id])return;
+ let ok=false;
+ try{ok=a.test(s);}catch(e){ok=false;}
+ if(!ok)return;
+ unlock[a.id]=gameYear(s);
+ try{toast(' 成就解锁：'+a.name+'（'+a.desc+'）');logEvent(s,' 成就解锁「'+a.name+'」——'+a.desc);}catch(e){}
+ });
+}
 </script>
 <script>
 
@@ -860,6 +912,7 @@ function newState(teamName,icon){
  ewc:null,annual:null, // EWC 电竞世界杯 / KPL 年度总决赛 赛段状态
  challenger:null, // 挑战者杯（春→挑杯→EWC→夏→年总）
  fmvpHonor:[],cardLosers:[], // 历届 FMVP / 卡位赛败者（年度积分名次判定用）
+ achieved:{},selfBuilt:false,maxSale:0, // 成就（id→解锁年份）/ 自建开局标记 / 单笔出售纪录
  };
 }
 function rosterAll(s){return s.players;}
@@ -976,6 +1029,7 @@ function weeklyWage(s){
  return sum;
 }
 function save(){
+ try{checkAchievements(S);}catch(e){}
  try{localStorage.setItem(slotKey(),JSON.stringify(S));}
  catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}}
 }
@@ -1042,6 +1096,9 @@ function migrateSave(){
  if(S.annual===undefined)S.annual=null;
  S.fmvpHonor=S.fmvpHonor||[];
  S.cardLosers=S.cardLosers||[];
+ S.achieved=S.achieved||{}; // 成就（id→解锁年份）
+ if(S.selfBuilt==null)S.selfBuilt=false; // 旧档无法追溯开局方式：不补发「白手起家」
+ if(S.maxSale==null)S.maxSale=0;
  if(S.challenger===undefined)S.challenger=null; // 挑战者杯赛段
  // 经济扩倍迁移（2026-09 身价体系 ×10）：旧档货币字段统一放大，保证与新的千万级身价同刻度
  if(!S.moneyScaled){
@@ -1656,7 +1713,7 @@ function negoSubmit(){
  if(!p){window._nego=null;closeModal('app-modal');toast('谈判对象已失效（被他人签走或市场刷新）');return;}
  const fee=n.freeAgent?0:Math.max(0,parseInt($('#nego-fee').value,10)||0);
  const wage=Math.max(1,parseInt($('#nego-wage').value,10)||0);
- if(!n.freeAgent&&fee>s.fund){n.msg=' 俱乐部资金不足（现有 '+fmt(s.fund)+'万，报价 '+fee+'万）。';renderNego();return;}
+ if(!n.freeAgent&&fee>s.fund){n.msg=' 俱乐部资金不足（现有 '+fmtWan(s.fund)+'，报价 '+fmtWan(fee)+'）。';renderNego();return;}
  // 非卖品强挖：每轮都掷成功率，失败=本轮破裂且要价上涨
  if(p.untouchable&&Math.random()>raidChance(p)){
  p.willingness=clamp(p.willingness-10,5,100);
@@ -1835,6 +1892,7 @@ function sellQuit(){
 /* 成交共用：转会费入账 + 名册/首发/挂牌清理 */
 function completeSale(s,p,fee,team){
  s.fund+=fee;
+ s.maxSale=Math.max(s.maxSale||0,fee); // 单笔出售纪录（成就「天价交易」）
  s.players=s.players.filter(x=>x.id!==p.id);
  if(s.lineup.includes(p.id))s.lineup=s.lineup.filter(x=>x!==p.id);
  if(s.pick)delete s.pick[p.pos];
@@ -2395,6 +2453,7 @@ function promoteRookie(s,id){
  s.academy=s.academy.filter(x=>x.id!==id);
  r.isRookie=false;
  r.tags=['青训'];
+ r.academyGrad=true; // 青训出身永久标记（成就「自家血统/青训门面」判定用）
  r.contract=2; // 晋升一线队签 2 年合同
  s.players.push(r);
  if(!s.lineup.includes(r.id)&&!s.players.some(p=>p.id!==r.id&&p.pos===r.pos&&s.lineup.includes(p.id))){
@@ -4995,6 +5054,23 @@ function renderBiz(){
  html+=`<div class="hint">还没有 FMVP——率队杀进决赛并打出统治表现（各局 MVP 累计最多）即可当选，获专属皮肤与人气温涨</div>`;
  }
  html+=`</div>`;
+ // 成就（生涯里程碑：解锁一次永久入册，条件在 save 巡检中评估）
+ {
+ const ach=S.achieved||{};
+ const got=ACHIEVEMENTS.filter(a=>ach[a.id]).length;
+ html+=`<div class="panel"><h3>成就 <span class="tag">${got}/${ACHIEVEMENTS.length} 已解锁</span></h3>
+ <div class="hint" style="margin-bottom:10px">经营生涯的里程碑：冠军、青训、转会、亚运……解锁时全队广播，集齐是对一段存档最好的总结</div>
+ <div class="grid g4" style="gap:8px">${ACHIEVEMENTS.map(a=>{
+ const yr=ach[a.id];
+ return `<div class="pcard" style="min-height:0;padding:10px 12px;${yr?'border-color:var(--gold)':'opacity:.55'}" ${yr?'title="'+yr+' 年解锁"':'title="'+a.desc+'"'}>
+ <div style="display:flex;align-items:center;gap:8px">
+ <span class="s-icon" style="${yr?'':'background:var(--surface2);color:var(--faint)'}">${a.icon}</span>
+ <div style="min-width:0"><div class="s-name" style="font-size:13px">${a.name}</div>
+ <div class="s-desc" style="font-size:11px">${yr?'<span class="gold">'+yr+' 年解锁</span>':a.desc}</div></div>
+ </div></div>`;
+ }).join('')}</div>
+ </div>`;
+ }
  // 比赛复盘
  if(S.history&&S.history.length){
  html+=`<div class="panel"><h3>比赛复盘 <span class="tag">最近 ${S.history.length} 场</span></h3>
@@ -5235,7 +5311,7 @@ function renderTrain(){
  const ready=total>=300,adult=r.age>=18;
  return `<div class="pcard" style="border-color:${ready&&adult?'var(--green)':'var(--line)'}">
  <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
- <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${''.repeat(r.potential)} · 周薪${r.wage}万</div>
+ <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 周薪${r.wage}万</div>
  <div class="attr" style="margin-top:6px">
  <span>对线<i>${r.attrs.lane}</i></span><span>运营<i>${r.attrs.farm}</i></span>
  <span>团战<i>${r.attrs.team}</i></span><span>心态<i>${r.attrs.mind}</i></span>
@@ -5398,8 +5474,8 @@ function renderUnion(){
  const lastTh=tab==='pop'?'人气':tab==='young'?'年龄 / 潜力':'身价';
  const metric=p=>{
  if(tab==='pop')return p.popularity||0;
- if(tab==='young')return (p.age||'?')+'岁'+(p.potential?' · '+''.repeat(p.potential):'');
- return fmt(sellAskPrice(p))+'万';
+ if(tab==='young')return (p.age||'?')+'岁'+(p.potential?' · '+'★'.repeat(p.potential):'');
+ return fmtWan(sellAskPrice(p));
  };
  html+=`<div class="panel"><h3>选手榜单 <span class="tag">全联盟注册选手 TOP15</span></h3>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${TABS.map(t=>`<button class="btn sm ${tab===t.k?'primary':''}" onclick="window._unionTab='${t.k}';renderUnion()">${t.n}</button>`).join('')}</div>
@@ -5670,6 +5746,7 @@ function createTeam(){
  if(!b.txt)b.txt=shortMark(name)||'队';
  S=newState(name,(b.txt||'队').slice(0,1));
  S.crest={sh:b.sh,c1:b.c1,c2:b.c2,c3:b.c3,txt:b.txt};
+ S.selfBuilt=true; // 自建俱乐部开局（成就「白手起家」条件；执教原版不触发）
  // 直签开局：使用独立的自由球员池（与 18 队注册名单不重叠，保证全联盟一人一队）
  const usedNames=new Set();
  POS_ORDER.forEach((pos,i)=>{

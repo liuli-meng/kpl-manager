@@ -447,7 +447,7 @@ function negoSubmit(){
  if(!p){window._nego=null;closeModal('app-modal');toast('谈判对象已失效（被他人签走或市场刷新）');return;}
  const fee=n.freeAgent?0:Math.max(0,parseInt($('#nego-fee').value,10)||0);
  const wage=Math.max(1,parseInt($('#nego-wage').value,10)||0);
- if(!n.freeAgent&&fee>s.fund){n.msg=' 俱乐部资金不足（现有 '+fmt(s.fund)+'万，报价 '+fee+'万）。';renderNego();return;}
+ if(!n.freeAgent&&fee>s.fund){n.msg=' 俱乐部资金不足（现有 '+fmtWan(s.fund)+'，报价 '+fmtWan(fee)+'）。';renderNego();return;}
  // 非卖品强挖：每轮都掷成功率，失败=本轮破裂且要价上涨
  if(p.untouchable&&Math.random()>raidChance(p)){
  p.willingness=clamp(p.willingness-10,5,100);
@@ -626,6 +626,7 @@ function sellQuit(){
 /* 成交共用：转会费入账 + 名册/首发/挂牌清理 */
 function completeSale(s,p,fee,team){
  s.fund+=fee;
+ s.maxSale=Math.max(s.maxSale||0,fee); // 单笔出售纪录（成就「天价交易」）
  s.players=s.players.filter(x=>x.id!==p.id);
  if(s.lineup.includes(p.id))s.lineup=s.lineup.filter(x=>x!==p.id);
  if(s.pick)delete s.pick[p.pos];

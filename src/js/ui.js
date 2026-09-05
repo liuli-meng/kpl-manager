@@ -345,6 +345,23 @@ function renderBiz(){
  html+=`<div class="hint">还没有 FMVP——率队杀进决赛并打出统治表现（各局 MVP 累计最多）即可当选，获专属皮肤与人气温涨</div>`;
  }
  html+=`</div>`;
+ // 成就（生涯里程碑：解锁一次永久入册，条件在 save 巡检中评估）
+ {
+ const ach=S.achieved||{};
+ const got=ACHIEVEMENTS.filter(a=>ach[a.id]).length;
+ html+=`<div class="panel"><h3>成就 <span class="tag">${got}/${ACHIEVEMENTS.length} 已解锁</span></h3>
+ <div class="hint" style="margin-bottom:10px">经营生涯的里程碑：冠军、青训、转会、亚运……解锁时全队广播，集齐是对一段存档最好的总结</div>
+ <div class="grid g4" style="gap:8px">${ACHIEVEMENTS.map(a=>{
+ const yr=ach[a.id];
+ return `<div class="pcard" style="min-height:0;padding:10px 12px;${yr?'border-color:var(--gold)':'opacity:.55'}" ${yr?'title="'+yr+' 年解锁"':'title="'+a.desc+'"'}>
+ <div style="display:flex;align-items:center;gap:8px">
+ <span class="s-icon" style="${yr?'':'background:var(--surface2);color:var(--faint)'}">${a.icon}</span>
+ <div style="min-width:0"><div class="s-name" style="font-size:13px">${a.name}</div>
+ <div class="s-desc" style="font-size:11px">${yr?'<span class="gold">'+yr+' 年解锁</span>':a.desc}</div></div>
+ </div></div>`;
+ }).join('')}</div>
+ </div>`;
+ }
  // 比赛复盘
  if(S.history&&S.history.length){
  html+=`<div class="panel"><h3>比赛复盘 <span class="tag">最近 ${S.history.length} 场</span></h3>
@@ -585,7 +602,7 @@ function renderTrain(){
  const ready=total>=300,adult=r.age>=18;
  return `<div class="pcard" style="border-color:${ready&&adult?'var(--green)':'var(--line)'}">
  <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
- <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${''.repeat(r.potential)} · 周薪${r.wage}万</div>
+ <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 周薪${r.wage}万</div>
  <div class="attr" style="margin-top:6px">
  <span>对线<i>${r.attrs.lane}</i></span><span>运营<i>${r.attrs.farm}</i></span>
  <span>团战<i>${r.attrs.team}</i></span><span>心态<i>${r.attrs.mind}</i></span>
@@ -748,8 +765,8 @@ function renderUnion(){
  const lastTh=tab==='pop'?'人气':tab==='young'?'年龄 / 潜力':'身价';
  const metric=p=>{
  if(tab==='pop')return p.popularity||0;
- if(tab==='young')return (p.age||'?')+'岁'+(p.potential?' · '+''.repeat(p.potential):'');
- return fmt(sellAskPrice(p))+'万';
+ if(tab==='young')return (p.age||'?')+'岁'+(p.potential?' · '+'★'.repeat(p.potential):'');
+ return fmtWan(sellAskPrice(p));
  };
  html+=`<div class="panel"><h3>选手榜单 <span class="tag">全联盟注册选手 TOP15</span></h3>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${TABS.map(t=>`<button class="btn sm ${tab===t.k?'primary':''}" onclick="window._unionTab='${t.k}';renderUnion()">${t.n}</button>`).join('')}</div>

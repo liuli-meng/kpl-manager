@@ -1,5 +1,7 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const fmt=n=>n>=10000?(n/10000).toFixed(1)+"万":String(Math.round(n));
+const fmt=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n));
+/* 金额专用：≤9999万 带万单位，≥1亿 换算为亿（调用点不要再手动拼「万」） */
+const fmtWan=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n))+"万";
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2200);}
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
@@ -444,3 +446,53 @@ const EVENTS=[
  分母 220：削弱纯战力碾压（BP/选人/版本强势才能真正左右胜负，弱队靠 BP 有翻盘空间） */
 function winChance(my,opp){return 1/(1+Math.pow(10,(opp-my)/220));}
 const CASTER=['一拉三！','极限操作！','名场面预定！','这波运营拉满！','经典绕后，丝血反杀！','水晶不倒，战斗不止！','教科书级团战！','来了！又是他！','反手就是一记大招！','这波决策太顶了！'];
+
+/* ================= 成就系统（生涯里程碑） =================
+ 巡检挂在 save() 上：每次状态落盘时统一评估，条件全部由当前状态可推导
+ （冠军史 titleHistory / 荣誉室 honors / FMVP 名人堂 / 名册 / 资金 / 连胜），
+ 解锁一次永久入册 s.achieved（id→解锁年份）。测试/旧档免迁移：缺字段懒补。 */
+const ACHIEVEMENTS=[
+ // —— 俱乐部 ——
+ {id:'found',icon:'创',name:'白手起家',desc:'以自建俱乐部开启征程',test:s=>!!s.selfBuilt},
+ {id:'coach',icon:'教',name:'良师入帐',desc:'签下第一名主教练',test:s=>!!s.coach},
+ // —— 比赛 ——
+ {id:'first_win',icon:'胜',name:'旗开得胜',desc:'拿下队史首场系列赛胜利',test:s=>(s.history||[]).some(h=>h.win)},
+ {id:'streak10',icon:'焰',name:'势如破竹',desc:'单赛季取得 10 连胜',test:s=>(s.streak||0)>=10},
+ // —— 冠军 ——
+ {id:'first_title',icon:'冠',name:'首冠时刻',desc:'夺得队史第一个冠军',test:s=>(s.honors||[]).some(h=>h.champion)},
+ {id:'t_spring',icon:'春',name:'银龙加冕',desc:'夺得春季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='春季赛'&&t.champ===s.teamName)},
+ {id:'t_summer',icon:'夏',name:'夏季赛登顶',desc:'夺得夏季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='夏季赛'&&t.champ===s.teamName)},
+ {id:'t_chall',icon:'挑',name:'挑战者之证',desc:'夺得挑战者杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='挑战者杯'&&t.champ===s.teamName)},
+ {id:'t_ewc',icon:'世',name:'世界之巅',desc:'夺得 EWC 电竞世界杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='EWC'&&t.champ===s.teamName)},
+ {id:'t_annual',icon:'龙',name:'圣龙王朝',desc:'捧起 KPL 年度总决赛圣龙杯',test:s=>(s.titleHistory||[]).some(t=>t.event==='年总'&&t.champ===s.teamName)},
+ {id:'defend',icon:'卫',name:'卫冕成功',desc:'连续两次夺冠（联盟已开始研究你）',test:s=>typeof dynastyStreak==='function'&&dynastyStreak(s,s.teamName)>=2},
+ {id:'triple_year',icon:'三',name:'一年三冠',desc:'同一自然年包揽三项冠军',test:s=>(s.titleHistory||[]).filter(t=>t.champ===s.teamName&&t.season===s.season).length>=3},
+ {id:'asiad_gold',icon:'金',name:'亚洲之巅',desc:'亚运会中国代表队夺得金牌',test:s=>(s.titleHistory||[]).some(t=>t.event==='亚运会'&&t.champ==='中国代表队')},
+ // —— 青训 ——
+ {id:'youth_first',icon:'训',name:'青训出道',desc:'首名青训生晋升一线队',test:s=>(s.players||[]).some(p=>p.academyGrad)},
+ {id:'youth_champ',icon:'承',name:'自家血统',desc:'青训生随队夺得冠军',test:s=>(s.honors||[]).some(h=>h.champion&&h.roster&&(s.players||[]).some(p=>p.academyGrad&&h.roster.includes(p.name)))},
+ {id:'youth_fmvp',icon:'面',name:'青训门面',desc:'青训生当选赛事 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName&&(s.players||[]).some(p=>p.academyGrad&&p.name===f.name))},
+ // —— 经营 ——
+ {id:'star90',icon:'星',name:'手握巨星',desc:'阵中拥有总值 ≥90 的选手',test:s=>(s.players||[]).some(p=>overall(p)>=90)},
+ {id:'big_sale',icon:'售',name:'天价交易',desc:'单笔出售选手回收 ≥2500万',test:s=>(s.maxSale||0)>=2500},
+ {id:'rich',icon:'财',name:'亿万豪门',desc:'俱乐部资金突破 2 亿',test:s=>(s.fund||0)>=20000},
+ {id:'five_year',icon:'恒',name:'长情经营',desc:'迎来第五个赛季',test:s=>gameYear(s)>=2030},
+ // —— 选手个人 ——
+ {id:'own_fmvp',icon:'M',name:'本队 FMVP',desc:'本队选手当选决赛 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName)},
+ {id:'mvp10',icon:'杀',name:'MVP 收割机',desc:'队内选手生涯 MVP ≥10 次',test:s=>(s.players||[]).some(p=>(p.mvp||0)>=10)},
+ {id:'nat_call',icon:'征',name:'国家征召',desc:'有选手入选亚运中国代表队',test:s=>(s.natSquad||[]).some(x=>x.mine)},
+ {id:'hot_form',icon:'火',name:'状态火热',desc:'有选手表现系数达到 140%+',test:s=>(s.players||[]).some(p=>(p.val||100)>=140)},
+];
+function checkAchievements(s){
+ if(!s)return;
+ s.achieved=s.achieved||{};
+ const unlock=s.achieved;
+ ACHIEVEMENTS.forEach(a=>{
+ if(unlock[a.id])return;
+ let ok=false;
+ try{ok=a.test(s);}catch(e){ok=false;}
+ if(!ok)return;
+ unlock[a.id]=gameYear(s);
+ try{toast(' 成就解锁：'+a.name+'（'+a.desc+'）');logEvent(s,' 成就解锁「'+a.name+'」——'+a.desc);}catch(e){}
+ });
+}

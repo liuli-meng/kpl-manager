@@ -24,6 +24,7 @@ function newState(teamName,icon){
  ewc:null,annual:null, // EWC 电竞世界杯 / KPL 年度总决赛 赛段状态
  challenger:null, // 挑战者杯（春→挑杯→EWC→夏→年总）
  fmvpHonor:[],cardLosers:[], // 历届 FMVP / 卡位赛败者（年度积分名次判定用）
+ achieved:{},selfBuilt:false,maxSale:0, // 成就（id→解锁年份）/ 自建开局标记 / 单笔出售纪录
  };
 }
 function rosterAll(s){return s.players;}
@@ -140,6 +141,7 @@ function weeklyWage(s){
  return sum;
 }
 function save(){
+ try{checkAchievements(S);}catch(e){}
  try{localStorage.setItem(slotKey(),JSON.stringify(S));}
  catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}}
 }
@@ -206,6 +208,9 @@ function migrateSave(){
  if(S.annual===undefined)S.annual=null;
  S.fmvpHonor=S.fmvpHonor||[];
  S.cardLosers=S.cardLosers||[];
+ S.achieved=S.achieved||{}; // 成就（id→解锁年份）
+ if(S.selfBuilt==null)S.selfBuilt=false; // 旧档无法追溯开局方式：不补发「白手起家」
+ if(S.maxSale==null)S.maxSale=0;
  if(S.challenger===undefined)S.challenger=null; // 挑战者杯赛段
  // 经济扩倍迁移（2026-09 身价体系 ×10）：旧档货币字段统一放大，保证与新的千万级身价同刻度
  if(!S.moneyScaled){
