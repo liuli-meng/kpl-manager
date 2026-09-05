@@ -2,11 +2,10 @@
 // 运行：node tests/audit-static.js
 const fs = require('fs');
 const path = require('path');
-const { makeDom, makeTester } = require('./harness');
+const { makeDom, makeTester, loadCode } = require('./harness');
 
 const ROOT = path.join(__dirname, '..');
-const code = ['data.js','state.js','players.js','transfer.js','train.js','season.js','bp.js','match.js','ui.js','main.js']
-  .map(f => fs.readFileSync(path.join(ROOT, 'src', 'js', f), 'utf8')).join('\n');
+const code = loadCode(); // 源模块清单以 harness.js 为准（只维护一份）
 const html = fs.readFileSync(path.join(ROOT, 'src', 'index.html'), 'utf8');
 const all = code + html;
 const T = makeTester('静态审计');

@@ -1,22 +1,8 @@
 // 冒烟测试：模拟浏览器全局，跑 BP 有效战力结算与赛前准备数据流
 const fs = require('fs');
 const vm = require('vm');
-const files = ['data.js','state.js','players.js','transfer.js','train.js','season.js','bp.js','match.js','ui.js','main.js'];
-let code = '';
-files.forEach(f => { code += fs.readFileSync('src/js/' + f, 'utf8') + '\n'; });
-const el = () => ({classList:{add(){},remove(){},toggle(){}},style:{},innerHTML:'',value:'',textContent:'',dataset:{},addEventListener(){},appendChild(){},select(){},querySelector(){return null},querySelectorAll(){return[]}});
-const elCache = {};
-const cachedEl = sel => elCache[sel] || (elCache[sel] = el());
-const dom = {
-  getElementById: id => cachedEl('#' + id), querySelector: sel => cachedEl(sel), querySelectorAll: () => [],
-  localStorage: {getItem: () => null, setItem(){}, removeItem(){}},
-  document: {querySelector: sel => cachedEl(sel), querySelectorAll: () => [], createElement: () => el(), execCommand: () => {}, body: el(), addEventListener(){}, removeEventListener(){}},
-  window: null, confirm: () => true, alert(){}, toast(){}, location: {reload(){}},
-  setTimeout: () => 0, clearTimeout(){}, addEventListener(){}, removeEventListener(){},
-};
-dom.window = dom;
-vm.createContext(dom);
-vm.runInContext(code, dom);
+const { makeDom } = require('./tests/harness');
+const { dom } = makeDom(); // 沙箱引导收敛到 tests/harness.js（源模块清单/DOM 桩只维护一份）
 const r = vm.runInContext(`
 (function(){
   const out=[];

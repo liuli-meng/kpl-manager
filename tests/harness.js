@@ -60,4 +60,4 @@ function makeTester(name) {
   };
 }
 
-module.exports = { makeDom, makeTester };
+module.exports = { makeDom, makeTester, loadCode };

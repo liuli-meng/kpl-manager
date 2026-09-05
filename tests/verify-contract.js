@@ -1,13 +1,8 @@
 // 2026-09 合同谈判回归：年限/报价可谈 → 心理价位被拒抬价 → 三轮谈崩 → 高价接受 → 提前续约
-const fs = require('fs'), vm = require('vm'), path = require('path');
-const SRC = path.join(__dirname, '..', 'src', 'js');
-let code = '';
-['data.js','state.js','players.js','transfer.js','train.js','season.js','bp.js','match.js','ui.js','main.js'].forEach(f => { code += fs.readFileSync(path.join(SRC, f), 'utf8') + '\n'; });
-const el = () => ({classList:{add(){},remove(){},toggle(){}},style:{},innerHTML:'',value:'',textContent:'',dataset:{},addEventListener(){},appendChild(){},select(){},querySelector(){return null},querySelectorAll(){return[]}});
-const elCache = {};
-const cachedEl = sel => elCache[sel] || (elCache[sel] = el());
-const dom = {getElementById:id=>cachedEl('#'+id),querySelector:sel=>cachedEl(sel),querySelectorAll:()=>[],localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:sel=>cachedEl(sel),querySelectorAll:()=>[],createElement:()=>el(),execCommand:()=>{},body:el(),addEventListener(){},removeEventListener(){}},window:null,confirm:()=>true,alert(){},toast(){},location:{reload(){}},setTimeout:()=>0,clearTimeout(){},addEventListener(){},removeEventListener(){}};
-dom.window = dom; vm.createContext(dom); vm.runInContext(code, dom);
+// 沙箱引导收敛到 tests/harness.js（源模块清单/DOM 桩只维护一份）
+const vm = require('vm');
+const { makeDom } = require('./harness');
+const { dom } = makeDom();
 
 const out = vm.runInContext(`
 (function(){

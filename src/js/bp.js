@@ -127,8 +127,21 @@ function expandSteps(sr,isPeak){
  return steps; // 18 手，side: M=我方 O=对方
 }
 /* 首发缺位时从替补席同位置自动递补（退役/转会后防呆）；伤停/国家队集训必须休息：
- 健康替补自动顶替；亚运年夏季若该位置无人可替，临时借调青训顶位（star 被征召时的买人/提拔价值） */
-function natBusy(s,p){return !!(p&&(p.injury>0||(p.natCamp&&!s.agDone&&s.split==='summer')));}
+ 无健康替补时位置空缺，由 lineupNoGo 在开赛入口统一拦截（签替补/提拔青训是玩家决策） */
+function natBusy(s,p){return !!(p&&(p.injury>0||(typeof natCamping==='function'&&natCamping(s,p))));}
+/* 当前首发里无法出战的位置（无人/伤停/集训）——openBP 与 autoPlayNext 共用同一判定 */
+function lineupNoGo(s){
+ return POS_ORDER.filter(pos=>{
+ const p=rosterLineup(s).find(x=>x.pos===pos);
+ return !p||natBusy(s,p);
+ });
+}
+function noGoDetail(s,noGo){
+ return noGo.map(pos=>{
+ const p=rosterLineup(s).find(x=>x.pos===pos);
+ return POS[pos][0]+(p?(p.natCamp?'（'+p.name+' 国家队集训）':'（'+p.name+' 伤停'+p.injury+'天）'):'（无人）');
+ }).join('、');
+}
 function autoFillLineup(s){
  POS_ORDER.forEach(pos=>{
  const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
@@ -195,15 +208,9 @@ function resetOppEnergy(s,opName){
 function openBP(title,onConfirm){
  autoFillLineup(S);
  const ls=rosterLineup(S);
- const noGo=POS_ORDER.filter(pos=>{
- const p=ls.find(x=>x.pos===pos);
- return !p||natBusy(S,p); // 伤停/集训必须缺席：无健康选手可出的位置拦下
- });
+ const noGo=lineupNoGo(S);
  if(noGo.length){
- const detail=noGo.map(pos=>{
- const p=ls.find(x=>x.pos===pos);
- return POS[pos][0]+(p?(p.natCamp?'（'+p.name+' 国家队集训）':'（'+p.name+' 伤停'+p.injury+'天）'):'（无人）');
- }).join('、');
+ const detail=noGoDetail(S,noGo);
  toast(' '+detail+' 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈');
  return;
  }
@@ -369,12 +376,9 @@ function autoPlayNext(){
  if(!sr)return;
  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
  autoFillLineup(S); // 伤员自动换下/缺位递补
- const noGo=POS_ORDER.filter(pos=>{
- const p=rosterLineup(S).find(x=>x.pos===pos);
- return !p||natBusy(S,p); // 伤停/集训必须缺席：无健康选手的位置拦下自动BP
- });
+ const noGo=lineupNoGo(S);
  if(noGo.length){
- toast(' '+noGo.map(pos=>POS[pos][0]).join('、')+' 无法出战（伤停/无人）——自动BP暂停，请补齐阵容');
+ toast(' '+noGoDetail(S,noGo)+' 无法出战（伤停/无人/集训）——自动BP暂停，请补齐阵容');
  S.seriesAuto=false;
  openBP('伤停 · 请补齐阵容后继续',playGame);
  return;

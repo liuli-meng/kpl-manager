@@ -1,12 +1,8 @@
 // 年度赛历回归测试：春季赛 → EWC → 夏季赛 → KPL年度总决赛 → 下一年春季赛 全流程贯通
-// + 挂牌撤牌（有报价时也可撤牌）
-const fs = require('fs'), vm = require('vm'), path = require('path');
-const SRC = path.join(__dirname, '..', 'src', 'js');
-let code = '';
-['data.js','state.js','players.js','transfer.js','train.js','season.js','bp.js','match.js','ui.js','main.js'].forEach(f => { code += fs.readFileSync(path.join(SRC, f), 'utf8') + '\n'; });
-const el = () => ({classList:{add(){},remove(){},toggle(){}},style:{},innerHTML:'',value:'',textContent:'',dataset:{},addEventListener(){},appendChild(){},select(){},querySelector(){return null},querySelectorAll(){return[]}});
-const dom = {getElementById:()=>el(),querySelector:()=>el(),querySelectorAll:()=>[],localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:()=>el(),querySelectorAll:()=>[],createElement:()=>el(),execCommand:()=>{},body:el(),addEventListener(){},removeEventListener(){}},window:null,confirm:()=>true,alert(){},toast(){},location:{reload(){}},setTimeout:()=>0,clearTimeout(){},addEventListener(){},removeEventListener(){}};
-dom.window = dom; vm.createContext(dom); vm.runInContext(code, dom);
+// 沙箱引导收敛到 tests/harness.js（源模块清单/DOM 桩只维护一份）
+const vm = require('vm');
+const { makeDom } = require('./harness');
+const { dom } = makeDom();
 
 const out = vm.runInContext(`
 (function(){
