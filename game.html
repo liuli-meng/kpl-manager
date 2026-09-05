@@ -1302,7 +1302,8 @@ function ensureAiRosters(s,teamName){
 function ageDrift(p){
  const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
  if(p.age<=m.gold){
- p.attrs[pick(['lane','farm','team','mind'])]=clamp(p.attrs[pick(['lane','farm','team','mind'])]+rnd(2,3),55,99);
+ const gk=pick(['lane','farm','team','mind']);
+ p.attrs[gk]=clamp(p.attrs[gk]+rnd(2,3),55,99);
  }else if(p.age<m.retire){
  const key=pick(['lane','farm','team','mind']);
  p.attrs[key]=clamp(p.attrs[key]-rnd(1,m.decay),40,99);
