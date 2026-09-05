@@ -133,24 +133,26 @@ function autoFillLineup(s){
  POS_ORDER.forEach(pos=>{
  const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
  const inPos=cur.find(p=>p.pos===pos);
- if(inPos&&natBusy(s,inPos)){ // 伤员/集训自动下场；无健康替补时留给 openBP 拦截
- const fit=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p));
+ if(inPos&&natBusy(s,inPos)){ // 伤员/集训自动下场
+ const cands=s.players.filter(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p))
+ .sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig)); // 替补择优上场
+ const fit=cands[0];
  if(fit){
  s.lineup[s.lineup.indexOf(inPos.id)]=fit.id;
  logEvent(s,' '+inPos.name+(inPos.natCamp?' 国家队集训中，缺席夏季赛；':' 伤停（还剩'+inPos.injury+'天），')+fit.name+' 顶替首发（'+POS[pos][0]+'）');
  return;
  }
- if(inPos.natCamp&&typeof promoteNatFill==='function'){ // 集训无人可替：青训临时借调（保证 5 人建制）
- const tmp=promoteNatFill(s,pos);
- if(tmp){
- s.lineup[s.lineup.indexOf(inPos.id)]=tmp.id;
- logEvent(s,' '+inPos.name+' 国家队集训缺阵，青训 '+tmp.name+' 临时借调顶位（'+POS[pos][0]+'）——集训结束归队');
+ if(inPos.natCamp){ // 集训缺席且无替补：强制下场留空位（开赛拦截——签替补是正式策略，不再凭空借调青训）
+ s.lineup.splice(s.lineup.indexOf(inPos.id),1);
+ logEvent(s,' '+inPos.name+' 国家队集训中且无替补可顶——'+POS[pos][0]+'空缺！转会市场签一名替补，否则该位置无法出战');
  return;
  }
- }
+ // 伤停无替补：留在首发（伤员自动下场后会无人可换），留给 openBP 拦截
  }
  if(!cur.some(p=>p.pos===pos)){
- const bench=s.players.find(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p));
+ const cands=s.players.filter(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p))
+ .sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig));
+ const bench=cands[0];
  if(bench){s.lineup.push(bench.id);logEvent(s,' '+bench.name+' 递补进入首发（'+POS[pos][0]+'）');}
  }
  });
@@ -195,14 +197,14 @@ function openBP(title,onConfirm){
  const ls=rosterLineup(S);
  const noGo=POS_ORDER.filter(pos=>{
  const p=ls.find(x=>x.pos===pos);
- return !p||p.injury>0; // 伤停必须休息：无健康选手可出的位置拦下
+ return !p||natBusy(S,p); // 伤停/集训必须缺席：无健康选手可出的位置拦下
  });
  if(noGo.length){
  const detail=noGo.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
- return POS[pos][0]+(p?'（'+p.name+' 伤停'+p.injury+'天）':'（无人）');
+ return POS[pos][0]+(p?(p.natCamp?'（'+p.name+' 国家队集训）':'（'+p.name+' 伤停'+p.injury+'天）'):'（无人）');
  }).join('、');
- toast(' '+detail+' 无法出战：伤停必须休息——签约替补 / 青训提拔 / 休息等伤愈');
+ toast(' '+detail+' 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈');
  return;
  }
  const sr=S.series;
@@ -369,7 +371,7 @@ function autoPlayNext(){
  autoFillLineup(S); // 伤员自动换下/缺位递补
  const noGo=POS_ORDER.filter(pos=>{
  const p=rosterLineup(S).find(x=>x.pos===pos);
- return !p||p.injury>0; // 伤停必须休息：无健康选手的位置拦下自动BP
+ return !p||natBusy(S,p); // 伤停/集训必须缺席：无健康选手的位置拦下自动BP
  });
  if(noGo.length){
  toast(' '+noGo.map(pos=>POS[pos][0]).join('、')+' 无法出战（伤停/无人）——自动BP暂停，请补齐阵容');

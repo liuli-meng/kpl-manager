@@ -1,9 +1,10 @@
-// 2026-09 亚运征召回归：入选选手缺席整个夏季赛（集训标记/换下首发/不可卖/青训借调/归队）
+// 2026-09 亚运征召回归：入选选手缺席整个夏季赛；顶位一律用队内替补（替补择优），
+// 无替补则位置空缺+开赛拦截（签替补是正式策略）——旧版「凭空青训借调」已移除，旧档 natFill 兼容清理
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const SRC = path.join(__dirname, '..', 'src', 'js');
 let code = '';
 ['data.js','state.js','players.js','transfer.js','train.js','season.js','bp.js','match.js','ui.js','main.js'].forEach(f => { code += fs.readFileSync(path.join(SRC, f), 'utf8') + '\n'; });
-const el = () => ({classList:{add(){},remove(){},toggle(){}},style:{},innerHTML:'',value:'',textContent:'',dataset:{},addEventListener(){},appendChild(){},select(){},querySelector(){return null},querySelectorAll(){return[]}});
+const el = () => ({classList:{add(){},remove(){},toggle(){}},style:{},innerHTML:'',value:'',textContent:'',dataset:{},disabled:false,addEventListener(){},appendChild(){},select(){},querySelector(){return null},querySelectorAll(){return[]}});
 const elCache = {};
 const cachedEl = sel => elCache[sel] || (elCache[sel] = el());
 const dom = {getElementById:id=>cachedEl('#'+id),querySelector:sel=>cachedEl(sel),querySelectorAll:()=>[],localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:sel=>cachedEl(sel),querySelectorAll:()=>[],createElement:()=>el(),execCommand:()=>{},body:el(),addEventListener(){},removeEventListener(){}},window:null,confirm:()=>true,alert(){},toast(){},location:{reload(){}},setTimeout:()=>0,clearTimeout(){},addEventListener(){},removeEventListener(){}};
@@ -22,11 +23,15 @@ const out = vm.runInContext(`
     p.heroPool=(p.heroPool||[]).map(h=>({...h,lv:3}));
     return p;
   };
-  S=newState('陪跑队','剑');
+
+  // ============ 场景A：有替补 → 替补择优顶位，5 人建制保持 ============
+  S=newState('替补队','剑');
   const star=mk99();
   const others=['jg','mid','ad','sup'].map(pos=>genPlayer(genFreeAgentDef(pos,'low',new Set())));
-  S.players=[star,...others];
-  S.lineup=S.players.map(p=>p.id);
+  const benchTop=genPlayer(genFreeAgentDef('top','low',new Set()));
+  benchTop.name='替补甲';benchTop.attrs={lane:70,farm:66,team:72,mind:68};
+  S.players=[star,...others,benchTop];
+  S.lineup=S.players.filter(x=>x!==benchTop).map(p=>p.id); // 替补甲在板凳
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
   S.seedPower=teamPower(S);
   S.fund=20000;
@@ -37,9 +42,11 @@ const out = vm.runInContext(`
   const p=S.players.find(x=>x.name==='测试王牌');
   if(!p||!p.natCamp)fail('①王牌未被征召（应缺席夏季赛）');
   else log('①征召宣布: '+p.name+' 入选中国代表队');
-  if(S.lineup.includes(p.id))fail('②征召选手仍在首发');
-  else log('②集训换下首发 → 顶位='+S.players.find(x=>S.lineup.includes(x.id)&&x.pos==='top').name);
-  if(S.lineup.length!==5)fail('③阵容不足 5 人（应替补/借调补位）');
+  const topNow=S.players.find(x=>S.lineup.includes(x.id)&&x.pos==='top');
+  if(!topNow||topNow===p)fail('②顶位不是替补（应为 替补甲）: '+(topNow&&topNow.name));
+  else if(!S.lineup.includes(benchTop.id))fail('②顶位用错人: '+topNow.name);
+  else log('②集训换下首发 → 替补择优顶位='+topNow.name);
+  if(S.lineup.length!==5)fail('③阵容不足 5 人（替补顶位后应保持 5 人）');
   else log('③阵容 5 人建制保持');
   const pre=JSON.stringify(S.lineup);
   swapPlayer(p.id);
@@ -50,17 +57,15 @@ const out = vm.runInContext(`
   releasePlayer(S,p.id);
   if(S.players.length!==n0)fail('⑤集训选手被出售/放走');
   else log('⑤集训期间不可出售/放走');
-  // ⑤b 青训借调顶位（natFill）同样禁售——卖掉会破坏 5 人建制（2026-09-05 排查修复）
-  const fill=S.players.find(x=>x.natFill);
-  if(fill){
-    openSellNego(S,fill.id);
-    if(window._sellNego)fail('⑤b 借调顶位可被出售（应拦截）');
-    else log('⑤b 借调顶位出售已拦截');
-    const n1=S.players.length;
-    releasePlayer(S,fill.id);
-    if(S.players.length!==n1)fail('⑤b 借调顶位被放走');
-    else log('⑤b 借调顶位不可放走（合同守卫）');
-  }
+  // ⑤b 旧档兼容：手动构造 natFill 残留（旧版本存档），禁售守卫仍生效
+  const legacy={id:'legacy_fill',name:'旧档借调',pos:'jg',team:null,tags:['青训'],attrs:{lane:60,farm:60,team:60,mind:60},
+   skill:{n:'x',t:'team',d:'x'},sig:'铠',heroPool:[{n:'铠',lv:2}],career:'',wage:3,energy:100,morale:80,injury:0,
+   mvp:0,retiring:false,age:17,popularity:5,willingness:80,potential:3,natFill:true,contract:1};
+  S.players.push(legacy);
+  openSellNego(S,legacy.id);
+  if(window._sellNego)fail('⑤b 旧档借调顶位可被出售（应拦截）');
+  else log('⑤b 旧档 natFill 残留：禁售守卫生效');
+  S.players=S.players.filter(x=>x!==legacy); // 场景A后续流程移除构造数据
 
   // 夏季赛全败打完：全程确认王牌不在首发
   S.preseason=false;S.transferWindow=0;
@@ -91,16 +96,50 @@ const out = vm.runInContext(`
     if(!back)fail('⑦亚运后未归队');
     else if(back.natCamp)fail('⑦归队后 natCamp 未清除');
     else log('⑦亚运收官归队: natCamp 清除 · 身价 '+val0+'→'+back.val+' · 人气 '+pop0+'→'+(back.popularity||0)+' · 体力 '+eng0+'→'+back.energy);
-    if((S.players||[]).some(x=>x.natFill))fail('⑧青训借调未撤销');
-    else log('⑧青训借调已撤销');
     const logs=(S.eventLog||[]).map(x=>x.txt).join('|');
     const hasBonus=logs.indexOf('亚运会加成')>=0||logs.indexOf('人气+')>=0||back.popularity>pop0;
     const hasTitle=(S.titleHistory||[]).some(h=>h.event==='亚运会');
     if(!hasBonus)fail('⑨未看到奖牌回流（人气 '+pop0+'→'+(back.popularity||0)+'）');
     else log('⑨奖牌回流已生效（人气提升，赛事史有亚运会记录='+hasTitle+'）');
   }
+
+  // ============ 场景B：无替补 → 位置空缺 + 开赛拦截 + 签替补恢复 ============
+  S=newState('无替队','盾');
+  const star2=mk99();
+  const others2=['jg','mid','ad','sup'].map(pos=>genPlayer(genFreeAgentDef(pos,'low',new Set())));
+  S.players=[star2,...others2];
+  S.lineup=S.players.map(p=>p.id);
+  S.coach={...COACH_POOL.find(c=>c.id==='co12')};
+  S.seedPower=teamPower(S);
+  S.fund=20000;
+  startSplit(S,'summer');
+  const p2=S.players.find(x=>x.name==='测试王牌');
+  if(!p2||!p2.natCamp)fail('B①无替队王牌未被征召');
+  if(S.lineup.includes(p2.id))fail('B②无替补时集训选手仍在首发');
+  else if(S.lineup.length!==4)fail('B②应为 4 人（top 空缺）: '+S.lineup.length);
+  else log('B①无替补：集训选手强制下场，top 空缺 lineup=4人');
+  const logs2=(S.eventLog||[]).map(x=>x.txt).join('|');
+  if(logs2.indexOf('没有替补可顶')<0)fail('B③征召时无「签替补」警告');
+  else log('B②征召宣布含行动警告（没有替补可顶）');
+  // 开赛被拦截：BP 台拒开
+  S.preseason=false;S.transferWindow=0;
+  autoFillLineup(S);
+  try{
+    openBP('测试',playGame);
+    if($('#app-modal').classList.contains('on'))fail('B④top 空缺仍可进 BP 台');
+    else log('B③top 空缺开赛被拦截（BP 台未开）');
+  }catch(e){log('B③top 空缺开赛被拦截（toast 提示路径）');}
+  // 签一名 top 自由球员 → autoFill 顶位 → 可开战
+  S.fund=50000;
+  const fa=(S.freeAgents||[]).filter(x=>x.pos==='top')[0]||genPlayer(genFreeAgentDef('top','low',new Set()));
+  if(!S.freeAgents.some(x=>x===fa))S.freeAgents=[fa,...(S.freeAgents||[])];
+  signFreeAgent(S,fa.id);
+  autoFillLineup(S);
+  const okNow=S.players.find(x=>S.lineup.includes(x.id)&&x.pos==='top');
+  if(!okNow||okNow===p2)fail('B⑤签替补后仍未顶位');
+  else log('B④签下替补 '+okNow.name+' → 顶位恢复 5 人，可正常出战');
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
-  return res.join('\\n');
+  return res.join(String.fromCharCode(10));
 })()
 `,dom);
 console.log(out);
