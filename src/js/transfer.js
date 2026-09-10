@@ -359,22 +359,26 @@ function buildTransferMarket(s){
  }
  s.freeAgents.sort((a,b)=>overall(b)-overall(a));
 }
-/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖） */
+/* 更衣室产物：公开要求离队的选手更容易谈走——俱乐部留人成本上升（买断费打折、强挖更易、
+   本人要价降低）。三处结算必须同用一个判定，避免" UI 说容易谈、实际更贵"的分裂 */
+const effWillingness=p=>clamp((p.willingness||0)+(p.transferRequest?-30:0),0,100);
+/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖）；要求离队者八五折 */
 function buyoutPrice(p){
  const base=valueOf(overall(p));
  const powBonus=1+Math.max(0,(playerPower(p,p.sig)-55)/200);
- const wilMult=p.willingness>=60?1:p.willingness>=30?1.5:2.2;
- return Math.round(base*powBonus*wilMult);
+ const wil=p.willingness||0;
+ const wilMult=wil>=60?1:wil>=30?1.5:2.2;
+ return Math.round(base*powBonus*wilMult*(p.transferRequest?0.85:1));
 }
 /* 非卖品强挖：2.5倍溢价，成功率=意愿缺口，失败意愿-10（多次尝试终能打动） */
 function untouchablePrice(p){return Math.round(buyoutPrice(p)*2.5);}
-function raidChance(p){return clamp((100-p.willingness)/100,0.02,0.8);}
+function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
 /* ================= FC26 式转会谈判 =================
  玩家报「转会费+年薪」组合报价 → 对方评估 → 最多 3 轮拉锯：
  每轮被拒后对方给出明确还价，接受还价即成交；超轮次或强挖失败则谈判破裂。
  超帽不拒签：允许超工资帽签约，超出部分每周缴纳 60% 奢侈税（发薪日结算，经营页可见）。 */
 function negoWageDemand(p){
- return Math.max(2,Math.round(p.wage*(1.15+(100-p.willingness)/120)));
+ return Math.max(2,Math.round(p.wage*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)));
 }
 function negoAskFee(p){
  return p.untouchable?untouchablePrice(p):buyoutPrice(p);
@@ -420,7 +424,7 @@ function renderNego(){
  <div class="center" style="margin-bottom:6px"><b style="font-size:16px;color:${ovrColor(overall(p))}">${p.name}</b>
  <span class="dim">${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁 · 战力 ${playerPower(p,p.sig)}</span></div>
  ${negoRow('现效力',p.freeAgent?'自由球员（无球可打）':p.ownerTeam||'—')}
- ${negoRow('本人意愿',p.willingness+' / 100',p.willingness<40?' <span style="color:var(--red)">（很可能拒绝）</span>':'')}
+ ${negoRow('本人意愿',effWillingness(p)+' / 100',p.transferRequest?' <span style="color:var(--gold)">（已公开要求离队 · 更容易谈）</span>':(p.willingness<40?' <span style="color:var(--red)">（很可能拒绝）</span>':''))}
  ${negoRow('对方心理价位',n.freeAgent?'—（仅谈薪资）':n.askFee+'万 转会费')}
  ${negoRow('期望年薪',n.askWage+'万')}
  ${(()=>{const {over,tax}=overCapTax(s,p.wage);return negoRow('签后周薪',(cur+p.wage)+' / 帽 '+s.wageCap+'万',over>0?` <span style="color:var(--red)">超帽${over}万 · 税${tax}万/周</span>`:' <span style="color:var(--green)">帽内</span>');})()}

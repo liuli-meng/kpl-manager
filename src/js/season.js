@@ -378,6 +378,7 @@ function poPlace(slot,isFinal){
 }
 function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
+ kjiaTick(s); // K甲下放倒计时：到期归队并成长
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
  if(s.transferWindow>0){
@@ -563,6 +564,8 @@ function newSeason(s){
  s.fund+=1300;
  logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万');
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
+ applySeasonPatch(s); // 赛季版本大改：两名英雄一增一削，持有者属性微调（自写 s.patch）
+ dressingRoomCheck(s); // 更衣室年检：坐穿板凳的高战力替补不满/要求离队；队长离队自动摘袖标
  boardApplyEffect(s); // 董事会：下赛季的干预（砍帽）或特权（追加预算）按月生效
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
  startSplit(s,'spring');
@@ -757,6 +760,94 @@ function awardSplitFans(s,isChamp,isRunner){
  let gain=pop/60;
  gain+=isChamp?8:(isRunner?5:(s.phase==='eliminated'?0:2));
  return addFans(s,Math.round(gain*10)/10,'赛段收官·'+splitLabel(s));
+}
+/* ================= 更衣室（出场时间 / 队长） =================
+ 替补不是摆设：长期坐板凳的高战力选手会不满，积累到一定程度公开要求离队。
+ 依据只有"出场差距"（apps 由 finishSeries 统计），规则简单可预期，玩家能据此主动轮换。 */
+const DRESS_OVR_MIN=74; // 战力低于此值的替补没资格抱怨（板凳深度本来就是他的位置）
+function dressingRoomCheck(s){
+ const ls=rosterLineup(s);
+ if(!ls.length)return 0;
+ const ref=ls.reduce((t,p)=>t+(p.apps||0),0)/ls.length; // 首发场均出场：替补的参照基准
+ let unhappy=0;
+ (s.players||[]).filter(p=>!s.lineup.includes(p.id)).forEach(p=>{
+ if(p.retiring||p.loan)return;
+ const ovr=overall(p);
+ if(ovr<DRESS_OVR_MIN)return;
+ const gap=ref-(p.apps||0);
+ if(ref>=3&&gap>=ref*0.6){ // 首发打满而他把板凳坐穿
+ p.morale=clamp(p.morale-6,20,100);
+ p.willingness=clamp((p.willingness==null?70:p.willingness)-8,0,100);
+ unhappy++;
+ logEvent(s,' 更衣室：'+p.name+'（战力 '+Math.round(ovr)+'）对出场时间公开不满（出场 '+(p.apps||0)+' 次 / 首发场均 '+ref.toFixed(1)+'）');
+ if(p.willingness<=25&&!p.transferRequest){
+ p.transferRequest=true;
+ logEvent(s,' 转会风向：'+p.name+' 经纪人放话希望离队寻求出场——市场上他更容易被谈走');
+ }
+ }
+ });
+ // 队长离队自动摘除（被卖/退役/租借出去都会走到这）
+ if(s.captain&&!(s.players||[]).some(p=>p.id===s.captain)){
+ logEvent(s,' 队长袖标空缺：原队长已不在阵中，可在阵容页重新任命');
+ s.captain=null;
+ }
+ return unhappy;
+}
+/* ================= 战术板 / 版本大改 / K甲下放 =================
+ 战术克制：双方各带一个战术倾向，克制方 ±3%（只在比赛模拟处生效，见 match.js）。
+ AI 的战术按系列赛懒生成并缓存——同一场系列赛里对手战术不会变。 */
+function seriesTacticEdge(s,sr){
+ if(!s.tactic||s.tactic==='balanced')return 0;
+ const mine=tacticById(s.tactic);
+ if(!sr._opTactic)sr._opTactic=tacticById(pick(TACTICS).id).id;
+ const theirs=tacticById(sr._opTactic);
+ sr._myTactic=mine.id;
+ return theirs.beats===mine.id?-0.03:(mine.beats===theirs.id?0.03:0);
+}
+/* 赛季版本大改：两名英雄一加强一削弱，持有者属性微调（影响招牌价值与 BP 优先级）。
+ upN/downN 可显式指定英雄名（测试与"策划指定版本"用），缺省随机抽取 */
+function applySeasonPatch(s,upN,downN){
+ const cand=HEROES.filter(h=>h.pos&&h.pos.length);
+ const up=(upN&&HEROES.find(h=>h.n===upN))||pick(cand);
+ let down=(downN&&HEROES.find(h=>h.n===downN))||pick(cand),g=0;
+ while(down.n===up.n&&g++<10)down=pick(cand);
+ (s.players||[]).forEach(p=>{
+ const hold=(p.sig===up.n)||(p.heroPool||[]).some(x=>x.n===up.n);
+ const hurt=(p.sig===down.n)||(p.heroPool||[]).some(x=>x.n===down.n);
+ if(hold){const k=pick(['lane','farm','team','mind']);p.attrs[k]=clamp(p.attrs[k]+2,40,99);}
+ if(hurt){const k=pick(['lane','farm','team','mind']);p.attrs[k]=clamp(p.attrs[k]-2,40,99);}
+ });
+ logEvent(s,' 版本公告 '+gameYear(s)+' 赛季：「'+up.n+'」加强、「'+down.n+'」削弱——绝活选手的战力随之浮动，BP 优先级变了');
+ s.patch={up:up.n,down:down.n,season:s.season};
+ return s.patch;
+}
+/* K甲下放：替补/青训去次级联赛锻炼 N 天（不占首发、不计出场），归队时属性成长 */
+const KJIA_DAYS=30;
+function sendKjia(s,id){
+ const p=(s.players||[]).find(x=>x.id===id);
+ if(!p){toast('选手不在阵中');return;}
+ if(p.kjia){toast(p.name+' 已在 K甲锻炼（剩余 '+p.kjia+' 天）');return;}
+ if(p.injury>0){toast(p.name+' 正在伤停，无法下放');return;}
+ s.players=s.players.filter(x=>x.id!==id||true); // 保留在册（仅离开首发）
+ if(s.captain===id){s.captain=null;logEvent(s,' 队长 '+p.name+' 下放 K甲，袖标摘除');}
+ const li=(s.lineup||[]).indexOf(id);
+ if(li>=0)s.lineup.splice(li,1);
+ p.kjia=KJIA_DAYS;
+ logEvent(s,' 下放 K甲：'+p.name+'（'+POS[p.pos][0]+'）前往次级联赛锻炼 '+KJIA_DAYS+' 天，归队时将带着成长回来');
+ save();renderAll();
+}
+function kjiaTick(s){ // 每天结算一次；到期归队并成长
+ (s.players||[]).forEach(p=>{
+ if(!p.kjia)return;
+ p.kjia--;
+ if(p.kjia>0)return;
+ p.kjia=0;
+ const keys=['lane','farm','team','mind'];
+ let gain=0;
+ for(let i=0;i<2;i++){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];const d=rnd(2,4);p.attrs[k]=clamp(p.attrs[k]+d,40,99);gain+=d;}
+ p.kjiaGain=(p.kjiaGain||0)+gain; // 成就「练级成功」依据
+ logEvent(s,' K甲归队：'+p.name+' 锻炼归来，属性成长 +'+gain+'（更沉稳了）');
+ });
 }
 function awardAnnualPts(s){
  const pts=ANNUAL_PTS[s.split]||ANNUAL_PTS.spring;

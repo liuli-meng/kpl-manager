@@ -958,6 +958,20 @@ const CASTER=['一拉三！','极限操作！','名场面预定！','这波运�
  巡检挂在 save() 上：每次状态落盘时统一评估，条件全部由当前状态可推导
  （冠军史 titleHistory / 荣誉室 honors / FMVP 名人堂 / 名册 / 资金 / 连胜），
  解锁一次永久入册 s.achieved（id→解锁年份）。测试/旧档免迁移：缺字段懒补。 */
+/* ================= 战术板（系列赛倾向） =================
+ 选战术 = 改变四维在战力里的权重（总和恒为 1）：把自己阵容的强项放大、弱项缩小，
+ 因此没有"最优战术"，只有"最适合你阵容的战术"。克制关系 ±3% 只在比赛模拟里生效。
+ S.tacticW 只在玩家设置了战术时存在——平衡门禁的模拟不设置，故门禁数值不受影响。 */
+const BASE_W={lane:0.25,farm:0.25,team:0.3,mind:0.2};
+const TACTICS=[
+ {id:'balanced',name:'均衡运营',desc:'标准权重：不偏科，适合阵容全面的队伍',w:BASE_W,beats:null},
+ {id:'farm',name:'运营拉扯',desc:'侧重运营与资源（farm .40）：拖后期打团，吃线优',w:{lane:0.2,farm:0.4,team:0.25,mind:0.15},beats:'mind'},
+ {id:'team',name:'团战致胜',desc:'侧重团战配合（team .45）：抱团推进，一波定胜负',w:{lane:0.2,farm:0.2,team:0.45,mind:0.15},beats:'farm'},
+ {id:'lane',name:'线优压制',desc:'侧重对线强度（lane .42）：三线全优滚雪球',w:{lane:0.42,farm:0.18,team:0.25,mind:0.15},beats:'team'},
+ {id:'mind',name:'心理博弈',desc:'侧重心态稳定（mind .38）：逆风不崩，抓对手失误',w:{lane:0.22,farm:0.15,team:0.25,mind:0.38},beats:'lane'},
+];
+function tacticById(id){return TACTICS.find(t=>t.id===id)||TACTICS[0];}
+
 /* ================= 开局剧本（难度档） =================
  给"从头开始"加变量：同一套规则下初始条件不同，董事会达标难度也随之变化。
  剧本只改开局初始值，不动物价/赛制/战力公式——平衡门禁跑的是固定档位阵容，不受影响。 */
@@ -1018,6 +1032,12 @@ const ACHIEVEMENTS=[
  {id:'sc_exodus',icon:'残',name:'残阵夺冠',desc:'「核心出走」开局下夺得任意冠军',test:s=>s.scenario==='exodus'&&(s.honors||[]).some(h=>h.champion)},
  {id:'sc_cap',icon:'紧',name:'紧缩夺冠',desc:'「工资帽紧缩」开局下夺得任意冠军',test:s=>s.scenario==='cap'&&(s.honors||[]).some(h=>h.champion)},
  {id:'sc_cursed',icon:'咒',name:'破除魔咒',desc:'「无冠魔咒」开局下夺得任意冠军',test:s=>s.scenario==='cursed'&&(s.honors||[]).some(h=>h.champion)},
+ // —— 更衣室 ——
+ {id:'cap_title',icon:'袖',name:'袖标荣耀',desc:'任命队长并在其任内夺得冠军',test:s=>!!s.captain&&(s.players||[]).some(p=>p.id===s.captain)&&(s.honors||[]).some(h=>h.champion)},
+ {id:'squad_happy',icon:'和',name:'更衣室和睦',desc:'全队士气 ≥85 且无人要求离队（至少 8 名选手）',test:s=>(s.players||[]).length>=8&&(s.players||[]).every(p=>(p.morale||0)>=85&&!p.transferRequest)},
+ // —— 战术与练级 ——
+ {id:'tactic_title',icon:'谋',name:'战术大师',desc:'以非均衡战术夺得冠军',test:s=>s.tactic&&s.tactic!=='balanced'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'kjia_grad',icon:'炼',name:'练级成功',desc:'下放 K甲的选手归队后累计成长 ≥5 点',test:s=>(s.players||[]).some(p=>(p.kjiaGain||0)>=5)},
  // —— 选手个人 ——
  {id:'own_fmvp',icon:'M',name:'本队 FMVP',desc:'本队选手当选决赛 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName)},
  {id:'mvp10',icon:'杀',name:'MVP 收割机',desc:'队内选手生涯 MVP ≥10 次',test:s=>(s.players||[]).some(p=>(p.mvp||0)>=10)},
@@ -1370,6 +1390,7 @@ function newState(teamName,icon){
  managerCareer:{years:0,titles:0,lastRank:null},
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
  fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
+ captain:null, // 队长（选手 id）：全队战力小幅加成 + 士气激励，离队自动摘除
  };
 }
 function rosterAll(s){return s.players;}
@@ -1384,14 +1405,21 @@ function moraleAll(s,v){s.players.forEach(p=>p.morale=clamp(p.morale+v,20,100));
 function pickedHero(s,p){return (s.pick&&s.pick[p.pos])||p.sig;}
 function heroOf(heroId){return HERO_BY_NAME[heroId]||null;} // Map 索引（data.js 建），原线性 find 是最热查询
 function heroAtPos(heroId,pos){const h=heroOf(heroId);return h&&h.pos.includes(pos)?h:null;}
+/* 当前战术权重：玩家在战术板选了战术就用它的权重（四维总和恒 1），否则用标准权重。
+ S.tacticW 只由战术板写入——平衡门禁的模拟不设置，战力体系对门禁保持原样。 */
+function tacticWeights(){
+ const t=(typeof S!=='undefined'&&S&&S.tacticW)?S.tacticW:null;
+ return t||BASE_W;
+}
 function playerPower(p,heroId){
  const a=p.attrs;
- let pow=a.lane*0.25+a.farm*0.25+a.team*0.3+a.mind*0.2;
+ const w=tacticWeights();
+ let pow=a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind;
  const sk=p.skill;
- if(sk.t==='lane')pow+=a.lane*0.12*0.25;
- if(sk.t==='farm')pow+=a.farm*0.12*0.25;
- if(sk.t==='team')pow+=a.team*0.12*0.3;
- if(sk.t==='mind')pow+=a.mind*0.12*0.2;
+ if(sk.t==='lane')pow+=a.lane*0.12*w.lane;
+ if(sk.t==='farm')pow+=a.farm*0.12*w.farm;
+ if(sk.t==='team')pow+=a.team*0.12*w.team;
+ if(sk.t==='mind')pow+=a.mind*0.12*w.mind;
  // 英雄加成：按熟练度（绝活+8% / 熟练+4% / 一般0% / 生疏-8%），版本热门再 +2%
  const h=heroId?heroAtPos(heroId,p.pos):null;
  if(h){
@@ -1456,14 +1484,15 @@ function teamPower(s,picks){
  // 助教组（上限2人）：与主教练加成叠加，幅度较小
  if(s.assistants&&s.assistants.length){
  s.assistants.forEach(a=>{
- const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[a.style];
- const attrSum=ls.reduce((t,p)=>t+p.attrs[a.style],0);
+ const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[a.style]; const attrSum=ls.reduce((t,p)=>t+p.attrs[a.style],0);
  pow+=attrSum*a.styleBonus/100*w;
  pow*=1+a.bonus/100;
  });
  }
  // 连胜/连败手感：±2%/场，上限 ±10%
  if(s.streak)pow*=1+clamp(s.streak,-5,5)*0.02;
+ // 队长加成：队长在首发阵中，全队战力 +2%（队长被卖/退役/换下则不生效）
+ if(s.captain&&ls.some(p=>p.id===s.captain))pow*=1.02;
  return Math.round(pow);
 }
 function activeBonds(s){
@@ -1515,6 +1544,7 @@ function migrateSave(){
  S.managerCareer=S.managerCareer||{years:0,titles:0,lastRank:null};
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
  S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
+ S.captain=S.captain==null?null:S.captain; // 队长字段兜底（旧档统一为 null）
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){
@@ -2097,22 +2127,26 @@ function buildTransferMarket(s){
  }
  s.freeAgents.sort((a,b)=>overall(b)-overall(a));
 }
-/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖） */
+/* 更衣室产物：公开要求离队的选手更容易谈走——俱乐部留人成本上升（买断费打折、强挖更易、
+   本人要价降低）。三处结算必须同用一个判定，避免" UI 说容易谈、实际更贵"的分裂 */
+const effWillingness=p=>clamp((p.willingness||0)+(p.transferRequest?-30:0),0,100);
+/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖）；要求离队者八五折 */
 function buyoutPrice(p){
  const base=valueOf(overall(p));
  const powBonus=1+Math.max(0,(playerPower(p,p.sig)-55)/200);
- const wilMult=p.willingness>=60?1:p.willingness>=30?1.5:2.2;
- return Math.round(base*powBonus*wilMult);
+ const wil=p.willingness||0;
+ const wilMult=wil>=60?1:wil>=30?1.5:2.2;
+ return Math.round(base*powBonus*wilMult*(p.transferRequest?0.85:1));
 }
 /* 非卖品强挖：2.5倍溢价，成功率=意愿缺口，失败意愿-10（多次尝试终能打动） */
 function untouchablePrice(p){return Math.round(buyoutPrice(p)*2.5);}
-function raidChance(p){return clamp((100-p.willingness)/100,0.02,0.8);}
+function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
 /* ================= FC26 式转会谈判 =================
  玩家报「转会费+年薪」组合报价 → 对方评估 → 最多 3 轮拉锯：
  每轮被拒后对方给出明确还价，接受还价即成交；超轮次或强挖失败则谈判破裂。
  超帽不拒签：允许超工资帽签约，超出部分每周缴纳 60% 奢侈税（发薪日结算，经营页可见）。 */
 function negoWageDemand(p){
- return Math.max(2,Math.round(p.wage*(1.15+(100-p.willingness)/120)));
+ return Math.max(2,Math.round(p.wage*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)));
 }
 function negoAskFee(p){
  return p.untouchable?untouchablePrice(p):buyoutPrice(p);
@@ -2158,7 +2192,7 @@ function renderNego(){
  <div class="center" style="margin-bottom:6px"><b style="font-size:16px;color:${ovrColor(overall(p))}">${p.name}</b>
  <span class="dim">${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁 · 战力 ${playerPower(p,p.sig)}</span></div>
  ${negoRow('现效力',p.freeAgent?'自由球员（无球可打）':p.ownerTeam||'—')}
- ${negoRow('本人意愿',p.willingness+' / 100',p.willingness<40?' <span style="color:var(--red)">（很可能拒绝）</span>':'')}
+ ${negoRow('本人意愿',effWillingness(p)+' / 100',p.transferRequest?' <span style="color:var(--gold)">（已公开要求离队 · 更容易谈）</span>':(p.willingness<40?' <span style="color:var(--red)">（很可能拒绝）</span>':''))}
  ${negoRow('对方心理价位',n.freeAgent?'—（仅谈薪资）':n.askFee+'万 转会费')}
  ${negoRow('期望年薪',n.askWage+'万')}
  ${(()=>{const {over,tax}=overCapTax(s,p.wage);return negoRow('签后周薪',(cur+p.wage)+' / 帽 '+s.wageCap+'万',over>0?` <span style="color:var(--red)">超帽${over}万 · 税${tax}万/周</span>`:' <span style="color:var(--green)">帽内</span>');})()}
@@ -3356,6 +3390,7 @@ function poPlace(slot,isFinal){
 }
 function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
+ kjiaTick(s); // K甲下放倒计时：到期归队并成长
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
  if(s.transferWindow>0){
@@ -3541,6 +3576,8 @@ function newSeason(s){
  s.fund+=1300;
  logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万');
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
+ applySeasonPatch(s); // 赛季版本大改：两名英雄一增一削，持有者属性微调（自写 s.patch）
+ dressingRoomCheck(s); // 更衣室年检：坐穿板凳的高战力替补不满/要求离队；队长离队自动摘袖标
  boardApplyEffect(s); // 董事会：下赛季的干预（砍帽）或特权（追加预算）按月生效
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
  startSplit(s,'spring');
@@ -3735,6 +3772,94 @@ function awardSplitFans(s,isChamp,isRunner){
  let gain=pop/60;
  gain+=isChamp?8:(isRunner?5:(s.phase==='eliminated'?0:2));
  return addFans(s,Math.round(gain*10)/10,'赛段收官·'+splitLabel(s));
+}
+/* ================= 更衣室（出场时间 / 队长） =================
+ 替补不是摆设：长期坐板凳的高战力选手会不满，积累到一定程度公开要求离队。
+ 依据只有"出场差距"（apps 由 finishSeries 统计），规则简单可预期，玩家能据此主动轮换。 */
+const DRESS_OVR_MIN=74; // 战力低于此值的替补没资格抱怨（板凳深度本来就是他的位置）
+function dressingRoomCheck(s){
+ const ls=rosterLineup(s);
+ if(!ls.length)return 0;
+ const ref=ls.reduce((t,p)=>t+(p.apps||0),0)/ls.length; // 首发场均出场：替补的参照基准
+ let unhappy=0;
+ (s.players||[]).filter(p=>!s.lineup.includes(p.id)).forEach(p=>{
+ if(p.retiring||p.loan)return;
+ const ovr=overall(p);
+ if(ovr<DRESS_OVR_MIN)return;
+ const gap=ref-(p.apps||0);
+ if(ref>=3&&gap>=ref*0.6){ // 首发打满而他把板凳坐穿
+ p.morale=clamp(p.morale-6,20,100);
+ p.willingness=clamp((p.willingness==null?70:p.willingness)-8,0,100);
+ unhappy++;
+ logEvent(s,' 更衣室：'+p.name+'（战力 '+Math.round(ovr)+'）对出场时间公开不满（出场 '+(p.apps||0)+' 次 / 首发场均 '+ref.toFixed(1)+'）');
+ if(p.willingness<=25&&!p.transferRequest){
+ p.transferRequest=true;
+ logEvent(s,' 转会风向：'+p.name+' 经纪人放话希望离队寻求出场——市场上他更容易被谈走');
+ }
+ }
+ });
+ // 队长离队自动摘除（被卖/退役/租借出去都会走到这）
+ if(s.captain&&!(s.players||[]).some(p=>p.id===s.captain)){
+ logEvent(s,' 队长袖标空缺：原队长已不在阵中，可在阵容页重新任命');
+ s.captain=null;
+ }
+ return unhappy;
+}
+/* ================= 战术板 / 版本大改 / K甲下放 =================
+ 战术克制：双方各带一个战术倾向，克制方 ±3%（只在比赛模拟处生效，见 match.js）。
+ AI 的战术按系列赛懒生成并缓存——同一场系列赛里对手战术不会变。 */
+function seriesTacticEdge(s,sr){
+ if(!s.tactic||s.tactic==='balanced')return 0;
+ const mine=tacticById(s.tactic);
+ if(!sr._opTactic)sr._opTactic=tacticById(pick(TACTICS).id).id;
+ const theirs=tacticById(sr._opTactic);
+ sr._myTactic=mine.id;
+ return theirs.beats===mine.id?-0.03:(mine.beats===theirs.id?0.03:0);
+}
+/* 赛季版本大改：两名英雄一加强一削弱，持有者属性微调（影响招牌价值与 BP 优先级）。
+ upN/downN 可显式指定英雄名（测试与"策划指定版本"用），缺省随机抽取 */
+function applySeasonPatch(s,upN,downN){
+ const cand=HEROES.filter(h=>h.pos&&h.pos.length);
+ const up=(upN&&HEROES.find(h=>h.n===upN))||pick(cand);
+ let down=(downN&&HEROES.find(h=>h.n===downN))||pick(cand),g=0;
+ while(down.n===up.n&&g++<10)down=pick(cand);
+ (s.players||[]).forEach(p=>{
+ const hold=(p.sig===up.n)||(p.heroPool||[]).some(x=>x.n===up.n);
+ const hurt=(p.sig===down.n)||(p.heroPool||[]).some(x=>x.n===down.n);
+ if(hold){const k=pick(['lane','farm','team','mind']);p.attrs[k]=clamp(p.attrs[k]+2,40,99);}
+ if(hurt){const k=pick(['lane','farm','team','mind']);p.attrs[k]=clamp(p.attrs[k]-2,40,99);}
+ });
+ logEvent(s,' 版本公告 '+gameYear(s)+' 赛季：「'+up.n+'」加强、「'+down.n+'」削弱——绝活选手的战力随之浮动，BP 优先级变了');
+ s.patch={up:up.n,down:down.n,season:s.season};
+ return s.patch;
+}
+/* K甲下放：替补/青训去次级联赛锻炼 N 天（不占首发、不计出场），归队时属性成长 */
+const KJIA_DAYS=30;
+function sendKjia(s,id){
+ const p=(s.players||[]).find(x=>x.id===id);
+ if(!p){toast('选手不在阵中');return;}
+ if(p.kjia){toast(p.name+' 已在 K甲锻炼（剩余 '+p.kjia+' 天）');return;}
+ if(p.injury>0){toast(p.name+' 正在伤停，无法下放');return;}
+ s.players=s.players.filter(x=>x.id!==id||true); // 保留在册（仅离开首发）
+ if(s.captain===id){s.captain=null;logEvent(s,' 队长 '+p.name+' 下放 K甲，袖标摘除');}
+ const li=(s.lineup||[]).indexOf(id);
+ if(li>=0)s.lineup.splice(li,1);
+ p.kjia=KJIA_DAYS;
+ logEvent(s,' 下放 K甲：'+p.name+'（'+POS[p.pos][0]+'）前往次级联赛锻炼 '+KJIA_DAYS+' 天，归队时将带着成长回来');
+ save();renderAll();
+}
+function kjiaTick(s){ // 每天结算一次；到期归队并成长
+ (s.players||[]).forEach(p=>{
+ if(!p.kjia)return;
+ p.kjia--;
+ if(p.kjia>0)return;
+ p.kjia=0;
+ const keys=['lane','farm','team','mind'];
+ let gain=0;
+ for(let i=0;i<2;i++){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];const d=rnd(2,4);p.attrs[k]=clamp(p.attrs[k]+d,40,99);gain+=d;}
+ p.kjiaGain=(p.kjiaGain||0)+gain; // 成就「练级成功」依据
+ logEvent(s,' K甲归队：'+p.name+' 锻炼归来，属性成长 +'+gain+'（更沉稳了）');
+ });
 }
 function awardAnnualPts(s){
  const pts=ANNUAL_PTS[s.split]||ANNUAL_PTS.spring;
@@ -5100,8 +5225,10 @@ function renderPreMatch(){
  const sr=S.series;if(!sr)return;
  const ls=rosterLineup(S),bn=rosterBench(S);
  const opR=ensureAiRosters(S,sr.opName)||[];
- const my=teamPower(S),op=powerOf(S,sr.opName);
+ const my=teamPower(S)*(1+seriesTacticEdge(S,sr)),op=powerOf(S,sr.opName); // 战术克制 ±3% 在此生效
  const wr=Math.round(winChance(my,op)*100);
+ // 战术板：显示双方战术与克制结果（edge 已计入上面的战力）
+ const tactHtml=(S.tactic&&S.tactic!=='balanced')?`<div class="hint" style="margin-bottom:8px">战术板：我方「${tacticById(S.tactic).name}」 vs 对方「${tacticById(sr._opTactic||'balanced').name}」${seriesTacticEdge(S,sr)>0?' <span class="green">· 战术克制 +3%</span>':(seriesTacticEdge(S,sr)<0?' <span style="color:var(--red)">· 被克制 −3%</span>':' · 互不克制')}</div>`:'';
  const midSeries=sr.mw+sr.ow>0;
  // 我方首发行
  const myRows=POS_ORDER.map(pos=>{
@@ -5147,6 +5274,7 @@ function renderPreMatch(){
  <h2>赛前准备 <span class="tag">${sr.max===7?'BO7 · 含巅峰对决':'BO5 · 全局BP'}</span></h2>
  <div class="hint" style="text-align:center;margin-bottom:8px">${window._prepTitle}${midSeries?` · 当前比分 <b>${sr.mw}:${sr.ow}</b>（<span style="cursor:help" title="我方已用：${(sr.used||[]).join('、')||'无'}
 对方已用：${(sr.usedOpp||[]).join('、')||'无'}">全局BP已用 · 我方 ${(sr.used||[]).length} / 对方 ${(sr.usedOpp||[]).length}</span>）`:''}</div>
+ ${tactHtml||''}
  <div style="display:flex;gap:8px;margin-bottom:10px">
  <div style="flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:center">
  <div style="font-size:11px;color:var(--dim)">${S.teamName}</div>
@@ -5230,6 +5358,8 @@ function recordSeason(s){
 function finishSeries(finalWin){
  const sr=S.series;
  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
+ // 出场统计（更衣室系统用）：本系列赛首发的选手各记一次出场——替补的不满按"出场差距"累积
+ rosterLineup(S).forEach(p=>{p.apps=(p.apps||0)+1;});
  S.series=null; // 先清系列赛状态，再走收尾链（playoffStep/playCardNext 可能立即开启下一场）
  // 体力按小局在 playGame 中逐局扣除，此处不再重复扣
  // 赛后小概率有人受伤：伤停必须休息，受伤瞬间立即换替补（阵容页即时反映）
@@ -5363,14 +5493,18 @@ function pcard(p,extra){
  const stageHtml=(p.age&&p.pos)?`<div class="p-hero" style="color:${p.age>(AGE_MODEL[p.pos]||AGE_MODEL.mid).gold?'var(--red)':'var(--green)'}">${ageStage(p)} · ${p.age}岁</div>`:'';
  // 合同状态（租借选手无合同）
  const contractHtml=(p.contract==null||p.loan)?'':`<div class="p-hero" style="color:${p.contract>0?'var(--dim)':'var(--red)'}">${p.contract>0?('合同'+p.contract+'年'):'合同到期 · 转会期续约'}</div>`;
+ // 出场统计 + 更衣室/K甲状态（apps 由 finishSeries 累计；transferRequest 由更衣室年检标记）
+ const appsHtml=(p.apps||p.transferRequest||p.kjia>0)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?' <span style="color:var(--cyan)">· K甲锻炼剩 '+p.kjia+' 天</span>':''}</div>`:'';
+ const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
  const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
- <div class="p-top"><span class="p-name">${p.name}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
+ <div class="p-top"><span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
  <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
  ${stageHtml}
  ${contractHtml}
+ ${appsHtml}
  ${heroHtml}
  ${endorseHtml}
  <div class="p-skill"><b>${p.skill.n}</b> · ${p.skill.d}</div>
@@ -5792,11 +5926,19 @@ function renderLineup(){
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
  if(!p)return `<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;
- return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button></div>`);
+ return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div><button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`);
  }).join('')}</div></div>`;
  html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
- ${bn.length?`<div class="grid g4">${bn.map(p=>pcard(p,`<button class="btn sm primary" onclick="swapPlayer('${p.id}')">↑ 放入首发</button><button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')"> 出售（谈判）</button>`)).join('')}</div>`:'<div class="hint">暂无替补，快去转会市场谈判补充阵容！</div>'}
+ ${bn.length?`<div class="grid g4">${bn.map(p=>pcard(p,`${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}<button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${p.kjia>0?'disabled':''}>↑ 放入首发</button><button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')"> 出售（谈判）</button><button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 30 天：不占首发、不计出场，归队时属性成长" ${p.kjia>0?'disabled':''}> 下放 K甲</button>`)).join('')}</div>`:'<div class="hint">暂无替补，快去转会市场谈判补充阵容！</div>'}
  </div>`;
+ // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算
+ {
+ const cur=tacticById(S.tactic||'balanced');
+ html+=`<div class="panel"><h3>战术板 <span class="tag">当前：${cur.name}</span></h3>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${TACTICS.map(t=>`<button class="btn sm ${t.id===(S.tactic||'balanced')?'primary':''}" onclick="setTactic('${t.id}')" title="${t.desc}${t.beats?' · 克制「'+tacticById(t.beats).name+'」':''}">${t.name}</button>`).join('')}</div>
+ <div class="hint">${cur.desc}${cur.beats?' · 克制「'+tacticById(cur.beats).name+'」、被「'+TACTICS.filter(t=>t.beats===cur.id).map(t=>t.name).join('/')+'」克制':''}。权重只作用在我方战力上（对手战术每场随机，赛前页可见克制结果）。</div>
+ </div>`;
+ }
  // 战队羁绊（上场选手触发，属于阵容维度）
  html+=`<div class="panel"><h3>战队羁绊 <span class="tag">同队上场生效</span></h3>`;
  if(bonds.length){
@@ -5810,6 +5952,7 @@ function renderLineup(){
 function swapPlayer(pid){
  const p=S.players.find(x=>x.id===pid);
  const inLineup=S.lineup.includes(pid);
+ if(!inLineup&&p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），暂不能进入首发');return;}
  if(!inLineup&&p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），不能进入首发');return;}
  if(!inLineup&&typeof natCamping==='function'&&natCamping(S,p)){toast(p.name+' 正在国家队集训（缺席整个夏季赛），不能进入首发');return;}
  if(inLineup){
@@ -6534,6 +6677,26 @@ function resetGame(){
 }
 
 /* ================= 赞助商 ================= */
+/* 战术板：切换系列赛倾向（改四维权重，强弱项随阵容取舍），克制关系在比赛模拟处结算 */
+function setTactic(id){
+ const t=tacticById(id);
+ S.tactic=t.id;
+ S.tacticW=t.w;
+ logEvent(S,' 战术板：切换为「'+t.name+'」——'+t.desc+(t.beats?'（克制「'+tacticById(t.beats).name+'」）':''));
+ save();renderAll();
+}
+/* 队长任命：队长在首发阵中生效（全队战力 +2%），任命时全队士气提升；离队自动摘除（更衣室年检） */
+function setCaptain(id){
+ const p=(S.players||[]).find(x=>x.id===id);
+ if(!p){toast('选手不在阵中');return;}
+ if(S.captain===id){S.captain=null;logEvent(S,' 摘除队长袖标：'+p.name);}
+ else{
+ S.captain=id;
+ (S.players||[]).forEach(x=>x.morale=clamp(x.morale+(x.id===id?5:3),20,100));
+ logEvent(S,' 任命 '+p.name+' 为队长：全队士气提升，队长在阵时全队战力 +2%');
+ }
+ save();renderAll();
+}
 function upgradeSponsor(){
  const next=SPONSORS[S.sponsorLv+1];
  if(!next)return;

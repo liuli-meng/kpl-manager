@@ -564,6 +564,20 @@ const CASTER=['一拉三！','极限操作！','名场面预定！','这波运�
  巡检挂在 save() 上：每次状态落盘时统一评估，条件全部由当前状态可推导
  （冠军史 titleHistory / 荣誉室 honors / FMVP 名人堂 / 名册 / 资金 / 连胜），
  解锁一次永久入册 s.achieved（id→解锁年份）。测试/旧档免迁移：缺字段懒补。 */
+/* ================= 战术板（系列赛倾向） =================
+ 选战术 = 改变四维在战力里的权重（总和恒为 1）：把自己阵容的强项放大、弱项缩小，
+ 因此没有"最优战术"，只有"最适合你阵容的战术"。克制关系 ±3% 只在比赛模拟里生效。
+ S.tacticW 只在玩家设置了战术时存在——平衡门禁的模拟不设置，故门禁数值不受影响。 */
+const BASE_W={lane:0.25,farm:0.25,team:0.3,mind:0.2};
+const TACTICS=[
+ {id:'balanced',name:'均衡运营',desc:'标准权重：不偏科，适合阵容全面的队伍',w:BASE_W,beats:null},
+ {id:'farm',name:'运营拉扯',desc:'侧重运营与资源（farm .40）：拖后期打团，吃线优',w:{lane:0.2,farm:0.4,team:0.25,mind:0.15},beats:'mind'},
+ {id:'team',name:'团战致胜',desc:'侧重团战配合（team .45）：抱团推进，一波定胜负',w:{lane:0.2,farm:0.2,team:0.45,mind:0.15},beats:'farm'},
+ {id:'lane',name:'线优压制',desc:'侧重对线强度（lane .42）：三线全优滚雪球',w:{lane:0.42,farm:0.18,team:0.25,mind:0.15},beats:'team'},
+ {id:'mind',name:'心理博弈',desc:'侧重心态稳定（mind .38）：逆风不崩，抓对手失误',w:{lane:0.22,farm:0.15,team:0.25,mind:0.38},beats:'lane'},
+];
+function tacticById(id){return TACTICS.find(t=>t.id===id)||TACTICS[0];}
+
 /* ================= 开局剧本（难度档） =================
  给"从头开始"加变量：同一套规则下初始条件不同，董事会达标难度也随之变化。
  剧本只改开局初始值，不动物价/赛制/战力公式——平衡门禁跑的是固定档位阵容，不受影响。 */
@@ -624,6 +638,12 @@ const ACHIEVEMENTS=[
  {id:'sc_exodus',icon:'残',name:'残阵夺冠',desc:'「核心出走」开局下夺得任意冠军',test:s=>s.scenario==='exodus'&&(s.honors||[]).some(h=>h.champion)},
  {id:'sc_cap',icon:'紧',name:'紧缩夺冠',desc:'「工资帽紧缩」开局下夺得任意冠军',test:s=>s.scenario==='cap'&&(s.honors||[]).some(h=>h.champion)},
  {id:'sc_cursed',icon:'咒',name:'破除魔咒',desc:'「无冠魔咒」开局下夺得任意冠军',test:s=>s.scenario==='cursed'&&(s.honors||[]).some(h=>h.champion)},
+ // —— 更衣室 ——
+ {id:'cap_title',icon:'袖',name:'袖标荣耀',desc:'任命队长并在其任内夺得冠军',test:s=>!!s.captain&&(s.players||[]).some(p=>p.id===s.captain)&&(s.honors||[]).some(h=>h.champion)},
+ {id:'squad_happy',icon:'和',name:'更衣室和睦',desc:'全队士气 ≥85 且无人要求离队（至少 8 名选手）',test:s=>(s.players||[]).length>=8&&(s.players||[]).every(p=>(p.morale||0)>=85&&!p.transferRequest)},
+ // —— 战术与练级 ——
+ {id:'tactic_title',icon:'谋',name:'战术大师',desc:'以非均衡战术夺得冠军',test:s=>s.tactic&&s.tactic!=='balanced'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'kjia_grad',icon:'炼',name:'练级成功',desc:'下放 K甲的选手归队后累计成长 ≥5 点',test:s=>(s.players||[]).some(p=>(p.kjiaGain||0)>=5)},
  // —— 选手个人 ——
  {id:'own_fmvp',icon:'M',name:'本队 FMVP',desc:'本队选手当选决赛 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName)},
  {id:'mvp10',icon:'杀',name:'MVP 收割机',desc:'队内选手生涯 MVP ≥10 次',test:s=>(s.players||[]).some(p=>(p.mvp||0)>=10)},

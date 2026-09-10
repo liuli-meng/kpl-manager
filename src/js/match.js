@@ -140,8 +140,10 @@ function renderPreMatch(){
  const sr=S.series;if(!sr)return;
  const ls=rosterLineup(S),bn=rosterBench(S);
  const opR=ensureAiRosters(S,sr.opName)||[];
- const my=teamPower(S),op=powerOf(S,sr.opName);
+ const my=teamPower(S)*(1+seriesTacticEdge(S,sr)),op=powerOf(S,sr.opName); // 战术克制 ±3% 在此生效
  const wr=Math.round(winChance(my,op)*100);
+ // 战术板：显示双方战术与克制结果（edge 已计入上面的战力）
+ const tactHtml=(S.tactic&&S.tactic!=='balanced')?`<div class="hint" style="margin-bottom:8px">战术板：我方「${tacticById(S.tactic).name}」 vs 对方「${tacticById(sr._opTactic||'balanced').name}」${seriesTacticEdge(S,sr)>0?' <span class="green">· 战术克制 +3%</span>':(seriesTacticEdge(S,sr)<0?' <span style="color:var(--red)">· 被克制 −3%</span>':' · 互不克制')}</div>`:'';
  const midSeries=sr.mw+sr.ow>0;
  // 我方首发行
  const myRows=POS_ORDER.map(pos=>{
@@ -187,6 +189,7 @@ function renderPreMatch(){
  <h2>赛前准备 <span class="tag">${sr.max===7?'BO7 · 含巅峰对决':'BO5 · 全局BP'}</span></h2>
  <div class="hint" style="text-align:center;margin-bottom:8px">${window._prepTitle}${midSeries?` · 当前比分 <b>${sr.mw}:${sr.ow}</b>（<span style="cursor:help" title="我方已用：${(sr.used||[]).join('、')||'无'}
 对方已用：${(sr.usedOpp||[]).join('、')||'无'}">全局BP已用 · 我方 ${(sr.used||[]).length} / 对方 ${(sr.usedOpp||[]).length}</span>）`:''}</div>
+ ${tactHtml||''}
  <div style="display:flex;gap:8px;margin-bottom:10px">
  <div style="flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:center">
  <div style="font-size:11px;color:var(--dim)">${S.teamName}</div>
@@ -270,6 +273,8 @@ function recordSeason(s){
 function finishSeries(finalWin){
  const sr=S.series;
  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
+ // 出场统计（更衣室系统用）：本系列赛首发的选手各记一次出场——替补的不满按"出场差距"累积
+ rosterLineup(S).forEach(p=>{p.apps=(p.apps||0)+1;});
  S.series=null; // 先清系列赛状态，再走收尾链（playoffStep/playCardNext 可能立即开启下一场）
  // 体力按小局在 playGame 中逐局扣除，此处不再重复扣
  // 赛后小概率有人受伤：伤停必须休息，受伤瞬间立即换替补（阵容页即时反映）

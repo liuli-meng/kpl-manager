@@ -20,14 +20,18 @@ function pcard(p,extra){
  const stageHtml=(p.age&&p.pos)?`<div class="p-hero" style="color:${p.age>(AGE_MODEL[p.pos]||AGE_MODEL.mid).gold?'var(--red)':'var(--green)'}">${ageStage(p)} · ${p.age}岁</div>`:'';
  // 合同状态（租借选手无合同）
  const contractHtml=(p.contract==null||p.loan)?'':`<div class="p-hero" style="color:${p.contract>0?'var(--dim)':'var(--red)'}">${p.contract>0?('合同'+p.contract+'年'):'合同到期 · 转会期续约'}</div>`;
+ // 出场统计 + 更衣室/K甲状态（apps 由 finishSeries 累计；transferRequest 由更衣室年检标记）
+ const appsHtml=(p.apps||p.transferRequest||p.kjia>0)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?' <span style="color:var(--cyan)">· K甲锻炼剩 '+p.kjia+' 天</span>':''}</div>`:'';
+ const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
  const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
- <div class="p-top"><span class="p-name">${p.name}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
+ <div class="p-top"><span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
  <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
  ${stageHtml}
  ${contractHtml}
+ ${appsHtml}
  ${heroHtml}
  ${endorseHtml}
  <div class="p-skill"><b>${p.skill.n}</b> · ${p.skill.d}</div>
@@ -449,11 +453,19 @@ function renderLineup(){
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
  if(!p)return `<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;
- return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button></div>`);
+ return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div><button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`);
  }).join('')}</div></div>`;
  html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
- ${bn.length?`<div class="grid g4">${bn.map(p=>pcard(p,`<button class="btn sm primary" onclick="swapPlayer('${p.id}')">↑ 放入首发</button><button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')"> 出售（谈判）</button>`)).join('')}</div>`:'<div class="hint">暂无替补，快去转会市场谈判补充阵容！</div>'}
+ ${bn.length?`<div class="grid g4">${bn.map(p=>pcard(p,`${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}<button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${p.kjia>0?'disabled':''}>↑ 放入首发</button><button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')"> 出售（谈判）</button><button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 30 天：不占首发、不计出场，归队时属性成长" ${p.kjia>0?'disabled':''}> 下放 K甲</button>`)).join('')}</div>`:'<div class="hint">暂无替补，快去转会市场谈判补充阵容！</div>'}
  </div>`;
+ // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算
+ {
+ const cur=tacticById(S.tactic||'balanced');
+ html+=`<div class="panel"><h3>战术板 <span class="tag">当前：${cur.name}</span></h3>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${TACTICS.map(t=>`<button class="btn sm ${t.id===(S.tactic||'balanced')?'primary':''}" onclick="setTactic('${t.id}')" title="${t.desc}${t.beats?' · 克制「'+tacticById(t.beats).name+'」':''}">${t.name}</button>`).join('')}</div>
+ <div class="hint">${cur.desc}${cur.beats?' · 克制「'+tacticById(cur.beats).name+'」、被「'+TACTICS.filter(t=>t.beats===cur.id).map(t=>t.name).join('/')+'」克制':''}。权重只作用在我方战力上（对手战术每场随机，赛前页可见克制结果）。</div>
+ </div>`;
+ }
  // 战队羁绊（上场选手触发，属于阵容维度）
  html+=`<div class="panel"><h3>战队羁绊 <span class="tag">同队上场生效</span></h3>`;
  if(bonds.length){
@@ -467,6 +479,7 @@ function renderLineup(){
 function swapPlayer(pid){
  const p=S.players.find(x=>x.id===pid);
  const inLineup=S.lineup.includes(pid);
+ if(!inLineup&&p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），暂不能进入首发');return;}
  if(!inLineup&&p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），不能进入首发');return;}
  if(!inLineup&&typeof natCamping==='function'&&natCamping(S,p)){toast(p.name+' 正在国家队集训（缺席整个夏季赛），不能进入首发');return;}
  if(inLineup){

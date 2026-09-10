@@ -137,6 +137,26 @@ function resetGame(){
 }
 
 /* ================= 赞助商 ================= */
+/* 战术板：切换系列赛倾向（改四维权重，强弱项随阵容取舍），克制关系在比赛模拟处结算 */
+function setTactic(id){
+ const t=tacticById(id);
+ S.tactic=t.id;
+ S.tacticW=t.w;
+ logEvent(S,' 战术板：切换为「'+t.name+'」——'+t.desc+(t.beats?'（克制「'+tacticById(t.beats).name+'」）':''));
+ save();renderAll();
+}
+/* 队长任命：队长在首发阵中生效（全队战力 +2%），任命时全队士气提升；离队自动摘除（更衣室年检） */
+function setCaptain(id){
+ const p=(S.players||[]).find(x=>x.id===id);
+ if(!p){toast('选手不在阵中');return;}
+ if(S.captain===id){S.captain=null;logEvent(S,' 摘除队长袖标：'+p.name);}
+ else{
+ S.captain=id;
+ (S.players||[]).forEach(x=>x.morale=clamp(x.morale+(x.id===id?5:3),20,100));
+ logEvent(S,' 任命 '+p.name+' 为队长：全队士气提升，队长在阵时全队战力 +2%');
+ }
+ save();renderAll();
+}
 function upgradeSponsor(){
  const next=SPONSORS[S.sponsorLv+1];
  if(!next)return;

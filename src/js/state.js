@@ -43,6 +43,7 @@ function newState(teamName,icon){
  managerCareer:{years:0,titles:0,lastRank:null},
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
  fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
+ captain:null, // 队长（选手 id）：全队战力小幅加成 + 士气激励，离队自动摘除
  };
 }
 function rosterAll(s){return s.players;}
@@ -57,14 +58,21 @@ function moraleAll(s,v){s.players.forEach(p=>p.morale=clamp(p.morale+v,20,100));
 function pickedHero(s,p){return (s.pick&&s.pick[p.pos])||p.sig;}
 function heroOf(heroId){return HERO_BY_NAME[heroId]||null;} // Map 索引（data.js 建），原线性 find 是最热查询
 function heroAtPos(heroId,pos){const h=heroOf(heroId);return h&&h.pos.includes(pos)?h:null;}
+/* 当前战术权重：玩家在战术板选了战术就用它的权重（四维总和恒 1），否则用标准权重。
+ S.tacticW 只由战术板写入——平衡门禁的模拟不设置，战力体系对门禁保持原样。 */
+function tacticWeights(){
+ const t=(typeof S!=='undefined'&&S&&S.tacticW)?S.tacticW:null;
+ return t||BASE_W;
+}
 function playerPower(p,heroId){
  const a=p.attrs;
- let pow=a.lane*0.25+a.farm*0.25+a.team*0.3+a.mind*0.2;
+ const w=tacticWeights();
+ let pow=a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind;
  const sk=p.skill;
- if(sk.t==='lane')pow+=a.lane*0.12*0.25;
- if(sk.t==='farm')pow+=a.farm*0.12*0.25;
- if(sk.t==='team')pow+=a.team*0.12*0.3;
- if(sk.t==='mind')pow+=a.mind*0.12*0.2;
+ if(sk.t==='lane')pow+=a.lane*0.12*w.lane;
+ if(sk.t==='farm')pow+=a.farm*0.12*w.farm;
+ if(sk.t==='team')pow+=a.team*0.12*w.team;
+ if(sk.t==='mind')pow+=a.mind*0.12*w.mind;
  // 英雄加成：按熟练度（绝活+8% / 熟练+4% / 一般0% / 生疏-8%），版本热门再 +2%
  const h=heroId?heroAtPos(heroId,p.pos):null;
  if(h){
@@ -129,14 +137,15 @@ function teamPower(s,picks){
  // 助教组（上限2人）：与主教练加成叠加，幅度较小
  if(s.assistants&&s.assistants.length){
  s.assistants.forEach(a=>{
- const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[a.style];
- const attrSum=ls.reduce((t,p)=>t+p.attrs[a.style],0);
+ const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[a.style]; const attrSum=ls.reduce((t,p)=>t+p.attrs[a.style],0);
  pow+=attrSum*a.styleBonus/100*w;
  pow*=1+a.bonus/100;
  });
  }
  // 连胜/连败手感：±2%/场，上限 ±10%
  if(s.streak)pow*=1+clamp(s.streak,-5,5)*0.02;
+ // 队长加成：队长在首发阵中，全队战力 +2%（队长被卖/退役/换下则不生效）
+ if(s.captain&&ls.some(p=>p.id===s.captain))pow*=1.02;
  return Math.round(pow);
 }
 function activeBonds(s){
@@ -188,6 +197,7 @@ function migrateSave(){
  S.managerCareer=S.managerCareer||{years:0,titles:0,lastRank:null};
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
  S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
+ S.captain=S.captain==null?null:S.captain; // 队长字段兜底（旧档统一为 null）
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){
