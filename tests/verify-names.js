@@ -71,6 +71,18 @@ const out = vm.runInContext(`
   else if(allNames.some(n=>PLACE.test(n)))fail('时代联盟含占位名');
   else log('⑤ 时代联盟 '+allNames.length+' 人无重名、无占位名');
 
+  // ⑥ 挑战者杯（14 队 ×5=70 人，名字池只有 41）：旧写法 CHALLENGER_NAMES[i%len] + 序号兜底，
+  //    每届固定产出「挑战者42…70」共 29 个占位名——本条回归专防它回来
+  S=newState('探针队','x');S.extraDefs=[];
+  const chNames=[];let ni=0;
+  CHALLENGER_TEAMS.forEach(([tn,band])=>{for(let k=0;k<5;k++){const d=genChallengerDef(S,ni++,tn,band);S.extraDefs.push(d);chNames.push(d.name);}});
+  const chPlace=chNames.filter(n=>PLACE.test(n));
+  const chDup=chNames.length-new Set(chNames).size;
+  if(chNames.length!==CHALLENGER_TEAMS.length*5)fail('挑战者生成人数异常: '+chNames.length);
+  else if(chPlace.length)fail('挑战者含占位名 '+chPlace.length+' 个: '+chPlace.slice(0,3).join('/'));
+  else if(chDup)fail('挑战者重名 '+chDup+' 例（应 70 人全不同）');
+  else log('⑥ 挑战者杯 '+chNames.length+' 人（池仅 '+CHALLENGER_NAMES.length+'）无占位名、无重名');
+
   installEra(null);
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');

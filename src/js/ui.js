@@ -102,6 +102,18 @@ function renderHeader(){
  });
  }catch(_){}
 }
+/* ================= 董事会终局的 UI 层守卫 =================
+ 下课是"软终局"：只在 UI 入口拦截，不改进程内部逻辑——平衡门禁（sim/sim-quick/fuzz）
+ 直接调用 nextDay/startMatch/startCup，若在那里硬守卫，门禁就再也测不出真实数值了。 */
+function boardLocked(){return !!(S&&S.board&&S.board.fired);}
+function uiGuard(msg){if(boardLocked()){try{toast(msg||'你已被董事会解约，执教生涯结束');}catch(_){}return true;}return false;}
+function uiNextDay(s){if(uiGuard())return;nextDay(s);}
+function uiStartMatch(){if(uiGuard())return;startMatch();}
+function uiStartCup(s){if(uiGuard())return;startCup(s);}
+function uiSkipTransfer(s){if(uiGuard())return;skipTransferWindow(s);}
+function uiEndPreseason(s){if(uiGuard())return;endPreseason(s);}
+function uiAdvanceCalendar(s){if(uiGuard())return;advanceCalendar(s);}
+function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 function renderClub(){
  const ls=rosterLineup(S);
  let html=`
@@ -115,6 +127,31 @@ function renderClub(){
  <div class="dim" style="font-size:11px">俱乐部资金</div>
  </div>
  </div>`;
+ // 董事会：信任度 + 本赛季 KPI（单机经营唯一的"输"——信任耗尽即解约终局）
+ {
+ const b=S.board||{trust:60},t=b.trust==null?60:b.trust,career=S.managerCareer||{};
+ const col=b.fired?'var(--red)':t>=BOARD_FAVOR_TRUST?'var(--green)':t>=60?'var(--cyan)':t>=BOARD_WARN_TRUST?'var(--gold)':'var(--red)';
+ if(b.fired){
+ html+=`<div class="panel" style="border-color:var(--red)">
+ <h3>董事会 <span class="tag" style="color:var(--red)">已解约</span></h3>
+ <div style="font-size:13px;margin-bottom:6px">信任度耗尽，董事会在第 ${b.firedSeason||S.season} 赛季结束后与你解约，执教生涯就此结束。</div>
+ <div class="hint">执教 ${career.years||0} 个赛季 · ${career.titles||0} 座冠军 · 最佳年度积分第 ${career.lastRank||'—'} 名 · 成就 ${Object.keys(S.achieved||{}).length}/${ACHIEVEMENTS.length}</div>
+ <div style="margin-top:10px"><button class="btn danger" style="width:100%" onclick="resetGame()">结束执教 · 重新开始</button></div>
+ </div>`;
+ }else{
+ const kpi=b.kpi,last=(b.log||[])[0];
+ // label 兜底：旧档/中间版本存档的 kpi 可能只有 target 没有 label，不能渲染出 undefined
+ const kpiText=k=>k?('赛季末年度积分进前 '+(k.target||12)):'赛季末不评价（缺历史数据）';
+ html+=`<div class="panel">
+ <h3>董事会 <span class="tag" style="color:${col}">信任度 ${t} · ${boardTierText(S)}</span>${t<=BOARD_WARN_TRUST?'<span class="tag" style="color:var(--red)">最后通牒</span>':''}</h3>
+ <div style="height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:${clamp(t,0,100)}%;background:${col}"></div></div>
+ <div style="font-size:13px">本赛季目标：<b>${kpiText(kpi)}</b>
+ <span class="hint">（${kpi&&kpi.from?'依据上年第 '+kpi.from+' 名':(S.selfBuilt?'首年按自建阵容档位':'首年按执教班底档位')}）</span></div>
+ ${last?`<div class="hint" style="margin-top:6px">上季结算：年度积分第 ${last.rank||'—'} 名 · 信任度 ${last.delta>=0?'+':''}${last.delta}${last.note?' · '+last.note:''}</div>`:''}
+ <div class="hint" style="margin-top:6px">赛季末按「年度积分排名」结算：达成目标涨信任度${t<=BOARD_WARN_TRUST?'；当前已被董事会介入，工资帽压缩，再未达标即解约':'；连年不达标会逐步失去董事会的耐心'}</div>
+ </div>`;
+ }
+ }
  if(S.phase==='r1'||S.phase==='r2'||S.phase==='r3'){
  const m=S.schedule[S.matchIdx];
  const g=myGroup(S);
@@ -144,11 +181,11 @@ function renderClub(){
  <button class="btn" style="flex:1;min-width:140px" onclick="goPage('lineup')">阵容 / 挂牌出售</button>
  </div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
- <button class="btn" style="flex:1;min-width:140px" onclick="nextDay(S)">推进一天（剩余 ${Math.max(0,S.transferWindow-1)} 天）</button>
- <button class="btn gold" style="flex:1;min-width:140px" onclick="skipTransferWindow(S)">跳过剩余 ${Math.max(0,S.transferWindow)} 天（自动训练/培养）</button>
+ <button class="btn" style="flex:1;min-width:140px" onclick="uiNextDay(S)">推进一天（剩余 ${Math.max(0,S.transferWindow-1)} 天）</button>
+ <button class="btn gold" style="flex:1;min-width:140px" onclick="uiSkipTransfer(S)">跳过剩余 ${Math.max(0,S.transferWindow)} 天（自动训练/培养）</button>
  </div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
- <button class="btn gold" style="flex:1;min-width:140px" onclick="endPreseason(S)"> 结束转会期 · 开始赛季</button>
+ <button class="btn gold" style="flex:1;min-width:140px" onclick="uiEndPreseason(S)"> 结束转会期 · 开始赛季</button>
  </div>
  </div>`;
  }else if(m){
@@ -160,7 +197,7 @@ function renderClub(){
  <div style="color:var(--dim);font-weight:900">VS</div>
  <div class="vs" style="justify-content:flex-end;text-align:right"><div><div class="tname">${crest(oppIcon||'队',m.opp,20)} ${m.opp}</div><div class="power">战力 ${fmt(powerOf(S,m.opp))}</div></div></div>
  </div>
- <button class="btn primary" style="width:100%" onclick="startMatch()">赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）</button>
+ <button class="btn primary" style="width:100%" onclick="uiStartMatch()">赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）</button>
  <div class="hint mt8">KPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（8万/小局）。赛前可换首发，BP 中也可换替补。</div>
  </div>`;
  }
@@ -199,7 +236,7 @@ function renderClub(){
  const myPending=[...c.r1,...(c.r2||[])].some(m=>!m.r&&(m.a===S.teamName||m.b===S.teamName));
  body=`${c.r1.filter(m=>m.r||m.a===S.teamName||m.b===S.teamName).map(m=>cupRow(m)).join('')}
  ${c.r2?`<div class="hint" style="margin:6px 0">16强（BO7）：</div>${c.r2.map(cupRow).join('')}`:''}
- ${!c.champ?`<button class="btn primary" style="width:100%" onclick="startCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}`;
+ ${!c.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}`;
  }else{
  const p=c.po;
  const myPending=p&&!c.final&&[...p.wb1,...p.lb1,...p.wb2,...p.lb2,p.wf,p.lbs,p.lbf].some(m=>!m.r&&(m.a===S.teamName||m.b===S.teamName));
@@ -208,7 +245,7 @@ function renderClub(){
  ${p.wb1.map(m=>mrow(m,'胜者组R1')).join('')}${p.wb2.map(m=>mrow(m,'胜者组SF')).join('')}${p.wf.a?mrow(p.wf,'胜者组决赛'):''}
  ${p.lb1.map(m=>mrow(m,'败者组R1')).join('')}${p.lb2.map(m=>mrow(m,'败者组R2')).join('')}${p.lbs.a?mrow(p.lbs,'败者组SF'):''}${p.lbf.a?mrow(p.lbf,'败者组决赛'):''}
  ${c.final&&c.final.a?`<div class="hint" style="margin:6px 0">总决赛（BO9 · 第9局巅峰对决）：</div>${mrow(c.final,'决赛')}`:''}
- ${!c.champ&&c.final&&!c.final.r?`<button class="btn primary" style="width:100%" onclick="startCup(S)">${myPending?'进行下一场':'进行总决赛（BO9）'}</button>`:!c.champ?`<button class="btn primary" style="width:100%" onclick="startCup(S)">${myPending?'进行下一场':'快进赛程'}</button>`:''}
+ ${!c.champ&&c.final&&!c.final.r?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场':'进行总决赛（BO9）'}</button>`:!c.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场':'快进赛程'}</button>`:''}
  ${c.champ?`<div class="hint mt8">冠军：${c.champ} —— 挑战者，皆王者！</div>`:''}`;
  }
  html+=`<div class="panel"><h3>挑战者杯 <span class="tag">32队 · 八大赛道 · 单败+双败</span></h3>
@@ -221,7 +258,7 @@ function renderClub(){
  const myPending=[...e.qf,...e.sf,e.final].some(m=>!m.r&&(m.a===S.teamName||m.b===S.teamName));
  html+=`<div class="panel"><h3>EWC 电竞世界杯 <span class="tag">利雅得 · 8强 BO7 单败</span></h3>
  ${e.qf.map(cupRow).join('')}${e.sf.filter(m=>m.a).map(cupRow).join('')}${e.final.a?cupRow(e.final):''}
- ${!e.champ?`<button class="btn primary" style="width:100%" onclick="startCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:`<div class="hint mt8">冠军：${e.champ}${e.champ===S.teamName?' ——世界之巅！':''} · 赛后进入夏季赛转会期</div>`}
+ ${!e.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:`<div class="hint mt8">冠军：${e.champ}${e.champ===S.teamName?' ——世界之巅！':''} · 赛后进入夏季赛转会期</div>`}
  <div class="hint mt8">KPL 春季赛冠亚军（直邀，冠军=KPL名额/亚军=英雄亚冠ACL名额）+ 6 支海外劲旅 · 冠军奖金 540 万并评 FMVP</div>
  </div>`;
  }else if(S.phase==='asiad'){
@@ -232,7 +269,7 @@ function renderClub(){
  <div class="hint" style="margin-bottom:8px"><b>中国代表队</b>（KPL 各位置当季最强，战力 ${a.myPow}）：${a.squad.map(x=>`<span class="tag" style="margin-right:4px${x.mine?';border-color:var(--gold);color:var(--gold)':''}">${POS[x.pos][1]} ${x.name}${x.mine?' ★':''}</span>`).join('')}</div>
  ${a.qf.map(row).join('')}${a.sf.filter(m=>m.a).map(row).join('')}${a.final.a?row(a.final):''}
  ${a.champ?`<div class="hint mt8">冠军：<b class="gold">${a.champ}</b> —— 中国队成绩：${a.medal}${a.mvp?' · MVP '+a.mvp:''} · 随后进入年度总决赛</div>`
- :`<button class="btn primary" style="width:100%" onclick="asiadStep(S)">推进亚运会赛程（BO7 单败）</button>`}
+ :`<button class="btn primary" style="width:100%" onclick="uiAsiadStep(S)">推进亚运会赛程（BO7 单败）</button>`}
  <div class="hint mt8">教练席在国家队手里，你只负责放人：麾下入选选手按奖牌档位回流人气/身价/士气（金牌 +8/+6、银牌 +5/+4、铜牌 +3/+2），协会另发奖金；代价是年总开局体力不满。最强对手：韩国。</div>
  </div>`;
  }else if(S.phase==='annual'){
@@ -245,7 +282,7 @@ function renderClub(){
  const rankLine=(tbl,teams)=>teams.slice().sort((x,y)=>tbl[y].pts-tbl[x].pts||tbl[y].pw-tbl[x].pw).map(t=>t+' '+tbl[t].pts+'分').join(' · ');
  html+=`<div class="panel"><h3>年度总决赛·擂台赛 <span class="tag">第${Math.min(a.roundIdx+1,6)}/6轮 · BO5 组外单循环</span></h3>
  ${myNext?`<div class="match"><div class="vs"><span class="tname">${myNext.a} vs ${myNext.b}</span><span class="score" style="font-size:12px">${myNext.a===S.teamName||myNext.b===S.teamName?'本队':'—'}</span></div></div>
- <button class="btn primary" style="width:100%" onclick="startCup(S)">进行擂台赛 · 调整阵容 / BP 开赛</button>`:`<div class="hint">本轮赛程进行中</div>`}
+ <button class="btn primary" style="width:100%" onclick="uiStartCup(S)">进行擂台赛 · 调整阵容 / BP 开赛</button>`:`<div class="hint">本轮赛程进行中</div>`}
  <div class="hint mt8"><b>大师组</b>（积分前6）：${rankLine(st.M,a.masters)}</div>
  <div class="hint"><b>精英组</b>（积分7-12）：${rankLine(st.E,a.elites)}</div>
  <div class="hint mt8">大师组前4 + 精英组第1 直进淘汰赛；大师5/6 与精英2-5 打突围赛；精英第6名直接出局</div>
@@ -254,7 +291,7 @@ function renderClub(){
  const myPending=a.brk.some(m=>!m.r&&(m.a===S.teamName||m.b===S.teamName));
  html+=`<div class="panel"><h3>年度总决赛·突围赛 <span class="tag">6队 BO7 单败 · 3队晋级</span></h3>
  ${a.brk.map(cupRow).join('')}
- ${a.brk.every(m=>m.r)?'<div class="hint mt8">晋级淘汰赛：'+a.brk.map(m=>m.r).join('、')+'</div>':`<button class="btn primary" style="width:100%" onclick="startCup(S)">${myPending?'进行突围赛':'快进赛程'}</button>`}
+ ${a.brk.every(m=>m.r)?'<div class="hint mt8">晋级淘汰赛：'+a.brk.map(m=>m.r).join('、')+'</div>':`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行突围赛':'快进赛程'}</button>`}
  </div>`;
  }else{
  const p=a.po;
@@ -263,7 +300,7 @@ function renderClub(){
  html+=`<div class="panel"><h3>年度总决赛·淘汰赛 <span class="tag">8强 BO7 双败 · 圣龙杯</span></h3>
  ${p?p.wb1.map(m=>mrow(m,'胜者组R1')).join('')+p.wb2.map(m=>mrow(m,'胜者组SF')).join('')+(p.wf.a?mrow(p.wf,'胜者组决赛'):'')+p.lb1.map(m=>mrow(m,'败者组R1')).join('')+p.lb2.map(m=>mrow(m,'败者组R2')).join('')+(p.lbs.a?mrow(p.lbs,'败者组SF'):'')+(p.lbf.a?mrow(p.lbf,'败者组决赛'):'')+(p.final.a?mrow(p.final,'总决赛'):'')
  :'<div class="hint">待突围赛结束</div>'}
- ${p&&p.final.a&&!p.final.r?`<button class="btn primary" style="width:100%" onclick="startCup(S)">${myPending?'进行下一场':'快进赛程'}</button>`:''}
+ ${p&&p.final.a&&!p.final.r?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场':'快进赛程'}</button>`:''}
  ${p&&p.champ?`<div class="hint mt8">年度总冠军：${p.champ} —— 圣龙杯！</div>`:''}
  </div>`;
  }
@@ -273,7 +310,7 @@ function renderClub(){
  <h3 style="justify-content:center">${splitLabel(S)} 总冠军：${S.playoff?S.playoff.champ:'—'}</h3>
  ${S.champion?'<div class="green" style="font-size:16px;font-weight:800;margin:8px 0">你是冠军！王朝就此建立！</div>':'<div class="dim">冠军属于对手，继续积蓄力量！</div>'}
  <div class="hint" style="margin:6px 0">${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → KPL 年度总决赛':'接下来：KPL 年度总决赛（年度积分前12）'}</div>
- <button class="btn gold mt12" onclick="advanceCalendar(S)">${calendarNextLabel(S)}</button>
+ <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
  }else if(S.phase==='eliminated'){
  html+=`<div class="panel center">
@@ -281,7 +318,7 @@ function renderClub(){
  <h3 style="justify-content:center">${splitLabel(S)} 止步</h3>
  <div class="dim" style="margin:8px 0">未能晋级后续阶段（B组后2名 / 卡位赛失利 / 季后赛出局）</div>
  <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → 年度总决赛':'接下来：年度总决赛（前12晋级）'}</div>
- <button class="btn gold mt12" onclick="advanceCalendar(S)">${calendarNextLabel(S)}</button>
+ <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
  }
  // 今日行动

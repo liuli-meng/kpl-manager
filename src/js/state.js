@@ -1,9 +1,15 @@
 
 /* ================= 游戏状态与存档 ================= */
+/* 存储键名里的 v3 是历史遗留：键名不能跟着 SAVE_VERSION 走，否则旧档直接"消失"。
+   结构升级靠 MIGRATIONS 迁移链在读取时完成（v3 档 → v4 档）。 */
 const SAVE_KEY='esport_manager_save_v3';
-const SAVE_VERSION=3; // 存档结构版本：结构变更时在 MIGRATIONS 追加迁移步骤并递增，旧档读入自动升级
+const SAVE_VERSION=4; // 存档结构版本：结构变更时在 MIGRATIONS 追加迁移步骤并递增，旧档读入自动升级
 const MIGRATIONS={
- // 3→4 示例：(s)=>{...}；migrateSave 按 v 逐级执行到 SAVE_VERSION
+ // 3→4：董事会/信任度系统上线（旧档补默认值：中性信任度 60，执教生涯从零计）
+ 3:(s)=>{
+  s.board={trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
+  s.managerCareer={years:0,titles:0,lastRank:null};
+ },
 };
 let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
 function slotKey(){return SAVE_KEY+(curSlot>1?'_'+curSlot:'');}
@@ -29,6 +35,10 @@ function newState(teamName,icon){
  challenger:null, // 挑战者杯（春→挑杯→EWC→夏→年总）
  fmvpHonor:[],cardLosers:[], // 历届 FMVP / 卡位赛败者（年度积分名次判定用）
  achieved:{},selfBuilt:false,maxSale:0, // 成就（id→解锁年份）/ 自建开局标记 / 单笔出售纪录
+ // 董事会：信任度 0-100 / 本赛季 KPI / 连续未达成次数 / 下课标记 / 每季结算记录
+ board:{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]},
+ // 执教生涯（下课结算页与 KPI 依据）：年数 / 冠军数 / 上年年度积分排名
+ managerCareer:{years:0,titles:0,lastRank:null},
  };
 }
 function rosterAll(s){return s.players;}
@@ -169,6 +179,9 @@ function migrateSave(){
  try{if(step)step(S);}catch(e){console.warn('migrate '+S.v+' fail',e);}
  S.v++;
  }
+ // 兜底：迁移步骤失败或存档被外部编辑过时，保证董事会字段可用（面板渲染不会崩）
+ S.board=S.board||{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
+ S.managerCareer=S.managerCareer||{years:0,titles:0,lastRank:null};
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){

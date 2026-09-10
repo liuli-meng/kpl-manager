@@ -285,6 +285,7 @@ function createTeam(){
  initGroups(S); // KPL 2025 官方赛制：18队 S/A/B 分组
  // 赛前转会期：先组队再开赛
  S.preseason=true;S.transferWindow=7;
+ setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`战队 ${name} 成立！初始资金8000万，目标：KPL 总冠军！`);
  logEvent(S,' 开局直签 5 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容');
@@ -324,6 +325,7 @@ function applyClub(){
  initGroups(S);
  // 赛前转会期：先组队再开赛
  S.preseason=true;S.transferWindow=7;
+ setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
  logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${lineup.map(id=>S.players.find(p=>p.id===id).name).join(' / ')}`);

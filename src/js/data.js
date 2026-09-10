@@ -589,6 +589,9 @@ const ACHIEVEMENTS=[
  {id:'big_sale',icon:'售',name:'天价交易',desc:'单笔出售选手回收 ≥2500万',test:s=>(s.maxSale||0)>=2500},
  {id:'rich',icon:'财',name:'亿万豪门',desc:'俱乐部资金突破 2 亿',test:s=>(s.fund||0)>=20000},
  {id:'five_year',icon:'恒',name:'长情经营',desc:'迎来第五个赛季',test:s=>gameYear(s)>=2030},
+ // —— 董事会 ——
+ {id:'board_fav',icon:'董',name:'董事会宠儿',desc:'把董事会信任度做到 90 以上',test:s=>!!s.board&&s.board.trust>=90},
+ {id:'board_survive',icon:'存',name:'力挽狂澜',desc:'信任度跌到 25 以下后重新回到 60（危机自救）',test:s=>!!s.board&&s.board.warn===0&&(s.board.trust||0)>=60&&(s.board.log||[]).some(l=>l.trust<=25)},
  // —— 选手个人 ——
  {id:'own_fmvp',icon:'M',name:'本队 FMVP',desc:'本队选手当选决赛 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName)},
  {id:'mvp10',icon:'杀',name:'MVP 收割机',desc:'队内选手生涯 MVP ≥10 次',test:s=>(s.players||[]).some(p=>(p.mvp||0)>=10)},
