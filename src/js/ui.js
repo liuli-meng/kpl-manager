@@ -121,8 +121,19 @@ function renderClub(){
  if(S.preseason){
  // 赛前转会期：先组队，再开赛（比赛面板隐藏）
  const lsP=rosterLineup(S);
+ // 开档三步清单：签教练 → 五位置有人 → 结束转会期（完成后随转会期面板一起消失）
+ const missPos=POS_ORDER.filter(pos=>!lsP.some(x=>x.pos===pos));
+ const steps=[
+ {ok:!!S.coach,n:'签下主教练'+(S.coach?'（'+S.coach.name+'）':'')},
+ {ok:!missPos.length,n:missPos.length?'五个位置有人（缺 '+missPos.map(pos=>POS[pos][1]).join('/')+'）':'五个位置有人'},
+ {ok:false,n:'结束转会期 · 开始赛季'},
+ ];
  html+=`<div class="panel">
  <h3>赛前转会期 <span class="tag">剩余 ${S.transferWindow} 天 · 结束后开赛</span></h3>
+ <div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+ <b>开档三步</b>　${steps.map(s=>s.ok?'<span style="color:var(--green)">✓ '+s.n+'</span>':'<span style="color:var(--gold)">□ '+s.n+'</span>').join('　→　')}
+ <div class="hint" style="margin-top:4px">阵容就绪后点下方「结束转会期 · 开始赛季」即可开打；天数用完也会自动开赛</div>
+ </div>
  <div class="hint" style="margin-bottom:8px">先把阵容组好再打比赛：转会市场可<b>买断其他俱乐部选手、直签自由球员、挂牌出售</b>；转会期内市场刷新免费、顶星供给增加。天数用完自动开始联赛，也可随时提前结束。</div>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${POS_ORDER.map(pos=>{
  const p=lsP.find(x=>x.pos===pos);
@@ -297,6 +308,21 @@ function renderClub(){
  <div class="sponsor"><span class="s-icon">教</span>
  <div><div class="s-name">${c.name} <span class="gold">(全队战力+${c.bonus}%)</span></div>
  <div class="s-desc"> ${c.skill.n}：${c.skill.d} · 周薪 ${c.wage}万 · 转会页可换帅</div></div></div></div>`;
+ }
+ // 事件动态（互斥分类：每条日志只归一类，各分类条数相加=全部，无遗漏）
+ {
+ const cats=[{k:'all',n:'全部'}].concat(LOG_CATS.map(c=>({k:c.k,n:c.n}))).concat([{k:'other',n:'其他动态'}]);
+ const kept=window._logFilter;
+ const fl=cats.some(c=>c.k===kept)?kept:'all';
+ const catOf=e=>e.cat||logCat(e.txt); // 旧存档无 cat 字段时按文案回推，避免读旧档分类全空
+ const cnt={};
+ (S.eventLog||[]).forEach(e=>{const k=catOf(e);cnt[k]=(cnt[k]||0)+1;});
+ const logs=(S.eventLog||[]).filter(e=>fl==='all'||catOf(e)===fl).slice(0,30);
+ const clr={win:'var(--green)',lose:'var(--red)',gold:'var(--gold)',info:'var(--dim)'};
+ html+=`<div class="panel"><h3>事件动态 <span class="tag">共 ${(S.eventLog||[]).length} 条 · 按分类查看</span></h3>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${cats.map(c=>`<button class="btn sm ${fl===c.k?'primary':''}" onclick="window._logFilter='${c.k}';renderClub()">${c.n}${c.k==='all'?'':' '+(cnt[c.k]||0)}</button>`).join('')}</div>
+ ${logs.length?logs.map(e=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--line);color:${clr[e.level]||'var(--dim)'}">${_escTxt(e.txt)}</div>`).join(''):'<div class="hint">该分类暂无事件</div>'}
+ </div>`;
  }
  $('#page-club').innerHTML=html;
 }

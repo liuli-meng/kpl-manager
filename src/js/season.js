@@ -21,13 +21,29 @@ function leaguePayout(s,place){
  if(amt){s.fund+=amt;logEvent(s,' 联盟分润（'+place+'）：'+amt+'万');}
 }
 function logLevel(txt){
- if(/冠军|王朝|夺得总冠军/.test(txt))return 'gold';
- if(/惜败|败|负|拖欠工资|淘汰|无缘/.test(txt))return 'lose';
- if(/胜|击败|获胜|晋级|卡位/.test(txt))return 'win';
+ if(/成就解锁|冠军|王朝|捧杯|FMVP|名人堂|亚运/.test(txt))return 'gold';
+ // "败/负"必须带语境词：裸匹配会把「S/A/B → 卡位赛 → 双败季后赛」这类赛制说明判成败绩
+ if(/惜败|落败|战败|不敌|淘汰|无缘|拖欠工资|负 /.test(txt))return 'lose';
+ if(/胜 |击败|获胜|晋级/.test(txt))return 'win'; // 不写"卡位"：赛制说明里的"卡位赛"会被误染成胜绩色
  if(/赞助|奖金|分润|收入|涨薪|代言|曝光|返还|找回/.test(txt))return 'gold';
  return 'info';
 }
-function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt)});s.eventLog=s.eventLog.slice(0,120);}
+/* 事件分类：互斥分区（荣誉成就 > 比赛战报 > 转会财政 > 其他动态）
+ 每条日志只归一类，四类合计=全部——不会出现"点财政看到的全是比赛战报"这种重叠。
+ 旧版在渲染层拿正则猜分类、且用 level==='gold' 当荣誉门槛，而 gold 在 logLevel 里
+ 同时表示"收入"，于是「成就解锁」永远进不了荣誉；回归用例见 tests/verify-logcat.js */
+const LOG_CATS=[
+ {k:'honor',n:'荣誉成就',re:/总冠军|夺冠|捧杯|FMVP|王朝|名人堂|成就解锁|亚运|征召|荣耀|卫冕/},
+ {k:'match',n:'比赛战报',re:/常规赛|季后赛|卡位赛|挑战者杯|电竞世界杯|EWC|年度总决赛|圣龙杯|联赛战报|连胜|连败|伤停|受伤/},
+ {k:'fund', n:'转会财政',re:/赞助|奖金|分润|收入|资金|薪|代言|转会|签约|签下|挂牌|特惠|预算|工资帽/},
+];
+function logCat(txt){
+ const t=String(txt==null?'':txt);
+ if(/赛制|版本更新|经济体系升级/.test(t))return 'other'; // 说明性文案：既不是比赛也不是账目
+ for(const c of LOG_CATS){if(c.re.test(t))return c.k;}
+ return 'other';
+}
+function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,120);}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(0,i);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function powerOf(s,name){
  if(name===s.teamName)return teamPower(s);
