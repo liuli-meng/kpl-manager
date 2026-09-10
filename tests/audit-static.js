@@ -161,9 +161,7 @@ const out = vm_run(dom, `
   if(histBad.length)R.push('历代联盟:'+JSON.stringify(histBad.slice(0,6)));
   // 存档往返 + 渲染
   S=newState('往返队','⚔️');
-  const _u=new Set();
-  ['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u))));
-  S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
   S.seedPower=400;initGroups(S);
   S.transferWindow=0;S.fund=3000;

@@ -614,6 +614,28 @@ function checkAchievements(s){
    真实明星选手按史实收录（阵容经公开赛事报道核实）；年代久远、阵容无从考证的席位
    由 genEraDef 生成「时代轮换选手」（游戏化演绎，career 注明）。installEra 在开局/读档时
    把默认联盟整体替换为该时代联盟，引擎赛制沿用现行年度赛历（游戏化演绎）。 */
+/* ================= 名字池与组合命名（供自由球员 / 青训 / 时代轮换选手共用） =================
+   池是有限的：ACADEMY_NAMES 36 个 + ERA_GEN_NAMES 48 个，囤人 30+ 或未来时代空位变多就会耗尽。
+   旧版耗尽后兜底成「新人47」「新援12」这种占位名，故统一走 combName()：
+   两字组合（20×20=400）→ 三字组合（8000），且**按固定顺序扫描、不引入随机**，
+   保证 genEraDef 这类要求"重复安装产出完全相同 def"的路径仍然确定性。 */
+const ROOKIE_NAMES=['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见','慕白','亦辰'];
+/* 电竞 ID 风格组名：字库两两组合（如 洛野/白柒/江辞），避免「清扬_2」式自增后缀 */
+const RK_A=['阿','小','白','苏','陆','沈','顾','洛','叶','凌','夜','莫','江','温','秦','池','祁','许','林','常'];
+const RK_B=['川','野','辞','屿','柒','晏','深','迟','昭','眠','遥','笙','秋','策','尘','澜','溪','澈','泠','桉'];
+function combName(used){
+ for(const a of RK_A)for(const b of RK_B){const n=a+b;if(!used||!used.has(n))return n;}
+ for(const a of RK_A)for(const b of RK_B)for(const c of RK_B){const n=a+b+c;if(!used||!used.has(n))return n;}
+ return '选手'+(used?used.size:0); // 理论不可达（8400 个组合）；真到了也不能生成 undefined
+}
+/* 取偏好池中第一个未被占用的名字，池尽回退 combName。
+   固定顺序扫描（find）不引入随机——开档名单的多样性由调用方 shuffle 名字池决定 */
+function poolName(pool,used){
+ if(!used)return pick(pool);
+ const hit=pool.find(n=>!used.has(n));
+ return hit||combName(used);
+}
+
 const ERA_GEN_NAMES=['临渊','栖梧','暮雪','孤舟','野渡','春潮','夏蝉','秋鸿','冬凌','朝雾','晚风','晨曦','夜阑','子规','青竹','翠微','苍梧','白鹭','闻笛','枕星','及锋','问渠','观棋','烂柯','折柳','吹角','连营','点兵','扬鞭','踏歌','放鹤','归鸿','拂衣','枕戈','听潮','望北','溯洄','宛在','水湄','蒹葭','既白','饮冰','怀瑾','佩瑜','其琛','维桢','令仪','令德'];
 /* 时代轮换选手生成：确定性 id（g<时代>_<队>_<位置>）+ 确定性属性（id 哈希播种）
    ——重复安装/读档重装必须产出完全相同的 def，否则存档重载后 AI 战力会漂移 */
@@ -621,8 +643,7 @@ function genEraDef(eraId,team,pos,used){
  const key='g'+eraId+'_'+team.replace(/\./g,'')+'_'+pos; // 队名去点号（RNG.M→RNGM），保证 id 稳定可引用
  const exist=PLAYER_POOL.find(d=>d.id===key);
  if(exist)return exist;
- let name=ERA_GEN_NAMES.concat(ACADEMY_NAMES).find(n=>!used.has(n));
- if(!name){do{name='新援'+(++_faSeq);}while(used.has(name));}
+ let name=poolName(ERA_GEN_NAMES.concat(ACADEMY_NAMES),used); // 池尽回退 combName（原为「新援N」）
  used.add(name);
  let h=5381;for(let i=0;i<key.length;i++)h=((h*33)^key.charCodeAt(i))>>>0;
  const rv=()=>{h=((h*1103515245)+12345)>>>0;return (h>>>16)%1000/1000;};

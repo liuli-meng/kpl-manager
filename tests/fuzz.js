@@ -55,9 +55,7 @@ const out = run(`
     if(bad.length)errs.push(where+': '+[...new Set(bad)].join(' / '));
   }
   S=newState('压测队','⚔️');
-  const _u=new Set();
-  ['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u))));
-  S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
   S.seedPower=400;initGroups(S);
   S.preseason=true;S.transferWindow=7;buildTransferMarket(S);refreshMarket(S);

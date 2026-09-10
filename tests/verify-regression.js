@@ -10,8 +10,7 @@ const T = makeTester('回归测试');
 // ① 替补身价 NaN（newSeason 对未上场选手）
 const r1 = run(`
 S=newState('T1','⚔️');
-const _u1=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u1))));
+fillRoster(S,'mid');
 const bench=genPlayer(genFreeAgentDef('jg','mid',new Set()));
 S.players.push(bench);S.lineup=S.players.slice(0,5).map(p=>p.id);
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
@@ -23,9 +22,7 @@ T.check(!isNaN(r1) && r1>=70 && r1<=150, '替补身价 NaN: r1=' + r1);
 // ② 总决赛亚军分润只发一次
 const r2 = run(`
 S=newState('T2','⚔️');
-const _u2=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u2))));
-S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
 const ais=AI_TEAMS.filter(t=>t.name!==S.teamName);
 const X=ais[0].name,Y=ais[1].name,A2=ais[2].name,A3=ais[3].name,A4=ais[4].name,A5=ais[5].name,A6=ais[6].name;
@@ -42,9 +39,7 @@ T.check(r2 === 1, '总决赛亚军分润发了 ' + r2 + ' 次（应 1 次）');
 // ③ 联盟页季后赛对阵含败者组决赛
 const r3 = run(`
 S=newState('T3','⚔️');
-const _u3=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u3))));
-S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
 S.phase='playoff';
 S.playoff={wb:[{a:'A',b:'B',r:'A'}],lb:[{a:'C',b:'D',r:'C'}],lb2:[{a:'E',b:'C',r:'C'}],lb3:[{a:'B',b:'C',r:'C'}],
@@ -73,9 +68,7 @@ T.check(r5.length === 0, '招牌错位: ' + r5.join(','));
 // ⑥ AI 补强：无幽灵签约 + 缺位必补
 const r6 = run(`
 S=newState('T6','⚔️');
-const _u6=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u6))));
-S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
 const yn=genPlayer(PLAYER_POOL.find(d=>d.id==='ad1'));
 S.players.push(yn);aiDetachDef(S,'ad1');
@@ -96,9 +89,7 @@ T.check(r6 === '{"ghost":[],"bad":[]}', 'AI补强异常: ' + r6);
 // ⑦ 租借全流程
 const r7 = run(`
 S=newState('T7','⚔️');
-const _u7=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u7))));
-S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
 S.transferWindow=0;S.fund=5000;
 const t7=loanCandidates(S)[0];
@@ -119,9 +110,7 @@ return JSON.stringify({rent, loaned:!!lp7.loan, cleared, returned:!S.players.som
 // ⑧ 跨队零重名（多赛季极端压力）
 const r8 = run(`
 S=newState('T8','⚔️');
-const _u8=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u8))));
-S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
 S.retiredDefs=PLAYER_POOL.map(d=>d.id);
 newSeason(S);
@@ -138,9 +127,7 @@ T.check(r8.length === 0, '跨队重名: ' + r8.slice(0,6).join(','));
 // ⑨ 伤停暂停可恢复
 const r9 = run(`
 S=newState('T9','⚔️');
-const _u9=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u9))));
-S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
 S.preseason=false;S.transferWindow=0;
 S.players.forEach(p=>{p.injury=4;});
@@ -155,9 +142,7 @@ T.check(r9 === '{"paused":true,"done":true,"progressed":true}', '伤停暂停/�
 // ⑩ 合同续约系统
 const r10 = run(`
 S=newState('T10','⚔️');
-const _u10=new Set();
-['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'mid',_u10))));
-S.lineup=S.players.map(p=>p.id);
+fillRoster(S,'mid');
 S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
 S.transferWindow=3;S.fund=5000;
 // 造一名到期主力

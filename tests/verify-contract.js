@@ -10,7 +10,7 @@ const out = vm.runInContext(`
   const fail=m=>{res.push('[FAIL] '+m);hadFail=true;};
   const log=t=>res.push('[PASS] '+t);
   S=newState('测试队','剑');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  fillRoster(S,'mid','star');
   S.fund=100000;S.transferWindow=7;
 
   // ① 年限溢价：1年 < 2年 < 4年 心理价位递增

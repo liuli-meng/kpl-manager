@@ -47,10 +47,9 @@ function buyPlayer(s,p){
 /* ================= 自由球员 / 青训名字池 =================
  与 18 队注册名单隔离，保证任何情况下联盟内一人一队 */
 const ACADEMY_NAMES=['弈秋','观澜','听松','照夜','惊蛰','谷雨','芒种','白秋','霜降','立夏','惊鸿照','初霁','疏桐','晚晴','归舟','远山','泊烟','沉璧','映雪','疏星','垂柳','鸣蝉','宿雨','斜阳','烟渚','兰舟','竹杖','芒鞋','蓑衣','钓叟','渔火','枫桥','钟声','客船','碧水','东流'];
-let _faSeq=0;
 function genFreeAgentDef(pos,band,usedNames){
- let name=usedNames?ACADEMY_NAMES.find(n=>!usedNames.has(n)):null;
- if(!name&&usedNames){do{name='新人'+(++_faSeq);}while(usedNames.has(name));} // 自增序号兜底：名字空间耗尽也不会死循环
+ // 池尽时走 combName（两字/三字组合），不再生成「新人47」这种占位名
+ const name=poolName(ACADEMY_NAMES,usedNames);
  if(usedNames)usedNames.add(name);
  // 档位即四维基准：star≈顶星(88+) / mid≈主力(78) / low≈轮换(69)，总值由 base 直出
  const BAND={star:[85,92],mid:[74,82],low:[66,73]}[band]||[74,82];

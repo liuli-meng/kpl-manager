@@ -11,7 +11,7 @@ const out = vm.runInContext(`
   const log=t=>res.push('[PASS] '+t);
   // ① 巅峰对决：操作区必须出现手动选位 UI（此前字段错位只显示"BP 完成"）
   S=newState('测试队','⚔️');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  fillRoster(S,'mid','star');
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
   S.lineup=S.players.map(p=>p.id);
   const initFund=S.fund,initCap=S.wageCap; // 开局资金/工资帽（×10 校验点，之后有交易流水）
@@ -49,7 +49,7 @@ const out = vm.runInContext(`
   log('④旧档迁移：fund 800→8000 · 帽 90→900 · 周薪 10→100 · 挂牌价 200→2000');
   // ⑤ BO9 决赛巅峰对决判定（4:4 → 第 9 局盲选；此前写死 3:3 只适配 BO7）
   S=newState('测试队','⚔️');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  fillRoster(S,'mid','star');
   S.lineup=S.players.map(p=>p.id);
   S.series={used:[],usedOpp:[],mw:4,ow:4,max:9,stage:'cup',cupSlot:'ch_final',cupMatch:{a:S.teamName,b:'K甲·苍穹',r:null},logs:[],myName:S.teamName,opName:'K甲·苍穹',side:'blue'};
   openBP('挑战者杯·总决赛（第9局）',playGame);
@@ -59,7 +59,7 @@ const out = vm.runInContext(`
   log('⑤BO9 决赛：4:4 → 第 9 局巅峰对决（盲选）判定 OK');
   // ⑥ 跳过剩余转会期：自动训练核心 + 自动青训培养
   S=newState('测试队','⚔️');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  fillRoster(S,'mid','star');
   S.lineup=S.players.map(p=>p.id);
   S.academy=[genRookie(S)];
   S.preseason=true;S.transferWindow=4;S.trained=false;S.academyTrained=false;
@@ -80,7 +80,7 @@ const out = vm.runInContext(`
   log('⑥跳过转会期：'+S.transferWindow+'→0 天，自动训练 '+trainDays+' 天 + 青训培养 '+rookieDays+' 天（净支出 '+spent+' 万，含每日赞助收入）→ 联赛开赛 OK');
   // ⑦ AI 青训培养：转会期 AI 队概率培养自家青训（底子成长），达标晋升替换弱首发
   S=newState('测试队','⚔️');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  fillRoster(S,'mid','star');
   S.lineup=S.players.map(p=>p.id);
   S.annualPts={};S.ewc=null;S.annual=null;S.challenger=null;
   S.eventLog=[];
@@ -96,7 +96,7 @@ const out = vm.runInContext(`
   log('⑦AI 青训培养：'+Object.keys(S.aiAcademy).length+' 队有青训营 · 培养 '+acLogs+' 人次'+(promoteLogs?' · 有新秀晋升一线队':'（晋升需多赛季累积）'));
   // ⑧ 跳过转会期遇报价中断（挂牌后跳过：无报价→跳过完；有报价→暂停保留天数并跳转会页）
   S=newState('测试队','⚔️');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  fillRoster(S,'mid','star');
   S.lineup=S.players.map(p=>p.id);
   const bench=S.players.find(p=>!S.lineup.includes(p.id));
   if(!bench){const fa=genPlayer(genFreeAgentDef('mid','low',new Set()));fa.contract=2;S.players.push(fa);}

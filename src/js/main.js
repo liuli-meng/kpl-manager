@@ -254,6 +254,7 @@ function createTeam(){
  S.crest={sh:b.sh,c1:b.c1,c2:b.c2,c3:b.c3,txt:b.txt};
  S.selfBuilt=true; // 自建俱乐部开局（成就「白手起家」条件；执教原版不触发）
  // 直签开局：使用独立的自由球员池（与 18 队注册名单不重叠，保证全联盟一人一队）
+ shuffle(ACADEMY_NAMES); // 打乱池序：开档阵容名字每次不同（池序决定 find 命中，否则恒为 弈秋/观澜/听松/照夜/惊蛰）
  const usedNames=new Set();
  POS_ORDER.forEach((pos,i)=>{
  const band=i===0?'star':'mid'; // 保底一名 90+ 王牌，其余主力级（档位决定四维基准）

@@ -21,8 +21,9 @@ const out = vm.runInContext(`
   // ============ 场景A：有替补 → 替补择优顶位，5 人建制保持 ============
   S=newState('替补队','剑');
   const star=mk99();
-  const others=['jg','mid','ad','sup'].map(pos=>genPlayer(genFreeAgentDef(pos,'low',new Set())));
-  const benchTop=genPlayer(genFreeAgentDef('top','low',new Set()));
+  const _nu=new Set(); // 各位置共用同一占用集合，否则 5 个位置会挑到同一个名字
+  const others=['jg','mid','ad','sup'].map(pos=>genPlayer(genFreeAgentDef(pos,'low',_nu)));
+  const benchTop=genPlayer(genFreeAgentDef('top','low',_nu));
   benchTop.name='替补甲';benchTop.attrs={lane:70,farm:66,team:72,mind:68};
   S.players=[star,...others,benchTop];
   S.lineup=S.players.filter(x=>x!==benchTop).map(p=>p.id); // 替补甲在板凳
@@ -118,7 +119,8 @@ const out = vm.runInContext(`
   // ============ 场景B：无替补 → 位置空缺 + 开赛拦截 + 签替补恢复 ============
   S=newState('无替队','盾');
   const star2=mk99();
-  const others2=['jg','mid','ad','sup'].map(pos=>genPlayer(genFreeAgentDef(pos,'low',new Set())));
+  const _nu2=new Set();
+  const others2=['jg','mid','ad','sup'].map(pos=>genPlayer(genFreeAgentDef(pos,'low',_nu2)));
   S.players=[star2,...others2];
   S.lineup=S.players.map(p=>p.id);
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};

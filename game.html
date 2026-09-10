@@ -1008,6 +1008,28 @@ function checkAchievements(s){
    真实明星选手按史实收录（阵容经公开赛事报道核实）；年代久远、阵容无从考证的席位
    由 genEraDef 生成「时代轮换选手」（游戏化演绎，career 注明）。installEra 在开局/读档时
    把默认联盟整体替换为该时代联盟，引擎赛制沿用现行年度赛历（游戏化演绎）。 */
+/* ================= 名字池与组合命名（供自由球员 / 青训 / 时代轮换选手共用） =================
+   池是有限的：ACADEMY_NAMES 36 个 + ERA_GEN_NAMES 48 个，囤人 30+ 或未来时代空位变多就会耗尽。
+   旧版耗尽后兜底成「新人47」「新援12」这种占位名，故统一走 combName()：
+   两字组合（20×20=400）→ 三字组合（8000），且**按固定顺序扫描、不引入随机**，
+   保证 genEraDef 这类要求"重复安装产出完全相同 def"的路径仍然确定性。 */
+const ROOKIE_NAMES=['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见','慕白','亦辰'];
+/* 电竞 ID 风格组名：字库两两组合（如 洛野/白柒/江辞），避免「清扬_2」式自增后缀 */
+const RK_A=['阿','小','白','苏','陆','沈','顾','洛','叶','凌','夜','莫','江','温','秦','池','祁','许','林','常'];
+const RK_B=['川','野','辞','屿','柒','晏','深','迟','昭','眠','遥','笙','秋','策','尘','澜','溪','澈','泠','桉'];
+function combName(used){
+ for(const a of RK_A)for(const b of RK_B){const n=a+b;if(!used||!used.has(n))return n;}
+ for(const a of RK_A)for(const b of RK_B)for(const c of RK_B){const n=a+b+c;if(!used||!used.has(n))return n;}
+ return '选手'+(used?used.size:0); // 理论不可达（8400 个组合）；真到了也不能生成 undefined
+}
+/* 取偏好池中第一个未被占用的名字，池尽回退 combName。
+   固定顺序扫描（find）不引入随机——开档名单的多样性由调用方 shuffle 名字池决定 */
+function poolName(pool,used){
+ if(!used)return pick(pool);
+ const hit=pool.find(n=>!used.has(n));
+ return hit||combName(used);
+}
+
 const ERA_GEN_NAMES=['临渊','栖梧','暮雪','孤舟','野渡','春潮','夏蝉','秋鸿','冬凌','朝雾','晚风','晨曦','夜阑','子规','青竹','翠微','苍梧','白鹭','闻笛','枕星','及锋','问渠','观棋','烂柯','折柳','吹角','连营','点兵','扬鞭','踏歌','放鹤','归鸿','拂衣','枕戈','听潮','望北','溯洄','宛在','水湄','蒹葭','既白','饮冰','怀瑾','佩瑜','其琛','维桢','令仪','令德'];
 /* 时代轮换选手生成：确定性 id（g<时代>_<队>_<位置>）+ 确定性属性（id 哈希播种）
    ——重复安装/读档重装必须产出完全相同的 def，否则存档重载后 AI 战力会漂移 */
@@ -1015,8 +1037,7 @@ function genEraDef(eraId,team,pos,used){
  const key='g'+eraId+'_'+team.replace(/\./g,'')+'_'+pos; // 队名去点号（RNG.M→RNGM），保证 id 稳定可引用
  const exist=PLAYER_POOL.find(d=>d.id===key);
  if(exist)return exist;
- let name=ERA_GEN_NAMES.concat(ACADEMY_NAMES).find(n=>!used.has(n));
- if(!name){do{name='新援'+(++_faSeq);}while(used.has(name));}
+ let name=poolName(ERA_GEN_NAMES.concat(ACADEMY_NAMES),used); // 池尽回退 combName（原为「新援N」）
  used.add(name);
  let h=5381;for(let i=0;i<key.length;i++)h=((h*33)^key.charCodeAt(i))>>>0;
  const rv=()=>{h=((h*1103515245)+12345)>>>0;return (h>>>16)%1000/1000;};
@@ -1645,10 +1666,9 @@ function buyPlayer(s,p){
 /* ================= 自由球员 / 青训名字池 =================
  与 18 队注册名单隔离，保证任何情况下联盟内一人一队 */
 const ACADEMY_NAMES=['弈秋','观澜','听松','照夜','惊蛰','谷雨','芒种','白秋','霜降','立夏','惊鸿照','初霁','疏桐','晚晴','归舟','远山','泊烟','沉璧','映雪','疏星','垂柳','鸣蝉','宿雨','斜阳','烟渚','兰舟','竹杖','芒鞋','蓑衣','钓叟','渔火','枫桥','钟声','客船','碧水','东流'];
-let _faSeq=0;
 function genFreeAgentDef(pos,band,usedNames){
- let name=usedNames?ACADEMY_NAMES.find(n=>!usedNames.has(n)):null;
- if(!name&&usedNames){do{name='新人'+(++_faSeq);}while(usedNames.has(name));} // 自增序号兜底：名字空间耗尽也不会死循环
+ // 池尽时走 combName（两字/三字组合），不再生成「新人47」这种占位名
+ const name=poolName(ACADEMY_NAMES,usedNames);
  if(usedNames)usedNames.add(name);
  // 档位即四维基准：star≈顶星(88+) / mid≈主力(78) / low≈轮换(69)，总值由 base 直出
  const BAND={star:[85,92],mid:[74,82],low:[66,73]}[band]||[74,82];
@@ -1715,10 +1735,8 @@ function genSeasonPlayer(s,def){
 }
 /* 青训递补选手定义（不占用联盟注册名额，与玩家、各队均不重名）
  底子随赛季水涨船高（每赛季+2，封顶+14）：明星到龄退役后联盟战力不至于塌方 */
-let _acSeq=0;
 function genAcademyDef(pos,usedNames,season){
- let name=typeof ACADEMY_NAMES!=='undefined'?ACADEMY_NAMES.find(n=>!usedNames.has(n)):null;
- if(!name){do{name='青训'+(++_acSeq);}while(usedNames.has(name));} // 自增序号兜底：名字空间耗尽也不会死循环
+ const name=typeof ACADEMY_NAMES!=='undefined'?poolName(ACADEMY_NAMES,usedNames):combName(usedNames);
  usedNames.add(name);
  const cands=HEROES.filter(h=>h.pos[0]===pos);
  const boost=Math.min(2*((season||1)-1),14);
@@ -1770,8 +1788,7 @@ function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额�
  底子随赛季水涨船高（每赛季+2，封顶+12）：新生代一代比一代强，联盟整体缓慢上探 */
 function genStarDef(s,usedNames,forcePos){
  const pos=forcePos||pick(POS_ORDER);
- let name=ACADEMY_NAMES.find(n=>!usedNames.has(n));
- if(!name){do{name='新星'+(++_acSeq);}while(usedNames.has(name));} // 自增序号兜底：名字空间耗尽也不会死循环
+ const name=poolName(ACADEMY_NAMES,usedNames); // 池尽回退 combName，不再生成「新星N」
  usedNames.add(name);
  const sk=pick([['lane','线霸体系','对线属性额外+10%'],['farm','运营体系','运营属性额外+10%'],
  ['team','团战体系','团战属性额外+10%'],['mind','大心脏体系','心态属性额外+10%']]);
@@ -2788,10 +2805,7 @@ function doHeroTrain(s,pid){
 }
 
 /* ================= 青训体系 ================= */
-const ROOKIE_NAMES=['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见','慕白','亦辰'];
-/* 电竞 ID 风格组名：字库两两组合（如 洛野/白柒/江辞），避免「清扬_2」式自增后缀 */
-const RK_A=['阿','小','白','苏','陆','沈','顾','洛','叶','凌','夜','莫','江','温','秦','池','祁','许','林','常'];
-const RK_B=['川','野','辞','屿','柒','晏','深','迟','昭','眠','遥','笙','秋','策','尘','澜','溪','澈','泠','桉'];
+/* 名字池（ROOKIE_NAMES / RK_A / RK_B）与 combName() 已上移到 data.js（供自由球员/时代选手共用） */
 let _rkSeq=0;
 /* 收集当前档位已占用的选手名（含市场/挂牌/自由球员/AI阵容缓存），保证新秀名唯一 */
 function rookieUsedNames(s){
@@ -2809,7 +2823,7 @@ function genRookieName(s){
  const n=Math.random()<0.35?pick(ROOKIE_NAMES):(pick(RK_A)+pick(RK_B));
  if(!used.has(n)){used.add(n);return n;}
  }
- return pick(RK_A)+pick(RK_B)+pick(RK_B); // 三字兜底（如 洛川澈）
+ return combName(used); // 兜底改为确定性扫描，保证不重名（旧版随机三字仍可能撞名）
 }
 function genRookie(s){
  _rkSeq++;
@@ -2931,13 +2945,29 @@ function leaguePayout(s,place){
  if(amt){s.fund+=amt;logEvent(s,' 联盟分润（'+place+'）：'+amt+'万');}
 }
 function logLevel(txt){
- if(/冠军|王朝|夺得总冠军/.test(txt))return 'gold';
- if(/惜败|败|负|拖欠工资|淘汰|无缘/.test(txt))return 'lose';
- if(/胜|击败|获胜|晋级|卡位/.test(txt))return 'win';
+ if(/成就解锁|冠军|王朝|捧杯|FMVP|名人堂|亚运/.test(txt))return 'gold';
+ // "败/负"必须带语境词：裸匹配会把「S/A/B → 卡位赛 → 双败季后赛」这类赛制说明判成败绩
+ if(/惜败|落败|战败|不敌|淘汰|无缘|拖欠工资|负 /.test(txt))return 'lose';
+ if(/胜 |击败|获胜|晋级/.test(txt))return 'win'; // 不写"卡位"：赛制说明里的"卡位赛"会被误染成胜绩色
  if(/赞助|奖金|分润|收入|涨薪|代言|曝光|返还|找回/.test(txt))return 'gold';
  return 'info';
 }
-function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt)});s.eventLog=s.eventLog.slice(0,120);}
+/* 事件分类：互斥分区（荣誉成就 > 比赛战报 > 转会财政 > 其他动态）
+ 每条日志只归一类，四类合计=全部——不会出现"点财政看到的全是比赛战报"这种重叠。
+ 旧版在渲染层拿正则猜分类、且用 level==='gold' 当荣誉门槛，而 gold 在 logLevel 里
+ 同时表示"收入"，于是「成就解锁」永远进不了荣誉；回归用例见 tests/verify-logcat.js */
+const LOG_CATS=[
+ {k:'honor',n:'荣誉成就',re:/总冠军|夺冠|捧杯|FMVP|王朝|名人堂|成就解锁|亚运|征召|荣耀|卫冕/},
+ {k:'match',n:'比赛战报',re:/常规赛|季后赛|卡位赛|挑战者杯|电竞世界杯|EWC|年度总决赛|圣龙杯|联赛战报|连胜|连败|伤停|受伤/},
+ {k:'fund', n:'转会财政',re:/赞助|奖金|分润|收入|资金|薪|代言|转会|签约|签下|挂牌|特惠|预算|工资帽/},
+];
+function logCat(txt){
+ const t=String(txt==null?'':txt);
+ if(/赛制|版本更新|经济体系升级/.test(t))return 'other'; // 说明性文案：既不是比赛也不是账目
+ for(const c of LOG_CATS){if(c.re.test(t))return c.k;}
+ return 'other';
+}
+function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,120);}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(0,i);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function powerOf(s,name){
  if(name===s.teamName)return teamPower(s);
@@ -5242,8 +5272,19 @@ function renderClub(){
  if(S.preseason){
  // 赛前转会期：先组队，再开赛（比赛面板隐藏）
  const lsP=rosterLineup(S);
+ // 开档三步清单：签教练 → 五位置有人 → 结束转会期（完成后随转会期面板一起消失）
+ const missPos=POS_ORDER.filter(pos=>!lsP.some(x=>x.pos===pos));
+ const steps=[
+ {ok:!!S.coach,n:'签下主教练'+(S.coach?'（'+S.coach.name+'）':'')},
+ {ok:!missPos.length,n:missPos.length?'五个位置有人（缺 '+missPos.map(pos=>POS[pos][1]).join('/')+'）':'五个位置有人'},
+ {ok:false,n:'结束转会期 · 开始赛季'},
+ ];
  html+=`<div class="panel">
  <h3>赛前转会期 <span class="tag">剩余 ${S.transferWindow} 天 · 结束后开赛</span></h3>
+ <div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--line);border-radius:4px;font-size:12px">
+ <b>开档三步</b>　${steps.map(s=>s.ok?'<span style="color:var(--green)">✓ '+s.n+'</span>':'<span style="color:var(--gold)">□ '+s.n+'</span>').join('　→　')}
+ <div class="hint" style="margin-top:4px">阵容就绪后点下方「结束转会期 · 开始赛季」即可开打；天数用完也会自动开赛</div>
+ </div>
  <div class="hint" style="margin-bottom:8px">先把阵容组好再打比赛：转会市场可<b>买断其他俱乐部选手、直签自由球员、挂牌出售</b>；转会期内市场刷新免费、顶星供给增加。天数用完自动开始联赛，也可随时提前结束。</div>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${POS_ORDER.map(pos=>{
  const p=lsP.find(x=>x.pos===pos);
@@ -5418,6 +5459,21 @@ function renderClub(){
  <div class="sponsor"><span class="s-icon">教</span>
  <div><div class="s-name">${c.name} <span class="gold">(全队战力+${c.bonus}%)</span></div>
  <div class="s-desc"> ${c.skill.n}：${c.skill.d} · 周薪 ${c.wage}万 · 转会页可换帅</div></div></div></div>`;
+ }
+ // 事件动态（互斥分类：每条日志只归一类，各分类条数相加=全部，无遗漏）
+ {
+ const cats=[{k:'all',n:'全部'}].concat(LOG_CATS.map(c=>({k:c.k,n:c.n}))).concat([{k:'other',n:'其他动态'}]);
+ const kept=window._logFilter;
+ const fl=cats.some(c=>c.k===kept)?kept:'all';
+ const catOf=e=>e.cat||logCat(e.txt); // 旧存档无 cat 字段时按文案回推，避免读旧档分类全空
+ const cnt={};
+ (S.eventLog||[]).forEach(e=>{const k=catOf(e);cnt[k]=(cnt[k]||0)+1;});
+ const logs=(S.eventLog||[]).filter(e=>fl==='all'||catOf(e)===fl).slice(0,30);
+ const clr={win:'var(--green)',lose:'var(--red)',gold:'var(--gold)',info:'var(--dim)'};
+ html+=`<div class="panel"><h3>事件动态 <span class="tag">共 ${(S.eventLog||[]).length} 条 · 按分类查看</span></h3>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${cats.map(c=>`<button class="btn sm ${fl===c.k?'primary':''}" onclick="window._logFilter='${c.k}';renderClub()">${c.n}${c.k==='all'?'':' '+(cnt[c.k]||0)}</button>`).join('')}</div>
+ ${logs.length?logs.map(e=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--line);color:${clr[e.level]||'var(--dim)'}">${_escTxt(e.txt)}</div>`).join(''):'<div class="hint">该分类暂无事件</div>'}
+ </div>`;
  }
  $('#page-club').innerHTML=html;
 }
@@ -6362,6 +6418,7 @@ function createTeam(){
  S.crest={sh:b.sh,c1:b.c1,c2:b.c2,c3:b.c3,txt:b.txt};
  S.selfBuilt=true; // 自建俱乐部开局（成就「白手起家」条件；执教原版不触发）
  // 直签开局：使用独立的自由球员池（与 18 队注册名单不重叠，保证全联盟一人一队）
+ shuffle(ACADEMY_NAMES); // 打乱池序：开档阵容名字每次不同（池序决定 find 命中，否则恒为 弈秋/观澜/听松/照夜/惊蛰）
  const usedNames=new Set();
  POS_ORDER.forEach((pos,i)=>{
  const band=i===0?'star':'mid'; // 保底一名 90+ 王牌，其余主力级（档位决定四维基准）

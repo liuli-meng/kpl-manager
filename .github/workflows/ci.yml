@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: 全量测试（静态审计 + 历史回归 + 冒烟）
+      - name: 全量测试（静态审计 + 历史回归 + 冒烟 + 平衡门禁）
         run: npm test
 
       - name: 模糊压测（15 赛季随机操作 + 不变量断言）

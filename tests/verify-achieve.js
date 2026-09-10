@@ -10,7 +10,7 @@ const out = vm.runInContext(`
   const fail=m=>{res.push('[FAIL] '+m);hadFail=true;};
   const log=t=>res.push('[PASS] '+t);
   S=newState('成就测试队','证');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  fillRoster(S,'mid','star');
   S.players[0].attrs={lane:95,farm:95,team:95,mind:95}; // 保证 star90 条件稳定（随机 star 档可能摇到 89）
   S.fund=100000;
 

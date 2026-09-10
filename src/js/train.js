@@ -50,10 +50,7 @@ function doHeroTrain(s,pid){
 }
 
 /* ================= 青训体系 ================= */
-const ROOKIE_NAMES=['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见','慕白','亦辰'];
-/* 电竞 ID 风格组名：字库两两组合（如 洛野/白柒/江辞），避免「清扬_2」式自增后缀 */
-const RK_A=['阿','小','白','苏','陆','沈','顾','洛','叶','凌','夜','莫','江','温','秦','池','祁','许','林','常'];
-const RK_B=['川','野','辞','屿','柒','晏','深','迟','昭','眠','遥','笙','秋','策','尘','澜','溪','澈','泠','桉'];
+/* 名字池（ROOKIE_NAMES / RK_A / RK_B）与 combName() 已上移到 data.js（供自由球员/时代选手共用） */
 let _rkSeq=0;
 /* 收集当前档位已占用的选手名（含市场/挂牌/自由球员/AI阵容缓存），保证新秀名唯一 */
 function rookieUsedNames(s){
@@ -71,7 +68,7 @@ function genRookieName(s){
  const n=Math.random()<0.35?pick(ROOKIE_NAMES):(pick(RK_A)+pick(RK_B));
  if(!used.has(n)){used.add(n);return n;}
  }
- return pick(RK_A)+pick(RK_B)+pick(RK_B); // 三字兜底（如 洛川澈）
+ return combName(used); // 兜底改为确定性扫描，保证不重名（旧版随机三字仍可能撞名）
 }
 function genRookie(s){
  _rkSeq++;

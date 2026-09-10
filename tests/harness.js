@@ -12,6 +12,24 @@ function loadCode() {
   return code;
 }
 
+// 沙箱内辅助：组一支 5 人首发（位置齐全，返回 S）。
+// usedNames 必须跨位置共享 —— 旧用例各位置各 new Set()，5 个位置全挑到同一个名字（满队「弈秋」）。
+// band 决定四维基准（star/mid/low），starBand 单独指定 1 号位的档位（默认同 band）。
+const HELPERS = `
+this.fillRoster=function(S,band,starBand){
+  const b=band||'mid',sb=starBand||b,u=new Set();
+  POS_ORDER.forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?sb:b,u))));
+  S.lineup=S.players.map(p=>p.id);
+  return S;
+};
+`;
+
+/* 自带 vm 上下文的测试（如 sim-quick.js）可注入同一套辅助，避免各自复制一份 */
+function injectHelpers(dom) {
+  vm.runInContext(HELPERS, dom);
+  return dom;
+}
+
 function makeDom() {
   const el = () => ({
     classList: { add() {}, remove() {}, toggle() {} }, style: {}, innerHTML: '', value: '',
@@ -39,6 +57,7 @@ function makeDom() {
   dom.window = dom;
   vm.createContext(dom);
   vm.runInContext(loadCode(), dom);
+  injectHelpers(dom);
   return { dom, elCache };
 }
 
@@ -60,4 +79,4 @@ function makeTester(name) {
   };
 }
 
-module.exports = { makeDom, makeTester, loadCode };
+module.exports = { makeDom, makeTester, loadCode, injectHelpers, FILES };

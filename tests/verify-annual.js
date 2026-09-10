@@ -11,7 +11,7 @@ const out = vm.runInContext(`
   try{
     // ===== 开局：自建队，直接开始春季赛 =====
     S=newState('测试队','⚔️');
-    ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+    fillRoster(S,'mid','star');
     S.coach={...COACH_POOL.find(c=>c.id==='co12')};
     S.lineup=S.players.map(p=>p.id);
     S.seedPower=teamPower(S);
@@ -139,7 +139,7 @@ const out = vm.runInContext(`
     log('撤牌（有报价时）：listed/bids 已清空 OK');
     // ===== 场景2：弱队全年陪跑（全输）→ EWC 观赛 → 无缘年总 → 直接下一年 =====
     S=newState('鱼腩队','🐟');
-    ['top','jg','mid','ad','sup'].forEach(pos=>S.players.push(genPlayer(genFreeAgentDef(pos,'low',new Set()))));
+    fillRoster(S,'low');
     S.coach={...COACH_POOL.find(c=>c.id==='co11')};
     S.lineup=S.players.map(p=>p.id);
     S.seedPower=teamPower(S);

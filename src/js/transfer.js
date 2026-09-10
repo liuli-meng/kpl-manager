@@ -51,10 +51,8 @@ function genSeasonPlayer(s,def){
 }
 /* 青训递补选手定义（不占用联盟注册名额，与玩家、各队均不重名）
  底子随赛季水涨船高（每赛季+2，封顶+14）：明星到龄退役后联盟战力不至于塌方 */
-let _acSeq=0;
 function genAcademyDef(pos,usedNames,season){
- let name=typeof ACADEMY_NAMES!=='undefined'?ACADEMY_NAMES.find(n=>!usedNames.has(n)):null;
- if(!name){do{name='青训'+(++_acSeq);}while(usedNames.has(name));} // 自增序号兜底：名字空间耗尽也不会死循环
+ const name=typeof ACADEMY_NAMES!=='undefined'?poolName(ACADEMY_NAMES,usedNames):combName(usedNames);
  usedNames.add(name);
  const cands=HEROES.filter(h=>h.pos[0]===pos);
  const boost=Math.min(2*((season||1)-1),14);
@@ -106,8 +104,7 @@ function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额�
  底子随赛季水涨船高（每赛季+2，封顶+12）：新生代一代比一代强，联盟整体缓慢上探 */
 function genStarDef(s,usedNames,forcePos){
  const pos=forcePos||pick(POS_ORDER);
- let name=ACADEMY_NAMES.find(n=>!usedNames.has(n));
- if(!name){do{name='新星'+(++_acSeq);}while(usedNames.has(name));} // 自增序号兜底：名字空间耗尽也不会死循环
+ const name=poolName(ACADEMY_NAMES,usedNames); // 池尽回退 combName，不再生成「新星N」
  usedNames.add(name);
  const sk=pick([['lane','线霸体系','对线属性额外+10%'],['farm','运营体系','运营属性额外+10%'],
  ['team','团战体系','团战属性额外+10%'],['mind','大心脏体系','心态属性额外+10%']]);
