@@ -46,6 +46,9 @@ function makeDom() {
     addEventListener() {}, removeEventListener() {},
     localStorage: { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; }, removeItem: k => { delete store[k]; } },
     document: {
+      // getElementById 必须提供：src 里有多处按 id 取元素（队徽生成器、开局剧本按钮等），
+      // 桩缺了它会让"加载期就会跑到的 UI 代码"把整个沙箱打爆（模拟器尤其容易被静默搞挂）
+      getElementById: id => cachedEl('#' + id),
       querySelector: sel => cachedEl(sel), querySelectorAll: () => [], createElement: () => el(),
       execCommand: () => {}, body: el(), addEventListener() {}, removeEventListener() {},
     },

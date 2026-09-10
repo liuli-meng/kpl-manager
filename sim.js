@@ -1,22 +1,9 @@
 // 平衡性蒙特卡洛：无头跑完整赛季（真实三档开局），统计进季后赛率/夺冠率/资金
-const fs = require('fs');
 const vm = require('vm');
-const path = require('path');
-const SRC = path.join(__dirname, 'src', 'js');
-const files = ['data.js','state.js','players.js','transfer.js','train.js','season.js','bp.js','match.js','ui.js','main.js'];
-let code = '';
-files.forEach(f => { code += fs.readFileSync(path.join(SRC, f), 'utf8') + '\n'; });
-const el = () => ({classList:{add(){},remove(){},toggle(){}},style:{},innerHTML:'',value:'',textContent:'',dataset:{},addEventListener(){},appendChild(){},select(){},querySelector(){return null},querySelectorAll(){return[]}});
-const dom = {
-  getElementById: () => el(), querySelector: () => el(), querySelectorAll: () => [],
-  localStorage: {getItem: () => null, setItem(){}, removeItem(){}},
-  document: {querySelector: () => el(), querySelectorAll: () => [], createElement: () => el(), execCommand: () => {}, body: el(), addEventListener(){}, removeEventListener(){}},
-  window: null, confirm: () => true, alert(){}, toast(){}, location: {reload(){}},
-  setTimeout: () => 0, clearTimeout(){}, addEventListener(){}, removeEventListener(){},
-};
-dom.window = dom;
-vm.createContext(dom);
-vm.runInContext(code, dom);
+// DOM 桩 / 源模块清单 / 沙箱辅助统一由 harness 提供（只维护一份）
+const { makeDom, injectHelpers } = require('./harness');
+const { dom } = makeDom();
+injectHelpers(dom);
 
 const HEADLESS = `
 function simSquad(kind){
@@ -27,9 +14,8 @@ function simSquad(kind){
     S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
     S.lineup=S.players.map(p=>p.id);
   }else{
-    ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+    fillRoster(S,'mid','star');
     S.coach={...COACH_POOL.find(c=>c.id==='co12')};
-    S.lineup=S.players.map(p=>p.id);
   }
   S.seedPower=teamPower(S);
   initGroups(S);

@@ -160,12 +160,18 @@ function initStart(){
  const clubs=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
  const eraBtns=Object.keys(KPL_ERAS).map(id=>`<button class="btn sm" id="era-btn-${id}" onclick="pickEra('${id}')">${KPL_ERAS[id].name}</button>`).join('');
  $('#start-modal-body').innerHTML=`
- <h2>王者电竞经理 · KPL 篇</h2>
- <div class="center dim" style="font-size:12px;margin-bottom:14px">化身战队经理：签约选手、经营俱乐部、征战联赛、冲击总冠军</div>
+ <h2>王者电竞经理 · KPL 篇</h2> <div class="center dim" style="font-size:12px;margin-bottom:14px">化身战队经理：签约选手、经营俱乐部、征战联赛、冲击总冠军</div>
  <div class="center" style="margin-bottom:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn sm primary" id="tab-self" onclick="switchStartTab('self')">创建我的俱乐部</button>
  <button class="btn sm" id="tab-club" onclick="switchStartTab('club')">执教现役俱乐部</button>
  <button class="btn sm" id="tab-era" onclick="switchStartTab('era')">历代联盟</button>
+ </div>
+ <div id="tab-scenario" style="margin-bottom:12px">
+ <div class="center dim" style="font-size:12px;margin-bottom:6px">开局剧本（难度档 · 可选）</div>
+ <div class="center" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+ ${SCENARIOS.map(s=>`<button class="btn sm" id="sc-btn-${s.id}" onclick="pickScenario('${s.id}')">${s.hard?'':'○ '}${s.name}</button>`).join('')}
+ </div>
+ <div class="center hint" id="sc-desc" style="margin-top:6px">${SCENARIOS[0].desc}</div>
  </div>
  <div id="tab-self-body">
  <div class="center" style="margin-bottom:12px">
@@ -190,8 +196,27 @@ function initStart(){
  <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyEraClub()" id="era-apply-btn" disabled>执教所选时代俱乐部</button></div>
  </div>`;
  $('#start-modal').classList.add('on');
+ pickScenario('normal'); // 剧本按钮回到默认高亮（弹窗重建后 class 会丢）
 }
-let _clubPick=-1,_eraSel=null;
+let _clubPick=-1,_eraSel=null,_scenario='normal';
+/* 开局剧本（难度档）：选中态只影响开局初始值，见 data.js SCENARIOS */
+function pickScenario(id){
+ _scenario=scenarioById(id).id;
+ SCENARIOS.forEach(s=>{
+  const b=document.getElementById('sc-btn-'+s.id);
+  if(b)b.className='btn sm'+(s.id===_scenario?' primary':'');
+ });
+ const d=$('#sc-desc');
+ if(d)d.textContent=scenarioById(_scenario).desc;
+}
+/* 把当前选中的剧本应用到刚建好的档（资金/工资帽/阵容/属性），并写入日志与成就判定依据 */
+function applyScenario(s){
+ s.scenario=_scenario||'normal';
+ const sc=scenarioById(s.scenario);
+ const dropped=sc.apply(s)||null;
+ logEvent(s,'开局剧本「'+sc.name+'」：'+sc.desc+(dropped?'（离开的是 '+dropped.name+'）':''));
+ return sc;
+}
 function switchStartTab(tab){
  $('#tab-self').className=tab==='self'?'btn sm primary':'btn sm';
  $('#tab-club').className=tab==='club'?'btn sm primary':'btn sm';
@@ -279,6 +304,7 @@ function createTeam(){
  }
  });
  S.lineup=lineup;
+ applyScenario(S); // 开局剧本：可能削属性/砍工资帽/挖走主力——必须在 seedPower 与 initGroups 之前
  // 新手教练：青训助教
  S.coach={...COACH_POOL.find(c=>c.id==='co12')};
  S.seedPower=teamPower(S)||280; // 种子=开局真实战力（决定分组落位）
@@ -321,6 +347,7 @@ function applyClub(){
  }
  });
  S.lineup=lineup;
+ applyScenario(S); // 开局剧本：同上，须在 seedPower 与 initGroups 之前
  S.seedPower=teamPower(S)||tmpl.seed; // 种子=执教班底真实战力（决定分组落位）
  initGroups(S);
  // 赛前转会期：先组队再开赛

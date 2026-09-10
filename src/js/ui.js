@@ -120,7 +120,7 @@ function renderClub(){
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
- <div class="dim" style="font-size:12px">${splitLabel(S)} · 第${S.day}天 · ${PHASE_NAME[S.phase]||S.phase}${myGroup(S)?' · '+myGroup(S)+'组':''}${(S.phase==='playoff'||S.phase==='annual'&&S.annual&&S.annual.stage==='po')?' · 双败淘汰':''}${S.phase==='ewc'?' · 8强单败':''}</div></div>
+ <div class="dim" style="font-size:12px">${splitLabel(S)} · 第${S.day}天 · ${PHASE_NAME[S.phase]||S.phase}${myGroup(S)?' · '+myGroup(S)+'组':''}${(S.phase==='playoff'||S.phase==='annual'&&S.annual&&S.annual.stage==='po')?' · 双败淘汰':''}${S.phase==='ewc'?' · 8强单败':''}${scenarioById(S.scenario||'normal').hard?' · <span class="gold">剧本：'+scenarioById(S.scenario).name+'</span>':''}</div></div>
  <button class="btn sm" style="margin-left:4px;flex:none" onclick="openCrestEdit()" title="自选外形/配色/缩写，风格同 18 支真实俱乐部">改队徽</button>
  <div style="margin-left:auto;text-align:right">
  <div class="gold" style="font-size:18px;font-weight:800">${fmt(S.fund)}</div>

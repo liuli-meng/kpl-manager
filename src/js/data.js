@@ -563,6 +563,32 @@ const CASTER=['一拉三！','极限操作！','名场面预定！','这波运�
  巡检挂在 save() 上：每次状态落盘时统一评估，条件全部由当前状态可推导
  （冠军史 titleHistory / 荣誉室 honors / FMVP 名人堂 / 名册 / 资金 / 连胜），
  解锁一次永久入册 s.achieved（id→解锁年份）。测试/旧档免迁移：缺字段懒补。 */
+/* ================= 开局剧本（难度档） =================
+ 给"从头开始"加变量：同一套规则下初始条件不同，董事会达标难度也随之变化。
+ 剧本只改开局初始值，不动物价/赛制/战力公式——平衡门禁跑的是固定档位阵容，不受影响。 */
+const SCENARIOS=[
+ {id:'normal',name:'常规开档',hard:false,desc:'初始资金 8000万 · 工资帽 900万/周 · 标准挑战',
+  apply:s=>{}},
+ {id:'debt',name:'财政危机',hard:true,desc:'负债累累接手：初始资金 2000万 · 工资帽 700万，只能靠成绩翻身',
+  apply:s=>{s.fund=2000;s.wageCap=700;}},
+ {id:'exodus',name:'核心出走',hard:true,desc:'队内王牌季前被挖走，开局即空一个位置，必须去市场补人',
+  apply:s=>dropBestPlayer(s)},
+ {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 540万/周，豪华阵容养不起，只能靠青训与规划',
+  apply:s=>{s.wageCap=540;}},
+ {id:'cursed',name:'无冠魔咒',hard:true,desc:'常年无冠、士气低落：全队属性 -4 · 初始士气 50，等你破咒',
+  apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));});}},
+];
+function scenarioById(id){return SCENARIOS.find(s=>s.id===id)||SCENARIOS[0];}
+/* 核心出走：队内战力最高者被挖走（人已离队，不返还资金） */
+function dropBestPlayer(s){
+ if(!(s.players||[]).length)return null;
+ const best=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
+ s.players=s.players.filter(p=>p!==best);
+ s.lineup=(s.lineup||[]).filter(id=>id!==best.id);
+ if(s.pick)delete s.pick[best.pos];
+ return best;
+}
+
 const ACHIEVEMENTS=[
  // —— 俱乐部 ——
  {id:'found',icon:'创',name:'白手起家',desc:'以自建俱乐部开启征程',test:s=>!!s.selfBuilt},
@@ -592,6 +618,11 @@ const ACHIEVEMENTS=[
  // —— 董事会 ——
  {id:'board_fav',icon:'董',name:'董事会宠儿',desc:'把董事会信任度做到 90 以上',test:s=>!!s.board&&s.board.trust>=90},
  {id:'board_survive',icon:'存',name:'力挽狂澜',desc:'信任度跌到 25 以下后重新回到 60（危机自救）',test:s=>!!s.board&&s.board.warn===0&&(s.board.trust||0)>=60&&(s.board.log||[]).some(l=>l.trust<=25)},
+ // —— 开局剧本（难度档）：在指定剧本下夺冠 ——
+ {id:'sc_debt',icon:'债',name:'负债逆袭',desc:'「财政危机」开局下夺得任意冠军',test:s=>s.scenario==='debt'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'sc_exodus',icon:'残',name:'残阵夺冠',desc:'「核心出走」开局下夺得任意冠军',test:s=>s.scenario==='exodus'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'sc_cap',icon:'紧',name:'紧缩夺冠',desc:'「工资帽紧缩」开局下夺得任意冠军',test:s=>s.scenario==='cap'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'sc_cursed',icon:'咒',name:'破除魔咒',desc:'「无冠魔咒」开局下夺得任意冠军',test:s=>s.scenario==='cursed'&&(s.honors||[]).some(h=>h.champion)},
  // —— 选手个人 ——
  {id:'own_fmvp',icon:'M',name:'本队 FMVP',desc:'本队选手当选决赛 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName)},
  {id:'mvp10',icon:'杀',name:'MVP 收割机',desc:'队内选手生涯 MVP ≥10 次',test:s=>(s.players||[]).some(p=>(p.mvp||0)>=10)},

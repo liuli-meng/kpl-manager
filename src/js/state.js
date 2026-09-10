@@ -5,10 +5,11 @@
 const SAVE_KEY='esport_manager_save_v3';
 const SAVE_VERSION=4; // 存档结构版本：结构变更时在 MIGRATIONS 追加迁移步骤并递增，旧档读入自动升级
 const MIGRATIONS={
- // 3→4：董事会/信任度系统上线（旧档补默认值：中性信任度 60，执教生涯从零计）
+ // 3→4：董事会/信任度 + 开局剧本（旧档补默认值：中性信任度 60、执教生涯从零计、剧本按常规）
  3:(s)=>{
   s.board={trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
   s.managerCareer={years:0,titles:0,lastRank:null};
+  s.scenario='normal';
  },
 };
 let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
@@ -39,6 +40,7 @@ function newState(teamName,icon){
  board:{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]},
  // 执教生涯（下课结算页与 KPI 依据）：年数 / 冠军数 / 上年年度积分排名
  managerCareer:{years:0,titles:0,lastRank:null},
+ scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
  };
 }
 function rosterAll(s){return s.players;}
@@ -182,6 +184,7 @@ function migrateSave(){
  // 兜底：迁移步骤失败或存档被外部编辑过时，保证董事会字段可用（面板渲染不会崩）
  S.board=S.board||{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
  S.managerCareer=S.managerCareer||{years:0,titles:0,lastRank:null};
+ S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){
