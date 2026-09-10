@@ -144,10 +144,11 @@ const WAGE_PTS=[[40,12],[50,20],[60,35],[66,50],[72,75],[76,100],[80,140],[85,21
 const wageOf=o=>_curve(WAGE_PTS,o);
 const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
  {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
-const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:100,cost:0},
- {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:250,cost:1500},
- {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:550,cost:4000},
- {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:1100,cost:10000}];
+/* 赞助商：升级同时需要资金与粉丝（fans，单位万）——把"成绩 → 粉丝 → 商业"接成一条链 */
+const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:100,cost:0,fans:0},
+ {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:250,cost:1500,fans:20},
+ {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:550,cost:4000,fans:80},
+ {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:1100,cost:10000,fans:200}];
 const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
 
 /* ================= 英雄池（KPL 常用英雄 · 含摇摆位） =================

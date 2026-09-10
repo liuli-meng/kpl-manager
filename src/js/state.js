@@ -10,6 +10,7 @@ const MIGRATIONS={
   s.board={trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
   s.managerCareer={years:0,titles:0,lastRank:null};
   s.scenario='normal';
+  s.fans=8; // 老档给一个中性起始粉丝（新房由 initFans 按阵容人气算）
  },
 };
 let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
@@ -41,6 +42,7 @@ function newState(teamName,icon){
  // 执教生涯（下课结算页与 KPI 依据）：年数 / 冠军数 / 上年年度积分排名
  managerCareer:{years:0,titles:0,lastRank:null},
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
+ fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
  };
 }
 function rosterAll(s){return s.players;}
@@ -185,6 +187,7 @@ function migrateSave(){
  S.board=S.board||{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
  S.managerCareer=S.managerCareer||{years:0,titles:0,lastRank:null};
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
+ S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){

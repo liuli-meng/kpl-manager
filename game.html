@@ -538,10 +538,11 @@ const WAGE_PTS=[[40,12],[50,20],[60,35],[66,50],[72,75],[76,100],[80,140],[85,21
 const wageOf=o=>_curve(WAGE_PTS,o);
 const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
  {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
-const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:100,cost:0},
- {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:250,cost:1500},
- {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:550,cost:4000},
- {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:1100,cost:10000}];
+/* 赞助商：升级同时需要资金与粉丝（fans，单位万）——把"成绩 → 粉丝 → 商业"接成一条链 */
+const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:100,cost:0,fans:0},
+ {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:250,cost:1500,fans:20},
+ {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:550,cost:4000,fans:80},
+ {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:1100,cost:10000,fans:200}];
 const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
 
 /* ================= 英雄池（KPL 常用英雄 · 含摇摆位） =================
@@ -1336,6 +1337,7 @@ const MIGRATIONS={
   s.board={trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
   s.managerCareer={years:0,titles:0,lastRank:null};
   s.scenario='normal';
+  s.fans=8; // 老档给一个中性起始粉丝（新房由 initFans 按阵容人气算）
  },
 };
 let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
@@ -1367,6 +1369,7 @@ function newState(teamName,icon){
  // 执教生涯（下课结算页与 KPI 依据）：年数 / 冠军数 / 上年年度积分排名
  managerCareer:{years:0,titles:0,lastRank:null},
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
+ fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
  };
 }
 function rosterAll(s){return s.players;}
@@ -1511,6 +1514,7 @@ function migrateSave(){
  S.board=S.board||{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
  S.managerCareer=S.managerCareer||{years:0,titles:0,lastRank:null};
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
+ S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){
@@ -3314,6 +3318,7 @@ function playoffStep(s){
  logEvent(s,splitLabel(s)+'总冠军：'+p.final.r+'！'+(s.champion?'你就是冠军！':''));
  // ===== 年度赛历衔接：年度积分 + FMVP，等待进入下一赛段（EWC/年总） =====
  awardAnnualPts(s);
+ awardSplitFans(s,s.champion,p.final.a===s.teamName||p.final.b===s.teamName); // 粉丝随赛段成绩增长
  awardFMVP(s,p.final.r,splitLabel(s));
  save();renderAll();
  }
@@ -3351,7 +3356,7 @@ function poPlace(slot,isFinal){
 }
 function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
- s.fund+=SPONSORS[s.sponsorLv].income; // 赞助商每日结算
+ s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
  if(s.transferWindow>0){
  s.transferWindow--;
@@ -3381,8 +3386,8 @@ function nextDay(s){
 }
 function payWage(s){
  const wage=weeklyWage(s);
- // 选手代言收入：人气 × 0.3万/周（商业价值对冲工资帽压力）
- const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*3),0));
+ // 选手代言收入：人气 × 0.3万/周 × 粉丝系数（商业价值对冲工资帽压力）
+ const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*3),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;
@@ -3692,6 +3697,44 @@ function leaguePlacements(s){
  (s.cardLosers||[]).forEach(n=>place[n]='p1112'); // 卡位赛败者
  (s.eliminated||[]).forEach(n=>{if(!place[n])place[n]='p1318';}); // B组3-6名
  return place;
+}
+/* ================= 粉丝与商业（成绩 → 粉丝 → 收入 的正循环） =================
+ 粉丝由成绩驱动（赛段名次/冠军/选手人气），再反过来放大赞助单价、门票流水与代言收入，
+ 并作为赞助商升级门槛——把原先互不相干的三条线（选手人气 / 赞助商 / 代言）缝成一个环。
+ 系数刻意保守且封顶；平衡门禁不跑转会，经济改动对门禁几乎无影响。 */
+function initFans(s){ // 开档粉丝 = 底子 + 阵容人气（豪门起点高，自建从零起步）
+ const pop=(s.players||[]).reduce((t,p)=>t+(p.popularity||0),0);
+ s.fans=Math.round((s.selfBuilt?6:10)+pop/12);
+ return s.fans;
+}
+const FAN_MILESTONES=[20,80,200]; // 与赞助商升级门槛对齐：突破即可洽谈更高级赞助
+function addFans(s,n,why){
+ if(!n)return s.fans||0;
+ const before=s.fans==null?0:s.fans;
+ const after=Math.max(0,Math.round((before+n)*10)/10);
+ s.fans=after;
+ if(why&&Math.abs(after-before)>=0.5)logEvent(s,' 粉丝 '+(after>=before?'+':'')+(Math.round((after-before)*10)/10)+'万（'+why+' · 当前 '+after+'万）');
+ FAN_MILESTONES.forEach(m=>{
+  if(before<m&&after>=m){
+   const tier=SPONSORS.filter(x=>x.fans===m).map(x=>x.name).join('/');
+   if(tier)logEvent(s,' 粉丝突破 '+m+' 万！可以洽谈「'+tier+'」级别的赞助商了');
+  }
+ });
+ return after;
+}
+const FAN_CAP=600; // 粉丝计效上限（万）：所有商业系数共用同一个帽子，避免极端值把日流水顶穿
+const fanEff=s=>Math.min(s.fans||0,FAN_CAP);
+const fanMul=(s,div)=>1+fanEff(s)/div; // 粉丝加成
+/* 每日商业流水：赞助单价（粉丝加成）+ 门票/周边（同样走封顶）。抽成纯函数便于精确断言 */
+function dailyCommercialIncome(s){
+ return Math.round(SPONSORS[s.sponsorLv].income*fanMul(s,500))+Math.round(fanEff(s)*0.08);
+}
+/* 赛段收官结算粉丝：阵容人气是基本盘，夺冠/亚军额外加成 */
+function awardSplitFans(s,isChamp,isRunner){
+ const pop=(s.players||[]).reduce((t,p)=>t+(p.popularity||0),0);
+ let gain=pop/60;
+ gain+=isChamp?8:(isRunner?5:(s.phase==='eliminated'?0:2));
+ return addFans(s,Math.round(gain*10)/10,'赛段收官·'+splitLabel(s));
 }
 function awardAnnualPts(s){
  const pts=ANNUAL_PTS[s.split]||ANNUAL_PTS.spring;
@@ -4179,6 +4222,7 @@ function finishAnnual(s,silent){
  }
  awardFMVP(s,p.champ,gameYear(s)+' KPL 年度总决赛');
  s.champion=p.champ===s.teamName;
+ addFans(s,p.champ===s.teamName?25:(runner===s.teamName?12:6),'KPL 年度总决赛'); // 年总是全年最大的曝光
  }
  boardSettle(s); // 董事会结算：按本赛季年度积分排名评价（必须在 newSeason 前——此时 s.season 仍是刚结束那年）
  newSeason(s); // 年度轮换：年龄/合同/退役结算 → 下一年春季赛
@@ -5666,9 +5710,13 @@ function renderClub(){
 function renderBiz(){
  const sp=SPONSORS[S.sponsorLv],next=SPONSORS[S.sponsorLv+1];
  let html=`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
- html+=`<div class="sponsor"><span class="s-icon">${sp.icon}</span><div><div class="s-name">${sp.name} <span class="gold">(当前)</span></div><div class="s-desc">每日收入 ${sp.income}万</div></div></div>`;
+ const fansNow=Math.round(S.fans||0);
+ const effIncome=Math.round(sp.income*fanMul(S,500));
+ html+=`<div class="sponsor"><span class="s-icon">${sp.icon}</span><div><div class="s-name">${sp.name} <span class="gold">(当前)</span></div><div class="s-desc">每日收入 ${sp.income}万${effIncome>sp.income?' <span class="green">→ 实收 '+effIncome+'万（粉丝加成 +'+(effIncome-sp.income)+'）</span>':''}</div></div></div>`;
+ html+=`<div class="hint" style="margin:6px 0">粉丝 <b>${fansNow}</b> 万 · 门票/周边日流水 ${Math.round(fansNow*0.08)}万 · 代言收入 ${Math.round(100*fanMul(S,300)-100)}% 加成<span class="dim">（粉丝由战绩与选手人气成长）</span></div>`;
  if(next){
- html+=`<button class="btn gold sm" onclick="upgradeSponsor()" ${S.fund<next.cost?'disabled':''}>升级到「${next.name}」需 ${next.cost}万</button>`;
+ const lackFans=(next.fans||0)>fansNow;
+ html+=`<button class="btn gold sm" onclick="upgradeSponsor()" ${(S.fund<next.cost||lackFans)?'disabled':''}>升级到「${next.name}」需 ${next.cost}万 · ${next.fans||0}万粉${lackFans?'（还差 '+(next.fans-fansNow)+'万粉）':''}</button>`;
  }else{html+=`<div class="hint">已是最顶级的赞助商！</div>`;}
  html+=`</div>`;
  // 工资帽
@@ -6489,9 +6537,11 @@ function resetGame(){
 function upgradeSponsor(){
  const next=SPONSORS[S.sponsorLv+1];
  if(!next)return;
- if(S.fund<next.cost){toast('资金不足');return;}
+ if(S.fund<next.cost){toast('资金不足（需 '+next.cost+'万）');return;}
+ const fans=Math.round(S.fans||0);
+ if((next.fans||0)>fans){toast('粉丝不足：「'+next.name+'」要求 '+(next.fans||0)+' 万粉丝（当前 '+fans+' 万）——成绩与人气才能换来关注');return;}
  S.fund-=next.cost;S.sponsorLv++;
- logEvent(S,` 签约新赞助商「${next.name}」，每日收入 ${next.income}万`);
+ logEvent(S,` 签约新赞助商「${next.name}」，每日收入 ${next.income}万（粉丝 ${fans} 万）`);
  save();renderAll();toast(`赞助商升级成功！`);
 }
 
@@ -6661,6 +6711,7 @@ function createTeam(){
  // 赛前转会期：先组队再开赛
  S.preseason=true;S.transferWindow=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
+ initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`战队 ${name} 成立！初始资金8000万，目标：KPL 总冠军！`);
  logEvent(S,' 开局直签 5 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容');
@@ -6702,6 +6753,7 @@ function applyClub(){
  // 赛前转会期：先组队再开赛
  S.preseason=true;S.transferWindow=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
+ initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
  logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${lineup.map(id=>S.players.find(p=>p.id===id).name).join(' / ')}`);

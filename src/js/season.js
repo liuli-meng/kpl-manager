@@ -340,6 +340,7 @@ function playoffStep(s){
  logEvent(s,splitLabel(s)+'总冠军：'+p.final.r+'！'+(s.champion?'你就是冠军！':''));
  // ===== 年度赛历衔接：年度积分 + FMVP，等待进入下一赛段（EWC/年总） =====
  awardAnnualPts(s);
+ awardSplitFans(s,s.champion,p.final.a===s.teamName||p.final.b===s.teamName); // 粉丝随赛段成绩增长
  awardFMVP(s,p.final.r,splitLabel(s));
  save();renderAll();
  }
@@ -377,7 +378,7 @@ function poPlace(slot,isFinal){
 }
 function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
- s.fund+=SPONSORS[s.sponsorLv].income; // 赞助商每日结算
+ s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
  if(s.transferWindow>0){
  s.transferWindow--;
@@ -407,8 +408,8 @@ function nextDay(s){
 }
 function payWage(s){
  const wage=weeklyWage(s);
- // 选手代言收入：人气 × 0.3万/周（商业价值对冲工资帽压力）
- const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*3),0));
+ // 选手代言收入：人气 × 0.3万/周 × 粉丝系数（商业价值对冲工资帽压力）
+ const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*3),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;
@@ -718,6 +719,44 @@ function leaguePlacements(s){
  (s.cardLosers||[]).forEach(n=>place[n]='p1112'); // 卡位赛败者
  (s.eliminated||[]).forEach(n=>{if(!place[n])place[n]='p1318';}); // B组3-6名
  return place;
+}
+/* ================= 粉丝与商业（成绩 → 粉丝 → 收入 的正循环） =================
+ 粉丝由成绩驱动（赛段名次/冠军/选手人气），再反过来放大赞助单价、门票流水与代言收入，
+ 并作为赞助商升级门槛——把原先互不相干的三条线（选手人气 / 赞助商 / 代言）缝成一个环。
+ 系数刻意保守且封顶；平衡门禁不跑转会，经济改动对门禁几乎无影响。 */
+function initFans(s){ // 开档粉丝 = 底子 + 阵容人气（豪门起点高，自建从零起步）
+ const pop=(s.players||[]).reduce((t,p)=>t+(p.popularity||0),0);
+ s.fans=Math.round((s.selfBuilt?6:10)+pop/12);
+ return s.fans;
+}
+const FAN_MILESTONES=[20,80,200]; // 与赞助商升级门槛对齐：突破即可洽谈更高级赞助
+function addFans(s,n,why){
+ if(!n)return s.fans||0;
+ const before=s.fans==null?0:s.fans;
+ const after=Math.max(0,Math.round((before+n)*10)/10);
+ s.fans=after;
+ if(why&&Math.abs(after-before)>=0.5)logEvent(s,' 粉丝 '+(after>=before?'+':'')+(Math.round((after-before)*10)/10)+'万（'+why+' · 当前 '+after+'万）');
+ FAN_MILESTONES.forEach(m=>{
+  if(before<m&&after>=m){
+   const tier=SPONSORS.filter(x=>x.fans===m).map(x=>x.name).join('/');
+   if(tier)logEvent(s,' 粉丝突破 '+m+' 万！可以洽谈「'+tier+'」级别的赞助商了');
+  }
+ });
+ return after;
+}
+const FAN_CAP=600; // 粉丝计效上限（万）：所有商业系数共用同一个帽子，避免极端值把日流水顶穿
+const fanEff=s=>Math.min(s.fans||0,FAN_CAP);
+const fanMul=(s,div)=>1+fanEff(s)/div; // 粉丝加成
+/* 每日商业流水：赞助单价（粉丝加成）+ 门票/周边（同样走封顶）。抽成纯函数便于精确断言 */
+function dailyCommercialIncome(s){
+ return Math.round(SPONSORS[s.sponsorLv].income*fanMul(s,500))+Math.round(fanEff(s)*0.08);
+}
+/* 赛段收官结算粉丝：阵容人气是基本盘，夺冠/亚军额外加成 */
+function awardSplitFans(s,isChamp,isRunner){
+ const pop=(s.players||[]).reduce((t,p)=>t+(p.popularity||0),0);
+ let gain=pop/60;
+ gain+=isChamp?8:(isRunner?5:(s.phase==='eliminated'?0:2));
+ return addFans(s,Math.round(gain*10)/10,'赛段收官·'+splitLabel(s));
 }
 function awardAnnualPts(s){
  const pts=ANNUAL_PTS[s.split]||ANNUAL_PTS.spring;
@@ -1205,6 +1244,7 @@ function finishAnnual(s,silent){
  }
  awardFMVP(s,p.champ,gameYear(s)+' KPL 年度总决赛');
  s.champion=p.champ===s.teamName;
+ addFans(s,p.champ===s.teamName?25:(runner===s.teamName?12:6),'KPL 年度总决赛'); // 年总是全年最大的曝光
  }
  boardSettle(s); // 董事会结算：按本赛季年度积分排名评价（必须在 newSeason 前——此时 s.season 仍是刚结束那年）
  newSeason(s); // 年度轮换：年龄/合同/退役结算 → 下一年春季赛

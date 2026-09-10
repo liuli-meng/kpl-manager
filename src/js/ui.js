@@ -367,9 +367,13 @@ function renderClub(){
 function renderBiz(){
  const sp=SPONSORS[S.sponsorLv],next=SPONSORS[S.sponsorLv+1];
  let html=`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
- html+=`<div class="sponsor"><span class="s-icon">${sp.icon}</span><div><div class="s-name">${sp.name} <span class="gold">(当前)</span></div><div class="s-desc">每日收入 ${sp.income}万</div></div></div>`;
+ const fansNow=Math.round(S.fans||0);
+ const effIncome=Math.round(sp.income*fanMul(S,500));
+ html+=`<div class="sponsor"><span class="s-icon">${sp.icon}</span><div><div class="s-name">${sp.name} <span class="gold">(当前)</span></div><div class="s-desc">每日收入 ${sp.income}万${effIncome>sp.income?' <span class="green">→ 实收 '+effIncome+'万（粉丝加成 +'+(effIncome-sp.income)+'）</span>':''}</div></div></div>`;
+ html+=`<div class="hint" style="margin:6px 0">粉丝 <b>${fansNow}</b> 万 · 门票/周边日流水 ${Math.round(fansNow*0.08)}万 · 代言收入 ${Math.round(100*fanMul(S,300)-100)}% 加成<span class="dim">（粉丝由战绩与选手人气成长）</span></div>`;
  if(next){
- html+=`<button class="btn gold sm" onclick="upgradeSponsor()" ${S.fund<next.cost?'disabled':''}>升级到「${next.name}」需 ${next.cost}万</button>`;
+ const lackFans=(next.fans||0)>fansNow;
+ html+=`<button class="btn gold sm" onclick="upgradeSponsor()" ${(S.fund<next.cost||lackFans)?'disabled':''}>升级到「${next.name}」需 ${next.cost}万 · ${next.fans||0}万粉${lackFans?'（还差 '+(next.fans-fansNow)+'万粉）':''}</button>`;
  }else{html+=`<div class="hint">已是最顶级的赞助商！</div>`;}
  html+=`</div>`;
  // 工资帽

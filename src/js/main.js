@@ -140,9 +140,11 @@ function resetGame(){
 function upgradeSponsor(){
  const next=SPONSORS[S.sponsorLv+1];
  if(!next)return;
- if(S.fund<next.cost){toast('资金不足');return;}
+ if(S.fund<next.cost){toast('资金不足（需 '+next.cost+'万）');return;}
+ const fans=Math.round(S.fans||0);
+ if((next.fans||0)>fans){toast('粉丝不足：「'+next.name+'」要求 '+(next.fans||0)+' 万粉丝（当前 '+fans+' 万）——成绩与人气才能换来关注');return;}
  S.fund-=next.cost;S.sponsorLv++;
- logEvent(S,` 签约新赞助商「${next.name}」，每日收入 ${next.income}万`);
+ logEvent(S,` 签约新赞助商「${next.name}」，每日收入 ${next.income}万（粉丝 ${fans} 万）`);
  save();renderAll();toast(`赞助商升级成功！`);
 }
 
@@ -312,6 +314,7 @@ function createTeam(){
  // 赛前转会期：先组队再开赛
  S.preseason=true;S.transferWindow=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
+ initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`战队 ${name} 成立！初始资金8000万，目标：KPL 总冠军！`);
  logEvent(S,' 开局直签 5 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容');
@@ -353,6 +356,7 @@ function applyClub(){
  // 赛前转会期：先组队再开赛
  S.preseason=true;S.transferWindow=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
+ initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
  logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${lineup.map(id=>S.players.find(p=>p.id===id).name).join(' / ')}`);
