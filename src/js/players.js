@@ -39,6 +39,7 @@ function buyPlayer(s,p){
  s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
+ recordTransfer(s,'in',p,cost,'自由市场',p.discount?'市场特惠签约':'市场签约'); // 年度回顾·转会台账
  logEvent(s,` 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
  try{SFX.gold();}catch(_){}
  save();renderAll();return true;

@@ -44,6 +44,11 @@ function newState(teamName,icon){
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
  fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
  captain:null, // 队长（选手 id）：全队战力小幅加成 + 士气激励，离队自动摘除
+ kjia:null, // K甲联赛（二队）：独立赛程/积分榜/二队班底，每赛段重开——见 season.js「K甲联赛」
+ offers:[], // 赛中转会报价（表现火热选手被挖角）：留人/放人/抬价三选——见 transfer.js
+ transfers:[], // 转会台账（买入/卖出/放走）：年度回顾·转会记录数据源
+ yearReviews:[], // 年度回顾（每年一份快照）：成绩曲线/转会记录/董事会评价/关键战役
+ yearStages:[], // 本年度各赛段名次（成绩曲线数据源，年度轮换清零）
  };
 }
 function rosterAll(s){return s.players;}
@@ -198,6 +203,11 @@ function migrateSave(){
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
  S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
  S.captain=S.captain==null?null:S.captain; // 队长字段兜底（旧档统一为 null）
+ if(S.kjia===undefined)S.kjia=null; // K甲联赛状态（旧档缺字段；nextDay/renderKjia 会懒初始化）
+ S.offers=S.offers||[]; // 赛中转会报价（旧档缺字段兜底）
+ S.transfers=S.transfers||[]; // 转会台账（旧档缺字段兜底）
+ S.yearReviews=S.yearReviews||[]; // 年度回顾（旧档缺字段兜底）
+ S.yearStages=S.yearStages||[]; // 成绩曲线（旧档缺字段兜底）
  S.aiRosters={}; // 名册更新后重建对手阵容
  // 修复旧版 0:0 模拟（KPL.BO5 未定义）造成的错误积分：回滚后按新逻辑重算
  if(typeof phaseGroups==='function'&&S.tables&&S.aiSchedule){

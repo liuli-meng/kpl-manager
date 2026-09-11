@@ -12,11 +12,12 @@ const out = vm.runInContext(`
   const mkS=()=>{S=newState('粉丝队','x');fillRoster(S,'mid','star');return S;};
 
   // ① 开档粉丝由阵容人气决定：自建底子低、执教底子高；都不为负
+  // 同一套阵容只切换 selfBuilt——两次 mkS 是两套随机阵容，人气基数不同会把底子比较搅成抽样噪声
   const a=mkS();a.selfBuilt=true;const fa=initFans(a);
-  const b=mkS();b.selfBuilt=false;const fb=initFans(b);
+  a.selfBuilt=false;const fb=initFans(a);
   if(!(fa>0&&fb>0))fail('开档粉丝应为正数: 自建'+fa+' 执教'+fb);
   else if(!(fb>=fa))fail('执教档起步粉丝应不低于自建档: '+fb+' < '+fa);
-  else log('① 开档粉丝：自建 '+fa+' 万 · 执教 '+fb+' 万（按阵容人气）');
+  else log('① 开档粉丝：同一套阵容下 自建 '+fa+' 万 · 执教 '+fb+' 万（底子 6 vs 10 + 人气盘）');
 
   // ② 赛段结算涨粉：夺冠 > 进季后赛 >= 止步（止步只保留阵容人气基本盘，不倒扣）
   const s=mkS();s.fans=10;

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "build": "powershell -ExecutionPolicy Bypass -File build.ps1",
-    "test": "node tests/audit-static.js && node tests/verify-regression.js && node tests/verify-ai-coach.js && node tests/verify-annual.js && node tests/verify-fixes.js && node tests/verify-contract.js && node tests/verify-natcamp.js && node tests/verify-achieve.js && node tests/verify-save.js && node tests/verify-logcat.js && node tests/verify-names.js && node tests/verify-board.js && node tests/verify-scenario.js && node tests/verify-fans.js && node tests/verify-squad.js && node tests/verify-tactics.js && node smoke.js && node tests/sim-quick.js",
+    "test": "node tests/audit-static.js && node tests/verify-regression.js && node tests/verify-ai-coach.js && node tests/verify-annual.js && node tests/verify-fixes.js && node tests/verify-contract.js && node tests/verify-natcamp.js && node tests/verify-achieve.js && node tests/verify-save.js && node tests/verify-logcat.js && node tests/verify-names.js && node tests/verify-board.js && node tests/verify-scenario.js && node tests/verify-fans.js && node tests/verify-squad.js && node tests/verify-tactics.js && node tests/verify-kjia.js && node tests/verify-offer.js && node tests/verify-review.js && node smoke.js && node tests/sim-quick.js",
     "fuzz": "node tests/fuzz.js",
     "sim": "node sim.js",
     "sim:quick": "node tests/sim-quick.js"

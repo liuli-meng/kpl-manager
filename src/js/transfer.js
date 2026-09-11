@@ -478,7 +478,9 @@ function negoSubmit(){
  if(!negoCapCheck(s,p))return; // 超帽需确认（奢侈税），取消则留在谈判
  if(!n.freeAgent)s.fund-=fee;
  p.wage=wage;
+ const fromTeam=n.freeAgent?'自由球员':(p.ownerTeam||'原俱乐部');
  negoComplete(s,p,n.freeAgent?0:fee);
+ recordTransfer(s,'in',p,n.freeAgent?0:fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
  logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
  if(fee>=300)logEvent(s,' 重磅转会！联盟震动');
  window._nego=null;closeModal('app-modal');
@@ -535,6 +537,7 @@ function openSellNego(s,pid){
  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
  if(p.natFill){toast(p.name+' 是亚运集训期的借调顶位，归还青训前不能出售');return;}
+ if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已挂牌，请先撤牌或等待报价');return;}
  const ask=sellAskPrice(p);
  const cap=sellCeiling(p);
@@ -638,6 +641,7 @@ function sellQuit(){
 }
 /* 成交共用：转会费入账 + 名册/首发/挂牌清理 */
 function completeSale(s,p,fee,team){
+ recordTransfer(s,'out',p,fee,team,'转会出售'); // 年度回顾·转会台账
  s.fund+=fee;
  s.maxSale=Math.max(s.maxSale||0,fee); // 单笔出售纪录（成就「天价交易」）
  s.players=s.players.filter(x=>x.id!==p.id);
@@ -672,6 +676,7 @@ function listPlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能挂牌');return;}
+ if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再挂牌');return;}
  if(s.lineup.includes(pid)){toast('请先将该选手移出首发');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已在挂牌名单');return;}
  const price=Math.round(valueOf(overall(p))*(p.willingness>=60?0.8:1.1));
@@ -883,6 +888,7 @@ function releasePlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p||p.contract>0){toast('该选手合同未到期');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能放走');return;}
+ if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作');return;}
  s.players=s.players.filter(x=>x.id!==pid);
  const li=s.lineup.indexOf(pid);if(li>=0)s.lineup.splice(li,1);
  if(s.pick)delete s.pick[p.pos];
@@ -891,6 +897,7 @@ function releasePlayer(s,pid){
  p.contract=1;
  s.freeAgents=[...(s.freeAgents||[]).filter(x=>x.id!==pid),p];
  s.expiring=(s.expiring||[]).filter(x=>x!==pid);
+ recordTransfer(s,'out',p,0,'自由球员','合同到期不续约放走'); // 年度回顾·转会台账
  logEvent(s,' 未与 '+p.name+' 续约，进入自由市场（其他队可直签）');
  save();renderAll();toast(p.name+' 进入自由市场');
 }
@@ -1070,4 +1077,103 @@ function tickLoans(s){
  s.aiRosters={};
  }
  });
+}
+/* ================= 赛中转会报价（打出名堂的选手收到其他队 offer） =================
+ 赛季进行中（非转会期），表现火热的选手会被其他俱乐部盯上——留人/放人/抬价三选：
+ 留人花工资（涨薪 ~8% 表达诚意，士气与忠诚上升）；放人收钱但得罪粉丝与更衣室；
+ 抬价约半数买家接受、部分给最终报价、也可能直接离场。报价 3 天不答复自动过期。
+ 与董事会/更衣室的联动是天然发生的：留人推高周薪（工资帽/奢侈税压力），
+ 放人削弱阵容（KPI 风险）并让队友寒心。引擎只在 nextDay 生成与过期 offer——
+ 门禁模拟不结算真实比赛表现（val 只在 gamePerform 更新），不会触发本系统。 */
+const OFFER_TTL=3; // 报价有效期（天）
+function eligibleForOffer(s,p){
+ if(!p||p.loan||p.kjia>0)return false;
+ if(typeof natCamping==='function'&&natCamping(s,p))return false; // 国家队集训缺席，不接 offer
+ if((p.val||100)<112)return false; // 表现门槛：打出名堂（火热≥112%）
+ return true;
+}
+function inSeasonOfferTick(s){
+ if(s.transferWindow>0)return; // 转会期走挂牌竞价，不重复
+ s.offers=s.offers||[];
+ const before=s.offers.length;
+ s.offers=s.offers.filter(o=>o.expire>s.day);
+ if(s.offers.length<before)logEvent(s,' 有俱乐部的赛中报价到期无人答复，买家转向了其他目标');
+ if(s.offers.length>=2)return; // 同时最多挂 2 份，避免刷屏
+ (s.players||[]).forEach(p=>{
+ if(s.offers.length>=2)return;
+ if(s.offers.some(o=>o.pid===p.id))return;
+ if(!eligibleForOffer(s,p))return;
+ if((p._offerCd||0)>s.day)return;
+ // 概率随火热程度上浮（火热顶星 ~6%/天，刚过门槛 ~1.5%/天）
+ const heat=(p.val||100)-100;
+ if(Math.random()>=clamp(0.015+heat*0.0012,0.015,0.06))return;
+ const fee=Math.round(buyoutPrice(p)*(0.95+Math.random()*0.4)); // 95%~135% 身价
+ // 买家偏好：身价越高越可能是豪门在挖（取 AI 队前半段的强队池）
+ const pool=AI_TEAMS.filter(t=>t.name!==s.teamName);
+ const buyer=pick(pool.slice(0,Math.max(6,Math.round(pool.length*(overall(p)>=88?0.5:1)))));
+ s.offers.push({pid:p.id,name:p.name,team:buyer.name,fee,expire:s.day+OFFER_TTL,status:'open'});
+ p._offerCd=s.day+20; // 同一选手 20 天内不再被报价
+ logEvent(s,' 赛中报价：'+buyer.name+' 开价 '+fee+'万 买断 '+p.name+'（表现引起联盟关注，俱乐部页 '+OFFER_TTL+' 天内答复）');
+ });
+}
+/* 放人结算共用：转会费入账 + 粉丝失望 + 队友寒心（sold 触发的两条系统联动） */
+function sellViaOffer(s,p,fee,team){
+ const pop=p.popularity||0;
+ const wasStarter=s.lineup.includes(p.id);
+ completeSale(s,p,fee,team);
+ const fanHit=clamp(Math.round(pop/12),1,5);
+ addFans(s,-fanHit,team+' 挖走 '+p.name);
+ s.players.forEach(x=>x.morale=clamp(x.morale-4,20,100));
+ if(wasStarter)logEvent(s,' '+POS[p.pos][0]+'位置出现空缺——转会市场签人 / 训练页提拔青训，二选一');
+ return fanHit;
+}
+function respondOffer(s,idx,action){
+ s.offers=s.offers||[];
+ const o=s.offers[idx];
+ if(!o)return;
+ const p=s.players.find(x=>x.id===o.pid);
+ if(!p){s.offers.splice(idx,1);save();renderAll();return;}
+ if(action==='keep'){ // 留人：回绝报价 + 涨薪表达诚意
+ const raise=Math.max(2,Math.round(p.wage*0.08));
+ p.wage+=raise;
+ p.morale=clamp(p.morale+5,20,100);
+ p.willingness=clamp((p.willingness==null?70:p.willingness)+5,0,100);
+ s.offers=s.offers.filter(x=>x.pid!==p.id);
+ logEvent(s,' 留人：回绝 '+o.team+' 的报价，给 '+p.name+' 涨薪至 '+p.wage+'万/周（士气+5 · 忠诚+5）——工资帽压力自负');
+ toast(p.name+' 留队！周薪 +'+raise+'万');
+ }else if(action==='sell'){ // 放人：接受报价
+ const fanHit=sellViaOffer(s,p,o.fee,o.team);
+ s.offers=s.offers.filter(x=>x.pid!==p.id);
+ toast(p.name+' 已转会 '+o.team+'（+'+o.fee+'万 · 粉丝-'+fanHit+'万）');
+ }else if(action==='counter'){ // 抬价：+20~35% 反报价 → 成交 / 最终报价 / 离场
+ if(o.status==='final'){toast('对方已给出最终报价：接受成交或留人');return;}
+ const ask=Math.round(o.fee*(1.2+Math.random()*0.15));
+ const roll=Math.random();
+ if(roll<0.55){
+ logEvent(s,' 抬价成功：'+o.team+' 接受 '+ask+'万 要价——'+p.name+' 加价成交（原报价 '+o.fee+'万）');
+ sellViaOffer(s,p,ask,o.team);
+ s.offers=s.offers.filter(x=>x.pid!==p.id);
+ toast(p.name+' 加价转会 '+o.team+'（+'+ask+'万）');
+ }else if(roll<0.85){
+ o.status='final';o.fee=ask;
+ logEvent(s,' '+o.team+' 给出最终报价 '+ask+'万：接受成交或留人，不再抬价');
+ }else{
+ s.offers=s.offers.filter(x=>x.pid!==o.pid);
+ p.morale=clamp(p.morale-4,20,100);
+ logEvent(s,' '+o.team+' 觉得被抬价羞辱，退出谈判——'+p.name+' 留队但情绪受影响（士气-4）');
+ }
+ }
+ save();renderAll();
+}
+
+/* ================= 转会台账（年度回顾·转会记录数据源） =================
+ 所有涉及本俱乐部的永久性人员流动统一入册：买入（市场/谈判/自由签）/ 卖出（谈判成交/
+ 挂牌竞价/赛中报价）/ 到期放走。租借与续约不入册（临时/合同行为，另见对应面板）。 */
+function recordTransfer(s,dir,p,fee,team,note){
+ try{
+ s.transfers=s.transfers||[];
+ s.transfers.unshift({yr:gameYear(s),season:s.season,dir,name:p.name,pos:p.pos||'mid',
+ fee:Math.round(fee||0),team:team||'',note:note||'',age:p.age||0,ovr:overall(p)});
+ s.transfers=s.transfers.slice(0,80);
+ }catch(e){}
 }

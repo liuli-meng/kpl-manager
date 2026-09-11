@@ -21,7 +21,9 @@ function pcard(p,extra){
  // 合同状态（租借选手无合同）
  const contractHtml=(p.contract==null||p.loan)?'':`<div class="p-hero" style="color:${p.contract>0?'var(--dim)':'var(--red)'}">${p.contract>0?('合同'+p.contract+'年'):'合同到期 · 转会期续约'}</div>`;
  // 出场统计 + 更衣室/K甲状态（apps 由 finishSeries 累计；transferRequest 由更衣室年检标记）
- const appsHtml=(p.apps||p.transferRequest||p.kjia>0)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?' <span style="color:var(--cyan)">· K甲锻炼剩 '+p.kjia+' 天</span>':''}</div>`:'';
+ // K甲表现：下放期间的出场与场均 KDA（kjiaStats 由二队每场结算累计）
+ const kjStat=(p.kjiaStats&&p.kjiaStats.apps)?` · K甲${p.kjiaStats.apps}场 场均${Math.round(p.kjiaStats.k/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.d/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.a/p.kjiaStats.apps*10)/10}`:'';
+ const appsHtml=(p.apps||p.transferRequest||p.kjia>0)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?` <span style="color:var(--cyan)">· K甲锻炼剩 ${p.kjia} 天${kjStat}</span>`:''}</div>`:'';
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
  const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
@@ -56,6 +58,47 @@ function showReplay(h){
  <div class="logbox" style="max-height:60vh">${h.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('on');
+}
+/* ================= 年度回顾弹窗（赛季回顾页） =================
+ 数据由 buildYearReview 在年度轮换前定格（season.js）；此处只读渲染。
+ 成绩曲线=各赛段名次徽章带；转会记录/董事会评价/关键战役/成就/经营快照分区展示。 */
+function showYearReview(idx){
+ const r=(S.yearReviews||[])[idx];
+ if(!r){toast('暂无年度回顾');return;}
+ const placeCol=p=>p==='冠军'?'var(--gold)':p==='亚军'?'var(--cyan)':/金牌|四强|胜/.test(p)?'var(--green)':/未|无|出局|13-18|止步/.test(p)?'var(--red)':'var(--dim)';
+ const stageRow=r.stages.length?r.stages.map(st=>`<div class="match" style="margin-bottom:5px;padding:8px 10px">
+ <div class="vs"><span class="tname" style="font-size:12px">${st.ev}</span></div>
+ <div class="score" style="font-size:13px;color:${placeCol(st.place)};min-width:70px">${st.place}</div></div>`).join('')
+ :'<div class="hint">本年度暂无赛段记录</div>';
+ const honorRow=r.honors.length?r.honors.map(h=>`<div class="hint" style="color:${h.champion?'var(--gold)':'var(--dim)'}">${h.champion?'':''}${h.title}</div>`).join(''):'<div class="hint">无决赛荣誉</div>';
+ const trRow=r.transfers.length?r.transfers.map(t=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line);font-size:12px">
+ <span>${t.dir==='in'?'<span class="cyan">签入</span>':'<span style="color:var(--gold)">售出</span>'} <b>${t.name}</b> <span class="dim">${t.team||''}${t.note?' · '+t.note:''}</span></span>
+ <span class="${t.dir==='in'?'red':'green'}" style="white-space:nowrap">${t.dir==='in'?'-':'+'}${t.fee||0}万</span></div>`).join('')
+ :'<div class="hint">本年度无人员流动</div>';
+ const b=r.board;
+ const boardRow=b?`<div style="font-size:13px;margin-bottom:4px">年度积分第 <b>${b.rank||'—'}</b> 名（目标前 ${b.target||'—'}）→ 信任度 <b class="${b.delta>=0?'green':'red'}">${b.delta>=0?'+':''}${b.delta}</b>（结算后 ${b.trust}）</div>
+ <div class="hint">${b.note||''}</div>`
+ :'<div class="hint">本年度董事会未作评价（缺积分数据）</div>';
+ const keyRow=r.keys.length?r.keys.map(h=>`<div class="match" style="margin-bottom:5px;padding:7px 10px;${h.win?'':'border-color:var(--line)'}">
+ <div class="vs"><span class="tname" style="font-size:12px">${r.team} vs ${h.opp}</span><div class="power" style="font-size:10px">${h.stage}${h.peak?' · 巅峰对决':''}</div></div>
+ <div class="score" style="font-size:13px;min-width:0">${h.win?'<span class="green">胜</span>':'<span class="red">负</span>'} ${h.score}</div></div>`).join('')
+ :'<div class="hint">本年度无关键战役记录</div>';
+ const achRow=r.achieved.length?r.achieved.map(n=>`<span class="p-tag" style="border-color:var(--gold);color:var(--gold);margin:2px">${n}</span>`).join(''):'<span class="hint">本年度无新成就</span>';
+ $('#app-modal-body').innerHTML=`
+ <h2>${r.year} 年度回顾 <span class="tag">${r.team} · 第 ${r.season} 赛季</span></h2>
+ <div class="panel" style="margin:10px 0"><h3>成绩曲线 <span class="tag">年度积分 ${r.annualPts} · 联盟第 ${r.annualRank||'—'} 名</span></h3>
+ ${stageRow}</div>
+ <div class="panel" style="margin:10px 0"><h3>荣誉</h3>${honorRow}</div>
+ <div class="panel" style="margin:10px 0"><h3>转会记录 <span class="tag">${r.transfers.length} 笔</span></h3>${trRow}</div>
+ <div class="panel" style="margin:10px 0"><h3>董事会评价</h3>${boardRow}</div>
+ <div class="panel" style="margin:10px 0"><h3>关键战役 <span class="tag">巅峰对决 / 决赛轮次</span></h3>${keyRow}</div>
+ <div class="panel" style="margin:10px 0"><h3>本年度成就</h3><div>${achRow}</div></div>
+ <div class="panel" style="margin:10px 0"><h3>经营快照</h3>
+ <div class="hint">年末资金 ${fmt(r.fund)} · 粉丝 ${r.fans} 万 · 年度积分 ${r.annualPts} 分</div></div>
+ <div class="center"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
+ $('#app-modal').classList.add('on');
+ $('#app-modal').classList.add('wide');
+ if(S._reviewNew===r.year){S._reviewNew=null;save();} // 首次查看后清除俱乐部页提示
 }
 function showCareer(p){
  if(!p||!p.name){toast('档案暂不可用');return;}
@@ -325,6 +368,31 @@ function renderClub(){
  <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
  }
+ // 年度回顾提示条：年度轮换后自动生成（查看后消失，历史回顾在经营页）
+ if(S._reviewNew!=null&&(S.yearReviews||[]).length){
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>年度回顾 <span class="tag" style="color:var(--gold)">${S._reviewNew} 赛季总结已生成</span></h3>
+ <div class="hint" style="margin-bottom:8px">上一年的成绩曲线、转会记录、董事会评价与关键战役已归档。</div>
+ <button class="btn gold" onclick="showYearReview(0)"> 查看 ${S._reviewNew} 年度回顾</button></div>`;
+ }
+ // 赛中转会报价：留人/放人/抬价三选（引擎在 transfer.js；报价 3 天过期）
+ if((S.offers||[]).length){
+ html+=`<div class="panel"><h3>赛中转会报价 <span class="tag">${S.offers.length} 份待答复 · ${OFFER_TTL} 天内有效 · 过期作废</span></h3>
+ ${S.offers.map((o,i)=>{
+ const p=S.players.find(x=>x.id===o.pid);
+ const meta=p?`${POS[p.pos][1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 周薪 ${p.wage}万`:'';
+ const final=o.status==='final';
+ return `<div class="match" style="margin-bottom:6px;padding:8px 10px;${final?'border-color:var(--gold)':''}">
+ <div class="vs"><span class="tname" style="font-size:13px">${o.team} ⇒ ${o.name}</span>
+ <div class="power" style="font-size:10px">${meta} · 报价 <b class="gold">${o.fee}万</b> · 第 ${o.expire} 天到期${final?' · <span class="gold">最终报价（不再抬价）</span>':''}</div></div>
+ <div style="display:flex;gap:4px;flex-wrap:wrap">
+ <button class="btn sm" onclick="respondOffer(S,${i},'keep')">留人（涨薪 8%）</button>
+ <button class="btn sm primary" onclick="respondOffer(S,${i},'sell')">放人（收 ${o.fee}万）</button>
+ ${final?'':`<button class="btn sm gold" onclick="respondOffer(S,${i},'counter')">抬价（+20~35%）</button>`}
+ </div></div>`;
+ }).join('')}
+ <div class="hint">留人：涨薪约 8% 表达诚意（士气+5 · 忠诚+5），工资帽/奢侈税压力自负；放人：收下转会费，但粉丝失望、队友寒心，阵容也削弱；抬价：约半数买家接受加价、部分给最终报价、也可能直接离场。表现火热（身价系数 ≥112%）的选手才会被盯上。</div>
+ </div>`;
+ }
  // 今日行动
  html+=`<div class="panel">
  <h3>今日行动 <span class="tag">每天可选择一项</span></h3>
@@ -416,6 +484,18 @@ function renderBiz(){
  html+=`<div class="hint">还没有 FMVP——率队杀进决赛并打出统治表现（各局 MVP 累计最多）即可当选，获专属皮肤与人气温涨</div>`;
  }
  html+=`</div>`;
+ // 年度回顾归档（每年一份快照，点开回看）
+ {
+ const revs=S.yearReviews||[];
+ html+=`<div class="panel"><h3>年度回顾 <span class="tag">${revs.length} 份归档 · 每年赛季末自动生成</span></h3>
+ <div class="hint" style="margin-bottom:8px">每年度轮换时定格一份总结：成绩曲线（各赛段名次）、转会记录、董事会评价、关键战役与经营快照。</div>
+ ${revs.length?revs.map((r,i)=>`<div class="match" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" onclick="showYearReview(${i})">
+ <div class="vs"><span class="tname" style="font-size:13px">${r.year} 年度回顾${r.stages.some(st=>st.place==='冠军')?' <span class="gold">冠军赛季</span>':''}</span>
+ <div class="power" style="font-size:10px">年度积分 ${r.annualPts} · 联盟第 ${r.annualRank||'—'} 名 · ${r.transfers.length} 笔转会 · 信任度 ${r.board?r.board.trust:'—'}</div></div>
+ <div class="score" style="font-size:12px;min-width:0">看回顾</div>
+ </div>`).join(''):'<div class="hint">还没有年度回顾——完成一个完整年度（年总收官）后自动生成</div>'}
+ </div>`;
+ }
  // 成就（生涯里程碑：解锁一次永久入册，条件在 save 巡检中评估）
  {
  const ach=S.achieved||{};
@@ -795,6 +875,77 @@ function renderLeague(){
  </div>`;
  }
  $('#page-league').innerHTML=html;
+}
+/* ================= 二队页（K甲联赛完整版：独立赛程 + 积分榜 + 下放选手表现数据） =================
+ K甲与 KPL 赛段并行推进：每 2 天一轮（nextDay 结算），下放选手真实出战。
+ 引擎在 season.js「K甲联赛」区段；本页只读 s.kjia 与 p.kjiaStats/kjiaLog 渲染。 */
+function renderKjia(){
+ if(!S.kjia)initKjia(S); // 旧档/新档懒初始化（首次点进二队页就能看到整届联赛）
+ const k=S.kjia,my=k.my||kjiaMyName(S);
+ const rank=kjiaRank(S);
+ const myRank=rank.indexOf(my)+1;
+ const done=k.rd>=k.rounds.length;
+ const next=done?null:k.rounds[k.rd].find(m=>m.a===my||m.b===my);
+ let html=`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
+ <div class="hint">次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。</div></div>`;
+ // 二队概况 + 下一场
+ const demoted=(S.players||[]).filter(p=>p.kjia>0);
+ html+=`<div class="panel"><h3>二队概况 <span class="tag">${crest(S.icon,my,18)} ${my} · 战力 ${fmt(kjiaTeamPower(S))} · 联赛第${myRank||'—'}名 · 下放选手 ${demoted.length} 人</span></h3>`;
+ if(next){
+ const opp=next.a===my?next.b:next.a;
+ html+=`<div class="match" style="border-color:var(--cyan)">
+ <div class="vs"><div class="tname">${my}</div><div class="power">战力 ${fmt(kjiaTeamPower(S))}</div></div>
+ <div class="score" style="font-size:13px"> 下一场 · 第${k.rd+1}轮</div>
+ <div class="vs" style="justify-content:flex-end;text-align:right"><div class="tname">${opp}</div><div class="power">战力 ${fmt(k.powers[opp]||0)}</div></div>
+ </div>`;
+ }else{
+ html+=`<div class="hint">本赛段 K甲已收官：冠军 <b class="gold">${k.champ||'—'}</b>——推进赛段后重开新一届</div>`;
+ }
+ html+=`</div>`;
+ // 积分榜
+ html+=`<div class="panel"><h3>K甲积分榜 <span class="tag">8队单循环 · 胜者积1分</span></h3>
+ <table class="tbl"><tr><th>#</th><th>战队</th><th>胜</th><th>负</th><th>积分</th><th>净胜局</th><th>战力</th></tr>
+ ${rank.map((n,i)=>{
+ const t=k.tables[n]||{w:0,l:0,pts:0,pw:0};
+ const isMy=n===my;
+ const pw=n===my?kjiaTeamPower(S):(k.powers[n]||0);
+ return `<tr class="${isMy?'me':''}"><td>${i+1}</td><td>${isMy?'<b>'+n+' ★</b>':n}</td><td>${t.w}</td><td>${t.l}</td><td>${t.pts}</td><td>${t.pw}</td><td>${fmt(pw)}</td></tr>`;
+ }).join('')}</table></div>`;
+ // 赛程与赛果（全 7 轮）
+ html+=`<div class="panel"><h3>赛程与赛果 <span class="tag">单循环 7 轮</span></h3>
+ ${k.rounds.map((rd,ri)=>{
+ const isCur=ri===k.rd&&!done;
+ return `<div class="hint" style="margin:8px 0 4px;font-weight:700;color:${isCur?'var(--cyan)':'var(--dim)'}">第${ri+1}轮${ri<k.rd?'（已赛）':isCur?'（进行中）':''}</div>`
+ +rd.map(m=>{
+ const played=!!m.r;
+ const me=m.a===my||m.b===my;
+ const myWon=played&&m.r===my;
+ return `<div class="match ${played?(me?(myWon?'win':'lose'):''):''}" style="padding:7px 10px;margin-bottom:4px;${isCur&&!played?'border-color:var(--cyan)':''}">
+ <div class="vs"><span class="tname" style="font-size:12px">${m.a}${m.a===my?' ★':''}</span></div>
+ <div class="score" style="font-size:13px">${played?m.ms+':'+m.es:(isCur?'待赛':'—')}</div>
+ <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname" style="font-size:12px">${m.b}${m.b===my?' ★':''}</span></div>
+ </div>`;
+ }).join('');
+ }).join('')}</div>`;
+ // 下放选手表现数据（本系统核心：练级看得见）
+ html+=`<div class="panel"><h3>下放选手表现 <span class="tag">K甲累计数据 · 场上好表现有即时成长</span></h3>`;
+ if(demoted.length){
+ html+=`<table class="tbl"><tr><th>选手</th><th>位置</th><th>出场</th><th>场均KDA</th><th>MVP</th><th>胜率</th><th>累计成长</th></tr>
+ ${demoted.map(p=>{
+ const st=p.kjiaStats||{apps:0,k:0,d:0,a:0,mvp:0,wins:0};
+ const avg=st.apps?[st.k,st.d,st.a].map(x=>Math.round(x/st.apps*10)/10).join('/'):'—';
+ const wr=st.apps?Math.round(st.wins/st.apps*100)+'%':'—';
+ return `<tr><td><b>${p.name}</b></td><td>${POS[p.pos][1]}</td><td>${st.apps}</td><td>${avg}</td><td>${st.mvp||0}</td><td>${wr}</td><td class="gold">+${p.kjiaGain||0}</td></tr>`;
+ }).join('')}</table>
+ <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">${(p.kjiaLog||[]).slice(0,3).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>`)).join('')}</div>`;
+ }else{
+ html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 30 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长。</div>`;
+ }
+ html+=`</div>`;
+ // 二队班底（K甲注册选手）
+ html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段调整 · 下放的一队选手顶替出场</span></h3>
+ <div class="grid g4">${k.squad.map(p=>pcard(p,'')).join('')}</div></div>`;
+ $('#page-kjia').innerHTML=html;
 }
 /* ================= 联盟页（战队总览 / 阵容浏览 / 选手榜单） ================= */
 function unionTeams(){

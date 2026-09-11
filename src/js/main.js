@@ -28,6 +28,7 @@ function renderPage(name){
  else if(name==='market')renderMarket();
  else if(name==='train')renderTrain();
  else if(name==='league')renderLeague();
+ else if(name==='kjia')renderKjia();
  else if(name==='union')renderUnion();
  else if(name==='biz')renderBiz();
 }

@@ -52,6 +52,10 @@ const out = vm.runInContext(`
   // ④ 版本大改：持有加强英雄者属性上升、持有削弱英雄者下降，且 s.patch 有记录
   const s4=mkS();S=s4;
   const pUp=s4.players[0],pDown=s4.players[1];
+  // 摇摆位英雄会同时进两个位置的池子（hold/hurt 双中 → +2-2 净 0，属正常游戏行为）。
+  // 断言需要确定性：把两人池子收敛到各自招牌，隔离交叉持有。
+  pUp.heroPool=[{n:pUp.sig,lv:3}];
+  pDown.heroPool=[{n:pDown.sig,lv:3}];
   const sum4=p=>p.attrs.lane+p.attrs.farm+p.attrs.team+p.attrs.mind;
   const beforeUp=sum4(pUp),beforeDown=sum4(pDown);
   applySeasonPatch(s4,pUp.sig,pDown.sig); // 显式指定：确定性断言（也验证"策划指定版本"入口）
@@ -82,9 +86,11 @@ const out = vm.runInContext(`
     if(b5.kjia!==0)fail('倒计时未归零: '+b5.kjia);
     else if(attrs1-attrs0<4)fail('归队后成长不足: +'+(attrs1-attrs0));
     else{
+     // 单次下放成长 4~8，成就门槛为累计 ≥5——不足就再下一轮，顺带验证 kjiaGain 累计语义
+     if((b5.kjiaGain||0)<5){sendKjia(s5,b5.id);for(let i=0;i<KJIA_DAYS;i++)kjiaTick(s5);}
      checkAchievements(s5);
-     if(!s5.achieved.kjia_grad)fail('成长 '+s5.players[0].kjiaGain+' 未解锁 kjia_grad');
-     else log('⑤ K甲下放：30 天后归队，四维 +'+(attrs1-attrs0)+' · swapPlayer 守卫生效 · 解锁「练级成功」');
+     if(!s5.achieved.kjia_grad)fail('成长 '+(b5.kjiaGain||0)+' 未解锁 kjia_grad');
+     else log('⑤ K甲下放：30 天后归队，四维 +'+(attrs1-attrs0)+'（累计 '+b5.kjiaGain+'）· swapPlayer 守卫生效 · 解锁「练级成功」');
     }
    }
   }

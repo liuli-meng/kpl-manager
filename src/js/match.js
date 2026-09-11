@@ -359,6 +359,7 @@ function finishSeries(finalWin){
  // 比赛复盘记录（含巅峰对决名场面标记）
  S.history=S.history||[];
  S.history.unshift({
+ yr:gameYear(S), // 年度归属（赛季回顾·关键战役按年筛选用）
  opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
  score:sr.mw+':'+sr.ow,win:finalWin,logs:sr.logs,
  peak:sr.max>=7&&sr.mw+sr.ow===sr.max // 打满最后一局（BO7 4:3 / BO9 5:4）= 巅峰对决名场面
