@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#141416">
 <title>王者电竞经理 · KPL 篇</title>
 <link rel="icon" href="data:,">
@@ -305,9 +305,10 @@ footer{background:transparent;border-top:1px solid var(--line);
   .stats .stat{min-width:0;padding:5px 8px}
   .stats .stat b{font-size:12px}
   .stats .stat small{font-size:9px}
-  /* 底部标签栏 */
+  /* 底部标签栏（PWA 全屏时垫高安全区，避开手机 Home 横条/手势条） */
   nav{position:fixed;bottom:0;left:0;right:0;margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;
-    z-index:80;background:var(--surface);box-shadow:0 -1px 0 var(--line)}
+    z-index:80;background:var(--surface);box-shadow:0 -1px 0 var(--line);
+    padding-bottom:env(safe-area-inset-bottom,0)}
   nav button{min-width:0;flex:1 1 auto;padding:11px 2px;font-size:11.5px;border-bottom-width:2px}
   .panel{padding:11px;margin-bottom:9px}
   .banner{padding:10px;gap:8px}
@@ -332,8 +333,8 @@ footer{background:transparent;border-top:1px solid var(--line);
   .sponsor{padding:9px}
   .event-card{padding:9px 11px}
   .pbar{font-size:10px}
-  .toast{font-size:12px;padding:9px 15px;bottom:64px}
-  footer{padding:8px;font-size:10px;padding-bottom:80px}
+  .toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0))}
+  footer{padding:8px;font-size:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}
   #tab-self-body .btn,#tab-club-body .btn{width:100%}
   /* 2026-09 移动端 pass：触控目标 / 安全区 / 表格横滑 / 弹窗手感 */
   .btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}
