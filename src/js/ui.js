@@ -738,7 +738,7 @@ function renderMarket(){
  const renewPanel=(expRows||earlyRows)?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3>合同续约 <span class="tag">年限 1-4 年可谈 · 报价定周薪</span></h3>
  <div class="hint" style="margin-bottom:8px">续约 = 谈判：选年限 + 出周薪报价，经纪人按心理价位博弈（长约溢价 / 老将抬价 / 三轮谈崩伤士气），签字费按年限递增。到期不处理将自动续约 1 年；「最后一年」可提前谈，拖到合同年有自由身离队风险。</div>
  ${expRows}${earlyRows}</div>`:'';
- const rows=(S.transferList||[]).map(p=>{
+ const rows=applySortPref('buy',S.transferList).map(p=>{
  const price=buyoutPrice(p);
  const unt=p.untouchable?(p.willingness>=75?`<span style="color:var(--red);font-weight:800">非卖 · 忠诚${p.willingness}</span>`:`<span style="color:var(--gold);font-weight:800">松动 · 意愿${p.willingness}</span>`):'';
  const wil=p.willingness>=60?'<span class="green">愿转会</span>':p.willingness>=30?'<span class="gold">犹豫中</span>':'<span class="red">拒绝加盟</span>';
@@ -746,7 +746,7 @@ function renderMarket(){
  ?`<button class="btn sm ${p.willingness<75?'gold':'primary'}" style="margin:0;min-width:64px" onclick="openNegotiation(S,'${p.id}')">强挖 ${Math.round(raidChance(p)*100)}%</button>`
  :`<button class="btn sm primary" style="margin:0;min-width:64px" onclick="openNegotiation(S,'${p.id}')" ${p.willingness<30?'disabled':''}>${p.willingness<30?'尝试谈判':'谈判'}</button>`;
  return `<div class="match" style="margin-bottom:6px;padding:8px 10px">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${p.ownerTeam} · 总值${overall(p)}${p.age?' · '+p.age+'岁':''})</span></span>
+ <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.ownerTeam} · 总值${overall(p)}${p.age?' · '+p.age+'岁':''})</span></span>
  <div class="power" style="font-size:10px">${wil}${unt}</div></div>
  <div class="score" style="font-size:13px;min-width:0">${p.untouchable?untouchablePrice(p)+'万':price+'万'}</div>
  ${btnHtml}
@@ -765,6 +765,7 @@ function renderMarket(){
  }).join('');
  transferHtml=renewPanel+`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3>转会市场 <span class="tag">转会窗剩余 ${S.transferWindow} 天 · 31岁+退役</span></h3>
  <div class="hint" style="margin-bottom:8px">多轮谈判：报价需同时打动俱乐部（转会费）和选手（年薪）；非卖品溢价强挖有失败风险；生涯暮年选手（29岁+）买来即巅峰末期</div>
+ ${sortChips('buy')}
  <div style="max-height:340px;overflow-y:auto">${rows||'<div class="hint">转会市场暂无选手</div>'}</div>
  <div class="hint" style="margin:10px 0 6px">我的挂牌（AI 队会来报价，转会窗关闭未成交自动撤牌）：</div>
  <div>${listed||'<div class="hint">暂无挂牌选手——在下方"我的队员"中点"挂牌"</div>'}</div>
@@ -793,7 +794,8 @@ function renderMarket(){
  // 自由球员与退役名宿：始终可见（不依赖转会窗）→ 侧栏
  sideHtml+=`<div class="panel ${foldCls('mfa')}" data-fold="mfa"><h3>自由球员 <span class="tag">各队无球可打的替补 · 低价直签</span></h3>
  <div class="hint" style="margin-bottom:8px">26 年自由市场：合同到期的 KPL 选手轮换上架（签一人少一人），谈薪资直签；不足时由无球可打的替补补位</div>
- ${(S.freeAgents||[]).map(p=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+ ${sortChips('fa')}
+ ${applySortPref('fa',S.freeAgents).map(p=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
  <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(总值${overall(p)} · ${POS[p.pos][1]}${p.age?' · '+p.age+'岁':''})</span></span></div>
  <div class="score" style="font-size:13px;min-width:0">${p.signCost}万</div>
  <button class="btn sm primary" style="margin:0" onclick="openNegotiation(S,'${p.id}')">谈薪资直签</button>
@@ -817,14 +819,15 @@ function renderMarket(){
  </div>`;
  const marketPanel=`<div class="panel ${foldCls('mmarket')}" data-fold="mmarket"><h3>自由市场 <span class="tag">${S.transferWindow>0?'转会窗开启·刷新免费·顶星增加':'刷新需5万/次'} · 每日特惠</span></h3>
  <div class="hint" style="margin-bottom:10px">签约费按总值实时定价：总值 90+ ≈ 260万 / 80 ≈ 140万 / 70 ≈ 70万，特惠选手 8 折。${S.marketRefreshed?'本日已刷新过（次日自动重置）':'今日尚未刷新'}</div>
- <div class="g2">${S.market.map(p=>{
+ ${sortChips('sign')}
+ <div class="g2">${applySortPref('sign',S.market).map(p=>{
  const c=costOf(p);
  return pcard(p,`<button class="btn sm primary" onclick="buyPlayer(S,S.market.find(x=>x.id==='${p.id}'))">签约 ${p.discount?`<s style="color:var(--dim)">${valueOf(overall(p))}万</s> ${c}万`:c+'万'}</button>`);
  }).join('')||'<div class="hint">市场空空如也，刷新一下吧</div>'}</div>
  <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${S.transferWindow>0?'（转会期内免费）':'（5万）'}</button>
  </div>`;
  const minePanel=`<div class="panel ${foldCls('mine')}" data-fold="mine"><h3>我的队员</h3>
- ${S.players.length?`<div class="grid g4">${S.players.filter(p=>!S.lineup.includes(p.id)).map(p=>{const listed=(S.listed||[]).some(x=>x.id===p.id);
+ ${S.players.length?`${sortChips('mine')}<div class="grid g4">${applySortPref('mine',S.players.filter(p=>!S.lineup.includes(p.id))).map(p=>{const listed=(S.listed||[]).some(x=>x.id===p.id);
  return pcard(p,`<button class="btn sm primary" onclick="swapPlayer('${p.id}')">↑ 放入首发</button><div style="display:flex;gap:6px;margin-top:8px">${listed
  ?`<button class="btn sm danger" style="flex:1" onclick="delistPlayer(S,'${p.id}')">撤牌</button>`
  :`<button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button><button class="btn sm" style="flex:1" onclick="listPlayer(S,'${p.id}')"> 挂牌</button>`}</div>`);}).join('')||'<div class="hint">全部队员都在首发阵容中</div>'}</div>`:'<div class="hint">还没有队员</div>'}
@@ -834,7 +837,8 @@ function renderMarket(){
 function renderTrain(){
  let html=pageHint('train')+`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性8万 / 英雄特训15万</span></h3>
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
- ${S.players.length?`<div class="grid g4">${S.players.map(p=>pcard(p,`<div class="g2" style="gap:6px">
+ ${sortChips('train')}
+ ${S.players.length?`<div class="grid g4">${applySortPref('train',S.players).map(p=>pcard(p,`<div class="g2" style="gap:6px">
  ${TRAIN_ITEMS.map(t=>`<button class="btn sm" onclick="doTrain(S,'${p.id}','${t.k}')" ${S.trained||p.energy<10?'disabled':''}>${t.n}+1~2</button>`).join('')}
  <button class="btn sm gold" onclick="doHeroTrain(S,'${p.id}')" ${S.trained||p.energy<15||(p.heroPool||[]).length>=80?'disabled':''}>英雄特训 ${(p.heroPool||[]).length}/80</button>
  </div>`)).join('')}</div>`:'<div class="hint">没有选手可训练</div>'}
@@ -1299,6 +1303,44 @@ function thSort(th){
  const body=rows[0]&&rows[0].parentNode;
  if(body)rows.forEach(r=>body.appendChild(r)); // appendChild 移动已有节点即完成重排
  toast('已按「'+th.textContent.trim()+'」'+(dir==='asc'?'升序':'降序'));
+}
+/* ================= 卡片列表排序 + 位置筛选（转会/自由市场等非表格列表） =================
+ 偏好存 localStorage.km_sort（UI 层偏好，不进存档），切页/重进保持；
+ chips 行横向可滑，移动端 38px 触控高度。 */
+function _sortPrefs(){try{return JSON.parse(localStorage.getItem('km_sort')||'{}');}catch(_){return {};}}
+function _saveSortPrefs(p){try{localStorage.setItem('km_sort',JSON.stringify(p));}catch(_){}}
+function getSortKey(key){return _sortPrefs()[key]||'ovr';}
+function getPosFilter(key){return _sortPrefs()[key+'|pos']||'';}
+function setSortKey(key,v){const p=_sortPrefs();p[key]=v;_saveSortPrefs(p);goPage(curPageName());}
+function setPosFilter(key,v){const p=_sortPrefs();p[key+'|pos']=v;_saveSortPrefs(p);goPage(curPageName());}
+function curPageName(){const c=document.querySelector('nav button.on');return c&&c.dataset&&c.dataset.page?c.dataset.page:'club';}
+const SORTERS={
+ ovr:{n:'总值',f:(a,b)=>overall(b)-overall(a)},
+ val:{n:'身价',f:(a,b)=>sellAskPrice(b)-sellAskPrice(a)},
+ age:{n:'年轻',f:(a,b)=>(a.age||0)-(b.age||0)},
+ mor:{n:'士气',f:(a,b)=>(b.morale||0)-(a.morale||0)}
+};
+/* 应用偏好：先按位置筛，再按排序键排——返回副本不动原数组 */
+function applySortPref(key,list){
+ let out=(list||[]).slice();
+ const pos=getPosFilter(key);
+ if(pos)out=out.filter(p=>p.pos===pos);
+ const s=SORTERS[getSortKey(key)];
+ if(s)out.sort(s.f);
+ return out;
+}
+/* chips 行：位置组 + 排序组；pos 传 null 表示该列表无位置概念（不渲染位置组） */
+function sortChips(key,pos){
+ const curPos=getPosFilter(key),cur=getSortKey(key);
+ const chip=(on,label,oc)=>'<button class="s-chip'+(on?' on':'')+'" onclick="'+oc+'">'+label+'</button>';
+ let html='<div class="sort-row">';
+ if(pos!==null){
+ html+=chip(!curPos,'全部',"setPosFilter('"+key+"','')");
+ POS_ORDER.forEach(p=>{html+=chip(curPos===p,POS[p][0],"setPosFilter('"+key+"','"+(curPos===p?'':p)+"')");});
+ html+='<span class="s-div"></span>';
+ }
+ Object.keys(SORTERS).forEach(k=>{html+=chip(cur===k,SORTERS[k].n,"setSortKey('"+key+"','"+k+"')");});
+ return html+'</div>';
 }
 /* ================= 生涯页（选手模式主页：成长 / 竞争 / 报价 / 履历） ================= */
 function renderCareer(){

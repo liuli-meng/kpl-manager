@@ -33,8 +33,7 @@ function dismissHint(name){
  const hide=JSON.parse(localStorage.getItem(HINT_KEY)||'{}');
  hide[name]=1;localStorage.setItem(HINT_KEY,JSON.stringify(hide));
  }catch(_){}
- const cur=document.querySelector('nav button.on');
- renderPage(cur&&cur.dataset&&cur.dataset.page?cur.dataset.page:'club');
+ renderPage(typeof curPageName==='function'?curPageName():'club');
 }
 /* 分步引导：按当前身份遍历可见页（MODE_PAGES），首尾各一页说明 */
 function tourSteps(){

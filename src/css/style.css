@@ -179,6 +179,13 @@ section.page.on{display:block;animation:fadein .18s ease}
 .page-hint span{flex:1;min-width:0}
 .ph-x{background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:0 2px;line-height:1.2;flex:none;font-family:inherit}
 .ph-x:hover{color:var(--txt)}
+/* 卡片列表排序 + 位置筛选 chips */
+.sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:8px;padding-bottom:2px}
+.sort-row::-webkit-scrollbar{display:none}
+.s-chip{flex:none;min-height:28px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--dim);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}
+.s-chip:hover{border-color:var(--line2);color:var(--txt)}
+.s-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(217,164,65,.08)}
+.s-div{flex:none;width:1px;height:18px;background:var(--line);margin:0 3px}
 .progress{height:4px;background:var(--sunken);border-radius:2px;overflow:hidden;margin-top:4px}
 .progress i{display:block;height:100%;background:var(--accent);border-radius:2px}
 .pbar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
@@ -309,6 +316,7 @@ footer{background:transparent;border-top:1px solid var(--line);
   .pcard .p-name{font-size:13px}
   .pcard .p-skill{min-height:0}
   .btn{padding:9px 14px;font-size:13px;min-height:40px}
+  .s-chip{min-height:38px;padding:6px 13px;font-size:12.5px}
   .btn.sm{padding:7px 10px;font-size:12px;min-height:36px}
   .match{padding:9px 10px;gap:6px}
   .match .vs .tname{font-size:13px}
