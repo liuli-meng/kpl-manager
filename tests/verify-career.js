@@ -108,9 +108,19 @@ const out = vm.runInContext(`
    else log('⑥ 退役：年龄到线触发退役声明，赛季履历快照+计数清零，生涯页进入结算态');
   }
 
-  // ⑦ 教练生涯：开局 + 俱乐部自动补强 + 豪门邀约回应
-  S=null;
-  _coachPick=3; // 固定选一支俱乐部
+  // ⑦ 教练生涯：卡片回调/按钮联动（沙箱无真实 DOM，走 handler 与按钮状态断言）+ 开局 + 补强 + 邀约
+  S=null;initStart();switchStartTab('coach');
+  if((coachCardHTML(CLUB_TEMPLATES[0],0)||'').indexOf('pickCoachClub')<0)fail('教练卡片模板未使用 pickCoachClub 回调');
+  else{
+   switchStartTab('coach'); // coach 分支会把 apply 按钮重置为禁用
+   const before=document.getElementById('coach-apply-btn').disabled;
+   pickCoachClub(3);
+   const after=document.getElementById('coach-apply-btn').disabled;
+   if(_coachPick!==3)fail('pickCoachClub 未记录选择');
+   else if(before!==true)fail('未选队时「开始执教」应禁用');
+   else if(after!==false)fail('选队后「开始执教」仍禁用（联动断裂——旧版错绑 pickClub 的症状）');
+   else log('⑦a 教练选队联动：卡片回调 pickCoachClub → 选择入册 → 「开始执教」按钮解锁');
+  }
   applyCoachClub();
   if(!S||S.mode!=='coach')fail('教练开局 mode 应为 coach');
   else if(!S.coachDeal)fail('教练合同缺失');

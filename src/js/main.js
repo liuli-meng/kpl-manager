@@ -227,6 +227,32 @@ function clubCardHTML(c,i){
  <div class="hint" style="font-size:10px;line-height:1.5">预算 ${c.budget}万 · 工资帽 ${c.cap}万<br>${c.desc}</div>
  </div>`;
 }
+/* 教练生涯卡片：与 clubCardHTML 同观感，但回调走 pickCoachClub（旧版错绑 pickClub 会导致「开始执教」永远点不亮） */
+function coachCardHTML(c,i){
+ return `<div class="club-card" data-ci="${i}" onclick="pickCoachClub(${i})" style="cursor:pointer;background:var(--card2);border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center;transition:.15s">
+ <div>${crest(c.icon,c.name,32)}</div>
+ <div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
+ <div class="hint" style="font-size:10px;line-height:1.5">班底战力约 ${c.seed||'—'} · 工资帽 ${c.cap}万<br>${c.desc}</div>
+ </div>`;
+}
+/* 从游戏内「历代联盟·史册」页进入时代选择：打开开局面板并切到历代标签（当前存档保留，真正开新档才覆盖） */
+function gotoEraStart(){
+ if(S&&S.teamName&&!confirm('体验历史时代将开一个新档（当前存档不会被立即清除；只有你完成选档开新局才会覆盖，建议先导出存档备份）——继续？'))return;
+ initStart();pickScenario('normal');
+ switchStartTab('era');
+ const firstEra=Object.keys(KPL_ERAS)[0];
+ if(firstEra)pickEra(firstEra); // 预选第一个时代：进来就能直接选俱乐部
+ const m=document.getElementById('start-modal-body');
+ if(m&&!document.getElementById('era-cancel'))m.insertAdjacentHTML('beforeend',
+ '<div class="center mt8"><button class="btn sm" id="era-cancel" onclick="cancelStartBack()">← 返回当前存档</button></div>');
+ try{window.scrollTo(0,0);}catch(_){}
+}
+/* 取消时代选择：关面板并按当前存档重装联盟（时代档恢复该时代，普通档还原现役），游戏原样继续 */
+function cancelStartBack(){
+ closeModal('start-modal');
+ if(typeof installEra==='function')installEra((S&&S.era&&KPL_ERAS[S.era])?S.era:null);
+ if(S)renderAll();
+}
 function initStart(){
  _crReset(); // 新档：队徽生成器回默认（盾形·红金配色）
  installEra(null);_eraSel=null;_eraSelCoach=null;_pcTeam=null; // 开局界面从默认（现役）联盟起步
@@ -260,7 +286,7 @@ function initStart(){
  </div>
  <div id="tab-coach-body" style="display:none">
  <div class="hint" style="margin-bottom:10px;text-align:center">只管竞技的执教生涯：BP/战术/训练/首发全权负责，转会与资金由俱乐部打理——成绩好被豪门挖角，连年失利会被解约（从任意一队起步）</div>
- <div class="grid g4" id="coach-clubs" style="gap:8px">${CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('')}</div>
+ <div class="grid g4" id="coach-clubs" style="gap:8px">${CLUB_TEMPLATES.map((c,i)=>coachCardHTML(c,i)).join('')}</div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="coach-pick-tip"> 点击选择执教的俱乐部</div>
  <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyCoachClub()" id="coach-apply-btn" disabled>开始执教生涯</button></div>
  </div>
@@ -332,7 +358,7 @@ function switchStartTab(tab){
  // 教练页从默认（现役）联盟起步：若浏览过时代先还原
  installEra(null);_eraSelCoach=null;_coachPick=-1;
  const grid=document.getElementById('coach-clubs');
- if(grid)grid.innerHTML=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
+ if(grid)grid.innerHTML=CLUB_TEMPLATES.map((c,i)=>coachCardHTML(c,i)).join('');
  const tip=$('#coach-pick-tip');if(tip)tip.textContent=' 点击选择执教的俱乐部';
  const btn=$('#coach-apply-btn');if(btn)btn.disabled=true;
  }
@@ -347,7 +373,9 @@ function switchStartTab(tab){
 function pickCoachClub(i){
  _coachPick=i;
  const grid=document.getElementById('coach-clubs');
- if(grid)[...grid.children].forEach((c,idx)=>{c.style.borderColor=idx===i?'var(--cyan)':'var(--line)';});
+ if(grid&&grid.children&&typeof grid.children[Symbol.iterator]==='function'){
+ [...grid.children].forEach((c,idx)=>{c.style.borderColor=idx===i?'var(--cyan)':'var(--line)';});
+ }
  const tip=$('#coach-pick-tip');if(tip)tip.textContent='已选择：'+(CLUB_TEMPLATES[i]?CLUB_TEMPLATES[i].name:'');
  const btn=$('#coach-apply-btn');if(btn)btn.disabled=false;
 }

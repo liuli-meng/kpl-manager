@@ -1007,7 +1007,8 @@ function renderUnionHistory(){
  const champCell=n=>n?crest('队',n,18)+' <b>'+n+'</b>':'—';
  let html=`<div class="panel"><h3>历代联盟 <span class="tag">KPL 2016-2026 · 据公开赛事报道整理</span></h3>
  <div class="hint">十年联盟史：${H.seasons.length} 届联赛、${H.finals.length} 届年度总决赛、${H.cups.length} 座杯赛，数据更新至 2026 年挑战者杯。</div>
- <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" onclick="setUnionMode('now')">← 返回联盟现况</button></div></div>`;
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" onclick="setUnionMode('now')">← 返回联盟现况</button>
+ <button class="btn gold sm" onclick="gotoEraStart()">▶ 选一个时代重新开档体验（2017 QG王朝 / 2019 双冠与信仰）</button></div></div>`;
  const champRow=(r,evCol)=>`<tr><td>${r.y}</td>${evCol?`<td>${r.ev}</td>`:''}<td>${champCell(r.champ)}</td><td>${r.ru?crest('队',r.ru,18)+' '+r.ru:'—'}</td><td class="gold">${r.score||'—'}</td><td>${r.fmvp||'—'}</td><td style="font-size:11px;color:var(--dim)">${r.note||''}</td></tr>`;
  html+=`<div class="panel"><h3>历届联赛冠军 <span class="tag">银龙杯</span></h3>
  <table class="tbl"><tr><th>赛季</th><th>冠军</th><th>亚军</th><th>决赛比分</th><th>FMVP</th><th>注</th></tr>
