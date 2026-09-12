@@ -1099,8 +1099,10 @@ function inSeasonOfferTick(s){
  s.offers=s.offers.filter(o=>o.expire>s.day);
  if(s.offers.length<before)logEvent(s,' 有俱乐部的赛中报价到期无人答复，买家转向了其他目标');
  if(s.offers.length>=2)return; // 同时最多挂 2 份，避免刷屏
+ const onlyMe=(s.mode==='player')?(s.career&&s.career.me):null; // 选手模式：只盯我自己的表现
  (s.players||[]).forEach(p=>{
  if(s.offers.length>=2)return;
+ if(onlyMe&&p.id!==onlyMe)return;
  if(s.offers.some(o=>o.pid===p.id))return;
  if(!eligibleForOffer(s,p))return;
  if((p._offerCd||0)>s.day)return;
@@ -1131,6 +1133,27 @@ function respondOffer(s,idx,action){
  s.offers=s.offers||[];
  const o=s.offers[idx];
  if(!o)return;
+ if(s.mode==='player'){ // 选手生涯：只有自己的报价可回应——留队=涨薪续约，接受=赛段间转会
+ if(o.pid!==(s.career&&s.career.me)){toast('那是队友的报价，经纪人不是你');return;}
+ const p=s.players.find(x=>x.id===o.pid);
+ if(!p){s.offers.splice(idx,1);save();renderAll();return;}
+ if(action==='keep'){
+ const raise=Math.max(2,Math.round(p.wage*0.08));
+ p.wage+=raise;
+ p.morale=clamp(p.morale+5,20,100);
+ p.willingness=clamp((p.willingness==null?70:p.willingness)+5,0,100);
+ s.offers=s.offers.filter(x=>x.pid!==p.id);
+ logEvent(s,' 留队：回绝 '+o.team+'，俱乐部给 '+p.name+' 涨薪至 '+p.wage+'万/周（士气+5 · 忠诚+5）');
+ toast(p.name+' 留队！周薪 +'+raise+'万');
+ }else if(action==='sell'){
+ s.career.pendingMove={team:o.team,fee:o.fee};
+ s.offers=s.offers.filter(x=>x.pid!==p.id);
+ logEvent(s,' 转会达成意向：你接受 '+o.team+' 的报价（'+o.fee+'万）——当前赛段继续为 '+s.teamName+' 出战，赛段结束正式加盟');
+ toast(' 转会意向达成：赛段结束后加盟 '+o.team);
+ }else{toast('选手报价只有「留队」与「接受」两个选项');return;}
+ save();renderAll();
+ return;
+ }
  const p=s.players.find(x=>x.id===o.pid);
  if(!p){s.offers.splice(idx,1);save();renderAll();return;}
  if(action==='keep'){ // 留人：回绝报价 + 涨薪表达诚意

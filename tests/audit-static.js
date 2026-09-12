@@ -135,7 +135,7 @@ const out = vm_run(dom, `
       if(!S.leagueTeams||S.leagueTeams.length!==18)eraBad.push(id+':联盟名录'+((S.leagueTeams||[]).length)+'队');
       migrateSave();
       let eErr='';
-      try{['club','lineup','market','train','league','kjia','union','biz'].forEach(p=>renderPage(p));}catch(e){eErr=e.message;}
+      try{['club','career','lineup','market','train','league','kjia','union','biz'].forEach(p=>renderPage(p));}catch(e){eErr=e.message;}
       if(eErr)eraBad.push(id+':渲染异常 '+eErr);
     }catch(e){eraBad.push(id+':异常 '+(e.message||e));}
   });
@@ -169,7 +169,7 @@ fillRoster(S,'mid');
   const back=JSON.parse(JSON.stringify(S));
   S=back;migrateSave();
   let renderErr='';
-  try{['club','lineup','market','train','league','kjia','union','biz'].forEach(p=>renderPage(p));
+  try{['club','career','lineup','market','train','league','kjia','union','biz'].forEach(p=>renderPage(p));
   window._unionMode='hist';renderPage('union');window._unionMode='now';renderPage('union'); // 历代联盟史册 + 现况两种形态都要能渲染
   }catch(e){renderErr=e.message;}
   const numOk=[S.fund,weeklyWage(S),teamPower(S)].every(v=>typeof v==='number'&&!isNaN(v));

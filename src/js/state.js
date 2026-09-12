@@ -42,6 +42,9 @@ function newState(teamName,icon){
  // 执教生涯（下课结算页与 KPI 依据）：年数 / 冠军数 / 上年年度积分排名
  managerCareer:{years:0,titles:0,lastRank:null},
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
+ mode:'manager', // 游戏身份：manager=经理（全权经营）/ player=选手生涯（扮演一名选手）/ coach=教练生涯（只管竞技）
+ career:null, // 选手生涯数据（mode=player）：{me:选手id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null}
+ coachDeal:null, // 教练执教履历（mode=coach）：{years:0,honors:[],log:[]}
  fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
  captain:null, // 队长（选手 id）：全队战力小幅加成 + 士气激励，离队自动摘除
  kjia:null, // K甲联赛（二队）：独立赛程/积分榜/二队班底，每赛段重开——见 season.js「K甲联赛」
@@ -54,6 +57,7 @@ function newState(teamName,icon){
 function rosterAll(s){return s.players;}
 function rosterLineup(s){return s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);}
 function rosterBench(s){return s.players.filter(p=>!s.lineup.includes(p.id));}
+function myPlayer(s){return (s&&s.mode==='player'&&s.career)?s.players.find(p=>p.id===s.career.me)||null:null;} // 选手生涯：我扮演的选手
 /* 夺冠阵容快照：冠军/亚军入册时记录当时的首发名单（荣誉室可回看"这冠是谁打下来的"） */
 function titleRoster(s){
  try{return rosterLineup(s).map(p=>p.name).join('、')||'—';}catch(e){return '';}
@@ -201,6 +205,9 @@ function migrateSave(){
  S.board=S.board||{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
  S.managerCareer=S.managerCareer||{years:0,titles:0,lastRank:null};
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
+ S.mode=S.mode||'manager'; // 旧档统一为经理模式
+ if(S.mode==='player'&&!S.career)S.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
+ if(S.mode==='coach'&&!S.coachDeal)S.coachDeal={years:0,honors:[],log:[]};
  S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
  S.captain=S.captain==null?null:S.captain; // 队长字段兜底（旧档统一为 null）
  if(S.kjia===undefined)S.kjia=null; // K甲联赛状态（旧档缺字段；nextDay/renderKjia 会懒初始化）

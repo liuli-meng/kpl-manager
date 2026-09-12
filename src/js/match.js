@@ -202,6 +202,7 @@ function gamePerform(winner){
  ls.forEach(p=>{
  const pw=playerPower(p,pickedHero(S,p));
  const k=rnd(1,12),d=rnd(0,6),a=rnd(0,12);
+ p._lk=k;p._ld=d;p._la=a; // 本局个人数据（选手生涯·「我的表现」汇总用）
  const score=k*3+a*2-d*1.5+(winner?6:2)+pw*0.5+rnd(0,3);
  const perf=(k*3+a*2-d*1.5)/25+(winner?0.35:-0.15);
  p.val=clamp(Math.round((p.val||100)*0.92+perf*8),70,150);
@@ -209,6 +210,58 @@ function gamePerform(winner){
  if(score>bs){bs=score;best={id:p.id,name:p.name,k,d,a};}
  });
  return best;
+}
+/* ================= 选手生涯：比赛引擎（教练指挥，你专注表现） =================
+ 首发由「教练」按同位置战力每场评定；系列赛自动打完（复用文字直播/个人 KDA/MVP 结算），
+ 你在结算弹窗看直播和「本场你的数据」。季后赛/杯赛同理自动推进。 */
+function coachPickLineup(s){ // 教练排首发：同位置健康者中取战力更强者（体力/士气实时影响评定）
+ if(s.mode!=='player')return;
+ const me=myPlayer(s);
+ if(!me)return;
+ if(me.injury>0){if(!s._meOutNoted){logEvent(s,' 伤停报告：'+me.name+'（'+me.injury+' 天恢复）本场缺席');s._meOutNoted=true;}return;}
+ s._meOutNoted=false;
+ const rival=s.players.filter(p=>p.pos===me.pos&&p.id!==me.id&&p.injury<=0)
+ .sort((a,b)=>playerPower(b)-playerPower(a))[0];
+ const li=s.lineup.indexOf(me.id);
+ if(!rival){if(li<0)s.lineup.push(me.id);return;}
+ const myPow=playerPower(me,(s.pick&&s.pick[me.pos])||me.sig);
+ const rivPow=playerPower(rival,rival.sig);
+ if(myPow>=rivPow){
+ if(li<0){const ri=s.lineup.indexOf(rival.id);if(ri>=0)s.lineup[ri]=me.id;else s.lineup.push(me.id);}
+ }else if(li>=0)s.lineup[li]=rival.id;
+}
+function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 series 形状对象（finishSeries 可直接消费）
+ coachPickLineup(s);
+ resetOppEnergy(s,opName);
+ const sr={used:[],usedOpp:[],mw:0,ow:0,max:bo,logs:[],myName:s.teamName,opName,side:firstSide(s,'regular',opName)};
+ const need=Math.ceil(bo/2);
+ let guard=0,myApps=0,myK=0,myD=0,myA=0,myMvp=0;
+ while(sr.mw<need&&sr.ow<need&&guard++<bo+2){
+ const my=teamPower(s),op=powerOf(s,opName);
+ const g=singleGame(my,op);
+ rosterLineup(s).forEach(p=>{p.energy=clamp(p.energy-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;});
+ if(g.w)sr.mw++;else sr.ow++;
+ const mvp=gamePerform(g.w);
+ if(mvp){const mp=s.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}}
+ if(mvp){sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id);sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a);}
+ const me=myPlayer(s);
+ const meIn=me&&rosterLineup(s).some(p=>p.id===me.id);
+ if(meIn){myApps++;myK+=me._lk||0;myD+=me._ld||0;myA+=me._la||0;if(mvp&&mvp.id===me.id)myMvp++;}
+ sr.logs.push('第'+(sr.mw+sr.ow)+'局  我方 '+g.myK+'-'+g.opK+' '+(g.w?'击败':'憾负')+' '+opName+' ｜ 总比分 '+sr.mw+':'+sr.ow+(mvp?' ｜ MVP：'+mvp.name+'（'+mvp.k+'/'+mvp.d+'/'+mvp.a+'）':''));
+ sr.logs.push(...genMatchStory(sr,g,mvp));
+ }
+ if(myApps)sr.logs.push(' 本场你的数据：出战 '+myApps+' 局 · 合计 '+myK+'/'+myD+'/'+myA+(myMvp?' · 拿下 '+myMvp+' 次单局MVP':'（尚无单局MVP）'));
+ return sr;
+}
+function startPlayerMatch(){ // 常规赛入口（选手模式：代替 startMatch 的赛前准备+BP）
+ if(S.preseason){toast(' 转会期中，联赛尚未开始');return;}
+ if(S.career&&S.career.retired){toast('职业生涯已退役');return;}
+ const m=S.schedule[S.matchIdx];
+ if(!m){toast('赛程已结束');return;}
+ const sr=playerAutoSeries(S,m.opp,KPL.BO5);
+ sr.stage='regular';
+ S.series=sr;
+ finishSeries(sr.mw>sr.ow);
 }
 
 function startMatch(){

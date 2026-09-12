@@ -15,7 +15,23 @@ document.addEventListener('click',e=>{
  try{localStorage.setItem('pfold_'+(panel.dataset.fold||h3.textContent.trim().slice(0,10)),folded?'1':'0');}catch(err){}
 });
 
-/* ================= 导航 ================= */
+/* ================= 导航（按身份模式适配可见页签） ================= */
+const MODE_PAGES={
+ manager:['club','lineup','market','train','league','kjia','union','biz'],
+ player:['career','club','league','kjia','union'], // 选手：生涯/球队日程/联赛/二队/联盟（不经营）
+ coach:['club','lineup','train','league','kjia','union'], // 教练：竞技全权，转会/经营由俱乐部打理
+};
+function applyModeNav(){
+ const pages=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
+ let changed=false;
+ $$('#nav button').forEach(b=>{
+ const show=pages.includes(b.dataset.page);
+ if(show&&b.style.display==='none')changed=true;
+ b.style.display=show?'':'none';
+ });
+ const cur=document.querySelector('nav button.on');
+ if(cur&&cur.style.display==='none'){cur.classList.remove('on');goPage(pages[0]);}
+}
 function goPage(name){
  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.page===name));
  $$('section.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+name));
@@ -29,10 +45,11 @@ function renderPage(name){
  else if(name==='train')renderTrain();
  else if(name==='league')renderLeague();
  else if(name==='kjia')renderKjia();
+ else if(name==='career')renderCareer();
  else if(name==='union')renderUnion();
  else if(name==='biz')renderBiz();
 }
-function renderAll(){renderHeader();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
+function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
 
 /* ================= 存档管理（多槽位 + 导出/导入） ================= */
 function openSaveMgmt(){
@@ -168,6 +185,39 @@ function upgradeSponsor(){
  logEvent(S,` 签约新赞助商「${next.name}」，每日收入 ${next.income}万（粉丝 ${fans} 万）`);
  save();renderAll();toast(`赞助商升级成功！`);
 }
+/* 教练生涯：回应豪门邀约（接受=换队执教重建班底，婉拒=留任加信任） */
+function respondCoachOffer(accept){
+ if(!S||!S.coachOffer)return;
+ const o=S.coachOffer;
+ const d=S.coachDeal=S.coachDeal||{years:0,honors:[],log:[]};
+ if(accept){
+ const tmpl=CLUB_TEMPLATES.find(c=>c.name===o.team);
+ if(!tmpl){S.coachOffer=null;return;}
+ d.log.unshift({year:gameYear(S),note:'离任 '+S.teamName+'，转投 '+tmpl.name});
+ d.log=d.log.slice(0,8);
+ S.teamName=tmpl.name;S.icon=tmpl.icon;
+ S.fund=tmpl.budget;S.wageCap=tmpl.cap;
+ S.players=[];
+ tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
+ const byPos={};
+ S.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
+ const lineup=[];
+ POS_ORDER.forEach(pos=>{const cand=byPos[pos];if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}});
+ S.lineup=lineup;
+ S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ S.seedPower=teamPower(S)||tmpl.seed;
+ S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
+ S.board.warn=0;
+ logEvent(S,' 你接受 '+tmpl.name+' 的邀约：新班底战力 '+fmt(teamPower(S))+'——用成绩证明他们的选择');
+ }else{
+ d.log.unshift({year:gameYear(S),note:'婉拒 '+o.team+' 邀约，留任 '+S.teamName});
+ d.log=d.log.slice(0,8);
+ S.board.trust=clamp((S.board?S.board.trust:60)+3,0,100);
+ logEvent(S,' 你婉拒了 '+o.team+' 的邀约，留任 '+S.teamName+'（管理层信任 +3）');
+ }
+ S.coachOffer=null;
+ save();renderAll();
+}
 
 /* ================= 开局 ================= */
 function clubCardHTML(c,i){
@@ -179,13 +229,15 @@ function clubCardHTML(c,i){
 }
 function initStart(){
  _crReset(); // 新档：队徽生成器回默认（盾形·红金配色）
- installEra(null);_eraSel=null; // 开局界面从默认（现役）联盟起步
+ installEra(null);_eraSel=null;_eraSelCoach=null;_pcTeam=null; // 开局界面从默认（现役）联盟起步
  const clubs=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
  const eraBtns=Object.keys(KPL_ERAS).map(id=>`<button class="btn sm" id="era-btn-${id}" onclick="pickEra('${id}')">${KPL_ERAS[id].name}</button>`).join('');
  $('#start-modal-body').innerHTML=`
  <h2>王者电竞经理 · KPL 篇</h2> <div class="center dim" style="font-size:12px;margin-bottom:14px">化身战队经理：签约选手、经营俱乐部、征战联赛、冲击总冠军</div>
  <div class="center" style="margin-bottom:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
- <button class="btn sm primary" id="tab-self" onclick="switchStartTab('self')">创建我的俱乐部</button>
+ <button class="btn sm" id="tab-player" onclick="switchStartTab('player')">选手生涯</button>
+ <button class="btn sm" id="tab-coach" onclick="switchStartTab('coach')">教练生涯</button>
+ <button class="btn sm primary" id="tab-self" onclick="switchStartTab('self')">经理模式</button>
  <button class="btn sm" id="tab-club" onclick="switchStartTab('club')">执教现役俱乐部</button>
  <button class="btn sm" id="tab-era" onclick="switchStartTab('era')">历代联盟</button>
  </div>
@@ -195,6 +247,22 @@ function initStart(){
  ${SCENARIOS.map(s=>`<button class="btn sm" id="sc-btn-${s.id}" onclick="pickScenario('${s.id}')">${s.hard?'':'○ '}${s.name}</button>`).join('')}
  </div>
  <div class="center hint" id="sc-desc" style="margin-top:6px">${SCENARIOS[0].desc}</div>
+ </div>
+ <div id="tab-player-body" style="display:none">
+ <div class="hint" style="text-align:center;margin-bottom:10px">扮演一名职业选手：签约球队 → 竞争首发 → 打出数据 → 收报价转会 → 冲击总冠军与 FMVP（比赛由教练组指挥，你专注成长与表现）</div>
+ <div class="center" style="margin-bottom:10px"><span class="dim">选手 ID：</span><input id="pc-name" maxlength="8" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:150px" placeholder="你的ID"></div>
+ <div class="center" style="margin-bottom:10px"><span class="dim" style="margin-right:6px">位置：</span>${POS_ORDER.map(p=>`<button class="btn sm" id="pc-pos-${p}" onclick="pickPlayerPos('${p}')">${POS[p][0]}</button>`).join('')}</div>
+ <div class="center" style="margin-bottom:10px"><span class="dim" style="margin-right:6px">出身：</span>${PLAYER_ARCHETYPES.map((a,i)=>`<button class="btn sm" id="pc-arch-${i}" onclick="pickPlayerArch(${i})" title="${a.desc}">${a.n}</button>`).join('')}</div>
+ <div class="center dim" style="font-size:12px;margin:6px 0">选择加盟球队（签 2 年合同，队内同位置需要竞争首发）</div>
+ <div class="grid g3" id="pc-teams" style="gap:8px"></div>
+ <div class="center mt8"><button class="btn sm" onclick="rollPlayerTeams()">换一批球队</button></div>
+ <div class="center" style="margin:12px 0"><button class="btn primary" style="padding:12px 40px;font-size:15px" onclick="createPlayerCareer()">开启选手生涯</button></div>
+ </div>
+ <div id="tab-coach-body" style="display:none">
+ <div class="hint" style="margin-bottom:10px;text-align:center">只管竞技的执教生涯：BP/战术/训练/首发全权负责，转会与资金由俱乐部打理——成绩好被豪门挖角，连年失利会被解约（从任意一队起步）</div>
+ <div class="grid g4" id="coach-clubs" style="gap:8px">${CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('')}</div>
+ <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="coach-pick-tip"> 点击选择执教的俱乐部</div>
+ <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyCoachClub()" id="coach-apply-btn" disabled>开始执教生涯</button></div>
  </div>
  <div id="tab-self-body">
  <div class="center" style="margin-bottom:12px">
@@ -220,8 +288,153 @@ function initStart(){
  </div>`;
  $('#start-modal').classList.add('on');
  pickScenario('normal'); // 剧本按钮回到默认高亮（弹窗重建后 class 会丢）
+ rollPlayerTeams();pickPlayerPos('mid');pickPlayerArch(0); // 选手页默认值
 }
 let _clubPick=-1,_eraSel=null,_scenario='normal';
+let _pcPos='mid',_pcArch=0,_pcTeam=null,_coachPick=-1,_eraSelCoach=null;
+/* 选手出身档（决定初始属性/年龄/知名度） */
+const PLAYER_ARCHETYPES=[
+ {id:'youth',n:'青训新秀',age:17,base:[64,64,64,64],wageMul:0.4,pop:5,career:'青训营出道，天赋肉眼可见',desc:'17岁 · 属性低但成长空间全在面前'},
+ {id:'semi',n:'次级联赛',age:19,base:[72,71,72,70],wageMul:0.8,pop:12,career:'K甲辗转三年，等待一个机会',desc:'19岁 · 即战力适中，马上能打'},
+ {id:'returnee',n:'海归选手',age:21,base:[77,76,78,75],wageMul:1.6,pop:26,career:'海外赛区归来，身价不菲',desc:'21岁 · 高起点高薪资，即插即用'},
+];
+function pickPlayerPos(p){
+ _pcPos=p;
+ POS_ORDER.forEach(x=>{const b=document.getElementById('pc-pos-'+x);if(b)b.className='btn sm'+(x===_pcPos?' primary':'');});
+}
+function pickPlayerArch(i){
+ _pcArch=i;
+ PLAYER_ARCHETYPES.forEach((a,x)=>{const b=document.getElementById('pc-arch-'+x);if(b)b.className='btn sm'+(x===_pcArch?' primary':'');});
+ const d=$('#sc-desc');
+ if(d)d.textContent=PLAYER_ARCHETYPES[_pcArch].desc+' · '+PLAYER_ARCHETYPES[_pcArch].career;
+}
+function rollPlayerTeams(){
+ const pool=CLUB_TEMPLATES.slice();
+ window._pcTeams=[];
+ for(let i=0;i<3&&pool.length;i++)window._pcTeams.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+ if(!_pcTeam||!window._pcTeams.some(c=>c.name===_pcTeam))_pcTeam=window._pcTeams[0].name;
+ const box=$('#pc-teams');
+ if(box)box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${c.name}')">
+ ${crest(c.icon,c.name,30)}<div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
+ <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
+}
+function pickPlayerTeam(n){_pcTeam=n;rollPlayerTeams();}
+/* 开局身份切换（选手/教练/经理/执教/历代） */
+function switchStartTab(tab){
+ const tabs=['player','coach','self','club','era'];
+ tabs.forEach(t=>{const b=document.getElementById('tab-'+t);if(b)b.className='btn sm'+(t===tab?' primary':'');});
+ ['player','coach','self','club','era'].forEach(t=>{
+ const body=document.getElementById('tab-'+t+'-body');if(body)body.style.display=t===tab?'':'none';
+ });
+ if(tab==='player'){const d=$('#sc-desc');if(d)d.textContent=PLAYER_ARCHETYPES[_pcArch].desc;}
+ if(tab!=='club'&&_eraActive){installEra(null);_eraSel=null;_clubPick=-1;}
+ if(tab==='coach'){
+ // 教练页从默认（现役）联盟起步：若浏览过时代先还原
+ installEra(null);_eraSelCoach=null;_coachPick=-1;
+ const grid=document.getElementById('coach-clubs');
+ if(grid)grid.innerHTML=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
+ const tip=$('#coach-pick-tip');if(tip)tip.textContent=' 点击选择执教的俱乐部';
+ const btn=$('#coach-apply-btn');if(btn)btn.disabled=true;
+ }
+ if(tab==='era'){
+ Object.keys(KPL_ERAS).forEach(k=>{
+ const b=document.getElementById('era-btn-'+k);if(b)b.className='btn sm'+(k===_eraSel?' primary':'');
+ });
+ const eb=$('#era-apply-btn');if(eb)eb.disabled=!(_eraSel&&_clubPick>=0);
+ }
+}
+/* 教练生涯：选俱乐部（与执教现役俱乐部同一套卡片） */
+function pickCoachClub(i){
+ _coachPick=i;
+ const grid=document.getElementById('coach-clubs');
+ if(grid)[...grid.children].forEach((c,idx)=>{c.style.borderColor=idx===i?'var(--cyan)':'var(--line)';});
+ const tip=$('#coach-pick-tip');if(tip)tip.textContent='已选择：'+(CLUB_TEMPLATES[i]?CLUB_TEMPLATES[i].name:'');
+ const btn=$('#coach-apply-btn');if(btn)btn.disabled=false;
+}
+/* 教练生涯开局：只管竞技——转会与资金由俱乐部打理，董事会=俱乐部管理层 */
+function applyCoachClub(){
+ if(_coachPick<0){toast('请先选择俱乐部');return;}
+ const tmpl=CLUB_TEMPLATES[_coachPick];
+ S=newState(tmpl.name,tmpl.icon);
+ S.mode='coach';
+ S.era=_eraSelCoach||null;
+ S.fund=tmpl.budget;S.wageCap=tmpl.cap;
+ S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ tmpl.players.forEach(pid=>{
+ const def=PLAYER_POOL.find(d=>d.id===pid);
+ if(def)S.players.push(genPlayer(def));
+ });
+ const byPos={};
+ S.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
+ const lineup=[];
+ POS_ORDER.forEach(pos=>{
+ const cand=byPos[pos];
+ if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}
+ });
+ S.lineup=lineup;
+ S.coachDeal={years:2,honors:[],log:[]}; // 教练合同：2 年起步，成绩决定去留
+ S.seedPower=teamPower(S)||tmpl.seed;
+ initGroups(S);
+ S.preseason=false;S.transferWindow=0; // 俱乐部引援自动处理，无需转会期
+ setBoardKpi(S);initFans(S);
+ initKjia(S);
+ logEvent(S,' 教练生涯开启：你出任 '+tmpl.name+' 主教练（合同 2 年）——竞技全权负责，转会资金由俱乐部打理');
+ logEvent(S,' 目标：带队出成绩。连续未达标会被解约；打出名气会有豪门来挖你');
+ $('#start-modal').classList.remove('on');
+ applyModeNav();
+ goPage('club');
+ toast(' 教练生涯开启：带队打出成绩！');
+ save();
+}
+/* 选手生涯开局：创建选手 → 加盟球队 → 竞争首发 */
+function createPlayerCareer(){
+ installEra(null);_eraSel=null;
+ const name=$('#pc-name').value.trim()||'无名小将';
+ const tmpl=CLUB_TEMPLATES.find(c=>c.name===_pcTeam)||window._pcTeams[0];
+ S=newState(tmpl.name,tmpl.icon);
+ S.mode='player';
+ S.fund=tmpl.budget;S.wageCap=tmpl.cap;
+ S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ tmpl.players.forEach(pid=>{
+ const def=PLAYER_POOL.find(d=>d.id===pid);
+ if(def)S.players.push(genPlayer(def));
+ });
+ const arch=PLAYER_ARCHETYPES[_pcArch];
+ const base=arch.base.map(v=>clamp(v+rnd(-1,2),40,90));
+ const def={id:'me_'+Date.now().toString(36),name,pos:_pcPos,team:tmpl.name,tags:[],
+ base,skill:{n:pick(['新星','大心脏','多面手','永动机'])+'体质',t:pick(['lane','farm','team','mind']),d:'职业生涯由你书写'},
+ sig:pick(HEROES.filter(h=>h.pos[0]===_pcPos)).n,
+ career:arch.career+'，'+arch.age+' 岁，渴望在 KPL 证明自己。'};
+ const me=genPlayer(def);
+ me.age=arch.age;
+ me.wage=Math.max(3,Math.round(me.wage*arch.wageMul));
+ me.contract=2;
+ me.popularity=Math.max(me.popularity,arch.pop);
+ S.players.push(me);
+ S.career={me:me.id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
+ // 首发按俱乐部最强阵容（同位置有我时取更强者——首发要靠竞争）
+ const byPos={};
+ S.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
+ const lineup=[];
+ POS_ORDER.forEach(pos=>{
+ const cand=byPos[pos];
+ if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}
+ });
+ S.lineup=lineup;
+ S.seedPower=teamPower(S)||300;
+ initGroups(S);
+ S.preseason=false;S.transferWindow=0;
+ initKjia(S);
+ initFans(S);
+ const starter=S.lineup.includes(me.id);
+ logEvent(S,' 选手生涯开启：'+me.name+'（'+POS[_pcPos][0]+' · '+arch.n+'）签约 '+tmpl.name+'（2 年合同）');
+ logEvent(S,starter?' 你已进入首发轮换——用表现锁住它':' 首发竞争激烈：先在「生涯」页加练，教练会在每场比赛前按状态排首发');
+ $('#start-modal').classList.remove('on');
+ applyModeNav();
+ goPage('career');
+ toast(' 选手生涯开启：'+(starter?'你已在首发阵容':'先争取首发位置！'));
+ save();
+}
 /* 开局剧本（难度档）：选中态只影响开局初始值，见 data.js SCENARIOS */
 function pickScenario(id){
  _scenario=scenarioById(id).id;
@@ -240,28 +453,8 @@ function applyScenario(s){
  logEvent(s,'开局剧本「'+sc.name+'」：'+sc.desc+(dropped?'（离开的是 '+dropped.name+'）':''));
  return sc;
 }
-function switchStartTab(tab){
- $('#tab-self').className=tab==='self'?'btn sm primary':'btn sm';
- $('#tab-club').className=tab==='club'?'btn sm primary':'btn sm';
- $('#tab-era').className=tab==='era'?'btn sm primary':'btn sm';
- $('#tab-self-body').style.display=tab==='self'?'':'none';
- $('#tab-club-body').style.display=tab==='club'?'':'none';
- $('#tab-era-body').style.display=tab==='era'?'':'none';
- if(tab==='club'&&_eraActive){ // 从时代标签切回现役：还原现役联盟并重建卡片
-  installEra(null);_eraSel=null;_clubPick=-1;
-  const grid=document.querySelector('#tab-club-body .grid');
-  if(grid)grid.innerHTML=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
-  const tip=$('#club-pick-tip');if(tip)tip.textContent=' 点击选择俱乐部';
-  const btn=$('#club-apply-btn');if(btn)btn.disabled=true;
- }
- if(tab==='era'){ // 时代按钮高亮与实际选择对齐（切走时可能已被重置）
-  Object.keys(KPL_ERAS).forEach(k=>{
-   const b=document.getElementById('era-btn-'+k);
-   if(b)b.className=k===_eraSel?'btn sm primary':'btn sm';
-  });
-  const eb=$('#era-apply-btn');if(eb)eb.disabled=!(_eraSel&&_clubPick>=0);
- }
-}
+/* 旧 switchStartTab 已并入上方五标签统一版（含选手/教练页）；此处不再重复定义，
+   否则按加载顺序后者覆盖前者，选手/教练标签会切不动 */
 /* 历代联盟：选时代（安装该时代联盟）→ 选俱乐部 → 复用 applyClub 开档流程 */
 function pickEra(id){
  installEra(id);_eraSel=null;_clubPick=-1;
@@ -512,7 +705,8 @@ window.addEventListener('unhandledrejection', e => _reportErr('Promise拒绝', e
 $$('nav button').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
 if(load()&&S&&S.teamName){
  ensureSeason(S); // 旧档自动迁移到 KPL 2025 赛制
- goPage('club');
+ applyModeNav();
+ goPage(S.mode==='player'?'career':'club');
 }else{
  initStart();
 }
