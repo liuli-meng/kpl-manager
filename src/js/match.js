@@ -543,6 +543,7 @@ function finishSeries(finalWin){
  peak:sr.max>=7&&sr.mw+sr.ow===sr.max // 打满最后一局（BO7 4:3 / BO9 5:4）= 巅峰对决名场面
  });
  S.history=S.history.slice(0,20);
+ r.hist=S.history[0]; // AI 战报异步回写绑到本场复盘（勿用 history[0]：并发/重放会串台）
  save();renderAll();
  showMatchModal(r,title||S.teamName+' vs '+sr.opName);
 }
@@ -602,8 +603,8 @@ function aiEnabled(){const s=aiSettings();return !!(s.on&&s.base);}
 function toggleAiReport(){
  const st=aiSettings();st.on=!st.on;
  try{localStorage.setItem(AI_SET_KEY,JSON.stringify(st));}catch(e){}
- save();renderAll();
- toast(st.on?' AI 战报已开启：每场赛后联网生成一次（经营页可配置端点与人设）':' AI 战报已关闭：恢复纯单机模式');
+ renderAll(); // 设置只在 localStorage：不写存档、不跑 checkAchievements
+ toast(st.on?(st.base?' AI 战报已开启：每场赛后联网生成一次（经营页可配置端点与人设）':' 已开启开关——请填写端点 URL 后才会真正联网'):' AI 战报已关闭：恢复纯单机模式');
 }
 function aiSaveForm(){
  const st=aiSettings();
@@ -632,7 +633,7 @@ async function aiFillReport(r){
  try{
  if(typeof fetch!=='function')throw new Error('环境不支持 fetch');
  const st=aiSettings();
- const h=(S.history||[])[0];
+ const h=(r&&r.hist)||(S.history||[])[0]; // 优先本场绑定的复盘对象
  const {system,user}=buildAiPrompt(r);
  const ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
  if(ctrl)timer=setTimeout(()=>ctrl.abort(),25000);

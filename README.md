@@ -104,6 +104,7 @@ src/
   js/kjia.js       K甲联赛（二队）
   js/cups.js       挑战者杯 / EWC / 亚运会 / 年总 + 杯赛通用流程
   js/career.js     选手/教练生涯引擎 + 年度回顾 + 退役名宿市场
+  js/hall.js       荣誉馆 + 战绩分享图（canvas 导出）
   js/bp.js         KPL 官方两段式 BP 引擎 + BP 台 UI
   js/match.js      比赛模拟、文字直播、系列赛收尾
   js/ui.js         各页面渲染
@@ -116,7 +117,7 @@ src/
 - **去 AI 味**：全项目 emoji 清零（约 280 处，仅保留 ★ 评级符号与 Roman 数字赞助商标）；装饰性 SVG 图标全部移除（导航纯文字、面板标题无图标框）；去宽字距与 uppercase；动效收敛到 150ms 过渡（保留首次进场淡入）
 - **队徽**：`crest(icon, team, size)` 纹章盾系统——全联盟同一盾形、俱乐部专属深色底 + 下半暗段 + 白色单字纹章，颜色由队名哈希确定（同队永远同色，18 队互不重复观感）；用于 header、俱乐部横幅、对阵卡、积分表、战队弹窗、开局选择器与进场动画
 - **信息密度**：选手紧凑卡、联赛/积分表 tabular-nums 数字对齐；`prefers-reduced-motion` 全部动画可关
-- **移动端适配**：≤640px 时导航变底部固定标签栏（拇指可达）、header 数据条 3 列网格、弹窗近全屏、按钮触控区 ≥40px、toast 上移避让；同一份 game.html 桌面/手机自适应，无需两套代码
+- **移动端适配**：≤640px 时导航变底部固定标签栏（拇指可达）、header 数据条 3 列网格、弹窗近全屏、按钮触控区 ≥40px、toast 上移避让；2026-09 pass 补：触控 ≥42px、表格横滑、`dvh` 弹窗、safe-area 底栏、VS 海报压缩——同一份 game.html 桌面/手机自适应
 - 类名与 v2/v3 完全兼容；`:root` 保留 `--cyan/--card2/--grad-*` 别名（历史内联样式引用，值已改为扁平色）
 - 旧 v3「NEON ARENA」说明已归档进 git 历史（`git log -- README.md` 可查）
 
@@ -412,6 +413,41 @@ src/
 - 本人退役时**不进**名宿随机市场，改为写入 `career.legacy` + `career.coachPath`，日志提示「教练组邀请」
 - 生涯页退役结算态出现「退役转教练」：`playerToCoach()` 切 `mode=coach`，按生涯荣誉折算评分（60–92）与全队加成（3–12%），合同 2 年；管理信任 +8；`career.legacy` 留在教练页展示「名宿出身」
 - 与开局直选教练并存：可当选手打到退役再执教，也可直接开教练档
+
+## 2026-09 存档瘦身与跳过期批量落盘
+
+- `serializeForSave`：写盘/导出/赛季备份统一剔除 `aiRosters`（读档由 `migrateSave` 清空重建，写进去纯占 localStorage）；运行期缓存保留
+- `skipTransferWindow`：循环期设 `_quietSave`，`nextDay` 不再每天全量 `JSON.stringify`，结束/中断统一 `save` 一次 + 成就巡检
+- `rosterLineup`/`rosterBench`：`lineup.includes` 改为 `Set` 查找（比赛/更衣室/战力高频路径）
+- 分享图下载优先 `toBlob` + ObjectURL（部分手机浏览器对超长 dataURL 下载不友好），失败回退 dataURL
+- 回归：`verify-save` ⑦⑧（序列化剔除 / 静默存档）
+
+## 2026-09 荣誉馆 / 战绩分享图 / 移动端 pass / AI 难度分层
+
+四件套：把散落的荣誉收拢成可翻阅的馆藏，补上可传播的战绩图，顺手过一遍手机手感，并让 AI 经营开始分层。
+
+### 荣誉馆（导航「荣誉馆」· 三身份可见）
+
+- 新模块 `hall.js` + 页面 `page-hall`：本队荣誉墙（含夺冠阵容）/ 王朝段（`titleHistory` 连冠 ≥2）/ 历届冠军时间线 / FMVP 名人堂 / 赛季最佳阵容；选手模式附个人履历，教练模式附执教合同
+- `hallDynastyRuns` 从 `titleHistory` 抽连冠段；`dynastyStreak` 仍负责玩法层反制，两套口径互不覆盖
+- 回归：`tests/verify-hall.js`（页面区块/王朝抽取/三身份导航/难度系数）
+
+### 战绩分享图
+
+- `shareHonorCard` / `shareCareerCard`：750×1200 竖版 canvas，深色 TOUCHLINE 配色，`toDataURL` 触发下载 PNG——零网络、可进单文件分发
+- 入口：荣誉馆页顶栏 + 年度回顾弹窗底栏
+
+### 移动端 pass（≤640px）
+
+- 触控目标统一 ≥42px（按钮/底栏 tab）；表格容器横滑；弹窗 `94dvh` + 底对齐 + safe-area；VS 海报/MVP 卡压缩；底栏 scroll-snap
+
+### AI 难度分层（`transfer.js`）
+
+- `aiTierOf` / `aiDiffMul`：按种子/战力分 **elite / mid / weak**
+  - 豪门：更愿留核心、明星流转更挑剔（+5 才换）、换帅 45%×1.35、青训开班 2-3 人、培养可到 +5
+  - 弱旅：更愿放人重组、+3 就赌明星、青训偏弱
+  - 玩家 ≥2 连冠：全局决策加压（+8%/连冠季），新秀产量 +1——与王朝反制配套
+- 兼容 `AI_TEAMS.power` 与 `CLUB_TEMPLATES.seed` 两套字段（时代档/现役档）
 
 ## 2026-09 season.js 机械拆分
 

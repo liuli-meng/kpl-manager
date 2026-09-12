@@ -108,6 +108,21 @@ const out = vm.runInContext(`
    else log('⑥ 退役：年龄到线触发退役声明，赛季履历快照+计数清零，生涯页进入结算态');
   }
 
+  // ⑥a 退役清人后：legacy 快照可渲染（me 已不在 players 时不能崩）
+  {
+   const snapName=me3.name,snapAge=me3.age,snapPos=me3.pos,snapOvr=overall(me3);
+   S.players=S.players.filter(p=>p.id!==me3.id); // 模拟 newSeason 清人
+   S.lineup=S.lineup.filter(id=>id!==me3.id);
+   S.career.legacy={name:snapName,age:snapAge,pos:snapPos,ovr:snapOvr,mvp:3,titles:1,fmvp:0,allstar:0,seasons:1};
+   S.career.coachPath=true;
+   if(myPlayer(S))fail('模拟清人后 myPlayer 仍应为 null');
+   renderCareer();
+   const careerHtml=document.querySelector('#page-career').innerHTML||'';
+   if(careerHtml.includes('数据缺失'))fail('退役后生涯页误报数据缺失（legacy 快照未用上）');
+   else if(!careerHtml.includes('退役')||!careerHtml.includes(snapName))fail('退役结算屏未渲染选手名');
+   else log('⑥a 退役清人后：legacy 快照渲染退役屏（'+snapName+'）· 不再误报「选手数据缺失」');
+  }
+
   // ⑥b 老将带新：清空名单只留老将+新人 → 配对 + 新人成长 + 老将人气
   S=null;initStart();createPlayerCareer();
   {
@@ -137,8 +152,8 @@ const out = vm.runInContext(`
   S.career.titles=2;S.career.fmvp=1;S.career.allstar=1;
   S.career.legacy={name:(myPlayer(S)||S.players[0]||{name:'名宿'}).name,age:25,pos:'mid',ovr:88,mvp:3,titles:2,fmvp:1,allstar:1,seasons:5};
   const legacyName=S.career.legacy.name;
-  const okCoach=playerToCoach(S);
-  if(!okCoach)fail('退役转教练失败');
+  const okCoach=playerToCoach(); // UI 回调不传参：应缺省用全局 S
+  if(!okCoach)fail('退役转教练失败（含无参回调路径）');
   else if(S.mode!=='coach')fail('转教练后 mode 应为 coach');
   else if(!S.coach||S.coach.origin!==legacyName)fail('教练身份未绑定名宿');
   else if(!S.coachDeal||!(S.coachDeal.log||[]).some(x=>/退役转教练/.test(x.note||'')))fail('教练合同未记录转型');

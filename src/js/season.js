@@ -438,6 +438,7 @@ function nextDay(s){
  ev.fn(s,tp);
  logEvent(s,' 【'+ev.t+'】'+txt);
  }
+ if(s._quietSave)return; // 批量跳过（转会期 skip）：由外层统一 save，避免 30 次全量序列化
  save();
 }
 function payWage(s){
@@ -515,7 +516,7 @@ function recordSeasonAwards(s){
 function newSeason(s){
  /* 年度轮换（仅在年度总决赛结束后调用）：年龄/合同/退役/工资帽结算 + 开启新赛季春季赛。
  夏季赛不经过此函数（年中不做年龄与合同结算），由 startSplit 直接开启。 */
- try{localStorage.setItem(slotKey()+'_auto',JSON.stringify(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
+ try{localStorage.setItem(slotKey()+'_auto',serializeForSave(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
  recordSeasonAwards(s); // 上赛季最佳阵容入册（趁阵容还没跨季老化）
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
@@ -596,7 +597,6 @@ function newSeason(s){
  retireToCoach(s,p);
  }
  });
- s.fund+=1300;
  // 王朝反制②：连冠队伍工资帽成长减半（保住豪华阵容越来越难）
  const st=dynastyStreak(s,s.teamName);
  s.wageCap=(s.wageCap||90)+(st>=2?7:15); // KPL 联盟每赛季调整工资帽
@@ -622,8 +622,8 @@ function newSeason(s){
  s.lineup=s.lineup.filter(id=>s.players.some(p=>p.id===id));
  s.aiRosters={};
  }
- s.fund+=1300;
- logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万');
+ s.fund+=1300; // 联盟赛季启动金（年度轮换只发一次）
+ logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万 · 赛季启动金 +1300万');
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
  applySeasonPatch(s); // 赛季版本大改：两名英雄一增一削，持有者属性微调（自写 s.patch）

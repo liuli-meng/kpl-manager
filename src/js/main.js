@@ -17,9 +17,9 @@ document.addEventListener('click',e=>{
 
 /* ================= 导航（按身份模式适配可见页签） ================= */
 const MODE_PAGES={
- manager:['club','lineup','market','train','league','kjia','union','biz'],
- player:['career','club','league','kjia','union'], // 选手：生涯/球队日程/联赛/二队/联盟（不经营）
- coach:['club','lineup','train','league','kjia','union'], // 教练：竞技全权，转会/经营由俱乐部打理
+ manager:['club','lineup','market','train','league','kjia','union','hall','biz'],
+ player:['career','club','league','kjia','union','hall'], // 选手：生涯/球队日程/联赛/二队/联盟/荣誉馆
+ coach:['club','lineup','train','league','kjia','union','hall'], // 教练：竞技全权，转会/经营由俱乐部打理
 };
 function applyModeNav(){
  const pages=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
@@ -47,6 +47,7 @@ function renderPage(name){
  else if(name==='kjia')renderKjia();
  else if(name==='career')renderCareer();
  else if(name==='union')renderUnion();
+ else if(name==='hall')renderHall();
  else if(name==='biz')renderBiz();
 }
 function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
@@ -94,7 +95,7 @@ function setSlot(i){
 }
 function exportSave(){
  const t=$('#save-io');
- t.value=b64e(JSON.stringify(S));
+ t.value=b64e(serializeForSave(S));
  t.select();
  try{document.execCommand('copy');}catch(e){}
  toast('存档已复制，请妥善保存');
@@ -112,7 +113,7 @@ function pickSaveFile(){$('#save-file').click();}
 function exportSaveFile(){
  try{
  save();
- const wrap={kplSave:true,v:SAVE_VERSION,exported:new Date().toISOString().slice(0,10),team:S.teamName,season:S.season,data:S};
+ const wrap={kplSave:true,v:SAVE_VERSION,exported:new Date().toISOString().slice(0,10),team:S.teamName,season:S.season,data:JSON.parse(serializeForSave(S))};
  const blob=new Blob([JSON.stringify(wrap)],{type:'application/json'});
  const a=document.createElement('a');
  a.href=URL.createObjectURL(blob);

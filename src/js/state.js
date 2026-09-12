@@ -55,8 +55,8 @@ function newState(teamName,icon){
  };
 }
 function rosterAll(s){return s.players;}
-function rosterLineup(s){return s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);}
-function rosterBench(s){return s.players.filter(p=>!s.lineup.includes(p.id));}
+function rosterLineup(s){const set=new Set(s.lineup);return s.players.filter(p=>set.has(p.id));}
+function rosterBench(s){const set=new Set(s.lineup);return s.players.filter(p=>!set.has(p.id));}
 function myPlayer(s){return (s&&s.mode==='player'&&s.career)?s.players.find(p=>p.id===s.career.me)||null:null;} // 选手生涯：我扮演的选手
 /* 夺冠阵容快照：冠军/亚军入册时记录当时的首发名单（荣誉室可回看"这冠是谁打下来的"） */
 function titleRoster(s){
@@ -176,11 +176,21 @@ function weeklyWage(s){
  (s.assistants||[]).forEach(a=>sum+=a.wage);
  return sum;
 }
+/* 存档序列化：剔除可重建/仅运行期字段。
+  aiRosters 读档时 migrateSave 统一清空重建，写进去纯属白占 localStorage；
+  _achAt/_asCache 等是节流缓存。导出/备份同样走这里。 */
+function serializeForSave(s){
+ if(!s)return 'null';
+ const cache=s.aiRosters;
+ s.aiRosters={};
+ try{return JSON.stringify(s);}
+ finally{if(cache)s.aiRosters=cache;}
+}
 function save(){
- if(!S)return;
+ if(!S)return false;
  try{checkAchievements(S);}catch(e){}
- try{localStorage.setItem(slotKey(),JSON.stringify(S));}
- catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}}
+ try{localStorage.setItem(slotKey(),serializeForSave(S));return true;}
+ catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}return false;}
 }
 /* 赛制形态校验：当前阶段的分组结构是否存在且匹配。
  r2 起分组是 {S,A,B}/{S,A}，没有 G1 是正常的——不能用「无 G1」当旧档特征，

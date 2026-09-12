@@ -116,6 +116,23 @@ function genStarDef(s,usedNames,forcePos){
  career:'赛季'+s.season+'从青训营出道的新生代，天赋肉眼可见。'};
 }
 /* AI 转会期（newSeason 内调用）：联盟生态推进 */
+/* 难度分层：按种子战力把 AI 队分成 豪门/中游/弱旅——豪门更凶（抢人/换帅/青训），
+ 弱旅更散（放人多、补强弱），形成经营压力梯度。玩家连冠会全局加压（王朝反制配套）。 */
+function aiTierOf(s,tn){
+ const t=AI_TEAMS.find(x=>x.name===tn)||{};
+ // AI_TEAMS 用 power；CLUB_TEMPLATES 用 seed——两者都认，避免时代档/现役档口径不一致
+ const seed=t.seed!=null?t.seed:(t.power||450);
+ const p=s.aiPower&&s.aiPower[tn]!=null?s.aiPower[tn]:seed;
+ if(seed>=560||p>=520)return 'elite';
+ if(seed>=470||p>=470)return 'mid';
+ return 'weak';
+}
+function aiDiffMul(s,tn){
+ // 全局：玩家 ≥2 连冠 → 全联盟决策更积极（研究/挖角/青训加码）
+ const pressure=1+Math.min(dynastyStreak(s,s.teamName),3)*0.08;
+ const t=aiTierOf(s,tn);
+ return (t==='elite'?1.35:t==='mid'?1:0.72)*pressure;
+}
 function aiTransferWindow(s){
  const map=aiRosterDefMap(s);
  s.extraDefs=s.extraDefs||[];
@@ -141,15 +158,17 @@ function aiTransferWindow(s){
  });
  });
  // ①.5 AI 续约决策：状态差（过黄金期/战力低迷）→ 不续约释放进自由池；状态好 → 续约留队
- // 释放的选手本队不再签回（避免"换了个寂寞"），别队/玩家可捡漏
+ // 难度：弱旅更愿放人重组，豪门更愿留核心（badForm 阈值按 tier 收紧/放宽）
  const releasedFrom={};
  teams.forEach(tn=>{
+ const tier=aiTierOf(s,tn);
+ const holdBias=tier==='elite'?0.25:tier==='weak'?-0.15:0; // 负=更容易放人
  map[tn]=map[tn].filter(pid=>{
  const def=defOf(s,pid);
  if(!def)return false;
  const p=genSeasonPlayer(s,def);
  const am=AGE_MODEL[p.pos]||AGE_MODEL.mid;
- const badForm=(p.age>am.gold&&Math.random()<0.55)||(overall(p)<76&&Math.random()<0.5);
+ const badForm=(p.age>am.gold&&Math.random()<0.55+holdBias)||(overall(p)<76&&Math.random()<0.5+holdBias);
  if(badForm){
  releasedFrom[pid]=tn;
  logEvent(s,' '+tn+' 未与 '+p.name+'（'+p.age+'岁 · 总值'+overall(p)+'）续约，状态下滑进入自由市场');
@@ -193,18 +212,21 @@ function aiTransferWindow(s){
  map[tn].push(def.id);
  }
  });
- // ④ 明星流转：每队有五成概率用自由池明显更强的同位置选手换下一名首发
+ // ④ 明星流转：按难度概率用自由池明显更强的同位置选手换下一名首发（豪门更积极）
  order.forEach(tn=>{
- if(Math.random()>=0.5||map[tn].length<5||!freePool.length)return;
+ const pStar=0.5*aiDiffMul(s,tn);
+ if(Math.random()>=pStar||map[tn].length<5||!freePool.length)return;
  let best=null;
  map[tn].forEach(pid=>{
  const def=defOf(s,pid);
  if(!def)return;
  const cur=ovrOf(def);
+ // 豪门更挑剔（需 +5 才换），弱旅更愿意赌（+3 就换）
+ const needGain=aiTierOf(s,tn)==='elite'?5:aiTierOf(s,tn)==='weak'?3:4;
  freePool.forEach(d=>{
  if(d.pos!==def.pos)return;
  const gain=ovrOf(d)-cur;
- if(gain>=4&&(!best||gain>best.gain))best={gain,pid,def,out:def};
+ if(gain>=needGain&&(!best||gain>best.gain))best={gain,pid,def,out:def};
  });
  });
  if(best){
@@ -216,7 +238,9 @@ function aiTransferWindow(s){
  }
  });
  // ⑤ 新星出道：每赛季 2-3 名新秀进入联盟（对冲各位置退役潮，优先补缺位，否则待业进自由市场）
- const births=rnd(2,3);
+ // 难度：玩家连冠压力下多生 1 人（联盟不让你躺）
+ const extraBirth=dynastyStreak(s,s.teamName)>=2?1:0;
+ const births=rnd(2,3)+extraBirth;
  for(let i=0;i<births;i++){
  const def=genStarDef(s,usedNames);
  s.extraDefs.push(def);
@@ -225,11 +249,11 @@ function aiTransferWindow(s){
  else{logEvent(s,' 新星出道：'+def.name+'（'+POS[def.pos][0]+'）进入自由市场');}
  }
  // ⑥ 教练组流动：AI 队也会换帅——从名宿市场挖更好的教练（与玩家抢人），旧帅下岗回流市场
- // 弱队优先、只升不降；换帅后 aiRosterPower 按新教练加成结算（不再是一刀切的固定班底）
+ // 弱队优先、只升不降；换帅概率按难度分层
  s.retiredCoaches=s.retiredCoaches||[];
  let coachMoved=false;
  order.forEach(tn=>{
- if(Math.random()>=0.45)return; // 每队每赛季 45% 概率寻求换帅
+ if(Math.random()>=0.45*aiDiffMul(s,tn))return;
  const cur=aiCoachState(s)[tn]||{bonus:6};
  const c=s.retiredCoaches.filter(r=>r.type!=='host'&&r.bonus>cur.bonus).sort((a,b)=>b.bonus-a.bonus)[0];
  if(!c)return;
@@ -241,14 +265,16 @@ function aiTransferWindow(s){
  });
  if(coachMoved)s.aiRosters={}; // 教练加成变化：名册缓存战力失效
  // ⑦ AI 青训培养：AI 队也有自家青训营——概率培养底子，达标的自动晋升替换队内弱首发
- // （补上"AI 永不培养青训"的生态缺口，新秀在联盟里有真实成长与上位路径）
+ // （豪门开班更勤、练得更狠）
  s.aiAcademy=s.aiAcademy||{};
  let rookMoved=false;
  order.forEach(tn=>{
- if(Math.random()>=0.4)return; // 40% 概率参与青训运作（弱队优先，order 已按战力升序）
+ const mul=aiDiffMul(s,tn);
+ if(Math.random()>=0.4*mul)return;
  if(!s.aiAcademy[tn]||!s.aiAcademy[tn].length){
  const pool=[];
- for(let k=0;k<rnd(1,2);k++){
+ const n=aiTierOf(s,tn)==='elite'?rnd(2,3):rnd(1,2);
+ for(let k=0;k<n;k++){
  const def=genAiRookieDef(s,tn);
  s.extraDefs.push(def);
  pool.push(def.id);
@@ -256,15 +282,16 @@ function aiTransferWindow(s){
  s.aiAcademy[tn]=pool;
  logEvent(s,' '+tn+' 青训营开班，签入 '+pool.length+' 名新秀（'+pool.map(id=>defOf(s,id).name).join('、')+'）');
  }
- // 培养一名新秀（随机属性 +2~4，与玩家青训培养同量级）
+ // 培养一名新秀（随机属性 +2~4，与玩家青训培养同量级；豪门可到 +5）
  const id=s.aiAcademy[tn][rnd(0,s.aiAcademy[tn].length-1)];
  const r=defOf(s,id);
  if(!r)return;
  const key=pick(['lane','farm','team','mind']);
  const idx=['lane','farm','team','mind'].indexOf(key);
- r.base[idx]=clamp((r.base[idx]||70)+rnd(2,4),40,95);
+ const trainMax=aiTierOf(s,tn)==='elite'?5:4;
+ r.base[idx]=clamp((r.base[idx]||70)+rnd(2,trainMax),40,95);
  const rSum=sumBase(r);
- logEvent(s,' '+tn+' 培养青训 '+r.name+'（'+POS[r.pos][0]+'）「'+TRAIN_ITEMS.find(t=>t.k===key).n+'」+2~4');
+ logEvent(s,' '+tn+' 培养青训 '+r.name+'（'+POS[r.pos][0]+'）「'+TRAIN_ITEMS.find(t=>t.k===key).n+'」+2~'+trainMax);
  // 达标晋升：四维和≥300 且队内该位置首发弱于新秀 → 替换上位（老将离队寻找下家）
  if(rSum>=300){
  const rOvr=overall(genSeasonPlayer(s,r));
@@ -941,6 +968,8 @@ function skipTransferWindow(s){
  const miss=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos));
  if(miss.length){toast(' '+miss.map(pos=>POS[pos][0]).join('、')+' 位置无人，无法开赛，请先签约选手');return;}
  let guard=0;
+ s._quietSave=true; // 内部 nextDay 不再天天全量存档；结束/中断时统一 save 一次
+ try{
  while(s.transferWindow>0&&guard++<30){
  if(!s.trained)autoDoTrain(s);
  if(!s.academyTrained)autoTrainRookie(s);
@@ -955,7 +984,11 @@ function skipTransferWindow(s){
  return;
  }
  }
+ }finally{
+ s._quietSave=false;
+ }
  logEvent(s,'跳过转会期剩余天数：已自动完成训练与青训培养，联赛正式开始');
+ checkAchievements(s); // 跳过期结束强制扫（quiet 期间未走 save 巡检）
  save();renderAll();
  toast('转会期跳过完成，联赛开始！');
 }

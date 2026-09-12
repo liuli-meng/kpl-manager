@@ -48,6 +48,31 @@ const out = vm.runInContext(`
   else log('⑥无效对象被拒（缺 teamName/players）');
   renderAll=_ra;save=_sv;
 
+  // ⑦ serializeForSave：aiRosters 不落盘，运行期缓存保留
+  S=newState('瘦身队','瘦');fillRoster(S,'mid');
+  S.aiRosters={'测试AI':[{id:'z'}]};
+  const raw=serializeForSave(S);
+  if(raw.includes('测试AI')||raw.includes('"aiRosters":{"'))fail('⑦aiRosters 不应写入序列化结果');
+  else if(!S.aiRosters['测试AI'])fail('⑦序列化后运行期 aiRosters 缓存被清空（应保留）');
+  else log('⑦serializeForSave：aiRosters 剔除 · 运行期缓存保留（读档由 migrateSave 重建）');
+
+  // ⑧ nextDay 静默存档：_quietSave 时不写 localStorage
+  S=newState('静默队','静');fillRoster(S,'mid');
+  S.coach={...COACH_POOL.find(c=>c.id==='co12')};
+  S.lineup=S.players.map(p=>p.id);
+  S.transferWindow=0;S.preseason=false;S.day=1;
+  const key=slotKey();
+  localStorage.removeItem(key);
+  S._quietSave=true;
+  nextDay(S);
+  if(localStorage.getItem(key))fail('⑧_quietSave 下 nextDay 仍写盘');
+  else{
+   S._quietSave=false;
+   save();
+   if(!localStorage.getItem(key))fail('⑧解除静默后 save 未落盘');
+   else log('⑧nextDay 静默：'+ (S._quietSave?'批量跳过期不写盘':'正常 save 落盘'));
+  }
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; '));
   return res.join(String.fromCharCode(10));
 })()

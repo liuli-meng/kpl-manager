@@ -78,10 +78,10 @@ function yearPlaceRank(place){
 }
 function yearTrendSvg(stages){
  if(!stages||stages.length<2)return '';
- const W=520,H=140,PAD_L=36,PAD_R=16,PAD_T=18,PAD_B=28;
+ const W=520,H=140,PAD_L=40,PAD_R=28,PAD_T=20,PAD_B=30;
  const ranks=stages.map(st=>yearPlaceRank(st.place));
  const yMin=1,yMax=16;
- const x=i=>stages.length===1?W/2:PAD_L+i*(W-PAD_L-PAD_R)/(stages.length-1);
+ const x=i=>PAD_L+i*(W-PAD_L-PAD_R)/(stages.length-1);
  const y=r=>PAD_T+(r-yMin)/(yMax-yMin)*(H-PAD_T-PAD_B);
  const pts=ranks.map((r,i)=>x(i)+','+y(r).toFixed(1)).join(' ');
  const gridY=[1,4,8,12,16].map(g=>{
@@ -90,13 +90,15 @@ function yearTrendSvg(stages){
  <text x="${PAD_L-6}" y="${gy}" text-anchor="end" dominant-baseline="central" fill="var(--dim)" font-size="10">${g===1?'冠军':g===16?'垫底':g+'名'}</text>`;
  }).join('');
  const dots=ranks.map((r,i)=>{
- const cx=x(i).toFixed(1),cy=y(r).toFixed(1);
+ const cx=x(i),cy=y(r);
  const col=r<=2?'var(--gold)':r<=4?'var(--cyan)':r<=8?'var(--green)':'var(--dim)';
- const label=stages[i].place;
- const short=stages[i].ev.replace(/KPL年度总决赛/,'年总').replace(/电竞世界杯/,'EWC').replace(/挑战者杯/,'挑杯');
- return `<circle cx="${cx}" cy="${cy}" r="4" fill="${col}"/>
- <text x="${cx}" y="${cy-10}" text-anchor="middle" fill="${col}" font-size="10" font-weight="600">${label}</text>
- <text x="${cx}" y="${H-8}" text-anchor="middle" fill="var(--dim)" font-size="10">${short}</text>`;
+ // 边缘点标签内收，避免贴 viewBox 被裁切
+ const tx=Math.min(Math.max(cx,PAD_L+18),W-PAD_R-18);
+ const label=_escTxt(String(stages[i].place||'—'));
+ const short=_escTxt(String(stages[i].ev||'').replace(/KPL年度总决赛/,'年总').replace(/电竞世界杯/,'EWC').replace(/挑战者杯/,'挑杯').slice(0,6));
+ return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${col}"/>
+ <text x="${tx.toFixed(1)}" y="${(cy-10).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="10" font-weight="600">${label}</text>
+ <text x="${tx.toFixed(1)}" y="${H-8}" text-anchor="middle" fill="var(--dim)" font-size="10">${short}</text>`;
  }).join('');
  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;max-width:${W}px;margin:0 auto" role="img" aria-label="年度成绩走势">
  ${gridY}
@@ -139,7 +141,10 @@ function showYearReview(idx){
  <div class="panel" style="margin:10px 0"><h3>本年度成就</h3><div>${achRow}</div></div>
  <div class="panel" style="margin:10px 0"><h3>经营快照</h3>
  <div class="hint">年末资金 ${fmt(r.fund)} · 粉丝 ${r.fans} 万 · 年度积分 ${r.annualPts} 分</div></div>
- <div class="center"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
+ <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+ <button class="btn gold sm" onclick="shareHonorCard()"> 生成战绩分享图</button>
+ <button class="btn primary" onclick="closeModal('app-modal')">关闭</button>
+ </div>`;
  $('#app-modal').classList.add('on');
  $('#app-modal').classList.add('wide');
  if(S._reviewNew===r.year){S._reviewNew=null;save();} // 首次查看后清除俱乐部页提示
@@ -181,7 +186,7 @@ function renderHeader(){
  <div class="stat"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
  ${S.coach?`<div class="stat gold"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
  </div>
- <button class="hd-btn" onclick="save();toast('存档成功')">存档</button>
+ <button class="hd-btn" onclick="uiSave()">存档</button>
  <button class="hd-btn" onclick="openSaveMgmt()">管理</button>
  <button class="hd-btn" onclick="toggleSfx()" title="音效开关">${_sfxOn?'音效 开':'音效 关'}</button>
  <button class="hd-btn" onclick="resetGame()">重开</button>`;
@@ -198,8 +203,9 @@ function renderHeader(){
  直接调用 nextDay/startMatch/startCup，若在那里硬守卫，门禁就再也测不出真实数值了。 */
 function boardLocked(){return !!(S&&S.board&&S.board.fired);}
 function uiGuard(msg){if(boardLocked()){try{toast(msg||'你已被董事会解约，执教生涯结束');}catch(_){}return true;}return false;}
+function uiSave(){if(save())toast('存档成功');}
 function playerRetired(s){return !!(s&&s.mode==='player'&&s.career&&s.career.retired);}
-function uiNextDay(s){if(uiGuard())return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);}
+function uiNextDay(s){if(uiGuard())return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);renderAll();}
 function uiStartMatch(){if(uiGuard())return;if(playerRetired(S)){toast('职业生涯已退役');return;}startMatch();}
 function uiStartCup(s){if(uiGuard())return;startCup(s);}
 function uiSkipTransfer(s){if(uiGuard())return;skipTransferWindow(s);}
@@ -1339,7 +1345,7 @@ function renderCareer(){
  // 成长 + 每日行动
  html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':'每天一项'}</span></h3>
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(me,84)}
- <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${c.mentorName?'<br>老将带新：'+c.mentorName+' 点拨过你（年度结算时属性成长更快）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
+ <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
  <button class="btn sm" onclick="playerTrain('lane')" ${S.trained||me.energy<10?'disabled':''}>练对线 +1~2</button>
  <button class="btn sm" onclick="playerTrain('farm')" ${S.trained||me.energy<10?'disabled':''}>练运营 +1~2</button>

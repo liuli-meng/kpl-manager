@@ -62,8 +62,10 @@ function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；
  }
 }
 /* 一条龙生涯：选手退役后转型执教（同档延续，履历写入教练合同）。
- 能力按生涯荣誉折算评分/加成；班底仍为现俱乐部，信任度小幅回正。 */
+ 能力按生涯荣誉折算评分/加成；班底仍为现俱乐部，信任度小幅回正。
+ UI 回调 onclick="playerToCoach()" 不传参——缺省用全局 S。 */
 function playerToCoach(s){
+ s=s||S;
  if(!s||s.mode!=='player'||!s.career||!s.career.retired||!s.career.coachPath||!s.career.legacy){
  toast('暂无执教邀请（需先退役并收到教练组邀请）');
  return false;

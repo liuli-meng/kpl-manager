@@ -320,6 +320,29 @@ footer{background:transparent;border-top:1px solid var(--line);
   .toast{font-size:12px;padding:9px 15px;bottom:64px}
   footer{padding:8px;font-size:10px;padding-bottom:80px}
   #tab-self-body .btn,#tab-club-body .btn{width:100%}
+  /* 2026-09 移动端 pass：触控目标 / 安全区 / 表格横滑 / 弹窗手感 */
+  .btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}
+  .btn.sm{min-height:38px}
+  nav button{min-height:52px}
+  .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  .tbl th,.tbl td{white-space:nowrap}
+  .modal{border-radius:10px;padding:16px 12px;max-height:94dvh}
+  .modal-bg{padding:6px;align-items:flex-end}
+  .modal-bg .modal{margin-bottom:env(safe-area-inset-bottom,0)}
+  .page-cols{gap:8px}
+  .g5,.g4{grid-template-columns:1fr 1fr}
+  .banner{flex-wrap:wrap}
+  .banner>div:nth-child(2){flex:1 1 140px;min-width:0}
+  .vs-poster{padding:10px 8px;gap:6px}
+  .vs-mid{width:90px}
+  .vs-pow{font-size:16px}
+  .result-band b{font-size:20px;letter-spacing:1px}
+  .mvp-card{padding:8px 10px;gap:8px}
+  .sponsor{padding:9px 10px}
+  .logbox{max-height:220px}
+  /* 底栏导航：滑动时最多显示 6 个标签，其余横向滑 */
+  nav{scroll-snap-type:x proximity}
+  nav button{scroll-snap-align:center}
 }
 @media (max-width:760px){
   .bp-board{flex-direction:column}

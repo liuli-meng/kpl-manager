@@ -704,6 +704,8 @@ function checkAchievements(s){
  if(!s)return;
  s.achieved=s.achieved||{};
  const unlock=s.achieved;
+ // 全解锁：后续扫描无事可做
+ if(Object.keys(unlock).length>=ACHIEVEMENTS.length)return;
  ACHIEVEMENTS.forEach(a=>{
  if(unlock[a.id])return;
  let ok=false;
