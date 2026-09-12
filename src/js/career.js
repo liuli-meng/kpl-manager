@@ -140,14 +140,14 @@ function retireToCoach(s,p){
  const bonus=isStar?rnd(5,8):rnd(3,5);
  const style=pick(['lane','farm','team','mind']);
  const coach={id:'rc'+Date.now()+'_'+rnd(100,999),name:p.name,rating:isStar?80:70,style,bonus,styleBonus:isStar?rnd(3,5):2,
- wage:isStar?rnd(120,180):rnd(80,110),cost:isStar?rnd(1200,1800):rnd(700,1000),
+ wage:isStar?rnd(20,30):rnd(13,18),cost:isStar?rnd(200,300):rnd(117,167),
  skill:{n:'名宿执教',d:'全队战力+'+bonus+'% · 退役选手转型教练'},type:'coach',origin:p.name};
  s.retiredCoaches.push(coach);
  logEvent(s,''+p.name+'（'+p.age+'岁）退役转型主教练！执教能力已进入教练市场');
  }else{
  // 转型主播：给俱乐部带来人气收入（每日资金）
  const host={id:'rh'+Date.now()+'_'+rnd(100,999),name:p.name,rating:80,type:'host',
- income:rnd(40,90),cost:rnd(900,1400),popularity:(p.popularity||40)+rnd(10,25),
+ income:rnd(7,15),cost:rnd(150,233),popularity:(p.popularity||40)+rnd(10,25),
  skill:{n:'转型主播',d:'每日为俱乐部带来 '+0+'万 人气收入'},origin:p.name};
  host.skill={n:'转型主播',d:'每日为俱乐部带来 '+host.income+'万 人气收入（热度 '+(p.popularity||40)+'）'};
  s.retiredCoaches.push(host);

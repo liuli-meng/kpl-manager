@@ -866,21 +866,21 @@ function renderTrain(){
  </div>
  <div class="p-foot"><span>四维 <b class="${ready?'green':'gold'}">${total}/300</b></span><span> ${r.sig}</span></div>
  <div style="display:flex;gap:6px;margin-top:8px">
- <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 10万</button>
+ <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 17万</button>
  <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满18岁':'未达标')}</button>
  </div>
  <div class="hint" style="margin-top:6px">${S.academyTrained?'今日已培养过青训':'培养：潜力越高成长越快'}</div>
  </div>`;
  }).join('');
  html+=`<div class="panel"><h3>青训营 <span class="tag">低薪高潜 · 工资帽友好</span></h3>
- <div class="hint" style="margin-bottom:10px">招募新秀（30万）→ 每日培养（10万，潜力越高成长越快）→ 四维总和 ≥300 晋升一线队。青训选手周薪仅 2-4万，是工资帽下的经济型补强。</div>
- <button class="btn gold sm" onclick="recruitRookie(S)"> 招募新秀（30万）</button>
+ <div class="hint" style="margin-bottom:10px">招募新秀（50万）→ 每日培养（17万，潜力越高成长越快）→ 四维总和 ≥300 晋升一线队。青训选手周薪仅 2-4万，是工资帽下的经济型补强。</div>
+ <button class="btn gold sm" onclick="recruitRookie(S)"> 招募新秀（50万）</button>
  <div class="grid g4" style="margin-top:12px">${acaHtml||'<div class="hint">青训营空无一人，先招募一名新秀吧</div>'}</div>
  </div>`;
  // 位置改造
  const convOpts=S.players.map(p=>`<option value="${p.id}">${p.name}（${POS[p.pos][0]} · ${p.age}岁）</option>`).join('');
  const posOpts=POS_ORDER.map(pos=>`<option value="${pos}">${POS[pos][0]}</option>`).join('');
- html+=`<div class="panel"><h3>位置改造 <span class="tag">30万 · 重构英雄池</span></h3>
+ html+=`<div class="panel"><h3>位置改造 <span class="tag">50万 · 重构英雄池</span></h3>
  <div class="hint" style="margin-bottom:10px">职业选手可以转型换位：属性保留，新位置英雄池重构（两位置通用英雄保留熟练度，招牌不通用则重立）。用于解决退役/转会造成的位置断档。</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
  <select id="conv-player" class="hd-in" style="padding:8px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);color:var(--txt)">${convOpts}</select>

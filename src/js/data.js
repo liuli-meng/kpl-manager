@@ -398,33 +398,34 @@ const AI_TEAMS=[
 const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）
 
 /* ================= 教练池（真实 KPL 主教练） =================
- bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费 */
+ bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费
+ 经济刻度：与工资帽 150 同步 ÷6——顶帅周薪 ~53（约帽的 1/3），中坚 22~27，助教位 12 */
 const COACH_POOL=[
- {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:320,cost:3200,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
- {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:320,cost:3200,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
- {id:'co3',name:'久哲',rating:90,style:'lane',bonus:9,styleBonus:6,wage:300,cost:3000,skill:{n:'五冠哲神',d:'全队战力+9%，对线属性额外+6%（Hero王朝奠基人）'}},
- {id:'co4',name:'林',rating:90,style:'team',bonus:8,styleBonus:5,wage:280,cost:2800,skill:{n:'赛训总监',d:'全队战力+8%，团战属性额外+5%（男人哥）'}},
- {id:'co5',name:'老林',rating:80,style:'farm',bonus:5,styleBonus:4,wage:160,cost:1500,skill:{n:'赛训大师',d:'全队战力+5%，运营属性额外+4%'}},
- {id:'co6',name:'月光',rating:80,style:'mind',bonus:5,styleBonus:4,wage:150,cost:1400,skill:{n:'月之BP',d:'全队战力+5%，心态属性额外+4%'}},
- {id:'co7',name:'Gemini',rating:80,style:'mind',bonus:5,styleBonus:4,wage:140,cost:1300,skill:{n:'毒奶玄学',d:'全队战力+5%，心态属性额外+4%（比赛毒奶对手）'}},
- {id:'co8',name:'花楼',rating:80,style:'lane',bonus:4,styleBonus:3,wage:140,cost:1200,skill:{n:'稳健BP',d:'全队战力+4%，对线属性额外+3%'}},
- {id:'co9',name:'张角',rating:80,style:'farm',bonus:4,styleBonus:3,wage:130,cost:1150,skill:{n:'战术大师',d:'全队战力+4%，运营属性额外+3%'}},
- {id:'co10',name:'Awoke',rating:80,style:'team',bonus:4,styleBonus:3,wage:130,cost:1150,skill:{n:'冠军赛训',d:'全队战力+4%，团战属性额外+3%'}},
- {id:'co11',name:'奶茶',rating:70,style:'mind',bonus:2,styleBonus:2,wage:80,cost:550,skill:{n:'鸡汤教练',d:'全队战力+2%，心态属性额外+2%'}},
- {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:70,cost:500,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
+ {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
+ {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
+ {id:'co3',name:'久哲',rating:90,style:'lane',bonus:9,styleBonus:6,wage:50,cost:500,skill:{n:'五冠哲神',d:'全队战力+9%，对线属性额外+6%（Hero王朝奠基人）'}},
+ {id:'co4',name:'林',rating:90,style:'team',bonus:8,styleBonus:5,wage:47,cost:467,skill:{n:'赛训总监',d:'全队战力+8%，团战属性额外+5%（男人哥）'}},
+ {id:'co5',name:'老林',rating:80,style:'farm',bonus:5,styleBonus:4,wage:27,cost:250,skill:{n:'赛训大师',d:'全队战力+5%，运营属性额外+4%'}},
+ {id:'co6',name:'月光',rating:80,style:'mind',bonus:5,styleBonus:4,wage:25,cost:233,skill:{n:'月之BP',d:'全队战力+5%，心态属性额外+4%'}},
+ {id:'co7',name:'Gemini',rating:80,style:'mind',bonus:5,styleBonus:4,wage:23,cost:217,skill:{n:'毒奶玄学',d:'全队战力+5%，心态属性额外+4%（比赛毒奶对手）'}},
+ {id:'co8',name:'花楼',rating:80,style:'lane',bonus:4,styleBonus:3,wage:23,cost:200,skill:{n:'稳健BP',d:'全队战力+4%，对线属性额外+3%'}},
+ {id:'co9',name:'张角',rating:80,style:'farm',bonus:4,styleBonus:3,wage:22,cost:192,skill:{n:'战术大师',d:'全队战力+4%，运营属性额外+3%'}},
+ {id:'co10',name:'Awoke',rating:80,style:'team',bonus:4,styleBonus:3,wage:22,cost:192,skill:{n:'冠军赛训',d:'全队战力+4%，团战属性额外+3%'}},
+ {id:'co11',name:'奶茶',rating:70,style:'mind',bonus:2,styleBonus:2,wage:13,cost:92,skill:{n:'鸡汤教练',d:'全队战力+2%，心态属性额外+2%'}},
+ {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:12,cost:83,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
 ];
 const COACH_STYLE={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
 
 /* ================= 助教池（教练组第二块拼图，最多聘 2 名，加成与主教练叠加） =================
  幅度小于主教练；退役名宿教练也可 6 折转任助教 */
 const ASSISTANT_POOL=[
- {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:60,cost:900,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
- {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:60,cost:900,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
- {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:50,cost:700,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
- {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:50,cost:700,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
- {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:40,cost:550,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
- {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:40,cost:550,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
- {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:30,cost:400,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
+ {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
+ {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
+ {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:8,cost:117,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
+ {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:8,cost:117,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
+ {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:7,cost:92,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
+ {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:7,cost:92,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
+ {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:5,cost:67,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
 ];
 
 /* ================= 转会市场：AI 战队选手池（u=非卖品） ================= */

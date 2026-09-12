@@ -878,33 +878,34 @@ const AI_TEAMS=[
 const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）
 
 /* ================= 教练池（真实 KPL 主教练） =================
- bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费 */
+ bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费
+ 经济刻度：与工资帽 150 同步 ÷6——顶帅周薪 ~53（约帽的 1/3），中坚 22~27，助教位 12 */
 const COACH_POOL=[
- {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:320,cost:3200,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
- {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:320,cost:3200,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
- {id:'co3',name:'久哲',rating:90,style:'lane',bonus:9,styleBonus:6,wage:300,cost:3000,skill:{n:'五冠哲神',d:'全队战力+9%，对线属性额外+6%（Hero王朝奠基人）'}},
- {id:'co4',name:'林',rating:90,style:'team',bonus:8,styleBonus:5,wage:280,cost:2800,skill:{n:'赛训总监',d:'全队战力+8%，团战属性额外+5%（男人哥）'}},
- {id:'co5',name:'老林',rating:80,style:'farm',bonus:5,styleBonus:4,wage:160,cost:1500,skill:{n:'赛训大师',d:'全队战力+5%，运营属性额外+4%'}},
- {id:'co6',name:'月光',rating:80,style:'mind',bonus:5,styleBonus:4,wage:150,cost:1400,skill:{n:'月之BP',d:'全队战力+5%，心态属性额外+4%'}},
- {id:'co7',name:'Gemini',rating:80,style:'mind',bonus:5,styleBonus:4,wage:140,cost:1300,skill:{n:'毒奶玄学',d:'全队战力+5%，心态属性额外+4%（比赛毒奶对手）'}},
- {id:'co8',name:'花楼',rating:80,style:'lane',bonus:4,styleBonus:3,wage:140,cost:1200,skill:{n:'稳健BP',d:'全队战力+4%，对线属性额外+3%'}},
- {id:'co9',name:'张角',rating:80,style:'farm',bonus:4,styleBonus:3,wage:130,cost:1150,skill:{n:'战术大师',d:'全队战力+4%，运营属性额外+3%'}},
- {id:'co10',name:'Awoke',rating:80,style:'team',bonus:4,styleBonus:3,wage:130,cost:1150,skill:{n:'冠军赛训',d:'全队战力+4%，团战属性额外+3%'}},
- {id:'co11',name:'奶茶',rating:70,style:'mind',bonus:2,styleBonus:2,wage:80,cost:550,skill:{n:'鸡汤教练',d:'全队战力+2%，心态属性额外+2%'}},
- {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:70,cost:500,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
+ {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
+ {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
+ {id:'co3',name:'久哲',rating:90,style:'lane',bonus:9,styleBonus:6,wage:50,cost:500,skill:{n:'五冠哲神',d:'全队战力+9%，对线属性额外+6%（Hero王朝奠基人）'}},
+ {id:'co4',name:'林',rating:90,style:'team',bonus:8,styleBonus:5,wage:47,cost:467,skill:{n:'赛训总监',d:'全队战力+8%，团战属性额外+5%（男人哥）'}},
+ {id:'co5',name:'老林',rating:80,style:'farm',bonus:5,styleBonus:4,wage:27,cost:250,skill:{n:'赛训大师',d:'全队战力+5%，运营属性额外+4%'}},
+ {id:'co6',name:'月光',rating:80,style:'mind',bonus:5,styleBonus:4,wage:25,cost:233,skill:{n:'月之BP',d:'全队战力+5%，心态属性额外+4%'}},
+ {id:'co7',name:'Gemini',rating:80,style:'mind',bonus:5,styleBonus:4,wage:23,cost:217,skill:{n:'毒奶玄学',d:'全队战力+5%，心态属性额外+4%（比赛毒奶对手）'}},
+ {id:'co8',name:'花楼',rating:80,style:'lane',bonus:4,styleBonus:3,wage:23,cost:200,skill:{n:'稳健BP',d:'全队战力+4%，对线属性额外+3%'}},
+ {id:'co9',name:'张角',rating:80,style:'farm',bonus:4,styleBonus:3,wage:22,cost:192,skill:{n:'战术大师',d:'全队战力+4%，运营属性额外+3%'}},
+ {id:'co10',name:'Awoke',rating:80,style:'team',bonus:4,styleBonus:3,wage:22,cost:192,skill:{n:'冠军赛训',d:'全队战力+4%，团战属性额外+3%'}},
+ {id:'co11',name:'奶茶',rating:70,style:'mind',bonus:2,styleBonus:2,wage:13,cost:92,skill:{n:'鸡汤教练',d:'全队战力+2%，心态属性额外+2%'}},
+ {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:12,cost:83,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
 ];
 const COACH_STYLE={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
 
 /* ================= 助教池（教练组第二块拼图，最多聘 2 名，加成与主教练叠加） =================
  幅度小于主教练；退役名宿教练也可 6 折转任助教 */
 const ASSISTANT_POOL=[
- {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:60,cost:900,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
- {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:60,cost:900,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
- {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:50,cost:700,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
- {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:50,cost:700,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
- {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:40,cost:550,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
- {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:40,cost:550,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
- {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:30,cost:400,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
+ {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
+ {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
+ {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:8,cost:117,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
+ {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:8,cost:117,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
+ {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:7,cost:92,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
+ {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:7,cost:92,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
+ {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:5,cost:67,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
 ];
 
 /* ================= 转会市场：AI 战队选手池（u=非卖品） ================= */
@@ -2969,7 +2970,7 @@ function endPreseason(s){
 function skipTransferWindow(s){
  const left=s.transferWindow||0;
  if(left<=0){toast('当前不在转会期');return;}
- if(!confirm('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，80万/次）\n· 培养一名青训（潜力优先，100万/次）\n资金不足的天数自动跳过；AI 报价照常进行。'))return;
+ if(!confirm('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，13万/次）\n· 培养一名青训（潜力优先，17万/次）\n资金不足的天数自动跳过；AI 报价照常进行。'))return;
  autoFillLineup(s);
  const miss=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos));
  if(miss.length){toast(' '+miss.map(pos=>POS[pos][0]).join('、')+' 位置无人，无法开赛，请先签约选手');return;}
@@ -2999,14 +3000,14 @@ function skipTransferWindow(s){
  toast('转会期跳过完成，联赛开始！');
 }
 function autoDoTrain(s){
- if(s.fund<80)return;
+ if(s.fund<13)return;
  const p=s.players.filter(x=>x.injury<=0&&x.energy>=10).sort((a,b)=>overall(b)-overall(a))[0];
  if(!p)return;
  const key=['lane','farm','team','mind'].sort((a,b)=>p.attrs[a]-p.attrs[b])[0]; // 练最弱属性
  doTrain(s,p.id,key);
 }
 function autoTrainRookie(s){
- if(s.fund<100)return;
+ if(s.fund<17)return;
  const r=(s.academy||[]).filter(x=>!rookieReady(x)).sort((a,b)=>(b.potential||0)-(a.potential||0))[0];
  if(!r)return;
  trainRookie(s,r.id);
@@ -3332,8 +3333,8 @@ function genRookie(s){
  mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true,contract:2};
 }
 function recruitRookie(s){
- if(s.fund<300){toast('招募青训需 300万');return;}
- s.fund-=300;
+ if(s.fund<50){toast('招募青训需 50万');return;}
+ s.fund-=50;
  const r=genRookie(s);
  s.academy=[...(s.academy||[]),r];
  logEvent(s,' 青训营招募新秀 '+r.name+'（'+POS[r.pos][0]+' · 潜力'+r.potential+'）');
@@ -3343,8 +3344,8 @@ function trainRookie(s,id){
  if(s.academyTrained){toast('今日已培养过青训选手');return;}
  const r=(s.academy||[]).find(x=>x.id===id);
  if(!r)return;
- if(s.fund<100){toast('青训培养需 100万');return;}
- s.fund-=100;
+ if(s.fund<17){toast('青训培养需 17万');return;}
+ s.fund-=17;
  s.academyTrained=true;
  // 潜力越高成长越快：2-4 起步 + 潜力加成（pot/2），平均 4~6/天 —— 约 3~4 周培养到晋升线（四维和300）
  const gain=2+rnd(0,2)+Math.floor((r.potential||3)/2);
@@ -5269,14 +5270,14 @@ function retireToCoach(s,p){
  const bonus=isStar?rnd(5,8):rnd(3,5);
  const style=pick(['lane','farm','team','mind']);
  const coach={id:'rc'+Date.now()+'_'+rnd(100,999),name:p.name,rating:isStar?80:70,style,bonus,styleBonus:isStar?rnd(3,5):2,
- wage:isStar?rnd(120,180):rnd(80,110),cost:isStar?rnd(1200,1800):rnd(700,1000),
+ wage:isStar?rnd(20,30):rnd(13,18),cost:isStar?rnd(200,300):rnd(117,167),
  skill:{n:'名宿执教',d:'全队战力+'+bonus+'% · 退役选手转型教练'},type:'coach',origin:p.name};
  s.retiredCoaches.push(coach);
  logEvent(s,''+p.name+'（'+p.age+'岁）退役转型主教练！执教能力已进入教练市场');
  }else{
  // 转型主播：给俱乐部带来人气收入（每日资金）
  const host={id:'rh'+Date.now()+'_'+rnd(100,999),name:p.name,rating:80,type:'host',
- income:rnd(40,90),cost:rnd(900,1400),popularity:(p.popularity||40)+rnd(10,25),
+ income:rnd(7,15),cost:rnd(150,233),popularity:(p.popularity||40)+rnd(10,25),
  skill:{n:'转型主播',d:'每日为俱乐部带来 '+0+'万 人气收入'},origin:p.name};
  host.skill={n:'转型主播',d:'每日为俱乐部带来 '+host.income+'万 人气收入（热度 '+(p.popularity||40)+'）'};
  s.retiredCoaches.push(host);
@@ -7816,21 +7817,21 @@ function renderTrain(){
  </div>
  <div class="p-foot"><span>四维 <b class="${ready?'green':'gold'}">${total}/300</b></span><span> ${r.sig}</span></div>
  <div style="display:flex;gap:6px;margin-top:8px">
- <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 10万</button>
+ <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 17万</button>
  <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满18岁':'未达标')}</button>
  </div>
  <div class="hint" style="margin-top:6px">${S.academyTrained?'今日已培养过青训':'培养：潜力越高成长越快'}</div>
  </div>`;
  }).join('');
  html+=`<div class="panel"><h3>青训营 <span class="tag">低薪高潜 · 工资帽友好</span></h3>
- <div class="hint" style="margin-bottom:10px">招募新秀（30万）→ 每日培养（10万，潜力越高成长越快）→ 四维总和 ≥300 晋升一线队。青训选手周薪仅 2-4万，是工资帽下的经济型补强。</div>
- <button class="btn gold sm" onclick="recruitRookie(S)"> 招募新秀（30万）</button>
+ <div class="hint" style="margin-bottom:10px">招募新秀（50万）→ 每日培养（17万，潜力越高成长越快）→ 四维总和 ≥300 晋升一线队。青训选手周薪仅 2-4万，是工资帽下的经济型补强。</div>
+ <button class="btn gold sm" onclick="recruitRookie(S)"> 招募新秀（50万）</button>
  <div class="grid g4" style="margin-top:12px">${acaHtml||'<div class="hint">青训营空无一人，先招募一名新秀吧</div>'}</div>
  </div>`;
  // 位置改造
  const convOpts=S.players.map(p=>`<option value="${p.id}">${p.name}（${POS[p.pos][0]} · ${p.age}岁）</option>`).join('');
  const posOpts=POS_ORDER.map(pos=>`<option value="${pos}">${POS[pos][0]}</option>`).join('');
- html+=`<div class="panel"><h3>位置改造 <span class="tag">30万 · 重构英雄池</span></h3>
+ html+=`<div class="panel"><h3>位置改造 <span class="tag">50万 · 重构英雄池</span></h3>
  <div class="hint" style="margin-bottom:10px">职业选手可以转型换位：属性保留，新位置英雄池重构（两位置通用英雄保留熟练度，招牌不通用则重立）。用于解决退役/转会造成的位置断档。</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
  <select id="conv-player" class="hd-in" style="padding:8px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);color:var(--txt)">${convOpts}</select>

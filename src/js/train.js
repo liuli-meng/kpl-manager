@@ -88,8 +88,8 @@ function genRookie(s){
  mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true,contract:2};
 }
 function recruitRookie(s){
- if(s.fund<300){toast('招募青训需 300万');return;}
- s.fund-=300;
+ if(s.fund<50){toast('招募青训需 50万');return;}
+ s.fund-=50;
  const r=genRookie(s);
  s.academy=[...(s.academy||[]),r];
  logEvent(s,' 青训营招募新秀 '+r.name+'（'+POS[r.pos][0]+' · 潜力'+r.potential+'）');
@@ -99,8 +99,8 @@ function trainRookie(s,id){
  if(s.academyTrained){toast('今日已培养过青训选手');return;}
  const r=(s.academy||[]).find(x=>x.id===id);
  if(!r)return;
- if(s.fund<100){toast('青训培养需 100万');return;}
- s.fund-=100;
+ if(s.fund<17){toast('青训培养需 17万');return;}
+ s.fund-=17;
  s.academyTrained=true;
  // 潜力越高成长越快：2-4 起步 + 潜力加成（pot/2），平均 4~6/天 —— 约 3~4 周培养到晋升线（四维和300）
  const gain=2+rnd(0,2)+Math.floor((r.potential||3)/2);

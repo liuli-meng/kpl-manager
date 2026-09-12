@@ -995,7 +995,7 @@ function endPreseason(s){
 function skipTransferWindow(s){
  const left=s.transferWindow||0;
  if(left<=0){toast('当前不在转会期');return;}
- if(!confirm('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，80万/次）\n· 培养一名青训（潜力优先，100万/次）\n资金不足的天数自动跳过；AI 报价照常进行。'))return;
+ if(!confirm('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，13万/次）\n· 培养一名青训（潜力优先，17万/次）\n资金不足的天数自动跳过；AI 报价照常进行。'))return;
  autoFillLineup(s);
  const miss=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos));
  if(miss.length){toast(' '+miss.map(pos=>POS[pos][0]).join('、')+' 位置无人，无法开赛，请先签约选手');return;}
@@ -1025,14 +1025,14 @@ function skipTransferWindow(s){
  toast('转会期跳过完成，联赛开始！');
 }
 function autoDoTrain(s){
- if(s.fund<80)return;
+ if(s.fund<13)return;
  const p=s.players.filter(x=>x.injury<=0&&x.energy>=10).sort((a,b)=>overall(b)-overall(a))[0];
  if(!p)return;
  const key=['lane','farm','team','mind'].sort((a,b)=>p.attrs[a]-p.attrs[b])[0]; // 练最弱属性
  doTrain(s,p.id,key);
 }
 function autoTrainRookie(s){
- if(s.fund<100)return;
+ if(s.fund<17)return;
  const r=(s.academy||[]).filter(x=>!rookieReady(x)).sort((a,b)=>(b.potential||0)-(a.potential||0))[0];
  if(!r)return;
  trainRookie(s,r.id);
