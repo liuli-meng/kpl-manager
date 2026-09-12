@@ -184,6 +184,11 @@ section.page.on{display:block;animation:fadein .18s ease}
 .mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
 .dim{color:var(--dim)} .gold{color:var(--gold)} .cyan{color:var(--accent)} .red{color:var(--red)} .green{color:var(--green)}
 .hint{font-size:11px;color:var(--dim);line-height:1.65}
+/* 新手引导：每页首行「这是什么」提示条 */
+.page-hint{display:flex;align-items:flex-start;gap:8px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:10px}
+.page-hint span{flex:1;min-width:0}
+.ph-x{background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:0 2px;line-height:1.2;flex:none;font-family:inherit}
+.ph-x:hover{color:var(--txt)}
 .progress{height:4px;background:var(--sunken);border-radius:2px;overflow:hidden;margin-top:4px}
 .progress i{display:block;height:100%;background:var(--accent);border-radius:2px}
 .pbar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
@@ -5291,7 +5296,7 @@ function renderHall(){
  const career=S.mode==='player'?(S.career||null):null;
  const deal=S.mode==='coach'?(S.coachDeal||null):null;
  const byEv=hallChampByEvent(S);
- let html=`<div class="panel" style="border-color:rgba(217,164,65,.45)">
+ let html=pageHint('hall')+`<div class="panel" style="border-color:rgba(217,164,65,.45)">
  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
  ${crest(S.icon,S.teamName,44)}
  <div><div style="font-size:18px;font-weight:800">${S.teamName} 荣誉馆</div>
@@ -5502,6 +5507,90 @@ function shareCareerCard(){
  ctx.fillText('王者电竞经理 · KPL 篇',375,1120);
  });
 }
+</script>
+<script>
+/* 新手引导 + 每页提示（纯 UI 层：进度存 localStorage，不进存档、不进迁移链）。
+ 每页首行「这是什么」由各渲染函数拼 pageHint()；分步引导走 app-modal（移动端天然底栏化），
+ 首进自动弹一次，之后从「存档管理 → 重玩新手引导」随时重放。 */
+const TOUR_KEY='km_tour',HINT_KEY='km_hints';
+const PAGE_HINTS={
+ club:'推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发',
+ lineup:'选手卡管一切：训练、身价、续约、挂牌出售、替补轮换',
+ market:'买人卖人：赛前转会期自由组队，赛季中留意报价与自由市场',
+ train:'变强在本页：专项训练/青训营/位置改造，花钱要精打细算',
+ league:'联盟战局：积分榜、赛程比分、数据榜——看看对手有多强',
+ kjia:'K甲二队：替补和青训生的练级场，表现好可提拔上一队',
+ union:'联盟总览：18 队战力榜与历代联盟史册',
+ hall:'荣誉馆：冠军墙/王朝纪录/FMVP/最佳阵容，夺冠后可生成战绩分享图',
+ biz:'钱袋子：粉丝/赞助/代言/门票——收入全靠经营，别只顾战绩',
+ career:'你的故事：训练/比赛数据/生涯目标，选手模式每天来这打卡'
+};
+const TOUR_TITLES={
+ club:'俱乐部 · 比赛主场',lineup:'阵容 · 管理选手',market:'转会 · 买卖选手',
+ train:'训练 · 变强',league:'联赛 · 联盟战局',kjia:'二队 · K甲练级',
+ union:'联盟 · 战力榜',hall:'荣誉馆 · 收藏馆',biz:'经营 · 钱袋子',career:'生涯 · 你的故事'
+};
+var _tour={on:false,i:0};
+/* 每页一行提示；× 单页关闭（km_hints 按页记忆） */
+function pageHint(name){
+ let hide=null;
+ try{hide=JSON.parse(localStorage.getItem(HINT_KEY)||'{}');}catch(_){}
+ if(hide&&hide[name])return '';
+ const txt=PAGE_HINTS[name];if(!txt)return '';
+ return `<div class="page-hint"><span>${txt}</span><button class="ph-x" onclick="dismissHint('${name}')" title="不再显示这条">×</button></div>`;
+}
+function dismissHint(name){
+ try{
+ const hide=JSON.parse(localStorage.getItem(HINT_KEY)||'{}');
+ hide[name]=1;localStorage.setItem(HINT_KEY,JSON.stringify(hide));
+ }catch(_){}
+ const cur=document.querySelector('nav button.on');
+ renderPage(cur&&cur.dataset&&cur.dataset.page?cur.dataset.page:'club');
+}
+/* 分步引导：按当前身份遍历可见页（MODE_PAGES），首尾各一页说明 */
+function tourSteps(){
+ const mode=(S&&S.mode)||'manager';
+ const pages=MODE_PAGES[mode]||MODE_PAGES.manager;
+ const modeName=mode==='player'?'选手生涯':mode==='coach'?'教练生涯':'经理模式';
+ const steps=[{page:null,title:'欢迎来到 王者电竞经理·KPL 篇',text:'你是'+modeName+'。下面带你把各页面走一遍，看懂就能上手；想随时重看：存档管理 → 重玩新手引导。'}];
+ pages.forEach(p=>steps.push({page:p,title:TOUR_TITLES[p]||p,text:PAGE_HINTS[p]||''}));
+ steps.push({page:null,title:'存档与目标',text:'进度自动保存在本机浏览器，「管理」里可 3 槽切换、导出备份、导入换机。目标只有一个：捧起银龙杯。上阵！'});
+ return steps;
+}
+function maybeStartTour(){
+ if(_tour.on||!S)return;
+ try{if(localStorage.getItem(TOUR_KEY))return;}catch(_){}
+ startTour();
+}
+function startTour(){
+ _tour={on:true,i:0};
+ renderTour();
+}
+function renderTour(){
+ const steps=tourSteps();
+ const st=steps[_tour.i]||steps[0];
+ if(st.page)goPage(st.page); // goPage 会再进 maybeStartTour：_tour.on 守卫挡住，不递归
+ const n=steps.length;
+ $('#app-modal-body').innerHTML=`<h2>${_escTxt(st.title)}</h2>
+ <div class="hint" style="margin-bottom:10px">${st.text}</div>
+ <div style="display:flex;gap:4px;margin-bottom:14px">${steps.map((_,i)=>`<span style="flex:1;height:3px;border-radius:2px;background:${i<=_tour.i?'var(--gold)':'var(--line)'}"></span>`).join('')}</div>
+ <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+ ${_tour.i>0?'<button class="btn sm" onclick="tourPrev()">上一步</button>':''}
+ <button class="btn sm" onclick="tourSkip()">跳过</button>
+ ${_tour.i<n-1?'<button class="btn sm primary" onclick="tourNext()">下一步</button>':'<button class="btn sm gold" onclick="tourFinish()">开始征程</button>'}
+ </div>`;
+ $('#app-modal').classList.add('on');
+}
+function tourNext(){const n=tourSteps().length;if(_tour.i<n-1){_tour.i++;renderTour();}else tourFinish();}
+function tourPrev(){if(_tour.i>0){_tour.i--;renderTour();}}
+function _tourEnd(msg){
+ _tour={on:false,i:0};
+ try{localStorage.setItem(TOUR_KEY,'1');}catch(_){}
+ closeModal('app-modal');
+ toast(msg);
+}
+function tourSkip(){_tourEnd('已跳过引导——「管理 → 重玩新手引导」随时再看');}
+function tourFinish(){_tourEnd('上阵！目标：总冠军');}
 </script>
 <script>
 
@@ -6978,7 +7067,7 @@ function uiAdvanceCalendar(s){if(uiGuard())return;advanceCalendar(s);}
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 function renderClub(){
  const ls=rosterLineup(S);
- let html=`
+ let html=pageHint('club')+`
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
@@ -7272,7 +7361,7 @@ function renderClub(){
 /* ================= 经营页（赞助商 / 工资帽 / 荣誉室 / 比赛复盘） ================= */
 function renderBiz(){
  const sp=SPONSORS[S.sponsorLv],next=SPONSORS[S.sponsorLv+1];
- let html=`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
+ let html=pageHint('biz')+`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
  const fansNow=Math.round(S.fans||0);
  const effIncome=Math.round(sp.income*fanMul(S,500));
  html+=`<div class="sponsor"><span class="s-icon">${sp.icon}</span><div><div class="s-name">${sp.name} <span class="gold">(当前)</span></div><div class="s-desc">每日收入 ${sp.income}万${effIncome>sp.income?' <span class="green">→ 实收 '+effIncome+'万（粉丝加成 +'+(effIncome-sp.income)+'）</span>':''}</div></div></div>`;
@@ -7376,7 +7465,7 @@ function renderBiz(){
 function renderLineup(){
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
- let html=`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
+ let html=pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
  <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 周薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
@@ -7593,10 +7682,10 @@ function renderMarket(){
  ?`<button class="btn sm danger" style="flex:1" onclick="delistPlayer(S,'${p.id}')">撤牌</button>`
  :`<button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button><button class="btn sm" style="flex:1" onclick="listPlayer(S,'${p.id}')"> 挂牌</button>`}</div>`);}).join('')||'<div class="hint">全部队员都在首发阵容中</div>'}</div>`:'<div class="hint">还没有队员</div>'}
  </div>`;
- $('#page-market').innerHTML='<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
+ $('#page-market').innerHTML=pageHint('market')+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
 }
 function renderTrain(){
- let html=`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性8万 / 英雄特训15万</span></h3>
+ let html=pageHint('train')+`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性8万 / 英雄特训15万</span></h3>
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
  ${S.players.length?`<div class="grid g4">${S.players.map(p=>pcard(p,`<div class="g2" style="gap:6px">
  ${TRAIN_ITEMS.map(t=>`<button class="btn sm" onclick="doTrain(S,'${p.id}','${t.k}')" ${S.trained||p.energy<10?'disabled':''}>${t.n}+1~2</button>`).join('')}
@@ -7645,7 +7734,7 @@ function renderTrain(){
 function renderLeague(){
  const groups=phaseGroups(S);
  const myG=myGroup(S);
- let html=`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
+ let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
  <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO7 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
  // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
@@ -7735,7 +7824,7 @@ function renderKjia(){
  const myRank=rank.indexOf(my)+1;
  const done=k.rd>=k.rounds.length;
  const next=done?null:k.rounds[k.rd].find(m=>m.a===my||m.b===my);
- let html=`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
+ let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
  <div class="hint">次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。</div></div>`;
  // 二队概况 + 下一场
  const demoted=(S.players||[]).filter(p=>p.kjia>0);
@@ -7867,7 +7956,7 @@ function renderUnionHistory(){
 function renderUnion(){
  if((window._unionMode||'now')==='hist'){$('#page-union').innerHTML=renderUnionHistory();return;}
  const teams=unionTeams().sort((a,b)=>b.power-a.power);
- let html=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn sm" onclick="setUnionMode('hist')">历代联盟 →</button></div>`+
+ let html=pageHint('union')+`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn sm" onclick="setUnionMode('hist')">历代联盟 →</button></div>`+
  `<div class="panel"><h3>战队总览 <span class="tag">18 队 · 点击查看阵容</span></h3>
  <table class="tbl"><tr><th>#</th><th>战队</th><th>总战力</th><th>平均总值</th><th>核心选手</th><th>战绩</th></tr>
  ${teams.map((t,i)=>{
@@ -8099,7 +8188,7 @@ function renderCareer(){
  const myPow=playerPower(me,(S.pick&&S.pick[me.pos])||me.sig),rivPow=rival?playerPower(rival,rival.sig):0;
  const myOffers=(S.offers||[]).filter(o=>o.pid===me.id);
  const avg=me.caps?[me.kTotal,me.dTotal,me.aTotal].map(x=>Math.round(x/me.caps*10)/10).join('/'):'—';
- let html=`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
+ let html=pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
  ${avatar(me,64)}
  <div><div style="font-size:20px;font-weight:800">${me.name} <span class="tag">${POS[me.pos][0]} · ${me.age}岁 · ${ageStage(me)}</span>${starter?' <span class="tag" style="border-color:var(--green);color:var(--green)">首发</span>':' <span class="tag" style="border-color:var(--gold);color:var(--gold)">替补</span>'}</div>
@@ -8226,6 +8315,7 @@ function goPage(name){
  $$('section.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+name));
  renderHeader();
  renderPage(name);
+ maybeStartTour(); // 首访自动开引导（km_tour 标记只弹一次；引导内部导航由 _tour.on 守卫）
 }
 function renderPage(name){
  if(name==='club')renderClub();
@@ -8259,6 +8349,7 @@ function openSaveMgmt(){
  <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
  <button class="btn sm" onclick="restoreAutoBackup()" ${localStorage.getItem(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
+ <button class="btn sm" onclick="startTour()"> 重玩新手引导</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>`;
  $('#app-modal').classList.add('on');

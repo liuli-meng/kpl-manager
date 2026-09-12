@@ -37,6 +37,7 @@ function goPage(name){
  $$('section.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+name));
  renderHeader();
  renderPage(name);
+ maybeStartTour(); // 首访自动开引导（km_tour 标记只弹一次；引导内部导航由 _tour.on 守卫）
 }
 function renderPage(name){
  if(name==='club')renderClub();
@@ -70,6 +71,7 @@ function openSaveMgmt(){
  <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
  <button class="btn sm" onclick="restoreAutoBackup()" ${localStorage.getItem(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
+ <button class="btn sm" onclick="startTour()"> 重玩新手引导</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>`;
  $('#app-modal').classList.add('on');

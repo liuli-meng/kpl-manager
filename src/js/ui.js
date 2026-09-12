@@ -214,7 +214,7 @@ function uiAdvanceCalendar(s){if(uiGuard())return;advanceCalendar(s);}
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 function renderClub(){
  const ls=rosterLineup(S);
- let html=`
+ let html=pageHint('club')+`
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
@@ -508,7 +508,7 @@ function renderClub(){
 /* ================= 经营页（赞助商 / 工资帽 / 荣誉室 / 比赛复盘） ================= */
 function renderBiz(){
  const sp=SPONSORS[S.sponsorLv],next=SPONSORS[S.sponsorLv+1];
- let html=`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
+ let html=pageHint('biz')+`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
  const fansNow=Math.round(S.fans||0);
  const effIncome=Math.round(sp.income*fanMul(S,500));
  html+=`<div class="sponsor"><span class="s-icon">${sp.icon}</span><div><div class="s-name">${sp.name} <span class="gold">(当前)</span></div><div class="s-desc">每日收入 ${sp.income}万${effIncome>sp.income?' <span class="green">→ 实收 '+effIncome+'万（粉丝加成 +'+(effIncome-sp.income)+'）</span>':''}</div></div></div>`;
@@ -612,7 +612,7 @@ function renderBiz(){
 function renderLineup(){
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
- let html=`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
+ let html=pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
  <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 周薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
@@ -829,10 +829,10 @@ function renderMarket(){
  ?`<button class="btn sm danger" style="flex:1" onclick="delistPlayer(S,'${p.id}')">撤牌</button>`
  :`<button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button><button class="btn sm" style="flex:1" onclick="listPlayer(S,'${p.id}')"> 挂牌</button>`}</div>`);}).join('')||'<div class="hint">全部队员都在首发阵容中</div>'}</div>`:'<div class="hint">还没有队员</div>'}
  </div>`;
- $('#page-market').innerHTML='<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
+ $('#page-market').innerHTML=pageHint('market')+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
 }
 function renderTrain(){
- let html=`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性8万 / 英雄特训15万</span></h3>
+ let html=pageHint('train')+`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性8万 / 英雄特训15万</span></h3>
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
  ${S.players.length?`<div class="grid g4">${S.players.map(p=>pcard(p,`<div class="g2" style="gap:6px">
  ${TRAIN_ITEMS.map(t=>`<button class="btn sm" onclick="doTrain(S,'${p.id}','${t.k}')" ${S.trained||p.energy<10?'disabled':''}>${t.n}+1~2</button>`).join('')}
@@ -881,7 +881,7 @@ function renderTrain(){
 function renderLeague(){
  const groups=phaseGroups(S);
  const myG=myGroup(S);
- let html=`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
+ let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
  <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO7 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
  // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
@@ -971,7 +971,7 @@ function renderKjia(){
  const myRank=rank.indexOf(my)+1;
  const done=k.rd>=k.rounds.length;
  const next=done?null:k.rounds[k.rd].find(m=>m.a===my||m.b===my);
- let html=`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
+ let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
  <div class="hint">次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。</div></div>`;
  // 二队概况 + 下一场
  const demoted=(S.players||[]).filter(p=>p.kjia>0);
@@ -1103,7 +1103,7 @@ function renderUnionHistory(){
 function renderUnion(){
  if((window._unionMode||'now')==='hist'){$('#page-union').innerHTML=renderUnionHistory();return;}
  const teams=unionTeams().sort((a,b)=>b.power-a.power);
- let html=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn sm" onclick="setUnionMode('hist')">历代联盟 →</button></div>`+
+ let html=pageHint('union')+`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn sm" onclick="setUnionMode('hist')">历代联盟 →</button></div>`+
  `<div class="panel"><h3>战队总览 <span class="tag">18 队 · 点击查看阵容</span></h3>
  <table class="tbl"><tr><th>#</th><th>战队</th><th>总战力</th><th>平均总值</th><th>核心选手</th><th>战绩</th></tr>
  ${teams.map((t,i)=>{
@@ -1335,7 +1335,7 @@ function renderCareer(){
  const myPow=playerPower(me,(S.pick&&S.pick[me.pos])||me.sig),rivPow=rival?playerPower(rival,rival.sig):0;
  const myOffers=(S.offers||[]).filter(o=>o.pid===me.id);
  const avg=me.caps?[me.kTotal,me.dTotal,me.aTotal].map(x=>Math.round(x/me.caps*10)/10).join('/'):'—';
- let html=`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
+ let html=pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
  ${avatar(me,64)}
  <div><div style="font-size:20px;font-weight:800">${me.name} <span class="tag">${POS[me.pos][0]} · ${me.age}岁 · ${ageStage(me)}</span>${starter?' <span class="tag" style="border-color:var(--green);color:var(--green)">首发</span>':' <span class="tag" style="border-color:var(--gold);color:var(--gold)">替补</span>'}</div>

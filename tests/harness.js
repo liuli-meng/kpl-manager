@@ -4,7 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..');
-const FILES = ['data.js','state.js','players.js','transfer.js','train.js','season.js','natcamp.js','board.js','clubops.js','kjia.js','cups.js','career.js','hall.js','bp.js','match.js','ui.js','main.js'];
+const FILES = ['data.js','state.js','players.js','transfer.js','train.js','season.js','natcamp.js','board.js','clubops.js','kjia.js','cups.js','career.js','hall.js','guide.js','bp.js','match.js','ui.js','main.js'];
 
 function loadCode() {
   let code = '';

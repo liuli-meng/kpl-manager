@@ -32,7 +32,7 @@ function renderHall(){
  const career=S.mode==='player'?(S.career||null):null;
  const deal=S.mode==='coach'?(S.coachDeal||null):null;
  const byEv=hallChampByEvent(S);
- let html=`<div class="panel" style="border-color:rgba(217,164,65,.45)">
+ let html=pageHint('hall')+`<div class="panel" style="border-color:rgba(217,164,65,.45)">
  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
  ${crest(S.icon,S.teamName,44)}
  <div><div style="font-size:18px;font-weight:800">${S.teamName} 荣誉馆</div>
