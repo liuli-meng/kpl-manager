@@ -117,6 +117,56 @@ function crestOf(b,s){ // 核心渲染：直接给品牌对象（生成器预览
  +'</svg>';
 }
 function crest(icon,team,size){return crestOf(crestBrand(team,icon),size||22);}
+/* ================= 程序化头像 / 英雄图标 / 雷达图（2026-09 质感升级） =================
+ 无外部素材约束下给游戏补「脸」：选手=电竞 ID 卡（姓名哈希配色 + 几何纹样 + 大字 monogram +
+ 位置色角标），英雄=六边形 monogram + 位置色系（hot 金圈），雷达图=四维多边形。
+ 与 crest 同一套确定性哈希思路：同一选手/英雄永远同一张图，纯内联 SVG 零资源文件。 */
+const AVATAR_HUES=[['#2E5BFF','#7A9CFF'],['#8A3FFC','#C09AFF'],['#00A3A3','#6FD8D8'],['#C93A6B','#F08CB4'],['#C98A1B','#F2C866'],['#2FA25B','#8CD9AC'],['#C9442E','#F0927D'],['#3A6BC9','#8FB3F0'],['#8A6BC9','#C0AEF0'],['#1F8FA5','#7FC9D9']];
+const POS_HUE={top:'#E8863A',jg:'#9A6BE0',mid:'#38B6E8',ad:'#4CBF6B',sup:'#D9A93B'};
+function _hashSeed(str){let h=5381;const s=String(str||'x');for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h;}
+function avatar(p,size){
+ const z=size||34;
+ const hue=AVATAR_HUES[_hashSeed((p&&p.id)||(p&&p.name))%AVATAR_HUES.length];
+ const variant=_hashSeed(p&&p.name)%3;
+ const monogram=_escTxt(((p&&p.name)||'？').slice(0,1));
+ const posTxt=(p&&p.pos&&POS[p.pos])?POS[p.pos][1]:'';
+ const posCol=POS_HUE[p&&p.pos]||'#3A4048';
+ let pat='';
+ if(variant===0)pat='<path d="M0 44L44 0v13L13 44Z" fill="'+hue[1]+'" opacity=".2"/><path d="M0 33L33 0h9L0 42Z" fill="'+hue[0]+'" opacity=".35"/>';
+ else if(variant===1)pat='<circle cx="37" cy="7" r="15" fill="'+hue[0]+'" opacity=".32"/><circle cx="5" cy="41" r="11" fill="'+hue[1]+'" opacity=".26"/>';
+ else pat='<path d="M0 0h20L0 20Z" fill="'+hue[0]+'" opacity=".32"/><path d="M44 44H23l21-21Z" fill="'+hue[1]+'" opacity=".3"/>';
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 44 44" style="flex:none;border-radius:9px;vertical-align:middle" aria-hidden="true">'
+ +'<rect width="44" height="44" rx="9" fill="#191C22"/>'+pat
+ +'<text x="22" y="30" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="21" font-weight="800" fill="'+hue[1]+'">'+monogram+'</text>'
+ +'<path d="M0 44v-8h44v8Z" fill="'+posCol+'" opacity=".95"/>'
+ +'<text x="22" y="42.6" text-anchor="middle" font-family="Arial,sans-serif" font-size="6.2" font-weight="800" fill="#101216">'+_escTxt(posTxt)+'</text>'
+ +'<rect x=".5" y=".5" width="43" height="43" rx="8.5" fill="none" stroke="rgba(255,255,255,.15)"/>'
+ +'</svg>';
+}
+function heroIcon(name,size){
+ const z=size||20;
+ const h=(typeof HERO_BY_NAME!=='undefined'&&HERO_BY_NAME.get)?HERO_BY_NAME.get(name):null;
+ const col=POS_HUE[h&&h.pos&&h.pos[0]]||'#5A6472';
+ const hot=h&&h.hot;
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 40 40" style="flex:none;vertical-align:-3px" aria-hidden="true">'
+ +'<path d="M20 2L36 11v18L20 38 4 29V11Z" fill="#1D2129" stroke="'+(hot?'#F2C41B':col)+'" stroke-width="2"/>'
+ +'<path d="M20 2L36 11v5L4 16v-5Z" fill="'+col+'" opacity=".3"/>'
+ +'<text x="20" y="26.5" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="14" font-weight="800" fill="#E8ECF4">'+_escTxt((name||'？').slice(0,1))+'</text>'
+ +(hot?'<circle cx="33" cy="7" r="3" fill="#F2C41B"/>':'')
+ +'</svg>';
+}
+function radarSvg(p,size){ // 四维雷达（对线/运营/团战/心态，刻度 0-99）
+ const z=size||76,cx=z/2,cy=z/2,r=z/2-13;
+ const keys=['lane','farm','team','mind'],labels=['线','运','团','心'];
+ const pt=(i,v)=>{const ang=-Math.PI/2+i*Math.PI/2;return [cx+Math.cos(ang)*r*v/99,cy+Math.sin(ang)*r*v/99];};
+ let rings='';
+ [33,66,99].forEach(v=>{const ps=[0,1,2,3].map(i=>pt(i,v).map(n=>n.toFixed(1)).join(','));rings+='<polygon points="'+ps.join(' ')+'" fill="none" stroke="rgba(255,255,255,.08)"/>';});
+ const vs=keys.map(k=>clamp(p.attrs[k],0,99));
+ const poly='<polygon points="'+vs.map((v,i)=>pt(i,v).map(n=>n.toFixed(1)).join(',')).join(' ')+'" fill="rgba(92,138,245,.25)" stroke="#5c8af5" stroke-width="1.5"/>';
+ let dots='';vs.forEach((v,i)=>{const xy=pt(i,v);dots+='<circle cx="'+xy[0].toFixed(1)+'" cy="'+xy[1].toFixed(1)+'" r="2" fill="#8FB3F0"/>';});
+ let labs='';labels.forEach((l,i)=>{const xy=pt(i,116);labs+='<text x="'+xy[0].toFixed(1)+'" y="'+(xy[1]+3).toFixed(1)+'" text-anchor="middle" font-size="8" fill="#8A93A3">'+l+'</text>';});
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 '+z+' '+z+'" aria-hidden="true">'+rings+poly+dots+labs+'</svg>';
+}
 /* ================= 总值体系（FC26 式 OVR） =================
  选手唯一评价=总值（0-99）：按位置加权四维实时计算，训练/年龄/表现即时反映在数字上。
  身价、周薪、签约费、市场档位全部由总值曲线出；卡面色阶：90+ 金 / 80+ 蓝 / 其余灰蓝。 */

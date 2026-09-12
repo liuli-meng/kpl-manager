@@ -27,7 +27,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{color-scheme:dark}
 body{
-  background:var(--bg);
+  background:radial-gradient(1100px 480px at 50% -8%,rgba(92,138,245,.075),transparent 62%),var(--bg);
   color:var(--txt);
   font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
   font-size:14px;line-height:1.55;min-height:100vh;padding-bottom:20px;
@@ -76,9 +76,10 @@ section.page.on{display:block;animation:fadein .18s ease}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 
 /* ===== Cards / panels ===== */
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px;margin-bottom:12px;
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.022),rgba(255,255,255,0) 56px),var(--surface);
+  border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:12px;
   position:relative}
-.panel h3{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;margin-bottom:11px}
+.panel h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin-bottom:11px;letter-spacing:.2px}
 .panel h3 .h-ic{display:none}
 .panel h3 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line);color:var(--dim);
   padding:1px 8px;border-radius:10px;font-weight:400}
@@ -141,9 +142,9 @@ section.page.on{display:block;animation:fadein .18s ease}
   border:1px solid var(--line2);background:var(--raise);color:var(--txt);
   cursor:pointer;font-size:13px;font-weight:600;transition:.15s;border-radius:3px}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
-.btn.gold{background:var(--gold);border-color:var(--gold);color:#1d1505}
+.btn.primary{background:linear-gradient(180deg,#6b97ff,#5483ec);border-color:#6b97ff;color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(92,138,245,.22)}
+.btn.primary:hover{background:linear-gradient(180deg,#7aa2ff,#5c8af5);border-color:#7aa2ff;color:#fff}
+.btn.gold{background:linear-gradient(180deg,#e5b455,#d9a441);border-color:#e0ac47;color:#1d1505;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(217,164,65,.18)}
 .btn.gold:hover{background:#c8942f;border-color:#c8942f;color:#1d1505}
 .btn.danger{color:var(--red);border-color:rgba(217,93,93,.5)}
 .btn.danger:hover{border-color:var(--red);background:rgba(217,93,93,.08);color:var(--red)}
@@ -359,6 +360,48 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 /* 可排序表：全部 .tbl 表头可点（事件委托于 ui.js） */
 .tbl th{cursor:pointer;user-select:none}
 .tbl th:hover{color:var(--cyan)}
+/* ===== 2026-09 质感升级组件：头像 / VS 海报 / MVP 高光卡 / 积分条 / 夺冠庆典 ===== */
+.pcard .p-top{gap:8px;justify-content:flex-start}
+.pcard .p-top .p-pos{margin-left:auto}
+.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(92,138,245,.09),rgba(92,138,245,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}
+.vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
+.vs-pow.op{color:var(--red)}
+.vs-mid{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:118px}
+.vs-tag{font-size:17px;font-weight:800;color:var(--dim)}
+.vs-bar{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.vs-bar i{height:100%}
+.vs-wr{font-size:10.5px;color:var(--dim);text-align:center}
+.result-band{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-radius:6px;margin-bottom:10px;font-weight:700;border:1px solid var(--line)}
+.result-band span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}
+.result-band b{font-size:26px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}
+.result-band.win{background:linear-gradient(180deg,rgba(75,163,104,.16),rgba(75,163,104,.05));border-color:rgba(75,163,104,.45)}
+.result-band.lose{background:linear-gradient(180deg,rgba(217,93,93,.12),rgba(217,93,93,.04));border-color:rgba(217,93,93,.35)}
+.mvp-card{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(242,196,27,.13),rgba(242,196,27,.03));border:1px solid rgba(242,196,27,.42);border-radius:8px;padding:10px 14px;margin-bottom:10px}
+.mvp-tag{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2.5px}
+.mvp-name{font-size:16px;font-weight:800}
+.mvp-kda{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pts-bar{height:4px;background:var(--sunken);border-radius:2px;margin-top:4px;overflow:hidden;max-width:150px}
+.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#8a6a24,var(--gold));border-radius:2px}
+.bp-slot{gap:3px}
+.bp-slot b{margin-top:1px}
+.bp-slot.pick.filled b{font-size:12px}
+#champion-overlay{position:fixed;inset:0;z-index:200;background:rgba(8,9,12,.93);display:flex;align-items:center;justify-content:center;animation:ccFade .5s ease;cursor:pointer}
+.cc-inner{text-align:center;position:relative;padding:40px}
+.cc-cup{animation:ccPop .7s cubic-bezier(.2,1.4,.4,1)}
+.cc-title{font-size:30px;font-weight:800;color:var(--gold);margin-top:16px;letter-spacing:5px}
+.cc-team{font-size:15px;color:var(--txt);margin-top:8px;letter-spacing:1px}
+.cc-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cc-confetti i{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;opacity:.85;animation:ccFall 3.2s linear infinite}
+@keyframes ccFall{to{transform:translateY(112vh) rotate(660deg);opacity:.15}}
+@keyframes ccPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes ccFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){
+ .cc-confetti i{display:none}
+ .cc-cup{animation:none}
+ #champion-overlay{animation:none}
+}
 </style>
 </head>
 <body>
@@ -513,6 +556,56 @@ function crestOf(b,s){ // 核心渲染：直接给品牌对象（生成器预览
  +'</svg>';
 }
 function crest(icon,team,size){return crestOf(crestBrand(team,icon),size||22);}
+/* ================= 程序化头像 / 英雄图标 / 雷达图（2026-09 质感升级） =================
+ 无外部素材约束下给游戏补「脸」：选手=电竞 ID 卡（姓名哈希配色 + 几何纹样 + 大字 monogram +
+ 位置色角标），英雄=六边形 monogram + 位置色系（hot 金圈），雷达图=四维多边形。
+ 与 crest 同一套确定性哈希思路：同一选手/英雄永远同一张图，纯内联 SVG 零资源文件。 */
+const AVATAR_HUES=[['#2E5BFF','#7A9CFF'],['#8A3FFC','#C09AFF'],['#00A3A3','#6FD8D8'],['#C93A6B','#F08CB4'],['#C98A1B','#F2C866'],['#2FA25B','#8CD9AC'],['#C9442E','#F0927D'],['#3A6BC9','#8FB3F0'],['#8A6BC9','#C0AEF0'],['#1F8FA5','#7FC9D9']];
+const POS_HUE={top:'#E8863A',jg:'#9A6BE0',mid:'#38B6E8',ad:'#4CBF6B',sup:'#D9A93B'};
+function _hashSeed(str){let h=5381;const s=String(str||'x');for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h;}
+function avatar(p,size){
+ const z=size||34;
+ const hue=AVATAR_HUES[_hashSeed((p&&p.id)||(p&&p.name))%AVATAR_HUES.length];
+ const variant=_hashSeed(p&&p.name)%3;
+ const monogram=_escTxt(((p&&p.name)||'？').slice(0,1));
+ const posTxt=(p&&p.pos&&POS[p.pos])?POS[p.pos][1]:'';
+ const posCol=POS_HUE[p&&p.pos]||'#3A4048';
+ let pat='';
+ if(variant===0)pat='<path d="M0 44L44 0v13L13 44Z" fill="'+hue[1]+'" opacity=".2"/><path d="M0 33L33 0h9L0 42Z" fill="'+hue[0]+'" opacity=".35"/>';
+ else if(variant===1)pat='<circle cx="37" cy="7" r="15" fill="'+hue[0]+'" opacity=".32"/><circle cx="5" cy="41" r="11" fill="'+hue[1]+'" opacity=".26"/>';
+ else pat='<path d="M0 0h20L0 20Z" fill="'+hue[0]+'" opacity=".32"/><path d="M44 44H23l21-21Z" fill="'+hue[1]+'" opacity=".3"/>';
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 44 44" style="flex:none;border-radius:9px;vertical-align:middle" aria-hidden="true">'
+ +'<rect width="44" height="44" rx="9" fill="#191C22"/>'+pat
+ +'<text x="22" y="30" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="21" font-weight="800" fill="'+hue[1]+'">'+monogram+'</text>'
+ +'<path d="M0 44v-8h44v8Z" fill="'+posCol+'" opacity=".95"/>'
+ +'<text x="22" y="42.6" text-anchor="middle" font-family="Arial,sans-serif" font-size="6.2" font-weight="800" fill="#101216">'+_escTxt(posTxt)+'</text>'
+ +'<rect x=".5" y=".5" width="43" height="43" rx="8.5" fill="none" stroke="rgba(255,255,255,.15)"/>'
+ +'</svg>';
+}
+function heroIcon(name,size){
+ const z=size||20;
+ const h=(typeof HERO_BY_NAME!=='undefined'&&HERO_BY_NAME.get)?HERO_BY_NAME.get(name):null;
+ const col=POS_HUE[h&&h.pos&&h.pos[0]]||'#5A6472';
+ const hot=h&&h.hot;
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 40 40" style="flex:none;vertical-align:-3px" aria-hidden="true">'
+ +'<path d="M20 2L36 11v18L20 38 4 29V11Z" fill="#1D2129" stroke="'+(hot?'#F2C41B':col)+'" stroke-width="2"/>'
+ +'<path d="M20 2L36 11v5L4 16v-5Z" fill="'+col+'" opacity=".3"/>'
+ +'<text x="20" y="26.5" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="14" font-weight="800" fill="#E8ECF4">'+_escTxt((name||'？').slice(0,1))+'</text>'
+ +(hot?'<circle cx="33" cy="7" r="3" fill="#F2C41B"/>':'')
+ +'</svg>';
+}
+function radarSvg(p,size){ // 四维雷达（对线/运营/团战/心态，刻度 0-99）
+ const z=size||76,cx=z/2,cy=z/2,r=z/2-13;
+ const keys=['lane','farm','team','mind'],labels=['线','运','团','心'];
+ const pt=(i,v)=>{const ang=-Math.PI/2+i*Math.PI/2;return [cx+Math.cos(ang)*r*v/99,cy+Math.sin(ang)*r*v/99];};
+ let rings='';
+ [33,66,99].forEach(v=>{const ps=[0,1,2,3].map(i=>pt(i,v).map(n=>n.toFixed(1)).join(','));rings+='<polygon points="'+ps.join(' ')+'" fill="none" stroke="rgba(255,255,255,.08)"/>';});
+ const vs=keys.map(k=>clamp(p.attrs[k],0,99));
+ const poly='<polygon points="'+vs.map((v,i)=>pt(i,v).map(n=>n.toFixed(1)).join(',')).join(' ')+'" fill="rgba(92,138,245,.25)" stroke="#5c8af5" stroke-width="1.5"/>';
+ let dots='';vs.forEach((v,i)=>{const xy=pt(i,v);dots+='<circle cx="'+xy[0].toFixed(1)+'" cy="'+xy[1].toFixed(1)+'" r="2" fill="#8FB3F0"/>';});
+ let labs='';labels.forEach((l,i)=>{const xy=pt(i,116);labs+='<text x="'+xy[0].toFixed(1)+'" y="'+(xy[1]+3).toFixed(1)+'" text-anchor="middle" font-size="8" fill="#8A93A3">'+l+'</text>';});
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 '+z+' '+z+'" aria-hidden="true">'+rings+poly+dots+labs+'</svg>';
+}
 /* ================= 总值体系（FC26 式 OVR） =================
  选手唯一评价=总值（0-99）：按位置加权四维实时计算，训练/年龄/表现即时反映在数字上。
  身价、周薪、签约费、市场档位全部由总值曲线出；卡面色阶：90+ 金 / 80+ 蓝 / 其余灰蓝。 */
@@ -5244,7 +5337,7 @@ function bpConfirm(){
 }
 
 /* ================= BP 台 UI（赛事转播观感） ================= */
-function bpSlot(cls,txt,sub){return `<div class="bp-slot ${cls}"><b>${txt||'&nbsp;'}</b><small>${sub||'&nbsp;'}</small></div>`;}
+function bpSlot(cls,txt,sub){return `<div class="bp-slot ${cls}">${(cls.includes('filled')&&txt&&txt!=='—'&&txt!=='？？？')?heroIcon(txt,19):''}<b>${txt||'&nbsp;'}</b><small>${sub||'&nbsp;'}</small></div>`;}
 function bpSideColumn(d,mine){
  const sr=d.sr;
  const myBlue=(sr.side!=='red');
@@ -5341,7 +5434,7 @@ function renderBP(){
  const th=threatOf(d,h,'opp');
  const oppUsed=(d.usedOpp||[]).includes(h);
  const real=!oppUsed&&(d.oppRoster||[]).some(p=>(p.heroPool||[]).some(x=>x.n===h));
- return `<button class="bp-hero ${h===bestBan?'rec':''}" ${oppUsed?'style="opacity:.4"':''} onclick="bpBanPick('${h}')">${h===bestBan?' ':''}${heroOf(h).hot&&!oppUsed?'':''}${h}<small>${oppUsed?'对方已用 · 本局选不了':(real?('对方威胁 '+(th==null?'—':Math.round(th))):('池外 · 仅-0.5%'))}</small></button>`;
+ return `<button class="bp-hero ${h===bestBan?'rec':''}" ${oppUsed?'style="opacity:.4"':''} onclick="bpBanPick('${h}')">${h===bestBan?' ':''}${heroIcon(h,16)} ${h}<small>${oppUsed?'对方已用 · 本局选不了':(real?('对方威胁 '+(th==null?'—':Math.round(th))):('池外 · 仅-0.5%'))}</small></button>`;
  }).join('')}</div>`;
  }else if(act.type==='pick'){
  const open=myOpenPositions(d);
@@ -5357,7 +5450,7 @@ function renderBP(){
  action=`<div class="hint" style="margin:10px 0 6px;color:var(--cyan)">为 <b>${POS[pos][1]} ${p?p.name:''}</b> 选英雄（推荐已标 · <button class="btn sm" style="display:inline;padding:1px 8px" onclick="bpBackToPos()">← 重选位置</button>）</div>
  <div class="bp-hero-grid">${avail.map(h=>{
  const hd=heroOf(h.n),lv=HERO_LV[h.lv],rec=best===h.n;
- return `<button class="bp-hero ${rec?'rec':''}" onclick="bpPickHero('${h.n}')">${rec?' ':''}${h.n}${hd&&hd.hot?'':''}<small>${lv.n}${lv.b>0?'+'+Math.round(lv.b*100)+'%':lv.b<0?Math.round(lv.b*100)+'%':''} · ${TYPE_NAME[hd?hd.t:'team']}</small></button>`;
+ return `<button class="bp-hero ${rec?'rec':''}" onclick="bpPickHero('${h.n}')">${rec?' ':''}${heroIcon(h.n,16)} ${h.n}${hd&&hd.hot?'':''}<small>${lv.n}${lv.b>0?'+'+Math.round(lv.b*100)+'%':lv.b<0?Math.round(lv.b*100)+'%':''} · ${TYPE_NAME[hd?hd.t:'team']}</small></button>`;
  }).join('')}</div>`;
  }
  }
@@ -5632,6 +5725,14 @@ function renderPreMatch(){
  // 战术板：显示双方战术与克制结果（edge 已计入上面的战力）
  const tactHtml=(S.tactic&&S.tactic!=='balanced')?`<div class="hint" style="margin-bottom:8px">战术板：我方「${tacticById(S.tactic).name}」 vs 对方「${tacticById(sr._opTactic||'balanced').name}」${seriesTacticEdge(S,sr)>0?' <span class="green">· 战术克制 +3%</span>':(seriesTacticEdge(S,sr)<0?' <span style="color:var(--red)">· 被克制 −3%</span>':' · 互不克制')}</div>`:'';
  const midSeries=sr.mw+sr.ow>0;
+ // VS 海报：双队徽对撞 + 战力对比条（比赛时刻的大屏感）
+ const opIcon=(AI_TEAMS.find(t=>t.name===sr.opName)||{}).icon||'队';
+ const myShare=Math.round(my/(my+op)*100);
+ const poster=`<div class="vs-poster">
+ <div class="vs-team"><div>${crest(S.icon,S.teamName,46)}</div><div class="vs-tname">${S.teamName}</div><div class="vs-pow">${fmt(my)}</div></div>
+ <div class="vs-mid"><div class="vs-tag">VS</div><div class="vs-bar"><i style="width:${myShare}%;background:var(--accent)"></i><i style="width:${100-myShare}%;background:var(--red)"></i></div><div class="vs-wr">赛前预估 ${wr}% · 战力差 ${fmt(Math.abs(my-op))}</div></div>
+ <div class="vs-team right"><div>${crest(opIcon,sr.opName,46)}</div><div class="vs-tname">${sr.opName}</div><div class="vs-pow op">${fmt(op)}</div></div>
+ </div>`;
  // 我方首发行
  const myRows=POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
@@ -5676,6 +5777,7 @@ function renderPreMatch(){
  <h2>赛前准备 <span class="tag">${sr.max===7?'BO7 · 含巅峰对决':'BO5 · 全局BP'}</span></h2>
  <div class="hint" style="text-align:center;margin-bottom:8px">${window._prepTitle}${midSeries?` · 当前比分 <b>${sr.mw}:${sr.ow}</b>（<span style="cursor:help" title="我方已用：${(sr.used||[]).join('、')||'无'}
 对方已用：${(sr.usedOpp||[]).join('、')||'无'}">全局BP已用 · 我方 ${(sr.used||[]).length} / 对方 ${(sr.usedOpp||[]).length}</span>）`:''}</div>
+ ${poster}
  ${tactHtml||''}
  <div style="display:flex;gap:8px;margin-bottom:10px">
  <div style="flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:center">
@@ -5848,6 +5950,12 @@ function finishSeries(finalWin){
  score:sr.mw+':'+sr.ow,
  mvps:(sr.mvpIds||[]).map((id,i)=>{const p=S.players.find(x=>x.id===id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
  };
+ // 夺冠仪式感：总决赛/各杯赛决赛赢下时全屏庆典（一次性覆盖层，点按或 6 秒自动消失）
+ if(finalWin&&(sr.stage==='po'&&sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot))){
+ playChampionCeremony(sr.stage==='po'?splitLabel(S)+' 总冠军':
+ sr.cupSlot==='ch_final'?gameYear(S)+' 挑战者杯冠军':
+ sr.cupSlot==='ewc_final'?gameYear(S)+' EWC 电竞世界杯冠军':gameYear(S)+' KPL 年度总冠军');
+ }
  // 比赛复盘记录（含巅峰对决名场面标记）
  S.history=S.history||[];
  S.history.unshift({
@@ -5864,8 +5972,23 @@ function startPlayoff(){if(S.preseason){toast(' 转会期进行中，联赛尚�
 function startCard(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}playCardNext(S);}
 function showMatchModal(r,title){
  try{(r.win?SFX.win():SFX.lose());}catch(_){}
+ // 系列赛 MVP 高光：按局数计票 + 各局 KDA 合计（字符串 r.mvps：「名字（k/d/a）」）
+ let mvpCard='';
+ if(r.mvps&&r.mvps.length){
+ const cnt={},kda={};
+ r.mvps.forEach(m=>{
+ const n=String(m).split('（')[0];cnt[n]=(cnt[n]||0)+1;
+ const k=String(m).match(/（(\d+)\/(\d+)\/(\d+)）/);
+ if(k){kda[n]=kda[n]||[0,0,0];kda[n][0]+=+k[1];kda[n][1]+=+k[2];kda[n][2]+=+k[3];}
+ });
+ const best=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x]||((kda[y]||[0,0,0]).reduce((t,v)=>t+v,0)-(kda[x]||[0,0,0]).reduce((t,v)=>t+v,0)))[0];
+ const p=S.players.find(x=>x.name===best);
+ mvpCard=`<div class="mvp-card">${avatar(p||{name:best},46)}<div><div class="mvp-tag">SERIES MVP</div><div class="mvp-name">${best}${p?' · '+((S.pick&&S.pick[p.pos])||p.sig||''):''}</div><div class="mvp-kda">${cnt[best]} 局 MVP · 合计 ${kda[best]?kda[best].join(' / '):'—'}</div></div></div>`;
+ }
  const mb=$('#app-modal');$('#app-modal-body').innerHTML=`
  <h2>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
+ <div class="result-band ${r.win?'win':'lose'}"><span>${S.teamName}</span><b>${r.score||''}</b><span>${r.opName||''}</span></div>
+ ${mvpCard}
  <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
  ${(aiEnabled())?`<div id="ai-report-box" class="event-card" style="margin-top:10px"><div class="et">AI 战报</div><p>生成中……（联网调用；失败自动回退本地文案，不影响比赛流程）</p></div>`:''}
  <div class="center mt16">
@@ -5966,7 +6089,7 @@ function pcard(p,extra){
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
- <div class="p-top"><span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
+ <div class="p-top">${avatar(p,34)}<span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
  <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
  ${stageHtml}
  ${contractHtml}
@@ -6049,7 +6172,7 @@ function showCareer(p){
  ${p.team?`<span class="dim" style="margin-left:8px">${p.team}</span>`:''}${(p.tags||[]).join(' ')}
  </div>
  <div class="event-card"><div class="et">职业生涯</div><p>${p.career||'新秀档案待完善'}</p></div>
- <div class="hint" style="margin-bottom:12px">年龄：${p.age!=null?p.age:'—'}岁${p.age!=null&&p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire-1?'（<b style="color:var(--red)">'+(p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire?'已到退役年龄':'即将退役')+'</b>）':''}　·　MVP：${p.mvp||0} 次　·　出场 ${p.caps||0} 场<br>当前身价 <b class="gold">${sellAskPrice(p)}万</b>（表现 ${perfLabel(p)} ${p.val||100}%）· 场均 ${(p.caps?Math.round((p.kTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.dTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.aTotal||0)/p.caps*10)/10:0)}<br>招牌英雄：${p.sig}（${HERO_LV[heroLv(p,p.sig)].n}）<br>英雄池：${lvDesc}</div>
+ <div style="display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(p,84)}<div class="hint" style="text-align:left">年龄：${p.age!=null?p.age:'—'}岁${p.age!=null&&p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire-1?'（<b style="color:var(--red)">'+(p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire?'已到退役年龄':'即将退役')+'</b>）':''}　·　MVP：${p.mvp||0} 次　·　出场 ${p.caps||0} 场<br>当前身价 <b class="gold">${sellAskPrice(p)}万</b>（表现 ${perfLabel(p)} ${p.val||100}%）· 场均 ${(p.caps?Math.round((p.kTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.dTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.aTotal||0)/p.caps*10)/10:0)}<br>招牌英雄：${heroIcon(p.sig,16)} ${p.sig}（${HERO_LV[heroLv(p,p.sig)].n}）<br>英雄池：${lvDesc}</div></div>
  <div class="center"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('on');
 }
@@ -6750,13 +6873,14 @@ function renderLeague(){
  const myG=myGroup(S);
  let html=`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
  <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO7 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
- // 年度积分榜（春夏累计，前12进年度总决赛）
+ // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
  const rank=annualRank(S);
  const myIdx=rank.indexOf(S.teamName);
+ const maxPts=Math.max(1,...rank.slice(0,12).map(t=>S.annualPts[t]||0));
  html+=`<div class="panel"><h3>年度积分榜 <span class="tag">${gameYear(S)} · 前 12 进年度总决赛</span></h3>
- <table class="tbl"><tr><th>#</th><th>战队</th><th>年度积分</th></tr>
- ${rank.slice(0,12).map((t,i)=>`<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${S.annualPts[t]||0}</td></tr>`).join('')}
+ <table class="tbl"><tr><th>#</th><th>战队</th><th style="width:46%">年度积分</th></tr>
+ ${rank.slice(0,12).map((t,i)=>`<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${S.annualPts[t]||0}<div class="pts-bar"><i style="width:${Math.round((S.annualPts[t]||0)/maxPts*100)}%"></i></div></td></tr>`).join('')}
  </table>
  <div class="hint mt8">${myIdx>=0&&myIdx<12?'你队第 '+(myIdx+1)+' 名，'+(myIdx<6?'大师组':'精英组')+'席位在握':(myIdx>=12?'你队第 '+(myIdx+1)+' 名，无缘年度总决赛——春夏赛季继续攒分':'春季赛打完后积分入账')} · 春季冠+100 夏季冠+120</div>
  </div>`;
@@ -7621,6 +7745,26 @@ function tweenNum(el,key,to){
  if(k<1)requestAnimationFrame(step);else{el.textContent=fmt(to);delete el.dataset.anim;}
  };
  requestAnimationFrame(step);
+}
+/* ================= 夺冠全屏庆典（总决赛/杯赛决赛赢下时一次性播放） =================
+ 深色覆盖层 + 队徽弹入 + 金色标题 + CSS 彩带；点按或 6 秒自动消失；减弱动效时直接跳过。 */
+function playChampionCeremony(title){
+ try{if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(_){}
+ try{
+ const ov=document.createElement('div');
+ ov.id='champion-overlay';
+ let confetti='';
+ for(let i=0;i<26;i++){
+ confetti+='<i style="left:'+rnd(2,98)+'%;animation-delay:'+(Math.random()*1.8).toFixed(2)+'s;background:'+(i%3===0?'#F2C41B':i%3===1?'#5c8af5':'#E8ECF4')+'"></i>';
+ }
+ ov.innerHTML='<div class="cc-inner"><div class="cc-cup">'+crest(S.icon,S.teamName,88)+'</div>'
+ +'<div class="cc-title">'+_escTxt(title||'总冠军')+'</div>'
+ +'<div class="cc-team">'+_escTxt(S.teamName)+' · 捧杯时刻</div>'
+ +'<div class="cc-confetti">'+confetti+'</div></div>';
+ document.body.appendChild(ov);
+ ov.addEventListener('click',()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);});
+ setTimeout(()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);},6000);
+ }catch(_){}
 }
 /* ================= 进场动画（首访一次：logo 聚拢 → 展开 → 淡出） ================= */
 function playIntro(){

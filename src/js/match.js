@@ -250,6 +250,14 @@ function renderPreMatch(){
  // 战术板：显示双方战术与克制结果（edge 已计入上面的战力）
  const tactHtml=(S.tactic&&S.tactic!=='balanced')?`<div class="hint" style="margin-bottom:8px">战术板：我方「${tacticById(S.tactic).name}」 vs 对方「${tacticById(sr._opTactic||'balanced').name}」${seriesTacticEdge(S,sr)>0?' <span class="green">· 战术克制 +3%</span>':(seriesTacticEdge(S,sr)<0?' <span style="color:var(--red)">· 被克制 −3%</span>':' · 互不克制')}</div>`:'';
  const midSeries=sr.mw+sr.ow>0;
+ // VS 海报：双队徽对撞 + 战力对比条（比赛时刻的大屏感）
+ const opIcon=(AI_TEAMS.find(t=>t.name===sr.opName)||{}).icon||'队';
+ const myShare=Math.round(my/(my+op)*100);
+ const poster=`<div class="vs-poster">
+ <div class="vs-team"><div>${crest(S.icon,S.teamName,46)}</div><div class="vs-tname">${S.teamName}</div><div class="vs-pow">${fmt(my)}</div></div>
+ <div class="vs-mid"><div class="vs-tag">VS</div><div class="vs-bar"><i style="width:${myShare}%;background:var(--accent)"></i><i style="width:${100-myShare}%;background:var(--red)"></i></div><div class="vs-wr">赛前预估 ${wr}% · 战力差 ${fmt(Math.abs(my-op))}</div></div>
+ <div class="vs-team right"><div>${crest(opIcon,sr.opName,46)}</div><div class="vs-tname">${sr.opName}</div><div class="vs-pow op">${fmt(op)}</div></div>
+ </div>`;
  // 我方首发行
  const myRows=POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
@@ -294,6 +302,7 @@ function renderPreMatch(){
  <h2>赛前准备 <span class="tag">${sr.max===7?'BO7 · 含巅峰对决':'BO5 · 全局BP'}</span></h2>
  <div class="hint" style="text-align:center;margin-bottom:8px">${window._prepTitle}${midSeries?` · 当前比分 <b>${sr.mw}:${sr.ow}</b>（<span style="cursor:help" title="我方已用：${(sr.used||[]).join('、')||'无'}
 对方已用：${(sr.usedOpp||[]).join('、')||'无'}">全局BP已用 · 我方 ${(sr.used||[]).length} / 对方 ${(sr.usedOpp||[]).length}</span>）`:''}</div>
+ ${poster}
  ${tactHtml||''}
  <div style="display:flex;gap:8px;margin-bottom:10px">
  <div style="flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:center">
@@ -466,6 +475,12 @@ function finishSeries(finalWin){
  score:sr.mw+':'+sr.ow,
  mvps:(sr.mvpIds||[]).map((id,i)=>{const p=S.players.find(x=>x.id===id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
  };
+ // 夺冠仪式感：总决赛/各杯赛决赛赢下时全屏庆典（一次性覆盖层，点按或 6 秒自动消失）
+ if(finalWin&&(sr.stage==='po'&&sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot))){
+ playChampionCeremony(sr.stage==='po'?splitLabel(S)+' 总冠军':
+ sr.cupSlot==='ch_final'?gameYear(S)+' 挑战者杯冠军':
+ sr.cupSlot==='ewc_final'?gameYear(S)+' EWC 电竞世界杯冠军':gameYear(S)+' KPL 年度总冠军');
+ }
  // 比赛复盘记录（含巅峰对决名场面标记）
  S.history=S.history||[];
  S.history.unshift({
@@ -482,8 +497,23 @@ function startPlayoff(){if(S.preseason){toast(' 转会期进行中，联赛尚�
 function startCard(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}playCardNext(S);}
 function showMatchModal(r,title){
  try{(r.win?SFX.win():SFX.lose());}catch(_){}
+ // 系列赛 MVP 高光：按局数计票 + 各局 KDA 合计（字符串 r.mvps：「名字（k/d/a）」）
+ let mvpCard='';
+ if(r.mvps&&r.mvps.length){
+ const cnt={},kda={};
+ r.mvps.forEach(m=>{
+ const n=String(m).split('（')[0];cnt[n]=(cnt[n]||0)+1;
+ const k=String(m).match(/（(\d+)\/(\d+)\/(\d+)）/);
+ if(k){kda[n]=kda[n]||[0,0,0];kda[n][0]+=+k[1];kda[n][1]+=+k[2];kda[n][2]+=+k[3];}
+ });
+ const best=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x]||((kda[y]||[0,0,0]).reduce((t,v)=>t+v,0)-(kda[x]||[0,0,0]).reduce((t,v)=>t+v,0)))[0];
+ const p=S.players.find(x=>x.name===best);
+ mvpCard=`<div class="mvp-card">${avatar(p||{name:best},46)}<div><div class="mvp-tag">SERIES MVP</div><div class="mvp-name">${best}${p?' · '+((S.pick&&S.pick[p.pos])||p.sig||''):''}</div><div class="mvp-kda">${cnt[best]} 局 MVP · 合计 ${kda[best]?kda[best].join(' / '):'—'}</div></div></div>`;
+ }
  const mb=$('#app-modal');$('#app-modal-body').innerHTML=`
  <h2>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
+ <div class="result-band ${r.win?'win':'lose'}"><span>${S.teamName}</span><b>${r.score||''}</b><span>${r.opName||''}</span></div>
+ ${mvpCard}
  <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
  ${(aiEnabled())?`<div id="ai-report-box" class="event-card" style="margin-top:10px"><div class="et">AI 战报</div><p>生成中……（联网调用；失败自动回退本地文案，不影响比赛流程）</p></div>`:''}
  <div class="center mt16">

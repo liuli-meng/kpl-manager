@@ -17,7 +17,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{color-scheme:dark}
 body{
-  background:var(--bg);
+  background:radial-gradient(1100px 480px at 50% -8%,rgba(92,138,245,.075),transparent 62%),var(--bg);
   color:var(--txt);
   font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
   font-size:14px;line-height:1.55;min-height:100vh;padding-bottom:20px;
@@ -66,9 +66,10 @@ section.page.on{display:block;animation:fadein .18s ease}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 
 /* ===== Cards / panels ===== */
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px;margin-bottom:12px;
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.022),rgba(255,255,255,0) 56px),var(--surface);
+  border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:12px;
   position:relative}
-.panel h3{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;margin-bottom:11px}
+.panel h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin-bottom:11px;letter-spacing:.2px}
 .panel h3 .h-ic{display:none}
 .panel h3 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line);color:var(--dim);
   padding:1px 8px;border-radius:10px;font-weight:400}
@@ -131,9 +132,9 @@ section.page.on{display:block;animation:fadein .18s ease}
   border:1px solid var(--line2);background:var(--raise);color:var(--txt);
   cursor:pointer;font-size:13px;font-weight:600;transition:.15s;border-radius:3px}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
-.btn.gold{background:var(--gold);border-color:var(--gold);color:#1d1505}
+.btn.primary{background:linear-gradient(180deg,#6b97ff,#5483ec);border-color:#6b97ff;color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(92,138,245,.22)}
+.btn.primary:hover{background:linear-gradient(180deg,#7aa2ff,#5c8af5);border-color:#7aa2ff;color:#fff}
+.btn.gold{background:linear-gradient(180deg,#e5b455,#d9a441);border-color:#e0ac47;color:#1d1505;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(217,164,65,.18)}
 .btn.gold:hover{background:#c8942f;border-color:#c8942f;color:#1d1505}
 .btn.danger{color:var(--red);border-color:rgba(217,93,93,.5)}
 .btn.danger:hover{border-color:var(--red);background:rgba(217,93,93,.08);color:var(--red)}
@@ -349,3 +350,45 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 /* 可排序表：全部 .tbl 表头可点（事件委托于 ui.js） */
 .tbl th{cursor:pointer;user-select:none}
 .tbl th:hover{color:var(--cyan)}
+/* ===== 2026-09 质感升级组件：头像 / VS 海报 / MVP 高光卡 / 积分条 / 夺冠庆典 ===== */
+.pcard .p-top{gap:8px;justify-content:flex-start}
+.pcard .p-top .p-pos{margin-left:auto}
+.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(92,138,245,.09),rgba(92,138,245,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}
+.vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
+.vs-pow.op{color:var(--red)}
+.vs-mid{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:118px}
+.vs-tag{font-size:17px;font-weight:800;color:var(--dim)}
+.vs-bar{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.vs-bar i{height:100%}
+.vs-wr{font-size:10.5px;color:var(--dim);text-align:center}
+.result-band{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-radius:6px;margin-bottom:10px;font-weight:700;border:1px solid var(--line)}
+.result-band span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}
+.result-band b{font-size:26px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}
+.result-band.win{background:linear-gradient(180deg,rgba(75,163,104,.16),rgba(75,163,104,.05));border-color:rgba(75,163,104,.45)}
+.result-band.lose{background:linear-gradient(180deg,rgba(217,93,93,.12),rgba(217,93,93,.04));border-color:rgba(217,93,93,.35)}
+.mvp-card{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(242,196,27,.13),rgba(242,196,27,.03));border:1px solid rgba(242,196,27,.42);border-radius:8px;padding:10px 14px;margin-bottom:10px}
+.mvp-tag{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2.5px}
+.mvp-name{font-size:16px;font-weight:800}
+.mvp-kda{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pts-bar{height:4px;background:var(--sunken);border-radius:2px;margin-top:4px;overflow:hidden;max-width:150px}
+.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#8a6a24,var(--gold));border-radius:2px}
+.bp-slot{gap:3px}
+.bp-slot b{margin-top:1px}
+.bp-slot.pick.filled b{font-size:12px}
+#champion-overlay{position:fixed;inset:0;z-index:200;background:rgba(8,9,12,.93);display:flex;align-items:center;justify-content:center;animation:ccFade .5s ease;cursor:pointer}
+.cc-inner{text-align:center;position:relative;padding:40px}
+.cc-cup{animation:ccPop .7s cubic-bezier(.2,1.4,.4,1)}
+.cc-title{font-size:30px;font-weight:800;color:var(--gold);margin-top:16px;letter-spacing:5px}
+.cc-team{font-size:15px;color:var(--txt);margin-top:8px;letter-spacing:1px}
+.cc-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cc-confetti i{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;opacity:.85;animation:ccFall 3.2s linear infinite}
+@keyframes ccFall{to{transform:translateY(112vh) rotate(660deg);opacity:.15}}
+@keyframes ccPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes ccFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){
+ .cc-confetti i{display:none}
+ .cc-cup{animation:none}
+ #champion-overlay{animation:none}
+}

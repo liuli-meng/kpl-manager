@@ -29,7 +29,7 @@ function pcard(p,extra){
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
- <div class="p-top"><span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
+ <div class="p-top">${avatar(p,34)}<span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
  <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
  ${stageHtml}
  ${contractHtml}
@@ -112,7 +112,7 @@ function showCareer(p){
  ${p.team?`<span class="dim" style="margin-left:8px">${p.team}</span>`:''}${(p.tags||[]).join(' ')}
  </div>
  <div class="event-card"><div class="et">职业生涯</div><p>${p.career||'新秀档案待完善'}</p></div>
- <div class="hint" style="margin-bottom:12px">年龄：${p.age!=null?p.age:'—'}岁${p.age!=null&&p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire-1?'（<b style="color:var(--red)">'+(p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire?'已到退役年龄':'即将退役')+'</b>）':''}　·　MVP：${p.mvp||0} 次　·　出场 ${p.caps||0} 场<br>当前身价 <b class="gold">${sellAskPrice(p)}万</b>（表现 ${perfLabel(p)} ${p.val||100}%）· 场均 ${(p.caps?Math.round((p.kTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.dTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.aTotal||0)/p.caps*10)/10:0)}<br>招牌英雄：${p.sig}（${HERO_LV[heroLv(p,p.sig)].n}）<br>英雄池：${lvDesc}</div>
+ <div style="display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(p,84)}<div class="hint" style="text-align:left">年龄：${p.age!=null?p.age:'—'}岁${p.age!=null&&p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire-1?'（<b style="color:var(--red)">'+(p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire?'已到退役年龄':'即将退役')+'</b>）':''}　·　MVP：${p.mvp||0} 次　·　出场 ${p.caps||0} 场<br>当前身价 <b class="gold">${sellAskPrice(p)}万</b>（表现 ${perfLabel(p)} ${p.val||100}%）· 场均 ${(p.caps?Math.round((p.kTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.dTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.aTotal||0)/p.caps*10)/10:0)}<br>招牌英雄：${heroIcon(p.sig,16)} ${p.sig}（${HERO_LV[heroLv(p,p.sig)].n}）<br>英雄池：${lvDesc}</div></div>
  <div class="center"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('on');
 }
@@ -813,13 +813,14 @@ function renderLeague(){
  const myG=myGroup(S);
  let html=`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
  <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO7 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
- // 年度积分榜（春夏累计，前12进年度总决赛）
+ // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
  const rank=annualRank(S);
  const myIdx=rank.indexOf(S.teamName);
+ const maxPts=Math.max(1,...rank.slice(0,12).map(t=>S.annualPts[t]||0));
  html+=`<div class="panel"><h3>年度积分榜 <span class="tag">${gameYear(S)} · 前 12 进年度总决赛</span></h3>
- <table class="tbl"><tr><th>#</th><th>战队</th><th>年度积分</th></tr>
- ${rank.slice(0,12).map((t,i)=>`<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${S.annualPts[t]||0}</td></tr>`).join('')}
+ <table class="tbl"><tr><th>#</th><th>战队</th><th style="width:46%">年度积分</th></tr>
+ ${rank.slice(0,12).map((t,i)=>`<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${S.annualPts[t]||0}<div class="pts-bar"><i style="width:${Math.round((S.annualPts[t]||0)/maxPts*100)}%"></i></div></td></tr>`).join('')}
  </table>
  <div class="hint mt8">${myIdx>=0&&myIdx<12?'你队第 '+(myIdx+1)+' 名，'+(myIdx<6?'大师组':'精英组')+'席位在握':(myIdx>=12?'你队第 '+(myIdx+1)+' 名，无缘年度总决赛——春夏赛季继续攒分':'春季赛打完后积分入账')} · 春季冠+100 夏季冠+120</div>
  </div>`;

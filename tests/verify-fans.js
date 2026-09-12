@@ -29,7 +29,7 @@ const out = vm.runInContext(`
   if(!(g1>g2))fail('夺冠涨粉应多于普通赛段: '+g1+' vs '+g2);
   else if(!(g2>=g3))fail('进季后赛涨粉应不少于止步: '+g2+' vs '+g3);
   else if(g3<0)fail('止步不应倒扣粉丝: '+g3);
-  else if(Math.abs(g3-popBase)>0.05)fail('止步增量应恰为阵容人气基本盘 '+popBase.toFixed(2)+'，实际 '+g3);
+  else if(Math.abs(g3-Math.round(popBase*10)/10)>0.001)fail('止步增量应恰为阵容人气基本盘（十分位舍入）'+popBase.toFixed(2)+'，实际 '+g3);
   else if(s.fans<0)fail('粉丝被扣成负数: '+s.fans);
   else log('② 赛段涨粉：夺冠 +'+g1+' · 进季后赛 +'+g2+' · 止步 +'+g3+'（止步只留人气基本盘 +'+popBase.toFixed(2)+'）· 下限不为负');
 

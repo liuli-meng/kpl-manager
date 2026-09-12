@@ -453,6 +453,26 @@ function tweenNum(el,key,to){
  };
  requestAnimationFrame(step);
 }
+/* ================= 夺冠全屏庆典（总决赛/杯赛决赛赢下时一次性播放） =================
+ 深色覆盖层 + 队徽弹入 + 金色标题 + CSS 彩带；点按或 6 秒自动消失；减弱动效时直接跳过。 */
+function playChampionCeremony(title){
+ try{if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(_){}
+ try{
+ const ov=document.createElement('div');
+ ov.id='champion-overlay';
+ let confetti='';
+ for(let i=0;i<26;i++){
+ confetti+='<i style="left:'+rnd(2,98)+'%;animation-delay:'+(Math.random()*1.8).toFixed(2)+'s;background:'+(i%3===0?'#F2C41B':i%3===1?'#5c8af5':'#E8ECF4')+'"></i>';
+ }
+ ov.innerHTML='<div class="cc-inner"><div class="cc-cup">'+crest(S.icon,S.teamName,88)+'</div>'
+ +'<div class="cc-title">'+_escTxt(title||'总冠军')+'</div>'
+ +'<div class="cc-team">'+_escTxt(S.teamName)+' · 捧杯时刻</div>'
+ +'<div class="cc-confetti">'+confetti+'</div></div>';
+ document.body.appendChild(ov);
+ ov.addEventListener('click',()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);});
+ setTimeout(()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);},6000);
+ }catch(_){}
+}
 /* ================= 进场动画（首访一次：logo 聚拢 → 展开 → 淡出） ================= */
 function playIntro(){
  try{if(localStorage.getItem('km_intro'))return;localStorage.setItem('km_intro','1');}catch(_){}

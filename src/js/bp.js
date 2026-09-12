@@ -459,7 +459,7 @@ function bpConfirm(){
 }
 
 /* ================= BP 台 UI（赛事转播观感） ================= */
-function bpSlot(cls,txt,sub){return `<div class="bp-slot ${cls}"><b>${txt||'&nbsp;'}</b><small>${sub||'&nbsp;'}</small></div>`;}
+function bpSlot(cls,txt,sub){return `<div class="bp-slot ${cls}">${(cls.includes('filled')&&txt&&txt!=='—'&&txt!=='？？？')?heroIcon(txt,19):''}<b>${txt||'&nbsp;'}</b><small>${sub||'&nbsp;'}</small></div>`;}
 function bpSideColumn(d,mine){
  const sr=d.sr;
  const myBlue=(sr.side!=='red');
@@ -556,7 +556,7 @@ function renderBP(){
  const th=threatOf(d,h,'opp');
  const oppUsed=(d.usedOpp||[]).includes(h);
  const real=!oppUsed&&(d.oppRoster||[]).some(p=>(p.heroPool||[]).some(x=>x.n===h));
- return `<button class="bp-hero ${h===bestBan?'rec':''}" ${oppUsed?'style="opacity:.4"':''} onclick="bpBanPick('${h}')">${h===bestBan?' ':''}${heroOf(h).hot&&!oppUsed?'':''}${h}<small>${oppUsed?'对方已用 · 本局选不了':(real?('对方威胁 '+(th==null?'—':Math.round(th))):('池外 · 仅-0.5%'))}</small></button>`;
+ return `<button class="bp-hero ${h===bestBan?'rec':''}" ${oppUsed?'style="opacity:.4"':''} onclick="bpBanPick('${h}')">${h===bestBan?' ':''}${heroIcon(h,16)} ${h}<small>${oppUsed?'对方已用 · 本局选不了':(real?('对方威胁 '+(th==null?'—':Math.round(th))):('池外 · 仅-0.5%'))}</small></button>`;
  }).join('')}</div>`;
  }else if(act.type==='pick'){
  const open=myOpenPositions(d);
@@ -572,7 +572,7 @@ function renderBP(){
  action=`<div class="hint" style="margin:10px 0 6px;color:var(--cyan)">为 <b>${POS[pos][1]} ${p?p.name:''}</b> 选英雄（推荐已标 · <button class="btn sm" style="display:inline;padding:1px 8px" onclick="bpBackToPos()">← 重选位置</button>）</div>
  <div class="bp-hero-grid">${avail.map(h=>{
  const hd=heroOf(h.n),lv=HERO_LV[h.lv],rec=best===h.n;
- return `<button class="bp-hero ${rec?'rec':''}" onclick="bpPickHero('${h.n}')">${rec?' ':''}${h.n}${hd&&hd.hot?'':''}<small>${lv.n}${lv.b>0?'+'+Math.round(lv.b*100)+'%':lv.b<0?Math.round(lv.b*100)+'%':''} · ${TYPE_NAME[hd?hd.t:'team']}</small></button>`;
+ return `<button class="bp-hero ${rec?'rec':''}" onclick="bpPickHero('${h.n}')">${rec?' ':''}${heroIcon(h.n,16)} ${h.n}${hd&&hd.hot?'':''}<small>${lv.n}${lv.b>0?'+'+Math.round(lv.b*100)+'%':lv.b<0?Math.round(lv.b*100)+'%':''} · ${TYPE_NAME[hd?hd.t:'team']}</small></button>`;
  }).join('')}</div>`;
  }
  }
