@@ -5381,88 +5381,193 @@ function renderBP(){
 </script>
 <script>
 
-/* ===== 比赛文字直播（借鉴 esports-manager 事件解说体系：事件驱动 + 多模板随机） ===== */
-function genMatchStory(sr,g){
+/* ===== 比赛文字直播（事件模板池 × 数据驱动语境，2026-09 文案升级） =====
+ 旧版全池约 30 条固定模板，打多了必然复读。升级三件事：
+ ① 池子扩容：一血/击杀/资源/推塔/团战/抢龙/战术解说/被动侧 8 类合计 90+ 条；
+ ② 语境编织：选用/绝活英雄、战术克制、比分背景（赛点局）、红蓝方、本局 MVP 的真实 KDA
+    全部织进句子——同模板在不同对局长出不同文本；
+ ③ 系列赛去重：sr._usedTxt 记录用过的句式（随存档持久化），同一场系列赛同一句式不重复。
+ 纯本地生成零网络依赖；AI 赛后战报是独立的可选增强（maybeAiReport，默认关闭）。 */
+function storyPick(id,pool,used){
+ const key=id+':';
+ for(let i=0;i<10;i++){const idx=Math.floor(Math.random()*pool.length);if(!used.includes(key+idx)){used.push(key+idx);return pool[idx];}}
+ return pool[Math.floor(Math.random()*pool.length)];
+}
+function genMatchStory(sr,g,mvp){
+ const used=sr._usedTxt=(sr._usedTxt||[]);
  const myLs=rosterLineup(S);
  const opR=ensureAiRosters(S,sr.opName)||[];
  const R=arr=>arr[Math.floor(Math.random()*arr.length)];
- const myA=()=>myLs.length?R(myLs).name:'我方选手';
- const myB=()=>myLs.length?R(myLs).name:'我方选手';
- const opA=()=>opR.length?R(opR).name:'对方选手';
- const opB=()=>opR.length?R(opR).name:'对方选手';
- const lane=()=>R(['对抗路','发育路','中路']);
- const win=g.w;
- const diff=Math.abs(g.myK-g.opK);
- const close=diff<=2,blowout=diff>=5;
+ const any=arr=>arr.length?R(arr):null;
+ const a=any(myLs),b=any(myLs),o=any(opR),o2=any(opR);
+ const myHero=p=>p?((S.pick&&S.pick[p.pos])||p.sig||''):'';
+ const heroTxt=p=>{const h=myHero(p);return h?` 的 ${h}`:'';};
+ const opHeroTxt=p=>{const h=p?(p.sig||''):'';return h?` 的 ${h}`:'';};
+ const laneN=()=>R(['对抗路','发育路','中路','河道']);
+ const win=g.w,diff=Math.abs(g.myK-g.opK),close=diff<=2,blowout=diff>=5;
  const mins=[3,6,9,13,17,21];
+ const P=(id,pool)=>storyPick(id,pool,used)();
  const lines=[];
- // 一血
+ // —— 一血（每侧 8 条，带选用/招牌英雄语境）——
  const fbMy=Math.random()<(win?0.62:0.38);
- lines.push(fbMy
- ? `第${mins[0]}分钟，一血爆发！${myA()} 单杀 ${opB()}，拿下开门红！`
- : `第${mins[0]}分钟，${opA()} 拿到一血，我方 ${myB()} 被击杀。`);
+ lines.push(fbMy?P('fb_my',[
+ ()=>`第${mins[0]}分钟，一血爆发！${a?a.name:'我方选手'}${heroTxt(a)} 单杀 ${o?o.name:'对方选手'}，拿下开门红！`,
+ ()=>`第${mins[0]}分钟，${a?a.name:'我方选手'} 蹲到 ${o?o.name:'对方选手'} 落单，一套连招带走一血！`,
+ ()=>`第${mins[0]}分钟，一级团设计成功，${a?a.name:'我方选手'} 收下一血，开局占先手！`,
+ ()=>`第${mins[0]}分钟，${a?a.name:'我方选手'}${heroTxt(a)} 极限换血反打，一血到手，解说席都站起来了！`,
+ ()=>`第${mins[0]}分钟，${o?o.name:'对方选手'} 压线过深，${a?a.name:'我方选手'} 配合队友包夹拿下一血！`,
+ ()=>`第${mins[0]}分钟，${a?a.name:'我方选手'} 抢二突袭，${o?o.name:'对方选手'} 反应慢了半拍，一血入账！`,
+ ()=>`第${mins[0]}分钟，视野战立功！${a?a.name:'我方选手'} 绕后收下一血。`,
+ ()=>`第${mins[0]}分钟，${sr.side==='red'?'红方':'蓝方'}开局强开，${a?a.name:'我方选手'} 拿下一血！`,
+ ]):P('fb_op',[
+ ()=>`第${mins[0]}分钟，${o?o.name:'对方选手'}${opHeroTxt(o)} 拿到一血，我方 ${a?a.name:'选手'} 被击杀。`,
+ ()=>`第${mins[0]}分钟，对方 ${o?o.name:'选手'} 一级团设计更胜一筹，一血落入敌手。`,
+ ()=>`第${mins[0]}分钟，${o?o.name:'对方选手'} 抓住 ${a?a.name:'我方选手'} 的走位失误拿下一血。`,
+ ()=>`第${mins[0]}分钟，我方野区被反，${o?o.name:'对方选手'} 顺势收下一血。`,
+ ()=>`第${mins[0]}分钟，${a?a.name:'我方选手'} 想拼操作但差了一点，${o?o.name:'对方选手'} 拿下一血。`,
+ ()=>`第${mins[0]}分钟，对方双人越塔强抓，${a?a.name:'我方选手'} 交出一血，节奏被动。`,
+ ()=>`第${mins[0]}分钟，${o?o.name:'对方选手'} 抢到关键视野，顺手带走 ${a?a.name:'我方选手'} 拿一血。`,
+ ()=>`第${mins[0]}分钟，开局被抓，${a?a.name:'我方选手'} 的一血送得有点冤。`,
+ ]));
+ // —— 中盘事件：我方优势侧 6 类 / 被动侧 4 类，全部带人名·英雄·兵线槽位 ——
  for(let i=1;i<mins.length;i++){
  const m=mins[i];
  const myEvent=Math.random()<(win?0.7:0.36);
- const pool=myEvent
- ? ['kill','kill','obj','tower','fight','fight']
- : ['opkill','opkill','opobj','optower','opfight'];
- const kind=R(pool);
- const t=R({
+ const kind=R(myEvent?['kill','kill','obj','tower','fight','fight','steal','skill']:['opkill','opkill','opobj','optower','opfight']);
+ const t=(myEvent?{
  kill:[
- `${myA()} 配合 ${myB()} 抓死 ${opA()}，节奏来了！`,
- `${myA()} 草丛蹲伏，一套连招带走 ${opA()}！`,
- `${myA()} 极限反杀 ${opA()}，丝血逃生！`,
- `${myA()} 绕后切入，${opA()} 来不及反应直接蒸发！`,
- `${myA()} 越塔强杀 ${opA()}，打得真凶！`,
+ ()=>`${a?a.name:'我方选手'} 配合 ${b?b.name:'队友'} 抓死 ${o?o.name:'对方选手'}，节奏来了！`,
+ ()=>`${a?a.name:'我方选手'} 草丛蹲伏，一套连招带走 ${o?o.name:'对方选手'}！`,
+ ()=>`${a?a.name:'我方选手'} 极限反杀 ${o?o.name:'对方选手'}，丝血逃生！`,
+ ()=>`${a?a.name:'我方选手'} 绕后切入，${o?o.name:'对方选手'} 来不及反应直接蒸发！`,
+ ()=>`${a?a.name:'我方选手'} 越塔强杀 ${o?o.name:'对方选手'}，打得真凶！`,
+ ()=>`${a?a.name:'我方选手'}${heroTxt(a)} 伤害拉满，${o?o.name:'对方选手'} 血条瞬间消失！`,
+ ()=>`${b?b.name:'我方选手'} 先手控住，${a?a.name:'我方选手'} 跟上补伤害，${o?o.name:'对方选手'} 当场倒地！`,
+ ()=>`${a?a.name:'我方选手'} 在${laneN()}完成单杀，${o?o.name:'对方选手'} 心态有点崩。`,
+ ()=>`${a?a.name:'我方选手'} 闪现追击收下 ${o?o.name:'对方选手'}，这波不亏反赚！`,
+ ()=>`${o?o.name:'对方选手'} 想试探草丛，被 ${a?a.name:'我方选手'} 一套秒掉，白给。`,
+ ()=>`${a?a.name:'我方选手'} 借${laneN()}兵线卡视野，突袭带走 ${o?o.name:'对方选手'}！`,
+ ()=>`${a?a.name:'我方选手'} 反蹲到位，${o?o.name:'对方选手'} 的进攻变成送人头。`,
  ],
  obj:[
- `我方稳稳控下暴君，经济小优！`,
- `${myA()} 抢下暗影主宰，召唤主宰先锋推进！`,
- `风暴龙王刷新，我方抱团控下，局面大好！`,
+ ()=>`我方稳稳控下暴君，经济小优！`,
+ ()=>`${a?a.name:'我方选手'} 抢下暗影主宰，召唤主宰先锋推进！`,
+ ()=>`风暴龙王刷新，我方抱团控下，局面大好！`,
+ ()=>`我方拿下主宰，兵线压力直接给满，对面只能守家。`,
+ ()=>`${a?a.name:'我方选手'} 惩戒掐点收下暴君，对面打野看傻了。`,
+ ()=>`我方控下暗影暴君，全队加成上身，团战底气更足。`,
+ ()=>`我方四人抱团压视野白拿暴君，${o?o.name:'对方选手'} 只能望龙兴叹。`,
+ ()=>`双龙汇打法成型，我方连收暴君与主宰！`,
  ],
  tower:[
- `我方推掉对方${lane()}一塔，打开局面！`,
- `${myA()} 带线推进，对方${lane()}二塔告破！`,
- `我方强上高地，${lane()}高地塔被磨掉大半！`,
+ ()=>`我方推掉对方${laneN()}一塔，打开局面！`,
+ ()=>`${a?a.name:'我方选手'} 带线推进，对方${laneN()}二塔告破！`,
+ ()=>`我方强上高地，${laneN()}高地塔被磨掉大半！`,
+ ()=>`${a?a.name:'我方选手'} 带着主宰先锋直拆高地，对面拦都拦不住。`,
+ ()=>`我方${laneN()}一塔速推成功，经济差开始拉开！`,
+ ()=>`对方中路二塔在 ${a?a.name:'我方选手'} 的强拆下轰然倒塌！`,
  ],
  fight:[
- `河道团战，我方 1 换 3，血赚！`,
- `${myA()} 大招开团，我方打出 0 换 4！`,
- `ACE！我方团灭对手，天平彻底倾斜！`,
- `${myA()} 关键绕后开团，直接打崩对方阵型！`,
+ ()=>`河道团战，我方 1 换 3，血赚！`,
+ ()=>`${a?a.name:'我方选手'} 大招开团，我方打出 0 换 4！`,
+ ()=>`ACE！我方团灭对手，天平彻底倾斜！`,
+ ()=>`${a?a.name:'我方选手'} 关键绕后开团，直接打崩对方阵型！`,
+ ()=>`高地团战我方全员站位完美，团灭对面还不掉点！`,
+ ()=>`${a?a.name:'我方选手'} 闪现开到双人，${b?b.name:'队友'} 收割战场，团战大胜！`,
+ ()=>`风暴龙王团我方打出完美阵型，一波团灭对面！`,
+ ()=>`${a?a.name:'我方选手'} 切死对方后排，${o2?o2.name:'对方选手'} 想跑已经来不及，团战我方碾压！`,
+ ()=>`我方逆风抱团打出漂亮反手团，1 换 4 翻盘在望！`,
+ ()=>`${a?a.name:'我方选手'} 抢到关键视野，团战先手秒掉 ${o?o.name:'对方选手'}！`,
  ],
+ steal:[
+ ()=>`${a?a.name:'我方选手'} 惩戒抢下暴君，${o?o.name:'对方选手'} 当场愣住！`,
+ ()=>`${a?a.name:'我方选手'} 残血极限抢龙，对面打野这波亏麻了。`,
+ ()=>`${a?a.name:'我方选手'} 一脚踩进龙坑抢下主宰，风向瞬间逆转！`,
+ ()=>`${o?o.name:'对方选手'} 打了半天龙，被 ${a?a.name:'我方选手'} 一惩戒抢走！`,
+ ()=>`${a?a.name:'我方选手'} 预判惩戒时机，风暴龙王收入囊中！`,
+ ()=>`龙坑博弈我方更胜一筹，${a?a.name:'我方选手'} 抢下关键资源！`,
+ ],
+ skill:[
+ ()=>`我方「${(S.tactic&&S.tactic!=='balanced')?tacticById(S.tactic).name:'均衡运营'}」体系奏效，${laneN()}优势全面展开。`,
+ ()=>`战术板显灵——「${(S.tactic&&S.tactic!=='balanced')?tacticById(S.tactic).name:'均衡运营'}」的节奏完全按我方剧本走。`,
+ ()=>`${a?a.name:'我方选手'} 按战术布置让出线权，${b?b.name:'队友'} 起飞了。`,
+ ()=>`对「${sr._opTactic?tacticById(sr._opTactic).name:'均衡运营'}」的克制布置生效，对面打法被完全预测。`,
+ ()=>`我方阵容在这个版本里打得游刃有余，${a?a.name:'我方选手'} 如鱼得水。`,
+ ],
+ }:{
  opkill:[
- `${opA()} 越塔强杀我方 ${myB()}，这波有点亏。`,
- `对方 ${opA()} 开团，我方 ${myB()} 被集火击杀。`,
- `${opA()} 蹲到我方 ${myB()}，视野缺失导致掉点。`,
+ ()=>`${o?o.name:'对方选手'} 越塔强杀我方 ${a?a.name:'选手'}，这波有点亏。`,
+ ()=>`对方 ${o?o.name:'选手'} 开团，我方 ${a?a.name:'选手'} 被集火击杀。`,
+ ()=>`${o?o.name:'对方选手'} 蹲到我方 ${a?a.name:'选手'}，视野缺失导致掉点。`,
+ ()=>`${o?o.name:'对方选手'}${opHeroTxt(o)} 操作拉满，我方 ${a?a.name:'选手'} 招架不住。`,
+ ()=>`我方 ${a?a.name:'选手'} 想反打但伤害差一截，被 ${o?o.name:'对方选手'} 反杀。`,
+ ()=>`${o2?o2.name:'对方选手'} 绕后包抄，${a?a.name:'我方选手'} 进退两难被留下。`,
+ ()=>`我方支援慢了一步，${o?o.name:'对方选手'} 白拿一个人头。`,
+ ()=>`${a?a.name:'我方选手'} 深追被包了饺子，这波冲得太深了。`,
  ],
  opobj:[
- `对方收下暴君，经济被拉开一点。`,
- `对方拿到暗影主宰，兵线压力陡增。`,
+ ()=>`对方收下暴君，经济被拉开一点。`,
+ ()=>`对方拿到暗影主宰，兵线压力陡增。`,
+ ()=>`${o?o.name:'对方选手'} 惩戒掐点抢下龙王，我方龙坑博弈输了。`,
+ ()=>`我方想争暴君但站位太散，对面白捡一条龙。`,
+ ()=>`对方控下双龙会合，我方防守压力剧增。`,
  ],
  optower:[
- `对方推掉我方${lane()}一塔，需要稳住。`,
- `我方${lane()}二塔被破，对方视野压进来了。`,
+ ()=>`对方推掉我方${laneN()}一塔，需要稳住。`,
+ ()=>`我方${laneN()}二塔被破，对方视野压进来了。`,
+ ()=>`${o?o.name:'对方选手'} 带线太深，我方${laneN()}高地塔岌岌可危。`,
+ ()=>`我方回防不及，${laneN()}被对方一波拆穿。`,
+ ()=>`对方主宰先锋顶在前面，我方${laneN()}防线告破。`,
  ],
  opfight:[
- `团战失利，我方 2 换 1，有点难受。`,
- `对方打出 ACE，我方被打了一波团灭。`,
+ ()=>`团战失利，我方 2 换 1，有点难受。`,
+ ()=>`对方打出 ACE，我方被打了一波团灭。`,
+ ()=>`${o?o.name:'对方选手'} 一波完美开团，我方阵型被冲散。`,
+ ()=>`我方团战技能交了一半就被秒，${o?o.name:'对方选手'} 收割干净利落。`,
+ ()=>`我方想抢龙引发团战，结果 1 换 4 大亏，节奏全丢。`,
+ ()=>`${o?o.name:'对方选手'} 后排输出拉满，我方前排顶不住，团战溃败。`,
  ],
- }[kind]);
- lines.push(`第${m}分钟，${t}`);
+ })[kind];
+ lines.push(`第${m}分钟，${P('ev_'+kind,t)}`);
  }
- // 收官
+ // —— 收官（胜方含 MVP 数据钩织 / 败方各 8 条，赛点局语境）——
  const endM=22+Math.floor(Math.random()*10);
- if(win){
- if(close)lines.push(`第${endM}分钟，逆风翻盘！${myA()} 关键抢龙，一波推平水晶拿下本局！`);
- else if(blowout)lines.push(`第${endM}分钟，碾压局！${myA()} 带队直取水晶，对手毫无还手之力！`);
- else lines.push(`第${endM}分钟，兵线进塔，${myA()} 点掉水晶，拿下本局！`);
+ const need=Math.ceil(sr.max/2);
+ const decider=sr.mw+sr.ow===sr.max-1&&(sr.mw===need-1||sr.ow===need-1); // 本局即决胜局
+ if(g.w&&mvp){
+ lines.push(P('end_wm',[
+ ()=>`第${endM}分钟，${mvp.name} 以 ${mvp.k}/${mvp.d}/${mvp.a} 的战绩收下本局MVP${close?'，逆风翻盘实至名归！':blowout?'，碾压局里也打出了统治力！':'，关键先生就是他！'}`,
+ ()=>`第${endM}分钟，兵线进塔，${mvp.name} 点掉水晶！${mvp.k}/${mvp.d}/${mvp.a}，本局MVP没有悬念。`,
+ ()=>`第${endM}分钟，水晶炸裂！${mvp.name} 的 ${mvp.k}/${mvp.d}/${mvp.a} 就是本局的答案。`,
+ ()=>`第${endM}分钟，${mvp.name} 一锤定音，${mvp.k}/${mvp.d}/${mvp.a} 的数据单漂亮得能裱起来。`,
+ ()=>`第${endM}分钟，拿下本局！${mvp.name} 用 ${mvp.k}/${mvp.d}/${mvp.a} 证明谁是这局的主人。`,
+ ()=>`第${endM}分钟，${mvp.name}${heroTxt(myLs.find(p=>p.id===mvp.id))} 收下决胜一击，${mvp.k}/${mvp.d}/${mvp.a} 当选MVP！`,
+ ]));
+ }else if(g.w){
+ lines.push(P('end_w',[
+ ()=>`第${endM}分钟，${close?'逆风翻盘！我方关键抢龙，一波推平水晶拿下本局！':blowout?'碾压局！我方带队直取水晶，对手毫无还手之力！':'兵线进塔，我方点掉水晶，拿下本局！'}`,
+ ()=>`第${endM}分钟，${blowout?'对面完全没有还手之力，水晶告破，漂亮！':'最后一波团战我方全员拉满，水晶爆炸，本局到手！'}`,
+ ()=>`第${endM}分钟，${decider?'决胜局顶住了！我方推掉水晶，全场沸腾！':'稳稳拿下本局，比分变成 '+sr.mw+':'+sr.ow+'。'}`,
+ ()=>`第${endM}分钟，${a?a.name:'我方选手'} 带队一波结束战斗，本局拿下！`,
+ ()=>`第${endM}分钟，对面投降式防守没撑住，我方推平水晶${decider?'——赛点在手！':'！'}`,
+ ()=>`第${endM}分钟，龙兵进高地，${blowout?'对面的防线形同虚设，水晶应声而碎！':'我方干净利落终结本局！'}`,
+ ()=>`第${endM}分钟，${sr.side==='red'?'红':'蓝'}方拿下本局——就是我们！`,
+ ()=>`第${endM}分钟，从${laneN()}优势滚成全局胜势，本局拿下！`,
+ ]));
  }else{
- if(close)lines.push(`第${endM}分钟，基地前最后一波团战失利，水晶告破……可惜了。`);
- else if(blowout)lines.push(`第${endM}分钟，对方带着主宰先锋推上高地，水晶告破，惨败一局。`);
- else lines.push(`第${endM}分钟，对方推掉水晶……${opA()} 这局发挥确实好。`);
+ lines.push(P('end_l',[
+ ()=>`第${endM}分钟，基地前最后一波团战失利，水晶告破……可惜了。`,
+ ()=>`第${endM}分钟，对方推掉水晶……${o?o.name:'对方选手'} 这局发挥确实好。`,
+ ()=>`第${endM}分钟，${blowout?'对方带着主宰先锋推上高地，水晶告破，惨败一局。':'经济差没能扳回来，本局遗憾丢掉。'}`,
+ ()=>`第${endM}分钟，最后一波我方阵容脱节，被 ${o?o.name:'对方选手'} 抓住机会一波带走。`,
+ ()=>`第${endM}分钟，${close?'就差一点点——水晶先碎了，本局输得太可惜。':'对面节奏完全压制，本局输得不冤。'}`,
+ ()=>`第${endM}分钟，${decider?'决胜局没顶住，对方先下一城，压力来到下一局。':'本局失利，比分被改写为 '+sr.mw+':'+sr.ow+'。'}`,
+ ()=>`第${endM}分钟，${o?o.name:'对方选手'} 越战越勇，我方防守层层被破，水晶失守。`,
+ ()=>`第${endM}分钟，一波决策失误葬送好局，${close?'本来真的有机会翻。':'这局确实打不过。'}`,
+ ]));
  }
+ // 解说口播（约一成对局出现一条口癖）
+ if(Math.random()<0.1)lines.push(` 解说席：${pick(CASTER)}${close?'这场真是太刺激了。':''}`);
  return lines.map(l=>' '+l);
 }
 /* ================= 比赛流程（KPL 赛制：常规赛 BO5 / 季后赛 BO7 全局BP） ================= */
@@ -5624,9 +5729,10 @@ function playGame(){
  const mvp=gamePerform(g.w);
  if(mvp){const mp=S.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
  if(mvp)sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id); // 系列赛各局 MVP 记录（FMVP 评选用）
+ if(mvp)sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a); // 各局 MVP 的 KDA（AI 战报语境用）
  sr.logs.push('第'+(sr.mw+sr.ow)+'局 '+(g.w?'':'')+' 我方 '+g.myK+'-'+g.opK+' '+(g.w?'击败':'憾负')+' '+sr.opName+' ｜ 总比分 '+sr.mw+':'+sr.ow+tag+' '+(sr.side==='red'?'红方':'蓝方')+' '+pick(CASTER)+(mvp?' ｜ MVP：'+mvp.name+'（'+mvp.k+'/'+mvp.d+'/'+mvp.a+'）':''));
- // 文字直播（借鉴 esports-manager 事件解说体系）
- sr.logs.push(...genMatchStory(sr,g));
+ // 文字直播（事件模板池 × 数据驱动语境：MVP KDA/英雄/战术/比分背景全部织进句子）
+ sr.logs.push(...genMatchStory(sr,g,mvp));
  const need=Math.ceil(sr.max/2);
  if(sr.mw>=need||sr.ow>=need){
  finishSeries(sr.mw>=need);
@@ -5737,7 +5843,11 @@ function finishSeries(finalWin){
  else if(S.phase==='challenger')challengerStep(S);
  else annualStep(S);
  }
- const r={win:finalWin,logs:sr.logs,opName:sr.opName};
+ const r={win:finalWin,logs:sr.logs,opName:sr.opName,
+ stageTxt:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
+ score:sr.mw+':'+sr.ow,
+ mvps:(sr.mvpIds||[]).map((id,i)=>{const p=S.players.find(x=>x.id===id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
+ };
  // 比赛复盘记录（含巅峰对决名场面标记）
  S.history=S.history||[];
  S.history.unshift({
@@ -5757,12 +5867,68 @@ function showMatchModal(r,title){
  const mb=$('#app-modal');$('#app-modal-body').innerHTML=`
  <h2>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
  <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
+ ${(aiEnabled())?`<div id="ai-report-box" class="event-card" style="margin-top:10px"><div class="et">AI 战报</div><p>生成中……（联网调用；失败自动回退本地文案，不影响比赛流程）</p></div>`:''}
  <div class="center mt16">
  ${(S.phase==='champion'||S.phase==='eliminated')?`<button class="btn gold" onclick="closeModal('app-modal');advanceCalendar(S)">${calendarNextLabel(S)}</button>`
  :(S.preseason?`<button class="btn gold" onclick="closeModal('app-modal');goPage('market')"> 进入转会期（组队备战）</button>`
  :`<button class="btn primary" onclick="closeModal('app-modal');nextDay(S);goPage('club')">继续（推进一天）</button>`)}
  </div>`;
  mb.classList.add('on');
+ if(aiEnabled())aiFillReport(r); // 异步填充，成败都不阻塞赛后流程
+}
+/* ================= AI 赛后战报（可选增强 · 默认关闭 · 失败静默回退） =================
+ 与「纯单机」承诺的边界：默认关闭、零请求；开启后每场系列赛结束向用户自填的
+ OpenAI 兼容端点发一次请求。设置存 localStorage（AI_SET_KEY），不进存档对象——
+ 导出存档/代码分享不会带走 key。任何失败（断网/超时/HTTP错误/CORS/无fetch环境）
+ 都静默回退本地文案；比赛引擎与门禁测试完全不依赖本模块。 */
+const AI_SET_KEY='km_ai_set';
+function aiSettings(){
+ try{return JSON.parse(localStorage.getItem(AI_SET_KEY))||{};}catch(e){return {};}
+}
+function aiEnabled(){const s=aiSettings();return !!(s.on&&s.base);}
+function toggleAiReport(){
+ const st=aiSettings();st.on=!st.on;
+ try{localStorage.setItem(AI_SET_KEY,JSON.stringify(st));}catch(e){}
+ save();renderAll();
+ toast(st.on?' AI 战报已开启：每场赛后联网生成一次（经营页可配置端点）':' AI 战报已关闭：恢复纯单机模式');
+}
+function aiSaveForm(){
+ const st=aiSettings();
+ st.base=(document.getElementById('ai-base')||{value:''}).value.trim();
+ st.model=(document.getElementById('ai-model')||{value:''}).value.trim();
+ st.key=(document.getElementById('ai-key')||{value:''}).value.trim();
+ try{localStorage.setItem(AI_SET_KEY,JSON.stringify(st));}catch(e){}
+ toast('AI 战报端点已保存（仅存本机，不随存档导出）');
+}
+async function aiFillReport(r){
+ let timer=null;
+ try{
+ if(typeof fetch!=='function')throw new Error('环境不支持 fetch');
+ const st=aiSettings();
+ const h=(S.history||[])[0];
+ const prompt='你是KPL王者荣耀职业联赛的赛事文案作者。请根据以下比赛数据写一段120字以内的中文赛后战报，专业但带情绪，直接输出正文，不要标题、不要列表：\n'
+ +'比赛：'+(r.stageTxt||'')+'，'+S.teamName+' vs '+r.opName+'，比分 '+r.score+'（我方'+(r.win?'胜':'负')+'）\n'
+ +'我方首发：'+rosterLineup(S).map(p=>p.name+'（'+((S.pick&&S.pick[p.pos])||p.sig||'')+'）').join('、')+'\n'
+ +((r.mvps||[]).length?'各局MVP：'+r.mvps.join('、')+'\n':'')
+ +'直播要点：'+(r.logs||[]).slice(0,10).join(' / ');
+ const ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+ if(ctrl)timer=setTimeout(()=>ctrl.abort(),25000);
+ const res=await fetch(st.base,{method:'POST',signal:ctrl?ctrl.signal:undefined,
+ headers:Object.assign({'Content-Type':'application/json'},st.key?{Authorization:'Bearer '+st.key}:{}),
+ body:JSON.stringify({model:st.model||'gpt-4o-mini',messages:[{role:'user',content:prompt}],temperature:0.9})});
+ if(timer){clearTimeout(timer);timer=null;}
+ if(!res.ok)throw new Error('HTTP '+res.status);
+ const j=await res.json();
+ const txt=String((j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'').trim();
+ if(!txt)throw new Error('空响应');
+ if(h){h.aiReport=txt;save();} // 存入复盘记录：重放可见，之后离线也能看
+ const box=document.getElementById('ai-report-box'); // 弹窗可能已被下一场替换，找不到就丢弃
+ if(box)box.innerHTML='<div class="et">AI 战报</div><p>'+_escTxt(txt)+'</p>';
+ }catch(e){
+ if(timer)clearTimeout(timer);
+ const box=document.getElementById('ai-report-box');
+ if(box)box.innerHTML='<div class="hint">AI 战报生成失败（'+_escTxt(String(e&&e.message||e)).slice(0,80)+'）——本场沿用本地文案</div>';
+ }
 }
 
 /* ================= 比赛模拟（Elo 胜率） ================= */
@@ -5826,6 +5992,7 @@ function showReplay(h){
  $('#app-modal-body').innerHTML=`
  <h2>复盘：${S.teamName} vs ${h.opp} <span class="tag">${h.stage} ${h.score}</span></h2>
  ${h.peak?'<div class="hint" style="text-align:center;color:var(--gold);margin-bottom:10px">巅峰对决名场面</div>':''}
+ ${h.aiReport?`<div class="event-card" style="margin-bottom:10px"><div class="et">AI 战报</div><p>${_escTxt(h.aiReport)}</p></div>`:''}
  <div class="logbox" style="max-height:60vh">${h.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('on');
@@ -6255,6 +6422,19 @@ function renderBiz(){
  html+=`<div class="hint">还没有 FMVP——率队杀进决赛并打出统治表现（各局 MVP 累计最多）即可当选，获专属皮肤与人气温涨</div>`;
  }
  html+=`</div>`;
+ // AI 赛后战报（可选实验功能，默认关闭）：设置存本机 localStorage，不进存档导出
+ {
+ const st=aiSettings();
+ html+=`<div class="panel ${foldCls('airep')}" data-fold="airep"><h3>AI 赛后战报 <span class="tag ${st.on?'':'dim'}">${st.on?'已开启 · 每场赛后联网一次':'默认关闭'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">可选实验功能：开启后每场系列赛结束，向你填写的 OpenAI 兼容端点发一次请求，生成一段 AI 赛后总结（存入比赛复盘，重放可见）。断网/失败/超时自动回退本地文案，比赛流程永不阻塞。设置只存本机——不进存档、不随导出文件走。</div>
+ <button class="btn sm ${st.on?'danger':'primary'}" onclick="toggleAiReport()">${st.on?' 关闭 AI 战报（恢复纯单机）':' 开启 AI 战报（需联网）'}</button>
+ ${st.on?`<div style="display:grid;gap:6px;margin-top:10px">
+ <label class="hint">端点 URL（OpenAI 兼容 chat/completions，需支持浏览器直连 CORS）<input id="ai-base" class="hd-in" style="width:100%" value="${_escTxt(st.base||'')}" placeholder="https://text.pollinations.ai/openai （社区公益·免key·可能不稳定）" onchange="aiSaveForm()"></label>
+ <label class="hint">模型名<input id="ai-model" class="hd-in" style="width:100%" value="${_escTxt(st.model||'')}" placeholder="openai / gpt-4o-mini / 供应商模型 id" onchange="aiSaveForm()"></label>
+ <label class="hint">API Key（免 key 端点留空）<input id="ai-key" type="password" class="hd-in" style="width:100%" value="${_escTxt(st.key||'')}" placeholder="sk-..." onchange="aiSaveForm()"></label>
+ </div>`:''}
+ </div>`;
+ }
  // 年度回顾归档（每年一份快照，点开回看）
  {
  const revs=S.yearReviews||[];

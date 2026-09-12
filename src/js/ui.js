@@ -55,6 +55,7 @@ function showReplay(h){
  $('#app-modal-body').innerHTML=`
  <h2>复盘：${S.teamName} vs ${h.opp} <span class="tag">${h.stage} ${h.score}</span></h2>
  ${h.peak?'<div class="hint" style="text-align:center;color:var(--gold);margin-bottom:10px">巅峰对决名场面</div>':''}
+ ${h.aiReport?`<div class="event-card" style="margin-bottom:10px"><div class="et">AI 战报</div><p>${_escTxt(h.aiReport)}</p></div>`:''}
  <div class="logbox" style="max-height:60vh">${h.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('on');
@@ -484,6 +485,19 @@ function renderBiz(){
  html+=`<div class="hint">还没有 FMVP——率队杀进决赛并打出统治表现（各局 MVP 累计最多）即可当选，获专属皮肤与人气温涨</div>`;
  }
  html+=`</div>`;
+ // AI 赛后战报（可选实验功能，默认关闭）：设置存本机 localStorage，不进存档导出
+ {
+ const st=aiSettings();
+ html+=`<div class="panel ${foldCls('airep')}" data-fold="airep"><h3>AI 赛后战报 <span class="tag ${st.on?'':'dim'}">${st.on?'已开启 · 每场赛后联网一次':'默认关闭'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">可选实验功能：开启后每场系列赛结束，向你填写的 OpenAI 兼容端点发一次请求，生成一段 AI 赛后总结（存入比赛复盘，重放可见）。断网/失败/超时自动回退本地文案，比赛流程永不阻塞。设置只存本机——不进存档、不随导出文件走。</div>
+ <button class="btn sm ${st.on?'danger':'primary'}" onclick="toggleAiReport()">${st.on?' 关闭 AI 战报（恢复纯单机）':' 开启 AI 战报（需联网）'}</button>
+ ${st.on?`<div style="display:grid;gap:6px;margin-top:10px">
+ <label class="hint">端点 URL（OpenAI 兼容 chat/completions，需支持浏览器直连 CORS）<input id="ai-base" class="hd-in" style="width:100%" value="${_escTxt(st.base||'')}" placeholder="https://text.pollinations.ai/openai （社区公益·免key·可能不稳定）" onchange="aiSaveForm()"></label>
+ <label class="hint">模型名<input id="ai-model" class="hd-in" style="width:100%" value="${_escTxt(st.model||'')}" placeholder="openai / gpt-4o-mini / 供应商模型 id" onchange="aiSaveForm()"></label>
+ <label class="hint">API Key（免 key 端点留空）<input id="ai-key" type="password" class="hd-in" style="width:100%" value="${_escTxt(st.key||'')}" placeholder="sk-..." onchange="aiSaveForm()"></label>
+ </div>`:''}
+ </div>`;
+ }
  // 年度回顾归档（每年一份快照，点开回看）
  {
  const revs=S.yearReviews||[];
