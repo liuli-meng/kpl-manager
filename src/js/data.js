@@ -186,19 +186,20 @@ const _curve=(pts,o)=>{
  }
  return pts[pts.length-1][1];
 };
-/* 总值→签约身价（万）：锚定旧经济（顶星≈260 / 主力≈130 / 轮换≈55） */
-const VALUE_PTS=[[40,60],[50,140],[60,300],[66,450],[72,650],[76,1000],[80,1400],[84,1850],[88,2400],[92,2850],[96,3350],[99,4000]];
+/* 总值→签约身价（万）：2026-09 真实经济对齐（KPL 转会封顶 1500 万 ⇒ 顶星身价曲线顶格 ≈670，
+ 配合意愿/强挖倍率后顶星摸到 1500 天花板；原千万级刻度 ÷6） */
+const VALUE_PTS=[[40,10],[50,25],[60,50],[66,75],[72,110],[76,165],[80,235],[84,310],[88,400],[92,475],[96,560],[99,670]];
 const valueOf=o=>_curve(VALUE_PTS,o);
-/* 总值→周薪曲线（万） */
-const WAGE_PTS=[[40,12],[50,20],[60,35],[66,50],[72,75],[76,100],[80,140],[85,210],[90,280],[96,350],[99,400]];
+/* 总值→周薪曲线（万）：同步 ÷6（个人顶薪封顶 70，见 transfer.js PLAYER_WAGE_MAX） */
+const WAGE_PTS=[[40,2],[50,3],[60,6],[66,8],[72,12],[76,17],[80,23],[85,35],[90,47],[96,58],[99,67]];
 const wageOf=o=>_curve(WAGE_PTS,o);
 const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
  {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
 /* 赞助商：升级同时需要资金与粉丝（fans，单位万）——把"成绩 → 粉丝 → 商业"接成一条链 */
-const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:100,cost:0,fans:0},
- {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:250,cost:1500,fans:20},
- {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:550,cost:4000,fans:80},
- {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:1100,cost:10000,fans:200}];
+const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:15,cost:0,fans:0},
+ {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:40,cost:250,fans:20},
+ {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:90,cost:650,fans:80},
+ {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:180,cost:1650,fans:200}];
 const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
 
 /* ================= 英雄池（KPL 常用英雄 · 含摇摆位） =================
@@ -450,24 +451,24 @@ const AI_ROSTERS={
 /* ================= 原版俱乐部模板（豪门/中坚/草根预算差异化） =================
  budget: 初始资金 cap: 工资帽 coach: 教练 players: 首发 seed: 战力种子(开局分组用) */
 const CLUB_TEMPLATES=[
- {name:'成都AG超玩会',icon:'焰',budget:15000,cap:1500,coach:'co1',seed:640,players:['top4','jg4','mid3','ad1','sup3'],desc:'银河战舰 · 2025三冠王朝 · 预算拉满'},
- {name:'重庆狼队',icon:'狼',budget:14000,cap:1450,coach:'co2',seed:620,players:['top6','jg5','mid4','ad2','sup4'],desc:'六冠豪门 · 野核体系 · 顶级预算'},
- {name:'武汉eStarPro',icon:'★',budget:13000,cap:1400,coach:'co3',seed:600,players:['top3','jg3','mid1','ad3','sup2'],desc:'eStar王朝 · 三冠主力全保留'},
- {name:'北京WB',icon:'熊',budget:10000,cap:1250,coach:'co5',seed:580,players:['top5','jg2','mid6','ad4','sup5'],desc:'追光者 · 暖阳领衔 · 中坚预算'},
- {name:'广州TTG',icon:'环',budget:9000,cap:1180,coach:'co8',seed:540,players:['top12','jg13','mid2','ad11','sup13'],desc:'九尾带队 · 法刺体系'},
- {name:'南京Hero久竞',icon:'影',budget:9500,cap:1200,coach:'co10',seed:460,players:['top9','jg6','mid5','ad12','sup6'],desc:'久竞传奇 · 久诚回归 · 中游预算'},
- {name:'苏州KSG',icon:'虎',budget:8500,cap:1120,coach:'co9',seed:500,players:['top14','jg7','mid13','ad9','sup12'],desc:'新锐崛起 · 稳扎稳打'},
- {name:'上海EDG.M',icon:'电',budget:6000,cap:1000,coach:'co11',seed:440,players:['top10','jg16','mid15','ad14','sup15'],desc:'平民战队 · 挑战者之路 · 低预算高目标'},
- {name:'北京JDG',icon:'豹',budget:9500,cap:1200,coach:'co4',seed:570,players:['top11','jg12','mid12','ad10','sup10'],desc:'劲旅 · 轩染领衔 · 顶配中坚'},
- {name:'济南RW侠',icon:'',budget:9000,cap:1180,coach:'co6',seed:560,players:['top1','jg1','mid10','ad7','sup11'],desc:'传奇飞牛坐镇 · 老牌侠客'},
- {name:'佛山DRG',icon:'龙',budget:8500,cap:1120,coach:'co7',seed:500,players:['top7','jg8','mid8','ad5','sup8'],desc:'龙魂新锐 · 百兽野心'},
- {name:'深圳DYG',icon:'鹰',budget:800,cap:110,coach:'co4',seed:480,players:['top13','jg14','mid7','ad6','sup14'],desc:'小义引擎 · 重塑荣光'},
- {name:'长沙TES.A',icon:'',budget:7000,cap:1050,coach:'co6',seed:450,players:['top8','jg15','mid14','ad13','sup9'],desc:'滔搏青春风暴 · 稳中求进'},
- {name:'杭州LGD.NBW',budget:6500,cap:1000,coach:'co7',seed:430,icon:'鹅',players:['top15','jg17','mid16','ad8','sup16'],desc:'大鹅新军 · 敢打敢拼'},
- {name:'上海RNG.M',icon:'冠',budget:6000,cap:1000,coach:'co4',seed:420,players:['top16','jg11','mid17','ad15','sup7'],desc:'皇族余晖 · 重建之路'},
- {name:'西安WE',icon:'蝎',budget:5500,cap:950,coach:'co6',seed:410,players:['top17','jg18','mid9','ad16','sup17'],desc:'蓝色风暴 · 草根逆袭'},
- {name:'桐乡情久',icon:'红',budget:5200,cap:950,coach:'co7',seed:400,players:['top18','jg19','mid11','ad17','sup18'],desc:'新军冲击 · 从零开始'},
- {name:'常山UUG',icon:'牛',budget:5000,cap:920,coach:'co4',seed:390,players:['top19','jg10','mid18','ad18','sup19'],desc:'升班马 · 一切从零'},
+ {name:'成都AG超玩会',icon:'焰',budget:2500,cap:250,coach:'co1',seed:640,players:['top4','jg4','mid3','ad1','sup3'],desc:'银河战舰 · 2025三冠王朝 · 预算拉满'},
+ {name:'重庆狼队',icon:'狼',budget:2333,cap:242,coach:'co2',seed:620,players:['top6','jg5','mid4','ad2','sup4'],desc:'六冠豪门 · 野核体系 · 顶级预算'},
+ {name:'武汉eStarPro',icon:'★',budget:2167,cap:233,coach:'co3',seed:600,players:['top3','jg3','mid1','ad3','sup2'],desc:'eStar王朝 · 三冠主力全保留'},
+ {name:'北京WB',icon:'熊',budget:1667,cap:208,coach:'co5',seed:580,players:['top5','jg2','mid6','ad4','sup5'],desc:'追光者 · 暖阳领衔 · 中坚预算'},
+ {name:'广州TTG',icon:'环',budget:1500,cap:197,coach:'co8',seed:540,players:['top12','jg13','mid2','ad11','sup13'],desc:'九尾带队 · 法刺体系'},
+ {name:'南京Hero久竞',icon:'影',budget:1583,cap:200,coach:'co10',seed:460,players:['top9','jg6','mid5','ad12','sup6'],desc:'久竞传奇 · 久诚回归 · 中游预算'},
+ {name:'苏州KSG',icon:'虎',budget:1417,cap:187,coach:'co9',seed:500,players:['top14','jg7','mid13','ad9','sup12'],desc:'新锐崛起 · 稳扎稳打'},
+ {name:'上海EDG.M',icon:'电',budget:1000,cap:167,coach:'co11',seed:440,players:['top10','jg16','mid15','ad14','sup15'],desc:'平民战队 · 挑战者之路 · 低预算高目标'},
+ {name:'北京JDG',icon:'豹',budget:1583,cap:200,coach:'co4',seed:570,players:['top11','jg12','mid12','ad10','sup10'],desc:'劲旅 · 轩染领衔 · 顶配中坚'},
+ {name:'济南RW侠',icon:'',budget:1500,cap:197,coach:'co6',seed:560,players:['top1','jg1','mid10','ad7','sup11'],desc:'传奇飞牛坐镇 · 老牌侠客'},
+ {name:'佛山DRG',icon:'龙',budget:1417,cap:187,coach:'co7',seed:500,players:['top7','jg8','mid8','ad5','sup8'],desc:'龙魂新锐 · 百兽野心'},
+ {name:'深圳DYG',icon:'鹰',budget:1333,cap:175,coach:'co4',seed:480,players:['top13','jg14','mid7','ad6','sup14'],desc:'小义引擎 · 重塑荣光'},
+ {name:'长沙TES.A',icon:'',budget:1167,cap:175,coach:'co6',seed:450,players:['top8','jg15','mid14','ad13','sup9'],desc:'滔搏青春风暴 · 稳中求进'},
+ {name:'杭州LGD.NBW',budget:1083,cap:167,coach:'co7',seed:430,icon:'鹅',players:['top15','jg17','mid16','ad8','sup16'],desc:'大鹅新军 · 敢打敢拼'},
+ {name:'上海RNG.M',icon:'冠',budget:1000,cap:167,coach:'co4',seed:420,players:['top16','jg11','mid17','ad15','sup7'],desc:'皇族余晖 · 重建之路'},
+ {name:'西安WE',icon:'蝎',budget:917,cap:158,coach:'co6',seed:410,players:['top17','jg18','mid9','ad16','sup17'],desc:'蓝色风暴 · 草根逆袭'},
+ {name:'桐乡情久',icon:'红',budget:867,cap:158,coach:'co7',seed:400,players:['top18','jg19','mid11','ad17','sup18'],desc:'新军冲击 · 从零开始'},
+ {name:'常山UUG',icon:'牛',budget:833,cap:153,coach:'co4',seed:390,players:['top19','jg10','mid18','ad18','sup19'],desc:'升班马 · 一切从零'},
 ];
 
 /* ================= 2026 自由市场（真实 KPL 选手 · 合同到期/转会流拍） =================
@@ -576,31 +577,31 @@ const mAmt=(p,v)=>{p.morale=clamp(p.morale+v,20,100);}; // 士气统一封顶 20
 const EVENTS=[
  // —— 日常随机 ——（fn 的第二参 p 由 nextDay 传入，保证公告文案与实际生效的是同一名选手）
  {t:'选手加练',desc:'{p} 深夜独自加练，手感火热。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','farm','team']);p.attrs[k]=clamp(p.attrs[k]+2,40,99);mAmt(p,5);}},
- {t:'媒体专访',desc:'俱乐部接受专访，曝光度大增，收到一笔采访费。',good:true,fn:s=>s.fund+=120},
- {t:'粉丝应援',desc:'粉丝团自发应援，主场氛围拉满。',good:true,fn:s=>{s.fund+=150;moraleAll(s,3);}},
- {t:'商业活动',desc:'俱乐部参加官方商业活动，获得活动分成。',good:true,fn:s=>s.fund+=80},
+ {t:'媒体专访',desc:'俱乐部接受专访，曝光度大增，收到一笔采访费。',good:true,fn:s=>s.fund+=20},
+ {t:'粉丝应援',desc:'粉丝团自发应援，主场氛围拉满。',good:true,fn:s=>{s.fund+=25;moraleAll(s,3);}},
+ {t:'商业活动',desc:'俱乐部参加官方商业活动，获得活动分成。',good:true,fn:s=>s.fund+=13},
  {t:'状态起伏',desc:'{p} 近期作息混乱，状态下滑。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-12);}},
  {t:'舆论风波',desc:'社交媒体出现不利言论，队员心态受挫。',good:false,fn:s=>moraleAll(s,-6)},
  {t:'身体不适',desc:'{p} 感冒发烧，需要休息两天。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.energy=Math.min(p.energy,30);mAmt(p,-8);}},
- {t:'赞助商洽谈',desc:'新赞助商对战队战绩满意，追加了赞助费！',good:true,fn:s=>s.fund+=200},
+ {t:'赞助商洽谈',desc:'新赞助商对战队战绩满意，追加了赞助费！',good:true,fn:s=>s.fund+=33},
  {t:'战术研讨',desc:'教练组闭门研究新战术，团战配合更好了。',good:true,fn:s=>{const p=pick(rosterAll(s));p.attrs.team=clamp(p.attrs.team+2,40,99);}},
  {t:'转会流言',desc:'{p} 被传出转会流言，本人表示不受影响。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-6);}},
- {t:'青训惊喜',desc:'青训队出了一个好苗子，俱乐部收到培养奖金。',good:true,fn:s=>s.fund+=80},
+ {t:'青训惊喜',desc:'青训队出了一个好苗子，俱乐部收到培养奖金。',good:true,fn:s=>s.fund+=13},
  {t:'老将觉醒',desc:'{p} 接受采访时表示要带新人拿冠军，士气大涨！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,12);}},
  // —— KPL 真实事件 ——
  {t:'亚运征召',desc:'{p} 入选亚运会电竞国家队，为国争光！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.morale=100;p.attrs.mind=Math.min(99,p.attrs.mind+3);}},
- {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));s.fund+=250;mAmt(p,10);}},
+ {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));s.fund+=42;mAmt(p,10);}},
  {t:'版本更新·削弱',desc:'新版本上线，{p} 擅长的英雄被削弱，需要时间适应。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);mAmt(p,-8);p.attrs[k]=Math.max(55,p.attrs[k]-2);}},
  {t:'版本更新·加强',desc:'新版本上线，{p} 的招牌英雄迎来版本红利，手感火热！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);p.attrs[k]=Math.min(99,p.attrs[k]+2);mAmt(p,6);}},
  {t:'全明星周末',desc:'参加 KPL 全明星周末，选手们放松了心情。',good:true,fn:s=>moraleAll(s,8)},
  {t:'假赛风波',desc:'联盟严查假赛，俱乐部被要求配合调查，舆论压力巨大。',good:false,fn:s=>moraleAll(s,-10)},
  {t:'解说毒奶',desc:'著名解说公开"看好"你下一场的对手……',good:true,fn:s=>moraleAll(s,5)},
  {t:'对手换帅',desc:'下个对手官宣换帅，新阵容磨合期战斗力存疑。',good:true,fn:s=>moraleAll(s,4)},
- {t:'巅峰对决名场面',desc:'训练赛复刻当年巅峰对决的名场面，全队沸腾！',good:true,fn:s=>{moraleAll(s,6);s.fund+=50;}},
- {t:'主场扩容',desc:'俱乐部主场升级完成，门票收入大涨。',good:true,fn:s=>s.fund+=200},
+ {t:'巅峰对决名场面',desc:'训练赛复刻当年巅峰对决的名场面，全队沸腾！',good:true,fn:s=>{moraleAll(s,6);s.fund+=8;}},
+ {t:'主场扩容',desc:'俱乐部主场升级完成，门票收入大涨。',good:true,fn:s=>s.fund+=33},
  {t:'降薪传闻',desc:'俱乐部降薪传闻流出，队员人心浮动。',good:false,fn:s=>moraleAll(s,-8)},
- {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,fn:s=>{s.fund+=250;}},
- {t:'青训挂牌',desc:'青训队新秀在转会市场被争抢，俱乐部收到问价。',good:true,fn:s=>s.fund+=100},
+ {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,fn:s=>{s.fund+=42;}},
+ {t:'青训挂牌',desc:'青训队新秀在转会市场被争抢，俱乐部收到问价。',good:true,fn:s=>s.fund+=17},
  {t:'转会传闻',desc:'媒体爆料 {p} 收到豪门高额报价，人心浮动。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.max(5,(p.willingness||50)-8);p.morale=clamp(p.morale-5,20,100);}},
  {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
 ];
@@ -632,14 +633,14 @@ function tacticById(id){return TACTICS.find(t=>t.id===id)||TACTICS[0];}
  给"从头开始"加变量：同一套规则下初始条件不同，董事会达标难度也随之变化。
  剧本只改开局初始值，不动物价/赛制/战力公式——平衡门禁跑的是固定档位阵容，不受影响。 */
 const SCENARIOS=[
- {id:'normal',name:'常规开档',hard:false,desc:'初始资金 8000万 · 工资帽 900万/周 · 标准挑战',
+ {id:'normal',name:'常规开档',hard:false,desc:'初始资金 1300万 · 工资帽 150万/周 · 标准挑战',
   apply:s=>{}},
- {id:'debt',name:'财政危机',hard:true,desc:'负债累累接手：初始资金 2000万 · 工资帽 700万，只能靠成绩翻身',
-  apply:s=>{s.fund=2000;s.wageCap=700;}},
+ {id:'debt',name:'财政危机',hard:true,desc:'负债累累接手：初始资金 330万 · 工资帽 120万，只能靠成绩翻身',
+  apply:s=>{s.fund=330;s.wageCap=120;}},
  {id:'exodus',name:'核心出走',hard:true,desc:'队内王牌季前被挖走，开局即空一个位置，必须去市场补人',
   apply:s=>dropBestPlayer(s)},
- {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 540万/周，豪华阵容养不起，只能靠青训与规划',
-  apply:s=>{s.wageCap=540;}},
+ {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 90万/周，豪华阵容养不起，只能靠青训与规划',
+  apply:s=>{s.wageCap=90;}},
  {id:'cursed',name:'无冠魔咒',hard:true,desc:'常年无冠、士气低落：全队属性 -4 · 初始士气 50，等你破咒',
   apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));});}},
 ];
@@ -677,7 +678,7 @@ const ACHIEVEMENTS=[
  {id:'youth_fmvp',icon:'面',name:'青训门面',desc:'青训生当选赛事 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName&&(s.players||[]).some(p=>p.academyGrad&&p.name===f.name))},
  // —— 经营 ——
  {id:'star90',icon:'星',name:'手握巨星',desc:'阵中拥有总值 ≥90 的选手',test:s=>(s.players||[]).some(p=>overall(p)>=90)},
- {id:'big_sale',icon:'售',name:'天价交易',desc:'单笔出售选手回收 ≥2500万',test:s=>(s.maxSale||0)>=2500},
+ {id:'big_sale',icon:'售',name:'天价交易',desc:'单笔出售选手回收 ≥1200万',test:s=>(s.maxSale||0)>=1200},
  {id:'rich',icon:'财',name:'亿万豪门',desc:'俱乐部资金突破 2 亿',test:s=>(s.fund||0)>=20000},
  {id:'five_year',icon:'恒',name:'长情经营',desc:'迎来第五个赛季',test:s=>gameYear(s)>=2030},
  // —— 董事会 ——

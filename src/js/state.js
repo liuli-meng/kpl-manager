@@ -19,11 +19,33 @@ function b64e(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEac
 function b64d(s){const bin=atob(s);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder().decode(bytes);}
 let S=null; // 全局状态
 
+/* ================= 预防性守卫（防误碰/空档/连点） =================
+  UI 入口用：requireSave 挡未开局操作；confirmDanger 挡高代价点击；
+  uiDebounce 挡连点重复触发。引擎层保持无 UI 依赖（门禁可直接驱动）。 */
+function requireSave(what){
+ if(!S||!S.players||!S.players.length){
+ try{toast('尚未开局，'+(what||'该操作')+'不可用');}catch(_){}
+ return false;
+ }
+ return true;
+}
+function confirmDanger(msg){
+ try{return typeof confirm==='function'?!!confirm(msg):true;}catch(e){return true;}
+}
+const _uiArm=Object.create(null);
+function uiDebounce(key,ms){
+ const now=Date.now();
+ const gap=ms||450;
+ if(_uiArm[key]&&now-_uiArm[key]<gap)return true; // 连点中：应拦截
+ _uiArm[key]=now;
+ return false;
+}
+
 function newState(teamName,icon){
  return {
- teamName,icon,crest:null,v:SAVE_VERSION,season:1,day:1,fund:8000,sponsorLv:0,moneyScaled:true,
+ teamName,icon,crest:null,v:SAVE_VERSION,season:1,day:1,fund:1300,sponsorLv:0,moneyScaled:true,econReal:true,
  honors:[], // 历史荣誉（多赛季）
- stage:'regular',phase:'r1',matchIdx:0,wageCap:900,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
+ stage:'regular',phase:'r1',matchIdx:0,wageCap:150,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
  players:[],lineup:[],market:[],
  schedule:[],groups:{},tables:{},aiPower:{},card:null,playoff:null,eliminated:[],
  eventLog:[],trained:false,marketRefreshed:false,academyTrained:false,champion:false,
@@ -294,6 +316,19 @@ function migrateSave(){
  (S.bids||[]).forEach(x=>x.bid=mul(x.bid));
  S.moneyScaled=true;
  try{logEvent(S,' 经济体系升级：全联盟身价/工资/资金 ×10（顶星身价千万级）');}catch(e){}
+ }
+ // 真实经济对齐迁移（2026-09 KPL 硬规则）：全联盟货币 ÷6，转会费封顶 1500 万、名单 ≤10、个人顶薪 70
+ if(!S.econReal){
+ const div=x=>(typeof x==='number')?Math.max(1,Math.round(x/6)):x;
+ S.fund=div(S.fund);S.wageCap=div(S.wageCap);
+ const dList=arr=>{if(Array.isArray(arr))arr.forEach(o=>{if(o&&typeof o==='object'){o.wage=div(o.wage);o.cost=div(o.cost);o.income=div(o.income);o.acqCost=div(o.acqCost);o.signCost=div(o.signCost);}});};
+ dList(S.players);dList(S.coachMarket);dList(S.retiredCoaches);dList(S.assistants);
+ dList(S.market);dList(S.freeAgents);dList(S.transferList);dList(S.hosts);
+ if(S.coach){S.coach.wage=div(S.coach.wage);S.coach.cost=div(S.coach.cost);}
+ (S.listed||[]).forEach(x=>x.price=div(x.price));
+ (S.bids||[]).forEach(x=>x.bid=div(x.bid));
+ S.econReal=true;
+ try{logEvent(S,' 联盟硬规则落地：转会费封顶 1500 万 · 大名单 ≤10 人 · 个人顶薪 70 万/周 · 奖金 70% 归选手（全联盟货币同步缩放）');}catch(e){}
  }
  // 总值化迁移：教练/名宿旧档 rarity → rating 评分（选手总值实时计算，无需迁移）
  const R2RATE={SSR:90,SR:80,R:70};

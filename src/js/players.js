@@ -29,9 +29,11 @@ const HERO_LV={
 function heroLv(p,heroId){const h=(p.heroPool||[]).find(x=>x.n===heroId);return h?h.lv:1;}
 /* 英雄熟练度：绝活+8% / 熟练+4% / 一般0% / 生疏-8% */
 function buyPlayer(s,p){
- const cost=Math.round(valueOf(overall(p))*(p.discount||1));
+ if(!rosterGuard(s))return false; // 联盟规则：大名单 ≤10 人
+ const cost=capFee(Math.round(valueOf(overall(p))*(p.discount||1)));
  if(s.fund<cost){toast('资金不足');return false;}
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return false;}
+ p.wage=Math.min(p.wage,PLAYER_WAGE_MAX); // 个人顶薪封顶
  if(weeklyWage(s)+p.wage>s.wageCap){
  const {over,tax}=overCapTax(s,p.wage);
  if(!confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return false;

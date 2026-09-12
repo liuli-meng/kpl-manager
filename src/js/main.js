@@ -96,6 +96,7 @@ function setSlot(i){
  else{S=null;closeModal('app-modal');initStart();toast('槽'+i+' 暂无存档，请创建新战队开局');}
 }
 function exportSave(){
+ if(!requireSave('导出'))return;
  const t=$('#save-io');
  t.value=b64e(serializeForSave(S));
  t.select();
@@ -114,6 +115,7 @@ function importSave(){
 function pickSaveFile(){$('#save-file').click();}
 function exportSaveFile(){
  try{
+ if(!requireSave('导出文件'))return;
  save();
  const wrap={kplSave:true,v:SAVE_VERSION,exported:new Date().toISOString().slice(0,10),team:S.teamName,season:S.season,data:JSON.parse(serializeForSave(S))};
  const blob=new Blob([JSON.stringify(wrap)],{type:'application/json'});
@@ -144,6 +146,10 @@ function applyImport(d,from){
  if(d&&d.kplSave&&d.data)d=d.data; // 文件包装格式→裸存档
  if(!d||!d.teamName||!d.players){toast('导入失败：'+from+' 不是有效存档');return;}
  if(d.v&&d.v>SAVE_VERSION){toast('导入失败：存档版本（v'+d.v+'）比当前游戏更新，请先更新游戏');return;}
+ // 覆盖当前档前确认（误粘贴/误选文件会直接冲掉进度）
+ if(S&&S.players&&S.players.length){
+ if(!confirmDanger('导入将覆盖当前槽进度（'+S.teamName+' · 第'+S.season+'赛季）。\n建议先「导出/下载存档」备份。确定导入？'))return;
+ }
  S=d;
  // 时代联盟按档重装：era 档装该时代；导入现代档时必须还原默认联盟（否则浏览器里装过的时代残留错装）
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
@@ -151,10 +157,17 @@ function applyImport(d,from){
  toast('已从'+from+'导入：'+S.teamName+'（'+gameYear(S)+'年 · v'+S.v+'）');
 }
 function resetGame(){
- if(confirm('确定重新开始？将清空当前槽存档')){
+ if(uiDebounce('reset',800))return;
+ // 重开前自动备份当前槽（误点也能在下次用「从文件导入」或手动恢复找回）
+ try{
+ const raw=localStorage.getItem(slotKey());
+ if(raw)localStorage.setItem(slotKey()+'_pre_reset',raw);
+ }catch(e){}
+ const season=(S&&S.season)?('第'+S.season+'赛季'):('空档');
+ const team=(S&&S.teamName)||'当前槽';
+ if(!confirmDanger('确定重新开始？\n将清空「'+team+' · '+season+'」存档（槽'+curSlot+'）。\n系统已把当前进度备份到「恢复前重开备份」。'))return;
  localStorage.removeItem(slotKey());
  location.reload();
- }
 }
 
 /* ================= 赞助商 ================= */
@@ -298,7 +311,7 @@ function initStart(){
  <span class="dim">战队名称：</span><input id="new-team-name" maxlength="8" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:180px" placeholder="输入队名" oninput="refreshCrUI()">
  </div>
  <div id="cr-builder">${crestBuilderHTML('')}</div>
- <div class="hint" style="margin:6px 0 14px;text-align:center">初始资金 8000万 · 工资帽 900万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
+ <div class="hint" style="margin:6px 0 14px;text-align:center">初始资金 1300万 · 工资帽 150万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
  <div class="center"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
  </div>
  <div id="tab-club-body" style="display:none">
@@ -561,7 +574,7 @@ function createTeam(){
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
- logEvent(S,`战队 ${name} 成立！初始资金8000万，目标：KPL 总冠军！`);
+ logEvent(S,`战队 ${name} 成立！初始资金1300万，目标：KPL 总冠军！`);
  logEvent(S,' 开局直签 5 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
  logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');

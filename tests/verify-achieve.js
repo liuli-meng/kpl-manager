@@ -77,10 +77,10 @@ const out = vm.runInContext(`
   // ⑧ 经营线：天价出售（走真实成交路径）→ big_sale；资金 2 亿 → rich
   const sellP=S.players[3];
   const fund0=S.fund;
-  completeSale(S,sellP,3000,'接盘俱乐部');
+  completeSale(S,sellP,1500,'接盘俱乐部');
   save();
-  if(!((S.maxSale||0)>=3000))fail('completeSale 未记录 maxSale: ' + S.maxSale);
-  else if(!S.achieved.big_sale)fail('卖出 3000万 未解锁 big_sale');
+  if(!((S.maxSale||0)>=1500))fail('completeSale 未记录 maxSale: ' + S.maxSale);
+  else if(!S.achieved.big_sale)fail('卖出 1500万 未解锁 big_sale');
   else log('⑪天价交易: maxSale=' + S.maxSale + '万，成交入账 ' + (S.fund - fund0) + '万 OK');
   S.fund=25000;save();
   if(!S.achieved.rich)fail('资金 2.5 亿未解锁 rich');

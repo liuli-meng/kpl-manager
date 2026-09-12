@@ -31,7 +31,7 @@ const out = vm.runInContext(`
   // 桩掉渲染/落盘：被测对象是 applyImport 的校验与迁移，不是渲染管线（夹具字段刻意最小化）
   const _ra=renderAll,_sv=save;
   renderAll=function(){};save=function(){};
-  const wrap={kplSave:true,v:SAVE_VERSION,exported:'2026-09-05',team:'文件队',season:3,data:{teamName:'文件队',players:[{id:'x'}],fund:999,season:3,moneyScaled:true}};
+  const wrap={kplSave:true,v:SAVE_VERSION,exported:'2026-09-05',team:'文件队',season:3,data:{teamName:'文件队',players:[{id:'x'}],fund:999,season:3,moneyScaled:true,econReal:true}};
   applyImport(wrap,'测试文件');
   if(S.teamName!=='文件队'||S.fund!==999||S.v!==SAVE_VERSION)fail('④包装格式导入异常: '+S.teamName+'/'+S.fund);
   else log('④包装格式导入 OK（自动解包 data）');

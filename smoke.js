@@ -360,7 +360,7 @@ const r10 = vm.runInContext(`
   const cap0=S.wageCap;
   S.titleHistory.push({season:3,champ:'王朝检测'}); // 模拟第3季收官：playoffStep 记录冠军
   newSeason(S);
-  out.push('帽冻结='+(S.wageCap===cap0+7?'OK(+'+(S.wageCap-cap0)+'万)':'异常!')+' 版本针对='+(S.eventLog.some(e=>e.txt.indexOf('版本针对')>=0)?'OK':'异常!'));
+  out.push('帽冻结='+(S.wageCap===cap0+1?'OK(+'+(S.wageCap-cap0)+'万·连冠减半)':'异常!')+' 版本针对='+(S.eventLog.some(e=>e.txt.indexOf('版本针对')>=0)?'OK':'异常!'));
   out.push('新赛季连冠判定='+dynastyStreak(S,'王朝检测')+'（应3）');
   return out.join(' || ');
 })()

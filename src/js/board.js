@@ -75,12 +75,12 @@ function boardApplyEffect(s){
  s.board=s.board||{};
  const t=s.board.trust==null?60:s.board.trust;
  if(t<=BOARD_WARN_TRUST){
-  const cut=Math.max(5,Math.round((s.wageCap||900)*0.1));
-  s.wageCap=Math.max(300,(s.wageCap||900)-cut);
+  const cut=Math.max(1,Math.round((s.wageCap||150)*0.1));
+  s.wageCap=Math.max(50,(s.wageCap||150)-cut);
   logEvent(s,' 董事会介入：对战绩不满，压缩工资帽 '+cut+'万（本赛季上限 '+s.wageCap+'万/周）——请用更低的成本打出成绩');
  }else if(t>=BOARD_FAVOR_TRUST){
-  s.fund+=800;
-  logEvent(s,' 董事会放权：追加运营预算 +800万（信任度 '+t+'）');
+  s.fund+=130;
+  logEvent(s,' 董事会放权：追加运营预算 +130万（信任度 '+t+'）');
  }
 }
 function boardTierText(s){ // 面板用一句人话概括董事会态度

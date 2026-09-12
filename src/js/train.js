@@ -5,8 +5,8 @@ function doTrain(s,pid,attr){
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
  if(p.energy<10){toast(`${p.name} 体力不足`);return;}
- if(s.fund<80){toast('资金不足（训练需 80万）');return;}
- s.fund-=80;p.energy-=10;s.trained=true;
+ if(s.fund<13){toast('资金不足（训练需 13万）');return;}
+ s.fund-=13;p.energy-=10;s.trained=true;
  const gain=1+rnd(0,1);
  p.attrs[attr]=clamp(p.attrs[attr]+gain,40,99);
  p.morale=clamp(p.morale-2,20,100);
@@ -26,7 +26,7 @@ function doHeroTrain(s,pid){
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
  if(p.energy<15){toast(`${p.name} 体力不足`);return;}
- if(s.fund<150){toast('资金不足（英雄特训需 150万）');return;}
+ if(s.fund<25){toast('资金不足（英雄特训需 25万）');return;}
  // 找熟练度最低的英雄提升
  const upgradable=(p.heroPool||[]).filter(h=>h.lv<3);
  let msg;
@@ -43,7 +43,7 @@ function doHeroTrain(s,pid){
  p.heroPool.push({n:h,lv:0});
  msg=` 英雄特训：${p.name} 学会了新英雄「${h}」（生疏）！`;
  }
- s.fund-=150;p.energy-=15;s.trained=true;
+ s.fund-=25;p.energy-=15;s.trained=true;
  p.morale=clamp(p.morale-2,20,100);
  logEvent(s,msg);
  save();renderAll();
@@ -119,6 +119,7 @@ function promoteRookie(s,id){
  if(!r)return;
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
  if(r.age<18){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 18 岁才能上场比赛——再等一年');return;}
+ if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
  s.academy=s.academy.filter(x=>x.id!==id);
  r.isRookie=false;
  r.tags=['青训'];
@@ -140,7 +141,7 @@ function convertPos(s,pid,newPos){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.pos===newPos){toast('已经是该位置');return;}
- const cost=300;
+ const cost=50;
  if(s.fund<cost){toast('位置改造需要 '+cost+'万');return;}
  if(s.lineup.includes(pid)&&s.lineup.some(id=>{
  const o=s.players.find(x=>x.id===id);return o&&o.id!==pid&&o.pos===newPos;

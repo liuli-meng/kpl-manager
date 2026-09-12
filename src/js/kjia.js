@@ -110,9 +110,9 @@ function finishKjiaSplit(s){
  const myRank=rank.indexOf(k.my)+1;
  logEvent(s,' K甲联赛收官：'+k.champ+' 夺得本赛段冠军（'+k.my+' 名次：第'+myRank+'）');
  if(k.champ===k.my){
- s.fund+=80;addFans(s,2,'二队 K甲夺冠');
+ grantPrize(s,13,'K甲夺冠奖金');addFans(s,2,'二队 K甲夺冠');
  (s.players||[]).filter(p=>p.kjia>0).forEach(p=>{p.morale=clamp(p.morale+5,20,100);});
- logEvent(s,' 二队 K甲夺冠！次级联赛奖金 +80万、关注度上涨（粉丝+2万）——下放练级的价值兑现了');
+ logEvent(s,' 二队 K甲夺冠！关注度上涨（粉丝+2万）——下放练级的价值兑现了');
  }
 }
 function sendKjia(s,id){

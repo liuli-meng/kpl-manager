@@ -50,7 +50,8 @@ const out = vm.runInContext(`
   else fail('低价谈判未触发谈崩: struck='+struck+' attempt='+(_nego&&_nego.attempt)+' contract='+p.contract);
 
   // ⑥ 高价报价：按谈定周薪与年限签订（接受是概率事件——高价只是"大概率"，小概率仍会被拒/谈崩，有界重试到触发为止）
-  let ok6=false,wage6=0,cost6=0,ask6=0,offer6=0;
+  // 超出个人顶薪 70 的部分会被联盟钳制：实际成交周薪 = min(报价, PLAYER_WAGE_MAX)
+  let ok6=false,wage6=0,cost6=0,ask6=0,offer6=0,capped6=false;
   for(let t=0;t<30&&!ok6;t++){
    p.contract=1;_nego=null;S.fund=100000;
    openRenewNego(S,p.id);
@@ -60,9 +61,9 @@ const out = vm.runInContext(`
    _nego.offer=Math.round(ask6*1.5);offer6=_nego.offer;
    const f0=S.fund;
    submitRenewNego();
-   if(p.contract===3&&p.wage===offer6&&S.fund<f0){ok6=true;wage6=p.wage;cost6=f0-S.fund;}
+   if(p.contract===3&&S.fund<f0&&p.wage===Math.min(PLAYER_WAGE_MAX,offer6)){ok6=true;wage6=p.wage;cost6=f0-S.fund;capped6=p.wage===PLAYER_WAGE_MAX&&offer6>PLAYER_WAGE_MAX;}
   }
-  if(ok6)log('⑥高价接受: 3年 · 周薪 '+wage6+'万（要价 '+ask6+'万）· 签字费 '+cost6+'万');
+  if(ok6)log('⑥高价接受: 3年 · 周薪 '+wage6+'万（要价 '+ask6+'万 · 报价 '+offer6+'万'+(capped6?' → 顶薪 70 钳制':'')+'）· 签字费 '+cost6+'万');
   else fail('高价报价应被接受: contract='+p.contract+' wage='+p.wage);
 
   // ⑦ 到期选手谈判后移出 expiring（不处理会被自动续 1 年，处理则按谈判结果；接受是概率事件，有界重试）

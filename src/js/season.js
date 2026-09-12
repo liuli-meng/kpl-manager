@@ -17,7 +17,7 @@ const ANNUAL_PTS={spring:{p1:100,p2:80,p34:60,p56:40,p78:20,p910:10,p1112:5,p131
 const gameYear=s=>2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
 const splitLabel=s=>gameYear(s)+' '+(SPLIT_NAME[s.split]||'春季赛');
 function leaguePayout(s,place){
- const map={'冠军':5000,'亚军':3000,'四强':1500,'八强':800};
+ const map={'冠军':830,'亚军':500,'四强':250,'八强':133}; // 联盟版权/商务分润（真实对齐 ÷6）：按成绩加权、非平均分配
  const amt=map[place];
  if(amt){s.fund+=amt;logEvent(s,' 联盟分润（'+place+'）：'+amt+'万');}
 }
@@ -599,10 +599,10 @@ function newSeason(s){
  });
  // 王朝反制②：连冠队伍工资帽成长减半（保住豪华阵容越来越难）
  const st=dynastyStreak(s,s.teamName);
- s.wageCap=(s.wageCap||90)+(st>=2?7:15); // KPL 联盟每赛季调整工资帽
+ s.wageCap=(s.wageCap||150)+(st>=2?1:3); // KPL 联盟每赛季调整工资帽（真实对齐后基础 150 万/周）
  // 王朝反制③：版本针对——力度随连冠次数加码
  if(st>=2){
- logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+(st>=2?7:15)+'万）');
+ logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+(st>=2?1:3)+'万）');
  const core=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
  if(core){
  const key=pick(['lane','farm','team','mind']);
@@ -622,8 +622,8 @@ function newSeason(s){
  s.lineup=s.lineup.filter(id=>s.players.some(p=>p.id===id));
  s.aiRosters={};
  }
- s.fund+=1300; // 联盟赛季启动金（年度轮换只发一次）
- logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万 · 赛季启动金 +1300万');
+ s.fund+=220; // 联盟赛季启动金（年度轮换只发一次）
+ logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
  applySeasonPatch(s); // 赛季版本大改：两名英雄一增一削，持有者属性微调（自写 s.patch）
@@ -650,8 +650,8 @@ function startSplit(s,split){
  save();renderAll();
  return;
  }
- if(split==='summer')s.fund+=800; // 夏季赛启动金（春季 130 万在年度轮换时发放）
- s.transferWindow=7;s.preseason=true; // 赛前转会期 7 天：自由组队，结束/到期后联赛才开打
+ if(split==='summer')s.fund+=133; // 夏季赛启动金（春季 220 万在年度轮换时发放）
+ s.transferWindow=7;s.preseason=true;s.windowSold=0; // 赛前转会期 7 天：自由组队，结束/到期后联赛才开打（卖出计数清零）
  s.pick={};
  aiTransferWindow(s); // AI 转会期：退役结算/缺位补强/明星流转/新星出道/换帅（联盟生态推进）
  buildTransferMarket(s); // 构建转会市场（AI 队选手 + 非卖品）

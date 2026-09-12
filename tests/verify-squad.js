@@ -75,7 +75,7 @@ const out = vm.runInContext(`
 
   // ⑤ 转会端联动：要求离队 → 买断费八五折、强挖成功率上升、要价降低、意愿显示 -30
   const s5=mkS();
-  const t5=s5.players[0];t5.willingness=50;t5.wage=50;
+  const t5=s5.players[0];t5.willingness=50;t5.wage=30; // 周薪取低于顶薪 70 的值，避免钳制抹平八五折语义
   const pNormal=buyoutPrice(t5),rNormal=raidChance(t5),wNormal=negoWageDemand(t5);
   t5.transferRequest=true;
   const pReq=buyoutPrice(t5),rReq=raidChance(t5),wReq=negoWageDemand(t5);

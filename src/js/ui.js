@@ -203,14 +203,23 @@ function renderHeader(){
  直接调用 nextDay/startMatch/startCup，若在那里硬守卫，门禁就再也测不出真实数值了。 */
 function boardLocked(){return !!(S&&S.board&&S.board.fired);}
 function uiGuard(msg){if(boardLocked()){try{toast(msg||'你已被董事会解约，执教生涯结束');}catch(_){}return true;}return false;}
-function uiSave(){if(save())toast('存档成功');}
+function uiSave(){if(!requireSave('存档'))return;if(save())toast('存档成功');}
 function playerRetired(s){return !!(s&&s.mode==='player'&&s.career&&s.career.retired);}
-function uiNextDay(s){if(uiGuard())return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);renderAll();}
-function uiStartMatch(){if(uiGuard())return;if(playerRetired(S)){toast('职业生涯已退役');return;}startMatch();}
+function uiNextDay(s){if(uiGuard())return;if(!requireSave('推进一天'))return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);renderAll();}
+function uiStartMatch(){if(uiGuard())return;if(!requireSave('开赛'))return;if(playerRetired(S)){toast('职业生涯已退役');return;}startMatch();}
 function uiStartCup(s){if(uiGuard())return;startCup(s);}
 function uiSkipTransfer(s){if(uiGuard())return;skipTransferWindow(s);}
 function uiEndPreseason(s){if(uiGuard())return;endPreseason(s);}
-function uiAdvanceCalendar(s){if(uiGuard())return;advanceCalendar(s);}
+function uiAdvanceCalendar(s){
+ if(uiGuard())return;
+ if(!requireSave('推进赛历'))return;
+ const label=calendarNextLabel(s)||'推进赛历';
+ // 年度收官/年总会触发年龄结算与新赛季：大步推进必须再确认
+ if(/年度收官|年度总决赛|新赛季/.test(label)){
+ if(!confirmDanger(label.replace(/^[\s]*/,'')+'？\n继续将推进年度赛历（可能直接进入下一年结算）。'))return;
+ }
+ advanceCalendar(s);
+}
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 function renderClub(){
  const ls=rosterLineup(S);
@@ -835,7 +844,7 @@ function renderMarket(){
  $('#page-market').innerHTML=pageHint('market')+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
 }
 function renderTrain(){
- let html=pageHint('train')+`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性8万 / 英雄特训15万</span></h3>
+ let html=pageHint('train')+`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性13万 / 英雄特训25万</span></h3>
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
  ${sortChips('train')}
  ${S.players.length?`<div class="grid g4">${applySortPref('train',S.players).map(p=>pcard(p,`<div class="g2" style="gap:6px">

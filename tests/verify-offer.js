@@ -41,16 +41,16 @@ const out = vm.runInContext(`
    }
   }
 
-  // ② 留人：涨薪约 8%、士气+5、忠诚+5，报价清除，阵容不动
+  // ② 留人：涨薪约 8%、士气+5、忠诚+5，报价清除，阵容不动（工资须在顶薪 70 帽下）
   const s2=mkS();S=s2;
-  const p2=s2.players[0];p2.val=130;p2.wage=100;p2.morale=80;p2.willingness=50;
-  s2.offers=[{pid:p2.id,name:p2.name,team:'测试豪门',fee:2000,expire:s2.day+3,status:'open'}];
+  const p2=s2.players[0];p2.val=130;p2.wage=50;p2.morale=80;p2.willingness=50;
+  s2.offers=[{pid:p2.id,name:p2.name,team:'测试豪门',fee:1200,expire:s2.day+3,status:'open'}];
   respondOffer(s2,0,'keep');
   if(s2.offers.length)fail('留人后报价未清除');
-  else if(p2.wage!==108)fail('留人涨薪异常（期望 ~8%）: '+p2.wage);
+  else if(p2.wage!==54)fail('留人涨薪异常（期望 50→54，~8%）: '+p2.wage);
   else if(p2.morale!==85||p2.willingness!==55)fail('留人安抚未生效: 士气'+p2.morale+' 忠诚'+p2.willingness);
   else if(!s2.players.some(x=>x.id===p2.id))fail('留人把选手弄丢了');
-  else log('② 留人：回绝报价并涨薪 100→108万/周（士气+5 · 忠诚+5），选手留队');
+  else log('② 留人：回绝报价并涨薪 50→54万/周（士气+5 · 忠诚+5），选手留队');
 
   // ③ 放人：转会费入账、选手去买家、粉丝失望、队友寒心、首发空缺提示
   const s3=mkS();S=s3;

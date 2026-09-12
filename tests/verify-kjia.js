@@ -117,7 +117,7 @@ const out = vm.runInContext(`
   sendKjia(s7,b7.id);
   for(let i=0;i<7;i++)kjiaNextRound(s7);
   if(s7.kjia.champ!==kjiaMyName(s7))fail('压低 AI 后二队仍未夺冠: '+s7.kjia.champ);
-  else if(s7.fund-fund0<80)fail('K甲夺冠奖金未发放: +'+(s7.fund-fund0));
+  else if(s7.fund-fund0<4)fail('K甲夺冠奖金未发放（俱乐部留成应≥4）: +'+(s7.fund-fund0));
   else if(!s7.eventLog.some(e=>/二队 K甲夺冠/.test(e.txt)))fail('夺冠公告缺失');
   else{
    // ⑧ 面板渲染：二队页关键区块齐全

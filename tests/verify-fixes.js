@@ -34,19 +34,21 @@ const out = vm.runInContext(`
   const inMarket=(S.transferList||[]).some(x=>x.id===mk.id&&x.ownerTeam==='成都AG超玩会');
   if(!inBuyer&&!inMarket)fail('出售选手完全不可见（买家阵容满 + 市场无条目）');
   log('②出售可见性：def 已注册，'+(inBuyer?'现于买家阵容':'买家满员 → 转会市场归属买家，随时可查/可买回'));
-  // ③ 身价经济 ×10（顶星千万级、OVR99≈4000万、火热可破5000万）
+  // ③ 真实经济对齐（KPL 硬规则：转会封顶 1500 万 ⇒ OVR99 曲线 670、火热顶星买断必被压到 1500 天花板）
   const star=genPlayer(genFreeAgentDef('top','star',new Set()));
-  if(valueOf(overall(star))<1000)fail('顶星身价未达千万级: '+valueOf(overall(star)));
-  if(valueOf(99)!==4000)fail('OVR99 曲线应 4000: '+valueOf(99));
+  if(valueOf(overall(star))<400)fail('顶星身价应≥400万（新刻度）: '+valueOf(overall(star)));
+  if(valueOf(99)!==670)fail('OVR99 曲线应 670: '+valueOf(99));
   const hot=Math.round(buyoutPrice({...star,willingness:60,attrs:{lane:99,farm:99,team:99,mind:99}}));
-  if(hot<3000)fail('火热顶星买断应≥3000万: '+hot);
-  if(initFund!==8000||initCap!==900)fail('新档资金/工资帽未×10: fund='+initFund+' cap='+initCap);
-  log('③身价×10：顶星≈'+valueOf(overall(star))+'万 · OVR99=4000万 · 火热买断≈'+hot+'万 · 初始资金 8000万/帽 900万');
-  // ④ 旧档货币迁移
+  if(hot>TRANSFER_CAP)fail('火热顶星买断超过联盟封顶 1500: '+hot);
+  const unt=Math.round(untouchablePrice({...star,willingness:5,attrs:{lane:99,farm:99,team:99,mind:99}}));
+  if(unt>TRANSFER_CAP)fail('非卖品强挖价超过联盟封顶 1500: '+unt);
+  if(initFund!==1300||initCap!==150)fail('新档资金/工资帽未对齐真实经济: fund='+initFund+' cap='+initCap);
+  log('③真实经济：顶星≈'+valueOf(overall(star))+'万 · OVR99=670万 · 火热买断='+hot+'万 · 非卖品强挖='+unt+'（均≤1500 封顶） · 初始资金 1300万/帽 150万');
+  // ④ 旧档货币迁移（两段链：×10 千万级 → ÷6 真实对齐）
   const old={teamName:'旧档',icon:'x',fund:800,wageCap:90,players:[{id:'p1',name:'a',wage:10,acqCost:200,pos:'mid',attrs:{lane:70,farm:70,team:70,mind:70}}],market:[],lineup:[],coachMarket:[],retiredCoaches:[],assistants:[],hosts:[],freeAgents:[],transferList:[],listed:[{id:'p1',price:200}],bids:[{id:'p1',bid:180}]};
   S=old;migrateSave();
-  if(S.fund!==8000||S.wageCap!==900||S.players[0].wage!==100||S.listed[0].price!==2000)fail('旧档迁移未×10: '+JSON.stringify({fund:S.fund,wageCap:S.wageCap,wage:S.players[0].wage,price:S.listed[0].price}));
-  log('④旧档迁移：fund 800→8000 · 帽 90→900 · 周薪 10→100 · 挂牌价 200→2000');
+  if(S.fund!==1333||S.wageCap!==150||S.players[0].wage!==17||S.listed[0].price!==333)fail('旧档两段迁移结果异常: '+JSON.stringify({fund:S.fund,wageCap:S.wageCap,wage:S.players[0].wage,price:S.listed[0].price}));
+  log('④旧档迁移两段链：fund 800→8000→1333 · 帽 90→900→150 · 周薪 10→100→17 · 挂牌价 200→2000→333');
   // ⑤ BO9 决赛巅峰对决判定（4:4 → 第 9 局盲选；此前写死 3:3 只适配 BO7）
   S=newState('测试队','⚔️');
   fillRoster(S,'mid','star');

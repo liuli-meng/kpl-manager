@@ -103,14 +103,14 @@ function finishChallenger(s){
  if(c.po.lbs.r)pts[loserOf(c.po.lbs)]=20;
  Object.keys(pts).forEach(t=>{s.annualPts[t]=(s.annualPts[t]||0)+(pts[t]||0);});
  logEvent(s,' 挑战者杯积分入账：'+s.teamName+' 年总积分累计 '+(s.annualPts[s.teamName]||0)+' 分');
- // 奖金（总池 1000 万）：冠军300 / 亚军150 / 四强80 / 8强40（游戏内×10 同经济刻度）
+ // 奖金（真实对齐 ÷6：总池 170 万）：冠军500 / 亚军250 / 四强133 / 8强67——按 KPL 规则选手分成 70%
  let prize=0;
- if(c.champ===s.teamName)prize=3000;
- else if(runner===s.teamName)prize=1500;
- else if(c.po.lbf.r&&loserOf(c.po.lbf)===s.teamName)prize=800;
- else if(c.po.lbs.r&&loserOf(c.po.lbs)===s.teamName)prize=400;
- else if((c.po.lb2||[]).some(m=>m.r&&loserOf(m)===s.teamName)||(c.po.lb1||[]).some(m=>m.r&&loserOf(m)===s.teamName))prize=400;
- if(prize){s.fund+=prize;logEvent(s,' 挑战者杯奖金：+'+prize+'万');}
+ if(c.champ===s.teamName)prize=500;
+ else if(runner===s.teamName)prize=250;
+ else if(c.po.lbf.r&&loserOf(c.po.lbf)===s.teamName)prize=133;
+ else if(c.po.lbs.r&&loserOf(c.po.lbs)===s.teamName)prize=67;
+ else if((c.po.lb2||[]).some(m=>m.r&&loserOf(m)===s.teamName)||(c.po.lb1||[]).some(m=>m.r&&loserOf(m)===s.teamName))prize=67;
+ if(prize)grantPrize(s,prize,'挑战者杯奖金');
  if(c.champ===s.teamName||runner===s.teamName){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' 挑战者杯 '+(c.champ===s.teamName?'冠军':'亚军'),champion:c.champ===s.teamName,roster:titleRoster(s)});
@@ -183,12 +183,12 @@ function finishEWC(s){
  const runner=loserOf(e.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'EWC',champ:e.champ}]).slice(-16);
  logEvent(s,' EWC 总决赛落幕：'+e.champ+' 捧杯！'+(e.champ===s.teamName?'中国赛区的世界之巅！':''));
- let prize=0; // 奖金（万美元折算）：冠军54万$≈540万 / 亚军33万$≈330万 / 四强14.5万$≈145万 / 八强9.3万$≈93万
- if(e.champ===s.teamName)prize=5400;
- else if(runner===s.teamName)prize=3300;
- else if(e.sf.some(m=>m.r&&loserOf(m)===s.teamName))prize=1450;
- else if(e.qf.some(m=>m.r&&loserOf(m)===s.teamName))prize=930;
- if(prize){s.fund+=prize;logEvent(s,' EWC 赛事奖金（美元折算）：+'+prize+'万');}
+ let prize=0; // 奖金（美元折算，真实对齐 ÷6）：冠军90万$≈900 / 亚军55万$≈550 / 四强24万$≈242 / 八强15.5万$≈155
+ if(e.champ===s.teamName)prize=900;
+ else if(runner===s.teamName)prize=550;
+ else if(e.sf.some(m=>m.r&&loserOf(m)===s.teamName))prize=242;
+ else if(e.qf.some(m=>m.r&&loserOf(m)===s.teamName))prize=155;
+ if(prize)grantPrize(s,prize,'EWC 赛事奖金');
  if(e.champ===s.teamName||runner===s.teamName){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' EWC 电竞世界杯 '+(e.champ===s.teamName?'冠军':'亚军'),champion:e.champ===s.teamName,roster:titleRoster(s)});
@@ -280,7 +280,7 @@ function finishAsianGames(s){
  // 奖牌回流俱乐部：本队入选选手按奖牌档位获得人气/身价/士气，协会发奖金；代价是年总体力下滑
  const mine=a.squad.filter(x=>x.mine);
  const add={'金牌':[8,6],'银牌':[5,4],'铜牌':[3,2],'无':[1,0]}[a.medal];
- const prizeBase={'金牌':400,'银牌':200,'铜牌':100,'无':50}[a.medal];
+ const prizeBase={'金牌':67,'银牌':33,'铜牌':17,'无':8}[a.medal];
  mine.forEach(x=>{
  const p=(s.players||[]).find(y=>y.name===x.name);
  if(!p)return;
@@ -291,9 +291,8 @@ function finishAsianGames(s){
  });
  if(mine.length){
  const prize=Math.round(prizeBase*mine.length/5);
- if(prize)s.fund+=prize;
+ if(prize)grantPrize(s,prize,'亚运会奖金（'+a.medal+'档 · '+mine.length+' 名选手入选）');
  if(s.mode==='player'&&s.career&&mine.some(x=>x.name===(myPlayer(s)||{}).name))s.career.nat=(s.career.nat||0)+1; // 生涯履历：国家队履历
- if(prize)logEvent(s,' 协会发放亚运会奖金：+'+prize+'万（'+mine.length+' 名选手入选 · '+a.medal+'档）');
  logEvent(s,' 亚运会加成：'+mine.map(x=>x.name).join('、')+' 人气+'+add[0]+' · 身价+'+add[1]+'（征召消耗体力，年总开局体力不满）');
  if(a.mvp&&mine.some(x=>x.name===a.mvp)){
  const p=(s.players||[]).find(y=>y.name===a.mvp);
@@ -453,11 +452,11 @@ function finishAnnual(s,silent){
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'年总',champ:p.champ}]).slice(-16);
  logEvent(s,' '+gameYear(s)+' KPL 年度总决赛落幕：'+p.champ+' 捧起圣龙杯！'+(p.champ===s.teamName?'年度至尊荣耀！':''));
  let prize=0; // 年总奖金（真实 2000 万级冠军奖，游戏内取 800 万）
- if(p.champ===s.teamName)prize=8000;
- else if(runner===s.teamName)prize=4000;
- else if([p.lbf,p.lbs].some(m=>m.r&&loserOf(m)===s.teamName))prize=2500;
- else if(p.lb2.concat(p.lb1).some(m=>m.r&&loserOf(m)===s.teamName))prize=1200;
- if(prize){s.fund+=prize;logEvent(s,' 年度总决赛奖金：+'+prize+'万');}
+ if(p.champ===s.teamName)prize=1333;
+ else if(runner===s.teamName)prize=667;
+ else if([p.lbf,p.lbs].some(m=>m.r&&loserOf(m)===s.teamName))prize=417;
+ else if(p.lb2.concat(p.lb1).some(m=>m.r&&loserOf(m)===s.teamName))prize=200;
+ if(prize)grantPrize(s,prize,'年度总决赛奖金');
  if(p.champ===s.teamName||runner===s.teamName){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' KPL年度总决赛 '+(p.champ===s.teamName?'冠军':'亚军'),champion:p.champ===s.teamName,roster:titleRoster(s)});

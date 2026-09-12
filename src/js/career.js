@@ -71,6 +71,7 @@ function playerToCoach(s){
  return false;
  }
  const L=s.career.legacy;
+ if(!confirmDanger('确认「'+L.name+'」退役转教练？\n身份切换为教练模式，选手生涯不可继续（履历会写入教练合同）。'))return false;
  const style=pick(['lane','farm','team','mind']);
  const titles=L.titles||0,fmvp=L.fmvp||0,allstar=L.allstar||0,mvp=L.mvp||0;
  const rating=clamp(Math.round(58+titles*4+fmvp*3+allstar*2+mvp*0.5+(L.ovr-70)*0.3),60,92);
@@ -175,6 +176,8 @@ function signRetired(s,id){
  save();renderAll();
 }
 function fireHost(s,id){
+ const h=(s.hosts||[]).find(x=>x.id===id);
+ if(h&&!confirmDanger('解除主播 '+h.name+' 的合约？\n每日人气收入 '+h.income+'万 将停止。'))return;
  s.hosts=(s.hosts||[]).filter(x=>x.id!==id);
  save();renderAll();toast('已解除主播合约');
 }
@@ -202,6 +205,7 @@ function hireAssistant(s,id){
 function fireAssistant(s,id){
  const a=(s.assistants||[]).find(x=>x.id===id);
  if(!a)return;
+ if(!confirmDanger('与助教 '+a.name+' 解约？\n其全队加成将立即失效。'))return;
  s.assistants=s.assistants.filter(x=>x.id!==id);
  logEvent(s,' 助教 '+a.name+' 与俱乐部解约');
  save();renderAll();

@@ -474,9 +474,9 @@ function finishSeries(finalWin){
  if(finalWin){ot.l++;}else{ot.w++;ot.pts++;}
  ot.pw+=sr.ow;
  }
- const bonus=winGames*80;
+ const bonus=winGames*13;
  S.fund+=bonus;
- if(finalWin&&Math.random()<0.5)S.fund+=200;
+ if(finalWin&&Math.random()<0.5)S.fund+=33;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
@@ -486,7 +486,7 @@ function finishSeries(finalWin){
  }else if(sr.stage==='card'){
  const m=sr.cardMatch;
  m.r=finalWin?sr.myName:sr.opName;
- const bonus=winGames*120;
+ const bonus=winGames*20;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,'卡位赛：'+S.teamName+' '+(finalWin?'晋级':'遗憾落败')+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
@@ -497,9 +497,9 @@ function finishSeries(finalWin){
  }else if(sr.stage==='po'){
  const m=sr.poMatch;
  m.r=finalWin?sr.myName:sr.opName;
- const bonus=winGames*150;
+ const bonus=winGames*25;
  S.fund+=bonus;
- if(finalWin&&sr.poSlot==='总决赛')S.fund+=600;
+ if(finalWin&&sr.poSlot==='总决赛')S.fund+=100;
  if(!finalWin&&sr.poSlot!=='总决赛'){
  // 联盟分润：按出局名次（总决赛败者的亚军分润由 playoffStep 冠军分支统一发放，此处不再发，避免双倍）
  const place=poPlace(sr.poSlot,false);
@@ -514,7 +514,7 @@ function finishSeries(finalWin){
  const m=sr.cupMatch;
  m.r=finalWin?sr.myName:sr.opName;
  if(m.a===sr.myName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;} // 擂台赛积分按 a/b 记小局
- const bonus=winGames*120;
+ const bonus=winGames*20;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+sr.cupLabel+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');

@@ -389,23 +389,46 @@ function buildTransferMarket(s){
 /* 更衣室产物：公开要求离队的选手更容易谈走——俱乐部留人成本上升（买断费打折、强挖更易、
    本人要价降低）。三处结算必须同用一个判定，避免" UI 说容易谈、实际更贵"的分裂 */
 const effWillingness=p=>clamp((p.willingness||0)+(p.transferRequest?-30:0),0,100);
-/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖）；要求离队者八五折 */
+/* ================= KPL 联盟硬规则（真实对齐） =================
+ TRANSFER_CAP 转会竞价封顶 1500 万——任何成交价（买断/强挖/挂牌/报价）不得突破，顶星摸天花板；
+ ROSTER_MAX 大名单 ≤10 人（5 首发 + 2~5 替补）；
+ SELL_HALF_GUARD 一个转会期卖出不得超过队内一半（保障队伍基本架构）；
+ PLAYER_WAGE_MAX 个人顶薪 70 万/周（基本工资封顶，商务/直播收入不在此列）。 */
+const TRANSFER_CAP=1500,ROSTER_MAX=10,PLAYER_WAGE_MAX=70;
+const capFee=x=>Math.min(Math.round(x),TRANSFER_CAP);
+/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖）；要求离队者八五折——封顶 1500 */
 function buyoutPrice(p){
  const base=valueOf(overall(p));
  const powBonus=1+Math.max(0,(playerPower(p,p.sig)-55)/200);
  const wil=p.willingness||0;
  const wilMult=wil>=60?1:wil>=30?1.5:2.2;
- return Math.round(base*powBonus*wilMult*(p.transferRequest?0.85:1));
+ return capFee(base*powBonus*wilMult*(p.transferRequest?0.85:1));
 }
-/* 非卖品强挖：2.5倍溢价，成功率=意愿缺口，失败意愿-10（多次尝试终能打动） */
-function untouchablePrice(p){return Math.round(buyoutPrice(p)*2.5);}
+/* 非卖品强挖：2.5倍溢价（同样受 1500 封顶，顶星与主力同价时更看意愿/成功率），成功率=意愿缺口，失败意愿-10 */
+function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
+/* 大名单：≥10 人禁止再签（买断/直签/青训提拔共用守卫） */
+function rosterFull(s){return (s.players||[]).length>=ROSTER_MAX;}
+function rosterGuard(s){
+ if(!rosterFull(s))return true;
+ toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前 '+(s.players||[]).length+' 人）——先卖出或放弃选手再签约');
+ return false;
+}
+/* 转会期卖出守卫：本转会期已卖出人数达到现名单一半（向下取整）则禁止再卖 */
+function sellGuard(s){
+ const n=(s.players||[]).length;
+ if((s.windowSold||0)>=Math.floor(n/2)){
+ toast(' 联盟规则：一个转会期卖出不得超过队内一半（已卖 '+(s.windowSold||0)+' 人 / 名单 '+n+' 人）');
+ return false;
+ }
+ return true;
+}
 /* ================= FC26 式转会谈判 =================
  玩家报「转会费+年薪」组合报价 → 对方评估 → 最多 3 轮拉锯：
  每轮被拒后对方给出明确还价，接受还价即成交；超轮次或强挖失败则谈判破裂。
  超帽不拒签：允许超工资帽签约，超出部分每周缴纳 60% 奢侈税（发薪日结算，经营页可见）。 */
 function negoWageDemand(p){
- return Math.max(2,Math.round(p.wage*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)));
+ return Math.min(PLAYER_WAGE_MAX,Math.max(2,Math.round(p.wage*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)))); // 个人顶薪封顶
 }
 function negoAskFee(p){
  return p.untouchable?untouchablePrice(p):buyoutPrice(p);
@@ -434,6 +457,7 @@ function openNegotiation(s,pid){
  const p=s.transferList.find(x=>x.id===pid)||(s.freeAgents||[]).find(x=>x.id===pid);
  if(!p){toast('该选手不在转会市场');return;}
  if(s.players.some(x=>x.id===pid)){toast('已拥有该选手');return;}
+ if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
  window._nego={s,pid,round:1,
  freeAgent:!!p.freeAgent,
  askFee:p.freeAgent?0:negoAskFee(p),
@@ -504,12 +528,12 @@ function negoSubmit(){
  if(feeOk&&wageOk&&willingOk){
  if(!negoCapCheck(s,p))return; // 超帽需确认（奢侈税），取消则留在谈判
  if(!n.freeAgent)s.fund-=fee;
- p.wage=wage;
+ p.wage=Math.min(PLAYER_WAGE_MAX,wage); // 个人顶薪封顶
  const fromTeam=n.freeAgent?'自由球员':(p.ownerTeam||'原俱乐部');
  negoComplete(s,p,n.freeAgent?0:fee);
  recordTransfer(s,'in',p,n.freeAgent?0:fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
  logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
- if(fee>=300)logEvent(s,' 重磅转会！联盟震动');
+ if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
  window._nego=null;closeModal('app-modal');
  try{SFX.gold();}catch(_){}
  save();renderAll();toast(' 谈判成功！'+p.name+' 加盟');
@@ -545,7 +569,7 @@ function sellAskPrice(p){
  const ageF=p.age<=m.gold?1.1:p.age>=m.retire-1?0.7:0.9; // 黄金期溢价，临近退役打折
  const popF=1+(p.popularity||0)/250; // 人气=商业价值
  const valF=(p.val||100)/100; // 比赛表现浮动：状态火热溢价、持续低迷打折（70%~150%）
- return Math.round(base*ageF*popF*valF);
+ return capFee(base*ageF*popF*valF); // 成交价受联盟 1500 万封顶
 }
 /* 表现状态标签（身价浮动可视化） */
 function perfLabel(p){
@@ -566,6 +590,7 @@ function openSellNego(s,pid){
  if(p.natFill){toast(p.name+' 是亚运集训期的借调顶位，归还青训前不能出售');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已挂牌，请先撤牌或等待报价');return;}
+ if(!sellGuard(s))return; // 联盟规则：一个转会期卖出不得超过队内一半
  const ask=sellAskPrice(p);
  const cap=sellCeiling(p);
  let cnt=overall(p)>=88?rnd(2,3):overall(p)>=78?rnd(1,2):(Math.random()<0.6?1:0); // 总值/人气决定意向俱乐部数
@@ -670,6 +695,7 @@ function sellQuit(){
 function completeSale(s,p,fee,team){
  recordTransfer(s,'out',p,fee,team,'转会出售'); // 年度回顾·转会台账
  s.fund+=fee;
+ s.windowSold=(s.windowSold||0)+1; // 联盟备案：本转会期卖出计数（卖出≤名单一半守卫用）
  s.maxSale=Math.max(s.maxSale||0,fee); // 单笔出售纪录（成就「天价交易」）
  s.players=s.players.filter(x=>x.id!==p.id);
  if(s.lineup.includes(p.id))s.lineup=s.lineup.filter(x=>x!==p.id);
@@ -695,7 +721,8 @@ function completeSale(s,p,fee,team){
  (s.transferList=s.transferList||[]).push(entry);
  }
  logEvent(s,' '+p.name+' 转会至 '+team+'（转会费 '+fee+'万）');
- if(fee>=3000)logEvent(s,' 重磅转会！联盟震动');
+ if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
+ else if(fee>=800)logEvent(s,' 重磅转会！联盟震动');
 }
 
 /* 玩家挂牌 / 撤牌 */
@@ -706,7 +733,8 @@ function listPlayer(s,pid){
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再挂牌');return;}
  if(s.lineup.includes(pid)){toast('请先将该选手移出首发');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已在挂牌名单');return;}
- const price=Math.round(valueOf(overall(p))*(p.willingness>=60?0.8:1.1));
+ if(!sellGuard(s))return; // 联盟规则：一个转会期卖出不得超过队内一半
+ const price=capFee(Math.round(valueOf(overall(p))*(p.willingness>=60?0.8:1.1))); // 成交价封顶 1500
  s.listed=[...(s.listed||[]),{id:pid,price}];
  toast(p.name+' 已挂牌（'+price+'万）'+(p.willingness>=60?'，本人愿意转会':'，本人不太愿意'));
  logEvent(s,' '+p.name+' 进入转会市场（挂牌 '+price+'万）');
@@ -714,6 +742,8 @@ function listPlayer(s,pid){
 }
 function delistPlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
+ const bids=(s.bids||[]).filter(x=>x.id===pid);
+ if(bids.length&&!confirmDanger('撤掉 '+((p&&p.name)||'选手')+' 的挂牌？\n当前 '+bids.length+' 份报价将全部作废。'))return;
  s.listed=(s.listed||[]).filter(x=>x.id!==pid);
  s.bids=(s.bids||[]).filter(x=>x.id!==pid); // 有报价也可撤牌：撤牌即作废所有未接受报价
  logEvent(s,''+(p?p.name:'选手')+'撤牌，报价作废，选手留队');
@@ -727,7 +757,7 @@ function aiBidTick(s){
  if(Math.random()<0.3){
  const team=pick(AI_TEAMS.filter(t=>t.name!==s.teamName));
  const p=s.players.find(x=>x.id===item.id);
- let bid=Math.round(item.price*(0.85+Math.random()*0.35));
+ let bid=Math.min(TRANSFER_CAP,Math.round(item.price*(0.85+Math.random()*0.35))); // AI 报价同样受 1500 封顶
  if(p){const cap=sellCeiling(p);if(cap!=null)bid=Math.min(bid,cap);} // 挂牌报价同样受转售保护
  s.bids=[...(s.bids||[]),{id:item.id,team:team.name,bid}];
  if(p)toast(' '+team.name+' 对 '+p.name+' 报价 '+bid+'万！');
@@ -802,9 +832,10 @@ function renewPlayer(s,pid,years,offerWage){
  if(s.fund<cost){toast('资金不足（续约签字费 '+cost+'万）');return;}
  s.fund-=cost;
  const nw=offerWage?Math.round(offerWage):Math.round(wageOf(overall(p))*((p.val||100)/100)); // 报价成交按谈定周薪，否则按表现重定
- if(nw>p.wage)logEvent(s,' '+p.name+' 续约涨薪：'+p.wage+'万 → '+nw+'万/周（表现好值得加薪）');
- else if(nw<p.wage)logEvent(s,' '+p.name+' 接受降薪续约：'+p.wage+'万 → '+nw+'万/周');
- p.wage=Math.max(1,nw);
+ const wageFinal=Math.min(PLAYER_WAGE_MAX,Math.max(1,nw)); // 个人顶薪封顶
+ if(wageFinal>p.wage)logEvent(s,' '+p.name+' 续约涨薪：'+p.wage+'万 → '+wageFinal+'万/周（表现好值得加薪）');
+ else if(wageFinal<p.wage)logEvent(s,' '+p.name+' 接受降薪续约：'+p.wage+'万 → '+wageFinal+'万/周');
+ p.wage=wageFinal;
  p.contract=y;
  p.morale=clamp(p.morale+6,20,100);
  p.willingness=Math.min(100,(p.willingness||50)+10);
@@ -821,7 +852,7 @@ function renewAskWage(p,years){
  const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
  if(p.age>=m.gold)w*=1.05;
  if((p.morale||50)<40)w*=1.05;
- return Math.max(5,Math.round(w/5)*5);
+ return Math.min(PLAYER_WAGE_MAX,Math.max(5,Math.round(w/5)*5)); // 个人顶薪封顶
 }
 function renewCostN(p,years){return Math.max(50,Math.round(renewCost(p)*(0.55+0.45*((years||2)-1))));}
 let _nego=null;
@@ -916,6 +947,7 @@ function releasePlayer(s,pid){
  if(!p||p.contract>0){toast('该选手合同未到期');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能放走');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作');return;}
+ if(!confirmDanger('确定不续约并放走 '+p.name+'（总值 '+overall(p)+'）？\n选手将进入自由市场，其他队可直签。'))return;
  s.players=s.players.filter(x=>x.id!==pid);
  const li=s.lineup.indexOf(pid);if(li>=0)s.lineup.splice(li,1);
  if(s.pick)delete s.pick[p.pos];
@@ -1051,6 +1083,7 @@ function signCoach(s,c){
 /* 解雇主教练：无教练期间全队无教练加成 */
 function fireCoach(s){
  if(!s.coach){toast('当前没有主教练');return;}
+ if(!confirmDanger('解雇主教练 '+s.coach.name+'？\n无教练期间全队战力加成失效，需再签新帅。'))return;
  logEvent(s,' '+s.coach.name+' 与俱乐部解约离任');
  s.coach=null;
  save();renderAll();
@@ -1142,7 +1175,7 @@ function inSeasonOfferTick(s){
  // 概率随火热程度上浮（火热顶星 ~6%/天，刚过门槛 ~1.5%/天）
  const heat=(p.val||100)-100;
  if(Math.random()>=clamp(0.015+heat*0.0012,0.015,0.06))return;
- const fee=Math.round(buyoutPrice(p)*(0.95+Math.random()*0.4)); // 95%~135% 身价
+ const fee=capFee(buyoutPrice(p)*(0.95+Math.random()*0.4)); // 95%~135% 身价（联盟 1500 封顶）
  // 买家偏好：身价越高越可能是豪门在挖（取 AI 队前半段的强队池）
  const pool=AI_TEAMS.filter(t=>t.name!==s.teamName);
  const buyer=pick(pool.slice(0,Math.max(6,Math.round(pool.length*(overall(p)>=88?0.5:1)))));
@@ -1172,7 +1205,7 @@ function respondOffer(s,idx,action){
  if(!p){s.offers.splice(idx,1);save();renderAll();return;}
  if(action==='keep'){
  const raise=Math.max(2,Math.round(p.wage*0.08));
- p.wage+=raise;
+ p.wage=Math.min(PLAYER_WAGE_MAX,p.wage+raise); // 个人顶薪封顶
  p.morale=clamp(p.morale+5,20,100);
  p.willingness=clamp((p.willingness==null?70:p.willingness)+5,0,100);
  s.offers=s.offers.filter(x=>x.pid!==p.id);
@@ -1191,7 +1224,7 @@ function respondOffer(s,idx,action){
  if(!p){s.offers.splice(idx,1);save();renderAll();return;}
  if(action==='keep'){ // 留人：回绝报价 + 涨薪表达诚意
  const raise=Math.max(2,Math.round(p.wage*0.08));
- p.wage+=raise;
+ p.wage=Math.min(PLAYER_WAGE_MAX,p.wage+raise); // 个人顶薪封顶
  p.morale=clamp(p.morale+5,20,100);
  p.willingness=clamp((p.willingness==null?70:p.willingness)+5,0,100);
  s.offers=s.offers.filter(x=>x.pid!==p.id);
