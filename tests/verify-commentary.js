@@ -90,6 +90,20 @@ const out = vm.runInContext(`
   if(!body.includes('AI 战报')||!body.includes('这是一段 AI 生成的赛后战报'))fail('复盘未渲染 AI 战报');
   else log('⑥ 复盘渲染：aiReport 已入册并在重放中显示（离线可回看）');
 
+  // ⑦ 多风格解说人设：默认 pro；切换后 system 不同、user 数据一致；未知 id 回落
+  if(aiPersona().id!=='pro')fail('默认人设应为 pro');
+  if(AI_PERSONAS.length<4)fail('人设数量不足（应≥4）');
+  const pr=buildAiPrompt(r5,AI_PERSONAS[0]);
+  const hy=buildAiPrompt(r5,AI_PERSONAS.find(p=>p.id==='hype'));
+  if(pr.system===hy.system)fail('专业/激情人设 system 相同');
+  else if(pr.user.indexOf(S.teamName)<0||hy.user.indexOf(S.teamName)<0)fail('user 未携带比赛数据');
+  else if(pr.user!==hy.user)fail('user 应与人设无关（只换 system）');
+  localStorage.setItem('km_ai_set',JSON.stringify({on:true,base:'https://x',persona:'coach'}));
+  if(aiPersona().id!=='coach')fail('已存 persona 未生效');
+  localStorage.setItem('km_ai_set',JSON.stringify({on:true,base:'https://x',persona:'nope'}));
+  if(aiPersona().id!=='pro')fail('未知 persona 应回落 pro');
+  log('⑦ 人设：5 档解说（专业/激情/叙事/弹幕/教练复盘）· system 随人设变 · user 数据一致 · 未知 id 回落');
+
   try{localStorage.removeItem('km_ai_set');}catch(e){}
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');

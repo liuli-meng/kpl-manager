@@ -134,13 +134,19 @@ const out = vm.runInContext(`
   else if((S.yearReviews||[])[0]!==r2)fail('重建快照未置顶');
   else log('⑤ 关键战役：带 peak 标记的当年复盘被收录（按 yr 过滤，' +r2.keys.length+' 场）');
 
-  // ⑥ 渲染：俱乐部提示条 / 回顾弹窗 / 经营页归档
+  // ⑥ 渲染：俱乐部提示条 / 回顾弹窗 / 经营页归档 + 成绩走势折线
   S._reviewNew=y2;
   let rErr='';
   try{
    goPage('club');
    const club=document.querySelector('#page-club').innerHTML;
    if(!club.includes('年度回顾'))fail('俱乐部页缺少回顾提示条');
+   // 折线：名次映射 + SVG 生成（沙箱 DOM 不产生子节点，直接断言纯函数输出）
+   if(yearPlaceRank('冠军')!==1||yearPlaceRank('亚军')!==2||yearPlaceRank('13-18名')!==15)fail('名次数值映射错误');
+   const svg=yearTrendSvg([{ev:'春季赛',place:'冠军'},{ev:'夏季赛',place:'四强'},{ev:'KPL年度总决赛',place:'亚军'}]);
+   if(!svg||svg.indexOf('<polyline')<0)fail('成绩走势折线 SVG 未生成');
+   else if(svg.indexOf('冠军')<0||svg.indexOf('四强')<0)fail('折线端点缺名次标注');
+   else if((svg.match(/<circle/g)||[]).length!==3)fail('折线数据点数量异常');
    showYearReview(0);
    const modal=document.querySelector('#app-modal-body').innerHTML;
    ['成绩曲线','转会记录','董事会评价','关键战役','本年度成就','经营快照'].forEach(t=>{if(!modal.includes(t))fail('回顾弹窗缺区块: '+t);});
@@ -151,7 +157,7 @@ const out = vm.runInContext(`
    if(!biz.includes('showYearReview(0)'))fail('经营页归档没有入口');
   }catch(e){rErr=e.message;}
   if(rErr)fail('渲染异常: '+rErr);
-  else log('⑥ 渲染：俱乐部提示条 → 回顾弹窗（六区块）→ 经营页归档入口，查看后提示已清除');
+  else log('⑥ 渲染：提示条 → 回顾弹窗（六区块+成绩走势折线 SVG）→ 经营页归档，提示已清除');
 
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');

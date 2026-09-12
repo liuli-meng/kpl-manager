@@ -177,6 +177,7 @@ function weeklyWage(s){
  return sum;
 }
 function save(){
+ if(!S)return;
  try{checkAchievements(S);}catch(e){}
  try{localStorage.setItem(slotKey(),JSON.stringify(S));}
  catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}}
@@ -208,6 +209,7 @@ function migrateSave(){
  S.mode=S.mode||'manager'; // 旧档统一为经理模式
  if(S.mode==='player'&&!S.career)S.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
  if(S.mode==='coach'&&!S.coachDeal)S.coachDeal={years:0,honors:[],log:[]};
+ S.mentorPairs=S.mentorPairs||[]; // 老将带新配对（旧档兜底）
  S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
  S.captain=S.captain==null?null:S.captain; // 队长字段兜底（旧档统一为 null）
  if(S.kjia===undefined)S.kjia=null; // K甲联赛状态（旧档缺字段；nextDay/renderKjia 会懒初始化）

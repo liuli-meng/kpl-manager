@@ -108,6 +108,43 @@ const out = vm.runInContext(`
    else log('⑥ 退役：年龄到线触发退役声明，赛季履历快照+计数清零，生涯页进入结算态');
   }
 
+  // ⑥b 老将带新：清空名单只留老将+新人 → 配对 + 新人成长 + 老将人气
+  S=null;initStart();createPlayerCareer();
+  {
+   const meB=myPlayer(S);
+   const vet=genPlayer(genFreeAgentDef(meB.pos==='mid'?'jg':'mid','star',new Set([meB.name])));
+   const vm=AGE_MODEL[vet.pos]||AGE_MODEL.mid;
+   vet.age=vm.gold+2;vet.retiring=false;vet.loan=null;
+   ['lane','farm','team','mind'].forEach(k=>{vet.attrs[k]=Math.min(99,vet.attrs[k]+8);});
+   S.players=[meB,vet]; // 防其他青训/模板新人抢配对
+   meB.age=18;['lane','farm','team','mind'].forEach(k=>{meB.attrs[k]=Math.max(40,meB.attrs[k]-20);});
+   const attrBefore={...meB.attrs},popBefore=vet.popularity||0;
+   mentorSeasonSettle(S);
+   const pair=(S.mentorPairs||[]).find(mp=>mp.r===meB.id||mp.v===meB.id);
+   if(!pair)fail('老将+新人未配对（mentorPairs='+JSON.stringify(S.mentorPairs||[])+' vetOvr='+overall(vet)+' vetAge='+vet.age+'）');
+   else{
+    const grew=Object.keys(attrBefore).some(k=>meB.attrs[k]>attrBefore[k]);
+    if(!grew)fail('新人未获得带新属性成长');
+    else if((vet.popularity||0)<=popBefore)fail('老将未获得带新人气');
+    else if(pair.v===vet.id&&!(S.career.mentorName||S.career.mentoredCount))fail('选手模式未记带新履历');
+    else log('⑥b 老将带新：'+vet.name+'（'+vet.age+'岁）带训 '+meB.name+'（18岁）→ 新人属性↑ · 老将人气 '+(popBefore||0)+'→'+(vet.popularity||0)+' · 配对已入档');
+   }
+  }
+
+  // ⑥c 退役转教练（一条龙）：置退役邀请 → playerToCoach → mode=coach + 履历入合同
+  S.career.retired=true;
+  S.career.coachPath=true;
+  S.career.titles=2;S.career.fmvp=1;S.career.allstar=1;
+  S.career.legacy={name:(myPlayer(S)||S.players[0]||{name:'名宿'}).name,age:25,pos:'mid',ovr:88,mvp:3,titles:2,fmvp:1,allstar:1,seasons:5};
+  const legacyName=S.career.legacy.name;
+  const okCoach=playerToCoach(S);
+  if(!okCoach)fail('退役转教练失败');
+  else if(S.mode!=='coach')fail('转教练后 mode 应为 coach');
+  else if(!S.coach||S.coach.origin!==legacyName)fail('教练身份未绑定名宿');
+  else if(!S.coachDeal||!(S.coachDeal.log||[]).some(x=>/退役转教练/.test(x.note||'')))fail('教练合同未记录转型');
+  else if(S.career.coachPath)fail('转型后应消费 coachPath 防重复');
+  else log('⑥c 一条龙：'+legacyName+' 退役转教练（评分 '+S.coach.rating+' · 战力+'+S.coach.bonus+'%）· mode=coach · 合同 2 年 · 履历保留');
+
   // ⑦ 教练生涯：卡片回调/按钮联动（沙箱无真实 DOM，走 handler 与按钮状态断言）+ 开局 + 补强 + 邀约
   S=null;initStart();switchStartTab('coach');
   if((coachCardHTML(CLUB_TEMPLATES[0],0)||'').indexOf('pickCoachClub')<0)fail('教练卡片模板未使用 pickCoachClub 回调');

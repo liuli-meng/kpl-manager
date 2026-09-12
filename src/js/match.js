@@ -583,6 +583,18 @@ function showMatchModal(r,title){
  导出存档/代码分享不会带走 key。任何失败（断网/超时/HTTP错误/CORS/无fetch环境）
  都静默回退本地文案；比赛引擎与门禁测试完全不依赖本模块。 */
 const AI_SET_KEY='km_ai_set';
+/* 解说人设：写进 system 提示，user 仍是同一套比赛数据。id 进 localStorage，不进存档。 */
+const AI_PERSONAS=[
+ {id:'pro',n:'专业解说',d:'冷静专业，数据说话',sys:'你是KPL王者荣耀职业联赛的官方专业解说。语气沉稳克制，重数据与战术脉络，少用感叹号，不玩网络梗。'},
+ {id:'hype',n:'激情解说',d:'热血上头，金句连发',sys:'你是电竞现场激情解说。语气高亢热血，短句连发，情绪拉满，可适度夸张但不人身攻击、不低俗。'},
+ {id:'story',n:'故事叙事',d:'纪录片旁白',sys:'你是电竞纪录片旁白。用叙事口吻讲这场比赛的起承转合，突出选手命运感与关键转折，像在讲一段传奇。'},
+ {id:'meme',n:'玩梗弹幕',d:'轻松幽默，梗密度高',sys:'你是赛事弹幕风格的赛后总结。轻松幽默，可适当使用电竞相关梗与网络语，禁止低俗与人身攻击。'},
+ {id:'coach',n:'教练复盘',d:'战术视角，找问题',sys:'你是退役教练做赛后复盘。冷静指出BP、节奏与关键决策的得失，给出可执行的改进方向，口吻专业直接。'}
+];
+function aiPersona(){
+ const id=(aiSettings().persona)||'pro';
+ return AI_PERSONAS.find(p=>p.id===id)||AI_PERSONAS[0];
+}
 function aiSettings(){
  try{return JSON.parse(localStorage.getItem(AI_SET_KEY))||{};}catch(e){return {};}
 }
@@ -591,15 +603,29 @@ function toggleAiReport(){
  const st=aiSettings();st.on=!st.on;
  try{localStorage.setItem(AI_SET_KEY,JSON.stringify(st));}catch(e){}
  save();renderAll();
- toast(st.on?' AI 战报已开启：每场赛后联网生成一次（经营页可配置端点）':' AI 战报已关闭：恢复纯单机模式');
+ toast(st.on?' AI 战报已开启：每场赛后联网生成一次（经营页可配置端点与人设）':' AI 战报已关闭：恢复纯单机模式');
 }
 function aiSaveForm(){
  const st=aiSettings();
  st.base=(document.getElementById('ai-base')||{value:''}).value.trim();
  st.model=(document.getElementById('ai-model')||{value:''}).value.trim();
  st.key=(document.getElementById('ai-key')||{value:''}).value.trim();
+ const psel=document.getElementById('ai-persona');
+ if(psel&&psel.value)st.persona=psel.value;
  try{localStorage.setItem(AI_SET_KEY,JSON.stringify(st));}catch(e){}
- toast('AI 战报端点已保存（仅存本机，不随存档导出）');
+ toast('AI 战报设置已保存（仅存本机，不随存档导出）');
+}
+/* 组 prompt（纯函数便于测试）：system=人设，user=比赛数据 */
+function buildAiPrompt(r,persona){
+ const p=persona||aiPersona();
+ const data='比赛：'+(r.stageTxt||'')+'，'+S.teamName+' vs '+r.opName+'，比分 '+r.score+'（我方'+(r.win?'胜':'负')+'）\n'
+ +'我方首发：'+rosterLineup(S).map(x=>x.name+'（'+((S.pick&&S.pick[x.pos])||x.sig||'')+'）').join('、')+'\n'
+ +((r.mvps||[]).length?'各局MVP：'+r.mvps.join('、')+'\n':'')
+ +'直播要点：'+(r.logs||[]).slice(0,10).join(' / ');
+ return {
+  system:p.sys,
+  user:'请根据以下比赛数据写一段120字以内的中文赛后战报，直接输出正文，不要标题、不要列表、不要复述数据清单：\n'+data
+ };
 }
 async function aiFillReport(r){
  let timer=null;
@@ -607,16 +633,12 @@ async function aiFillReport(r){
  if(typeof fetch!=='function')throw new Error('环境不支持 fetch');
  const st=aiSettings();
  const h=(S.history||[])[0];
- const prompt='你是KPL王者荣耀职业联赛的赛事文案作者。请根据以下比赛数据写一段120字以内的中文赛后战报，专业但带情绪，直接输出正文，不要标题、不要列表：\n'
- +'比赛：'+(r.stageTxt||'')+'，'+S.teamName+' vs '+r.opName+'，比分 '+r.score+'（我方'+(r.win?'胜':'负')+'）\n'
- +'我方首发：'+rosterLineup(S).map(p=>p.name+'（'+((S.pick&&S.pick[p.pos])||p.sig||'')+'）').join('、')+'\n'
- +((r.mvps||[]).length?'各局MVP：'+r.mvps.join('、')+'\n':'')
- +'直播要点：'+(r.logs||[]).slice(0,10).join(' / ');
+ const {system,user}=buildAiPrompt(r);
  const ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
  if(ctrl)timer=setTimeout(()=>ctrl.abort(),25000);
  const res=await fetch(st.base,{method:'POST',signal:ctrl?ctrl.signal:undefined,
  headers:Object.assign({'Content-Type':'application/json'},st.key?{Authorization:'Bearer '+st.key}:{}),
- body:JSON.stringify({model:st.model||'gpt-4o-mini',messages:[{role:'user',content:prompt}],temperature:0.9})});
+ body:JSON.stringify({model:st.model||'gpt-4o-mini',messages:[{role:'system',content:system},{role:'user',content:user}],temperature:0.9})});
  if(timer){clearTimeout(timer);timer=null;}
  if(!res.ok)throw new Error('HTTP '+res.status);
  const j=await res.json();
@@ -624,7 +646,7 @@ async function aiFillReport(r){
  if(!txt)throw new Error('空响应');
  if(h){h.aiReport=txt;save();} // 存入复盘记录：重放可见，之后离线也能看
  const box=document.getElementById('ai-report-box'); // 弹窗可能已被下一场替换，找不到就丢弃
- if(box)box.innerHTML='<div class="et">AI 战报</div><p>'+_escTxt(txt)+'</p>';
+ if(box)box.innerHTML='<div class="et">AI 战报 · '+_escTxt(aiPersona().n)+'</div><p>'+_escTxt(txt)+'</p>';
  }catch(e){
  if(timer)clearTimeout(timer);
  const box=document.getElementById('ai-report-box');

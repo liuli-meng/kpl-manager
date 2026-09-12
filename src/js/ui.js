@@ -61,12 +61,54 @@ function showReplay(h){
  $('#app-modal').classList.add('on');
 }
 /* ================= 年度回顾弹窗（赛季回顾页） =================
- 数据由 buildYearReview 在年度轮换前定格（season.js）；此处只读渲染。
- 成绩曲线=各赛段名次徽章带；转会记录/董事会评价/关键战役/成就/经营快照分区展示。 */
+ 数据由 buildYearReview 在年度轮换前定格（career.js）；此处只读渲染。
+ 成绩曲线=SVG 折线走势 + 名次徽章带；转会记录/董事会评价/关键战役/成就/经营快照分区展示。 */
+function yearPlaceRank(place){
+ // 名次文本 → 数值（越小越好）。折线 Y 轴翻转：冠军在顶部。
+ if(!place)return 12;
+ if(place==='冠军'||place==='金牌')return 1;
+ if(place==='亚军'||place==='银牌')return 2;
+ if(place==='四强'||place==='铜牌')return 3;
+ if(/^5-6/.test(place))return 5.5;
+ if(/^7-8/.test(place))return 7.5;
+ if(/^9-10/.test(place))return 9.5;
+ if(/^11-12/.test(place))return 11.5;
+ if(/13-18|未晋级|无奖牌|出局|止步/.test(place))return 15;
+ return 12;
+}
+function yearTrendSvg(stages){
+ if(!stages||stages.length<2)return '';
+ const W=520,H=140,PAD_L=36,PAD_R=16,PAD_T=18,PAD_B=28;
+ const ranks=stages.map(st=>yearPlaceRank(st.place));
+ const yMin=1,yMax=16;
+ const x=i=>stages.length===1?W/2:PAD_L+i*(W-PAD_L-PAD_R)/(stages.length-1);
+ const y=r=>PAD_T+(r-yMin)/(yMax-yMin)*(H-PAD_T-PAD_B);
+ const pts=ranks.map((r,i)=>x(i)+','+y(r).toFixed(1)).join(' ');
+ const gridY=[1,4,8,12,16].map(g=>{
+ const gy=y(g).toFixed(1);
+ return `<line x1="${PAD_L}" y1="${gy}" x2="${W-PAD_R}" y2="${gy}" stroke="var(--line)" stroke-width="1"/>
+ <text x="${PAD_L-6}" y="${gy}" text-anchor="end" dominant-baseline="central" fill="var(--dim)" font-size="10">${g===1?'冠军':g===16?'垫底':g+'名'}</text>`;
+ }).join('');
+ const dots=ranks.map((r,i)=>{
+ const cx=x(i).toFixed(1),cy=y(r).toFixed(1);
+ const col=r<=2?'var(--gold)':r<=4?'var(--cyan)':r<=8?'var(--green)':'var(--dim)';
+ const label=stages[i].place;
+ const short=stages[i].ev.replace(/KPL年度总决赛/,'年总').replace(/电竞世界杯/,'EWC').replace(/挑战者杯/,'挑杯');
+ return `<circle cx="${cx}" cy="${cy}" r="4" fill="${col}"/>
+ <text x="${cx}" y="${cy-10}" text-anchor="middle" fill="${col}" font-size="10" font-weight="600">${label}</text>
+ <text x="${cx}" y="${H-8}" text-anchor="middle" fill="var(--dim)" font-size="10">${short}</text>`;
+ }).join('');
+ return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;max-width:${W}px;margin:0 auto" role="img" aria-label="年度成绩走势">
+ ${gridY}
+ <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+ ${dots}
+ </svg>`;
+}
 function showYearReview(idx){
  const r=(S.yearReviews||[])[idx];
  if(!r){toast('暂无年度回顾');return;}
  const placeCol=p=>p==='冠军'?'var(--gold)':p==='亚军'?'var(--cyan)':/金牌|四强|胜/.test(p)?'var(--green)':/未|无|出局|13-18|止步/.test(p)?'var(--red)':'var(--dim)';
+ const trend=yearTrendSvg(r.stages);
  const stageRow=r.stages.length?r.stages.map(st=>`<div class="match" style="margin-bottom:5px;padding:8px 10px">
  <div class="vs"><span class="tname" style="font-size:12px">${st.ev}</span></div>
  <div class="score" style="font-size:13px;color:${placeCol(st.place)};min-width:70px">${st.place}</div></div>`).join('')
@@ -88,6 +130,7 @@ function showYearReview(idx){
  $('#app-modal-body').innerHTML=`
  <h2>${r.year} 年度回顾 <span class="tag">${r.team} · 第 ${r.season} 赛季</span></h2>
  <div class="panel" style="margin:10px 0"><h3>成绩曲线 <span class="tag">年度积分 ${r.annualPts} · 联盟第 ${r.annualRank||'—'} 名</span></h3>
+ ${trend?`<div style="padding:6px 0 10px">${trend}</div><div class="hint" style="text-align:center;margin-bottom:8px">赛段走势：越高越好（冠军在顶）</div>`:''}
  ${stageRow}</div>
  <div class="panel" style="margin:10px 0"><h3>荣誉</h3>${honorRow}</div>
  <div class="panel" style="margin:10px 0"><h3>转会记录 <span class="tag">${r.transfers.length} 笔</span></h3>${trRow}</div>
@@ -193,6 +236,7 @@ function renderClub(){
  const kpiText=k=>k?('赛季末年度积分进前 '+(k.target||12)):'赛季末不评价（缺历史数据）';
  html+=`<div class="panel">
  <h3>董事会 <span class="tag" style="color:${col}">信任度 ${t} · ${boardTierText(S)}</span>${t<=BOARD_WARN_TRUST?'<span class="tag" style="color:var(--red)">最后通牒</span>':''}</h3>
+ ${S.career&&S.career.legacy?`<div class="hint" style="margin-bottom:6px">名宿出身：${S.career.legacy.name} 由选手生涯转型（${S.career.legacy.seasons||0} 赛季 · ${S.career.legacy.titles||0} 冠 · 生涯总值峰值 ${S.career.legacy.ovr||'—'}）</div>`:''}
  <div style="height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:${clamp(t,0,100)}%;background:${col}"></div></div>
  <div style="font-size:13px">本赛季目标：<b>${kpiText(kpi)}</b>
  <span class="hint">（${kpi&&kpi.from?'依据上年第 '+kpi.from+' 名':(S.selfBuilt?'首年按自建阵容档位':'首年按执教班底档位')}）</span></div>
@@ -511,6 +555,7 @@ function renderBiz(){
  <div class="hint" style="margin-bottom:8px">可选实验功能：开启后每场系列赛结束，向你填写的 OpenAI 兼容端点发一次请求，生成一段 AI 赛后总结（存入比赛复盘，重放可见）。断网/失败/超时自动回退本地文案，比赛流程永不阻塞。设置只存本机——不进存档、不随导出文件走。</div>
  <button class="btn sm ${st.on?'danger':'primary'}" onclick="toggleAiReport()">${st.on?' 关闭 AI 战报（恢复纯单机）':' 开启 AI 战报（需联网）'}</button>
  ${st.on?`<div style="display:grid;gap:6px;margin-top:10px">
+ <label class="hint">解说人设<select id="ai-persona" class="hd-in" style="width:100%" onchange="aiSaveForm()">${AI_PERSONAS.map(p=>`<option value="${p.id}"${(st.persona||'pro')===p.id?' selected':''}>${p.n} · ${p.d}</option>`).join('')}</select></label>
  <label class="hint">端点 URL（OpenAI 兼容 chat/completions，需支持浏览器直连 CORS）<input id="ai-base" class="hd-in" style="width:100%" value="${_escTxt(st.base||'')}" placeholder="https://text.pollinations.ai/openai （社区公益·免key·可能不稳定）" onchange="aiSaveForm()"></label>
  <label class="hint">模型名<input id="ai-model" class="hd-in" style="width:100%" value="${_escTxt(st.model||'')}" placeholder="openai / gpt-4o-mini / 供应商模型 id" onchange="aiSaveForm()"></label>
  <label class="hint">API Key（免 key 端点留空）<input id="ai-key" type="password" class="hd-in" style="width:100%" value="${_escTxt(st.key||'')}" placeholder="sk-..." onchange="aiSaveForm()"></label>
@@ -1253,19 +1298,32 @@ function thSort(th){
 function renderCareer(){
  const el=$('#page-career');
  if(S.mode!=='player'){el.innerHTML='<div class="hint">生涯页仅选手生涯模式可用</div>';return;}
- const me=myPlayer(S);
- if(!me){el.innerHTML='<div class="hint">选手数据缺失（存档异常）——请重新开局</div>';return;}
  const c=S.career||{};
- if(c.retired){ // 退役结算：生涯画上句号
+ const me=myPlayer(S);
+ // 退役后本人已从名单移除：用 legacy 快照渲染结算屏（否则会误报「选手数据缺失」）
+ if(c.retired){
+ const L=c.legacy||{};
+ const name=L.name||(me&&me.name)||'选手';
+ const age=L.age||(me&&me.age)||'—';
+ const mvp=L.mvp!=null?L.mvp:(me&&me.mvp)||0;
+ const ovrPeak=(c.seasons||[]).reduce((m,r)=>Math.max(m,r.ovr||0),0)||L.ovr||0;
  const rows=(c.seasons||[]).map(r=>`<tr><td>${r.year}</td><td>${r.team}</td><td>${r.apps}</td><td>${r.kda||'—'}</td><td>${r.mvp}</td><td class="gold">${r.titles?r.titles+' 冠':''}</td></tr>`).join('');
+ const coachBtn=c.coachPath
+ ?`<button class="btn gold" onclick="playerToCoach()" style="margin:0 6px">退役转教练（执教 ${S.teamName}）</button>`
+ :'';
  el.innerHTML=`<div class="panel center" style="border-color:var(--gold)">
- <div style="font-size:34px;font-weight:800;color:var(--gold);margin:8px 0">${me.name} 退役</div>
- <div class="dim" style="margin-bottom:10px">${me.age} 岁 · ${c.seasons.length||0} 个赛季 · ${c.titles||0} 冠 · ${me.mvp||0} 次单场MVP · 生涯最高总值 ${c.seasons.reduce((m,r)=>Math.max(m,r.ovr),0)}</div>
- <table class="tbl" style="max-width:640px;margin:0 auto 12px"><tr><th>赛季</th><th>球队</th><th>出场</th><th>场均KDA</th><th>MVP</th><th>荣誉</th></tr>${rows}</table>
- <button class="btn gold" onclick="resetGame()">开启下一段旅程（重新开始）</button>
+ <div style="font-size:34px;font-weight:800;color:var(--gold);margin:8px 0">${name} 退役</div>
+ <div class="dim" style="margin-bottom:10px">${age} 岁 · ${(c.seasons||[]).length||0} 个赛季 · ${c.titles||0} 冠 · ${mvp} 次单场MVP · 生涯最高总值 ${ovrPeak||'—'}</div>
+ <table class="tbl" style="max-width:640px;margin:0 auto 12px"><tr><th>赛季</th><th>球队</th><th>出场</th><th>场均KDA</th><th>MVP</th><th>荣誉</th></tr>${rows||'<tr><td colspan="6" class="hint">无赛季履历</td></tr>'}</table>
+ ${c.coachPath?'<div class="hint" style="margin-bottom:10px">教练组发出邀请：你可以留在赛场开启执教生涯（一条龙）——履历与荣誉会写进教练合同。</div>':''}
+ <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+ ${coachBtn}
+ <button class="btn" onclick="resetGame()">开启下一段旅程（重新开始）</button>
+ </div>
  </div>`;
  return;
  }
+ if(!me){el.innerHTML='<div class="hint">选手数据缺失（存档异常）——请重新开局</div>';return;}
  const starter=S.lineup.includes(me.id);
  const rival=S.players.filter(p=>p.pos===me.pos&&p.id!==me.id&&p.injury<=0).sort((a,b)=>playerPower(b)-playerPower(a))[0];
  const myPow=playerPower(me,(S.pick&&S.pick[me.pos])||me.sig),rivPow=rival?playerPower(rival,rival.sig):0;
@@ -1281,7 +1339,7 @@ function renderCareer(){
  // 成长 + 每日行动
  html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':'每天一项'}</span></h3>
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(me,84)}
- <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}</div></div>
+ <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${c.mentorName?'<br>老将带新：'+c.mentorName+' 点拨过你（年度结算时属性成长更快）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
  <button class="btn sm" onclick="playerTrain('lane')" ${S.trained||me.energy<10?'disabled':''}>练对线 +1~2</button>
  <button class="btn sm" onclick="playerTrain('farm')" ${S.trained||me.energy<10?'disabled':''}>练运营 +1~2</button>
