@@ -321,7 +321,7 @@ function renderClub(){
  <div class="hint mt8">${me?(meStart?'你已进入首发轮换——教练按状态评定每场首发':'你目前是替补：在「生涯」页加练，战力超过同位置队友即可夺回首发'):'选手数据缺失'}。比赛由教练组指挥 BP，赛后看你的个人数据与全场直播。</div>`;
  }else{
  html+=`<button class="btn primary" style="width:100%" onclick="uiStartMatch()">赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）</button>
- <div class="hint mt8">KPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（8万/小局）。赛前可换首发，BP 中也可换替补。</div>`;
+ <div class="hint mt8">KPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（13万/小局）。赛前可换首发，BP 中也可换替补。</div>`;
  }
  html+=`</div>`;
  }
@@ -477,7 +477,7 @@ function renderClub(){
  <div class="g2">
  <div class="pcard" style="border-color:var(--line)">
  <div style="font-weight:800;margin-bottom:6px">训练</div>
- <div class="hint" style="margin-bottom:10px">选择一名选手专项训练（8万/次，体力-10，属性+1~2）</div>
+ <div class="hint" style="margin-bottom:10px">选择一名选手专项训练（13万/次，体力-10，属性+1~2）</div>
  <button class="btn sm primary" onclick="goPage('train')" ${S.trained?'disabled':''}>前往训练</button>
  </div>
  <div class="pcard" style="border-color:var(--line)">

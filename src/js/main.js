@@ -329,8 +329,8 @@ function initStart(){
  <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyEraClub()" id="era-apply-btn" disabled>执教所选时代俱乐部</button></div>
  </div>`;
  $('#start-modal').classList.add('on');
- pickScenario('normal'); // 剧本按钮回到默认高亮（弹窗重建后 class 会丢）
  rollPlayerTeams();pickPlayerPos('mid');pickPlayerArch(0); // 选手页默认值
+ pickScenario('normal'); // 剧本按钮默认高亮 + 描述以剧本为准——必须在 pickPlayerArch 之后，否则默认页（经理模式）的描述被选手出身文案覆盖
 }
 let _clubPick=-1,_eraSel=null,_scenario='normal';
 let _pcPos='mid',_pcArch=0,_pcTeam=null,_coachPick=-1,_eraSelCoach=null;
@@ -368,7 +368,7 @@ function switchStartTab(tab){
  ['player','coach','self','club','era'].forEach(t=>{
  const body=document.getElementById('tab-'+t+'-body');if(body)body.style.display=t===tab?'':'none';
  });
- if(tab==='player'){const d=$('#sc-desc');if(d)d.textContent=PLAYER_ARCHETYPES[_pcArch].desc;}
+ {const d=$('#sc-desc');if(d)d.textContent=tab==='player'?PLAYER_ARCHETYPES[_pcArch].desc:scenarioById(_scenario).desc;} // 选手页显示出身档，其余身份恢复剧本描述
  if(tab!=='club'&&_eraActive){installEra(null);_eraSel=null;_clubPick=-1;}
  if(tab==='coach'){
  // 教练页从默认（现役）联盟起步：若浏览过时代先还原

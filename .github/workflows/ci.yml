@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: 全量测试（静态审计 + 历史回归 + 冒烟 + 平衡门禁）
+      - name: 全量测试（runner：静态审计 + 回归 + 冒烟 + 平衡门禁 + 年终全链路 + 构建产物）
         run: npm test
 
       - name: 模糊压测（15 赛季随机操作 + 不变量断言）
@@ -24,6 +24,9 @@ jobs:
 
       - name: 构建 game.html
         run: npm run build
+
+      - name: 构建产物运行时校验（内联脚本进沙箱）
+        run: node tests/verify-built.js
 
       - name: 校验构建产物与 src 一致（改了源码忘 build 会在这里拦截）
         run: |

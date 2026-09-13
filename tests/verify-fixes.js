@@ -35,15 +35,16 @@ const out = vm.runInContext(`
   if(!inBuyer&&!inMarket)fail('出售选手完全不可见（买家阵容满 + 市场无条目）');
   log('②出售可见性：def 已注册，'+(inBuyer?'现于买家阵容':'买家满员 → 转会市场归属买家，随时可查/可买回'));
   // ③ 真实经济对齐（KPL 硬规则：转会封顶 1500 万 ⇒ OVR99 曲线 670、火热顶星买断必被压到 1500 天花板）
+  // 不用随机 star 档断言身价下限（总值可掉到 378 造成 flaky）；曲线与封顶用固定 OVR 断言
   const star=genPlayer(genFreeAgentDef('top','star',new Set()));
-  if(valueOf(overall(star))<400)fail('顶星身价应≥400万（新刻度）: '+valueOf(overall(star)));
+  if(valueOf(90)<400)fail('OVR90 曲线应≥400万: '+valueOf(90));
   if(valueOf(99)!==670)fail('OVR99 曲线应 670: '+valueOf(99));
   const hot=Math.round(buyoutPrice({...star,willingness:60,attrs:{lane:99,farm:99,team:99,mind:99}}));
   if(hot>TRANSFER_CAP)fail('火热顶星买断超过联盟封顶 1500: '+hot);
   const unt=Math.round(untouchablePrice({...star,willingness:5,attrs:{lane:99,farm:99,team:99,mind:99}}));
   if(unt>TRANSFER_CAP)fail('非卖品强挖价超过联盟封顶 1500: '+unt);
   if(initFund!==1300||initCap!==150)fail('新档资金/工资帽未对齐真实经济: fund='+initFund+' cap='+initCap);
-  log('③真实经济：顶星≈'+valueOf(overall(star))+'万 · OVR99=670万 · 火热买断='+hot+'万 · 非卖品强挖='+unt+'（均≤1500 封顶） · 初始资金 1300万/帽 150万');
+  log('③真实经济：随机star≈'+valueOf(overall(star))+'万 · OVR90='+valueOf(90)+'万 · OVR99=670万 · 火热买断='+hot+'万 · 非卖品强挖='+unt+'（均≤1500 封顶） · 初始资金 1300万/帽 150万');
   // ④ 旧档货币迁移（两段链：×10 千万级 → ÷6 真实对齐）
   const old={teamName:'旧档',icon:'x',fund:800,wageCap:90,players:[{id:'p1',name:'a',wage:10,acqCost:200,pos:'mid',attrs:{lane:70,farm:70,team:70,mind:70}}],market:[],lineup:[],coachMarket:[],retiredCoaches:[],assistants:[],hosts:[],freeAgents:[],transferList:[],listed:[{id:'p1',price:200}],bids:[{id:'p1',bid:180}]};
   S=old;migrateSave();

@@ -30,7 +30,8 @@ function injectHelpers(dom) {
   return dom;
 }
 
-function makeDom() {
+// opts.code：可选，改跑自定义脚本源（默认 src/js 拼接）；verify-built 用它加载 game.html 内联脚本
+function makeDom(opts) {
   const el = () => ({
     classList: { add() {}, remove() {}, toggle() {} }, style: {}, innerHTML: '', value: '',
     textContent: '', dataset: {}, disabled: false, addEventListener() {}, appendChild() {},
@@ -59,7 +60,8 @@ function makeDom() {
   };
   dom.window = dom;
   vm.createContext(dom);
-  vm.runInContext(loadCode(), dom);
+  const code = (opts && opts.code != null) ? opts.code : loadCode();
+  vm.runInContext(code, dom);
   injectHelpers(dom);
   return { dom, elCache };
 }

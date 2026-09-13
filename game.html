@@ -1761,7 +1761,8 @@ function migrateSave(){
  if(S.crest===undefined)S.crest=null; // 自建/改队徽的品牌（外形+配色+缩写），无则用俱乐部原版/哈希
  S.coachMarket=S.coachMarket||[];
  S.honors=S.honors||[];
- if(!S.wageCap)S.wageCap=90;
+ // 缺工资帽：按现役经济刻度回落 150（旧写 90 会让 mid 阵容开局即超帽）
+ if(!S.wageCap||S.wageCap<50)S.wageCap=150;
  if(!S.seedPower)S.seedPower=280;
  if(!S.streak)S.streak=0;
  if(S.preseason==null)S.preseason=false; // 旧档迁移：默认已过转会期
@@ -3859,7 +3860,8 @@ function nextDay(s){
 function payWage(s){
  const wage=weeklyWage(s);
  // 选手代言收入：人气 × 0.3万/周 × 粉丝系数（商业价值对冲工资帽压力）
- const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*3),0)*fanMul(s,300));
+ // 注意：×3 是旧千万级刻度残留——在现役「万」单位下会把基金刷爆（5 人人气 40 → 周入 600 万，远超周薪）
+ const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*0.3),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;
@@ -4014,10 +4016,11 @@ function newSeason(s){
  });
  // 王朝反制②：连冠队伍工资帽成长减半（保住豪华阵容越来越难）
  const st=dynastyStreak(s,s.teamName);
- s.wageCap=(s.wageCap||150)+(st>=2?1:3); // KPL 联盟每赛季调整工资帽（真实对齐后基础 150 万/周）
+ const capGrow=st>=2?3:6; // 正常 +6；王朝 +3（约一半）
+ s.wageCap=(s.wageCap||150)+capGrow;
  // 王朝反制③：版本针对——力度随连冠次数加码
  if(st>=2){
- logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+(st>=2?1:3)+'万）');
+ logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+capGrow+'万，正常 +6）');
  const core=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
  if(core){
  const key=pick(['lane','farm','team','mind']);
@@ -7272,7 +7275,7 @@ function renderClub(){
  <div class="hint mt8">${me?(meStart?'你已进入首发轮换——教练按状态评定每场首发':'你目前是替补：在「生涯」页加练，战力超过同位置队友即可夺回首发'):'选手数据缺失'}。比赛由教练组指挥 BP，赛后看你的个人数据与全场直播。</div>`;
  }else{
  html+=`<button class="btn primary" style="width:100%" onclick="uiStartMatch()">赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）</button>
- <div class="hint mt8">KPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（8万/小局）。赛前可换首发，BP 中也可换替补。</div>`;
+ <div class="hint mt8">KPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（13万/小局）。赛前可换首发，BP 中也可换替补。</div>`;
  }
  html+=`</div>`;
  }
@@ -7428,7 +7431,7 @@ function renderClub(){
  <div class="g2">
  <div class="pcard" style="border-color:var(--line)">
  <div style="font-weight:800;margin-bottom:6px">训练</div>
- <div class="hint" style="margin-bottom:10px">选择一名选手专项训练（8万/次，体力-10，属性+1~2）</div>
+ <div class="hint" style="margin-bottom:10px">选择一名选手专项训练（13万/次，体力-10，属性+1~2）</div>
  <button class="btn sm primary" onclick="goPage('train')" ${S.trained?'disabled':''}>前往训练</button>
  </div>
  <div class="pcard" style="border-color:var(--line)">
@@ -8756,8 +8759,8 @@ function initStart(){
  <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyEraClub()" id="era-apply-btn" disabled>执教所选时代俱乐部</button></div>
  </div>`;
  $('#start-modal').classList.add('on');
- pickScenario('normal'); // 剧本按钮回到默认高亮（弹窗重建后 class 会丢）
  rollPlayerTeams();pickPlayerPos('mid');pickPlayerArch(0); // 选手页默认值
+ pickScenario('normal'); // 剧本按钮默认高亮 + 描述以剧本为准——必须在 pickPlayerArch 之后，否则默认页（经理模式）的描述被选手出身文案覆盖
 }
 let _clubPick=-1,_eraSel=null,_scenario='normal';
 let _pcPos='mid',_pcArch=0,_pcTeam=null,_coachPick=-1,_eraSelCoach=null;
@@ -8795,7 +8798,7 @@ function switchStartTab(tab){
  ['player','coach','self','club','era'].forEach(t=>{
  const body=document.getElementById('tab-'+t+'-body');if(body)body.style.display=t===tab?'':'none';
  });
- if(tab==='player'){const d=$('#sc-desc');if(d)d.textContent=PLAYER_ARCHETYPES[_pcArch].desc;}
+ {const d=$('#sc-desc');if(d)d.textContent=tab==='player'?PLAYER_ARCHETYPES[_pcArch].desc:scenarioById(_scenario).desc;} // 选手页显示出身档，其余身份恢复剧本描述
  if(tab!=='club'&&_eraActive){installEra(null);_eraSel=null;_clubPick=-1;}
  if(tab==='coach'){
  // 教练页从默认（现役）联盟起步：若浏览过时代先还原

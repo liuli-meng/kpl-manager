@@ -444,7 +444,8 @@ function nextDay(s){
 function payWage(s){
  const wage=weeklyWage(s);
  // 选手代言收入：人气 × 0.3万/周 × 粉丝系数（商业价值对冲工资帽压力）
- const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*3),0)*fanMul(s,300));
+ // 注意：×3 是旧千万级刻度残留——在现役「万」单位下会把基金刷爆（5 人人气 40 → 周入 600 万，远超周薪）
+ const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*0.3),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;
@@ -599,10 +600,11 @@ function newSeason(s){
  });
  // 王朝反制②：连冠队伍工资帽成长减半（保住豪华阵容越来越难）
  const st=dynastyStreak(s,s.teamName);
- s.wageCap=(s.wageCap||150)+(st>=2?1:3); // KPL 联盟每赛季调整工资帽（真实对齐后基础 150 万/周）
+ const capGrow=st>=2?3:6; // 正常 +6；王朝 +3（约一半）
+ s.wageCap=(s.wageCap||150)+capGrow;
  // 王朝反制③：版本针对——力度随连冠次数加码
  if(st>=2){
- logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+(st>=2?1:3)+'万）');
+ logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+capGrow+'万，正常 +6）');
  const core=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
  if(core){
  const key=pick(['lane','farm','team','mind']);

@@ -304,7 +304,8 @@ console.log(r8);
 const idxSrc = fs.readFileSync('src/index.html', 'utf8');
 const navPages = [...idxSrc.matchAll(/data-page="([^"]+)"/g)].map(m => m[1]);
 const missing = navPages.filter(p => !idxSrc.includes('id="page-' + p + '"'));
-console.log('页面骨架: ' + navPages.length + ' 个导航页 · 缺失容器=' + (missing.length ? missing.join(',') + ' 异常!' : '无 OK'));
+const skelOk = !missing.length;
+console.log('页面骨架: ' + navPages.length + ' 个导航页 · 缺失容器=' + (skelOk ? '无 OK' : missing.join(',') + ' 异常!'));
 
 // ---- BAN 决策回归：对方已用的英雄不再是有效 BAN（推荐避开、结算按空气价）----
 const r9 = vm.runInContext(`
@@ -360,9 +361,19 @@ const r10 = vm.runInContext(`
   const cap0=S.wageCap;
   S.titleHistory.push({season:3,champ:'王朝检测'}); // 模拟第3季收官：playoffStep 记录冠军
   newSeason(S);
-  out.push('帽冻结='+(S.wageCap===cap0+1?'OK(+'+(S.wageCap-cap0)+'万·连冠减半)':'异常!')+' 版本针对='+(S.eventLog.some(e=>e.txt.indexOf('版本针对')>=0)?'OK':'异常!'));
+  out.push('帽冻结='+(S.wageCap===cap0+3?'OK(+'+(S.wageCap-cap0)+'万·连冠减半)':'异常!')+' 版本针对='+(S.eventLog.some(e=>e.txt.indexOf('版本针对')>=0)?'OK':'异常!'));
   out.push('新赛季连冠判定='+dynastyStreak(S,'王朝检测')+'（应3）');
   return out.join(' || ');
 })()
 `, dom);
 console.log(r10);
+
+// ---- 汇总：输出里出现「异常!」或骨架缺失时置非零退出码（runner/CI 可门禁）----
+const dumps = [r, r2, r3, r4, r5, r6, r7, r8, r9, r10].filter(Boolean).join('\n');
+const hasFail = /异常!|\[FAIL\]/.test(dumps) || !skelOk || missing.length > 0;
+if (hasFail) {
+  console.error('[FAIL] 冒烟：输出含异常标记或页面骨架缺失');
+  process.exitCode = 1;
+} else {
+  console.log('[PASS] 冒烟');
+}

@@ -43,11 +43,18 @@ GitHub: <https://github.com/liuli-meng/kpl-manager>
 
 ```powershell
 npm run build     # 把 src/ 拼成单文件 game.html（等价于 powershell -File build.ps1）
-npm test          # 静态审计 + 历史 bug 回归 + 冒烟 + 平衡门禁（约 1 分钟，日常必跑）
+npm test          # runner 全量：静态审计 + 回归 + 冒烟 + 平衡门禁 + 年终全链路 + 构建产物（约 1-2 分钟）
+npm run test:fast # 跳过两道模拟门禁，只跑定向用例（改 UI/文案时更快）
+npm test -- --only=sim-yearend   # 只跑年终全链路
+npm test -- --fail-fast          # 首挂即停
 npm run fuzz      # 模糊压测：15 赛季随机操作 + 不变量断言（约 1-2 分钟，改转会/比赛逻辑后跑）
 npm run sim       # 蒙特卡洛：三档开局 ×200 赛季，看进季后赛率/夺冠率/破产率（约 2 分钟）
-npm run sim:quick # 单独重跑平衡门禁（--n=150 可加大样本校准区间）
+npm run sim:quick # 单独重跑单赛段平衡门禁（--n=150 可加大样本校准区间）
+npm run sim:yearend # 单独重跑年终全链路门禁
+npm run test:built # 单独重跑 game.html 构建产物校验
 ```
+
+`npm test` 走 `tests/run.js`：逐项执行、**单挂不阻断后续**，结束时汇总失败清单与耗时（不再是一条看不见哪挂了的 `&&` 长链）。
 
 ### 平衡门禁（CI 防漂移）
 
@@ -67,18 +74,21 @@ npm run sim:quick # 单独重跑平衡门禁（--n=150 可加大样本校准区�
 
 **改数值后怎么校准**：`npm run sim:quick -- --n=150 --seed=random` 看新中值 → 更新上表 → 用 `--seed=<整数>` 扫 5-6 个种子，挑四个比率都最接近中位数的那个作为新的 `DEFAULT_SEED`（写在 `tests/sim-quick.js` 顶部）。固定种子下"越界重跑一次"没有意义，已自动关闭（仅 `--seed=random` 时保留）。
 
-**覆盖范围（重要）**：`sim.js` / `sim-quick.js` 只驱动到当前赛段的 `champion` 就停（单赛段模拟），**不跑挑战者杯 / 亚运 / 年总、也不触发董事会结算**——年终类系统（董事会 KPI、年度积分、圣龙杯）不在平衡门禁覆盖内，改这些要靠 `tests/verify-*.js` 的定向用例兜。
+**覆盖范围（重要）**：`sim.js` / `sim-quick.js` 只驱动到当前赛段的 `champion` 就停（单赛段模拟）。年终类系统（挑战者杯 / 亚运 / 年总 / 董事会 KPI 结算）由 **`tests/sim-yearend.js` 年终全链路门禁**补上：四档开局各跑满 8 年（弱旅允许中途下课退出），每年走 `advanceCalendar` → 挑杯/EWC/亚运/年总 → `boardSettle` → `newSeason`，断言信任度越界、解约后底层 `nextDay` 仍可推进、年度积分轮换、圣龙杯产出。
 
 测试分层（`tests/`）：
 
 ```
+tests/run.js              测试 runner：逐项执行、失败不阻断、结束汇总（npm test 入口）
 tests/harness.js          共享基座：把 src/js 拼进 node:vm 沙箱（DOM/localStorage 全桩）
 tests/audit-static.js     静态审计：onclick 回调存在性 / 重复函数定义 / 数据表一致性 / 存档往返渲染 / 历代联盟时代安装
 tests/verify-regression.js 回归：历史上修过的 9 类 bug 用例（身价 NaN、分润双发、阵容缩水、重名、租借、伤停恢复等）
 tests/verify-kplrules.js   KPL 五条硬规则：转会费 1500 封顶 / 名单 ≤10 / 卖出 ≤半 / 顶薪 70 / 奖金 70-30
 tests/sim-quick.js        平衡门禁：三档开局 + 2017 时代档各 30 赛季，关键比率越界即失败（CI 防漂移）
+tests/sim-yearend.js      年终全链路门禁：挑杯/EWC/亚运/年总/董事会结算 + 多年轮换不变量
+tests/verify-built.js     构建产物校验：game.html 内联完整、页面容器齐全、内联脚本在沙箱可跑 UI 入口
 tests/fuzz.js             模糊压测：随机买卖/租借/训练/打系列赛 15 赛季，逐步断言数值/名单/赛制不变量
-smoke.js                  冒烟：开局→BP→结算→完整系列赛无头回归
+smoke.js                  冒烟：开局→BP→结算→完整系列赛无头回归（输出含「异常!」时退出码非零）
 sim.js                    蒙特卡洛数值模拟
 ```
 
@@ -453,6 +463,16 @@ src/
 接入点：`applyImport` 覆盖前确认 · `resetGame` 自动备份 `_pre_reset` + 确认 · `fireCoach`/`fireAssistant`/`fireHost`/`releasePlayer` 确认 · `delistPlayer` 有报价时确认作废 · `playerToCoach` 不可逆身份切换确认 · `uiAdvanceCalendar` 年度收官/年总大步确认。
 
 回归：`tests/verify-prevent.js`（取消路径均不改动状态）。
+
+## 2026-09 工资帽经济修复
+
+三处刻度残留会让「帽」看起来不对，一并修掉：
+
+1. **缺工资帽回落 90 → 150**（`migrateSave`）：与 `newState` / 真实经济刻度对齐；旧写 90 会让 mid 阵容开局即超帽
+2. **代言收入 ×3 → ×0.3**（`payWage`）：注释写「人气 × 0.3 万/周」，代码却写 `*3`（千万级旧刻度残留）——5 人人气 40 时周入约 600 万，远超周薪，基金被刷爆；改为 0.3 后约 60 万
+3. **帽成长 +1/+3 → 王朝 +3 / 正常 +6**：原先「减半」写成 1 与 3，相对顶薪 70 几乎不涨；正常赛季 +6，连冠 +3
+
+回归：`tests/verify-wagecap.js`（缺帽回落 / mid 开局帽内 / 代言刻度 / 成长减半）。`smoke` 帽冻结断言同步为 +3。
 
 ## 2026-09 存档瘦身与跳过期批量落盘
 

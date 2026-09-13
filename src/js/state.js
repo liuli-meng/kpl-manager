@@ -274,7 +274,8 @@ function migrateSave(){
  if(S.crest===undefined)S.crest=null; // 自建/改队徽的品牌（外形+配色+缩写），无则用俱乐部原版/哈希
  S.coachMarket=S.coachMarket||[];
  S.honors=S.honors||[];
- if(!S.wageCap)S.wageCap=90;
+ // 缺工资帽：按现役经济刻度回落 150（旧写 90 会让 mid 阵容开局即超帽）
+ if(!S.wageCap||S.wageCap<50)S.wageCap=150;
  if(!S.seedPower)S.seedPower=280;
  if(!S.streak)S.streak=0;
  if(S.preseason==null)S.preseason=false; // 旧档迁移：默认已过转会期
