@@ -214,9 +214,9 @@ function uiAdvanceCalendar(s){
  if(uiGuard())return;
  if(!requireSave('推进赛历'))return;
  const label=calendarNextLabel(s)||'推进赛历';
- // 年度收官/年总会触发年龄结算与新赛季：大步推进必须再确认
+ // 年度收官/年总会触发年龄结算与新赛季：大步推进确认；简化模式跳过例行确认
  if(/年度收官|年度总决赛|新赛季/.test(label)){
- if(!confirmDanger(label.replace(/^[\s]*/,'')+'？\n继续将推进年度赛历（可能直接进入下一年结算）。'))return;
+ if(!confirmSoft(label.replace(/^[\s]*/,'')+'？\n继续将推进年度赛历（可能直接进入下一年结算）。'))return;
  }
  advanceCalendar(s);
 }
@@ -563,6 +563,18 @@ function renderBiz(){
  html+=`<div class="hint">还没有 FMVP——率队杀进决赛并打出统治表现（各局 MVP 累计最多）即可当选，获专属皮肤与人气温涨</div>`;
  }
  html+=`</div>`;
+ // 本机偏好（简化模式 / 高对比 / 双开提示）：localStorage，不进存档
+ {
+ const sp=simpleMode(),hc=highContrast();
+ html+=`<div class="panel"><h3>本机偏好 <span class="tag">不进存档 · 只影响这台浏览器</span></h3>
+ <div class="hint" style="margin-bottom:8px">跨设备玩同一档时请各自设置；导出/导入存档不会带走这些开关。</div>
+ <div style="display:grid;gap:8px">
+ <button class="btn sm ${sp?'gold':'primary'}" onclick="toggleSimpleMode()">${sp?' 关闭简化模式':' 开启简化模式'}</button>
+ <div class="hint">简化模式：年度收官等例行确认自动跳过；赛前准备按战力自动优化首发（伤停/集训仍会顶替）。导入覆盖、解雇、放走等高代价操作仍会确认。</div>
+ <button class="btn sm ${hc?'gold':'primary'}" onclick="toggleHighContrast()">${hc?' 关闭高对比':' 开启高对比'}</button>
+ <div class="hint">高对比：加亮边框与正文，胜负场次用边框标记辅助（不只靠红绿色）。适合色弱或强光环境。</div>
+ </div></div>`;
+ }
  // AI 赛后战报（可选实验功能，默认关闭）：设置存本机 localStorage，不进存档导出
  {
  const st=aiSettings();
@@ -644,7 +656,15 @@ function renderLineup(){
  if(bonds.length){
  html+=bonds.map(c=>`<div class="event-card"><div class="et">${c.desc}</div></div>`).join('');
  }else{
- html+=`<div class="hint">暂无生效羁绊。凑齐同队选手上场可触发战力加成（如 AG超玩会 / eStarPro / 重庆狼队 全阵容+12%，主播天团、XYG青训、三冠传奇等）</div>`;
+ html+=`<div class="hint">暂无生效羁绊。凑齐同队选手上场可触发战力加成（如 AG超玩会 / eStarPro / 重庆狼队 全阵容+12%，主播天团、XYG青训、三冠传奇等）；夺冠后「冠军班底」羁绊更容易达成</div>`;
+ }
+ const cc=S.champCore;
+ if(cc&&cc.ids&&cc.ids.length){
+ const n=ls.filter(p=>cc.ids.includes(p.id)).length;
+ html+=`<div class="event-card" style="margin-top:6px;border-color:${n>=3?'rgba(217,164,65,.55)':'var(--line)'}">
+ <div class="et"><b class="gold">冠军班底</b> · ${(cc.label||'夺冠')}${cc.titles>1?' ×'+cc.titles+'冠':''}
+ —— 当前首发同场 <b class="${n>=3?'gold':''}">${n}</b>/5 人${n>=3?'（羁绊已生效）':'（≥3 人触发战力加成，连冠再升一档）'}</div>
+ <div class="hint" style="margin-top:4px">班底：${(cc.names||[]).join('、')||'—'}</div></div>`;
  }
  html+=`</div>`;
  $('#page-lineup').innerHTML=html;

@@ -429,3 +429,24 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
  .cc-cup{animation:none}
  #champion-overlay{animation:none}
 }
+
+/* ===== 本机偏好：高对比 / 简化模式辅助 ===== */
+/* 高对比：拉高正文与描边对比度；胜负不只靠色相（边框加粗 + 胜负角标） */
+html.hc{
+ --line:#4a4a52; --line2:#6a6a74; --txt:#f2f2f5; --dim:#c4c4cc; --faint:#9a9aa4;
+ --accent:#7aa4ff; --gold:#f0c35a; --red:#ff7a7a; --green:#6fd48a;
+}
+html.hc body{background:var(--bg)}
+html.hc .panel,html.hc header,html.hc nav{border-color:var(--line2)}
+html.hc .match.win{border-left:4px solid var(--green);border-width:2px}
+html.hc .match.lose{border-left:4px solid var(--red);border-width:2px}
+html.hc .match.win .score::before{content:"胜 ";font-weight:800}
+html.hc .match.lose .score::before{content:"负 ";font-weight:800}
+html.hc .logbox .win::before{content:"▲ "}
+html.hc .logbox .lose::before{content:"▼ "}
+html.hc .result-band.win{border-width:2px}
+html.hc .result-band.lose{border-width:2px}
+html.hc :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* 简化模式：压缩次要提示密度，突出操作按钮 */
+html.simple .hint{opacity:.92}
+html.simple .panel h3 .tag{font-size:9px}

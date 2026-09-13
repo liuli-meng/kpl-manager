@@ -170,6 +170,26 @@ function autoFillLineup(s){
  }
  });
 }
+/* 简化模式：同位置把「可出场」里战力更高者换进首发（伤停/集训/K甲锻炼排除）。
+  非简化模式直接 return——平衡门禁与默认玩法完全不受影响。 */
+function optimizeLineup(s){
+ try{if(!simpleMode())return;}catch(e){return;}
+ POS_ORDER.forEach(pos=>{
+  const pool=s.players.filter(p=>p.pos===pos&&!natBusy(s,p)&&(p.kjia||0)<=0);
+  if(!pool.length)return;
+  const best=pool.slice().sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig))[0];
+  const idx=s.lineup.findIndex(id=>{
+   const p=s.players.find(x=>x.id===id);
+   return p&&p.pos===pos;
+  });
+  const cur=idx>=0?s.players.find(p=>p.id===s.lineup[idx]):null;
+  if(!best||(cur&&best.id===cur.id))return;
+  if(cur&&playerPower(best,best.sig)<=playerPower(cur,cur.sig))return;
+  if(s.lineup.includes(best.id))return; // 已在首发其他位：不跨位强换
+  if(idx>=0)s.lineup[idx]=best.id;
+  else s.lineup.push(best.id);
+ });
+}
 /* 系列赛开始：对手阵容体力回满（体力衰减只在系列赛内逐局累积，跨系列赛恢复；AI 互比用构建值）
  伤病对称：AI 也会伤停（以缺阵系列赛数计），伤员由本队青训递补顶替——追打伤停队是合法战术 */
 function resetOppEnergy(s,opName){

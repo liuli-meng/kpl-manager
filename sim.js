@@ -1,7 +1,7 @@
 // 平衡性蒙特卡洛：无头跑完整赛季（真实三档开局），统计进季后赛率/夺冠率/资金
 const vm = require('vm');
 // DOM 桩 / 源模块清单 / 沙箱辅助统一由 harness 提供（只维护一份）
-const { makeDom, injectHelpers } = require('./harness');
+const { makeDom, injectHelpers } = require('./tests/harness');
 const { dom } = makeDom();
 injectHelpers(dom);
 

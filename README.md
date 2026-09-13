@@ -457,12 +457,39 @@ src/
 | 守卫 | 作用 |
 |---|---|
 | `requireSave(what)` | 未开局时挡导出/存档/推进/开赛等入口 |
-| `confirmDanger(msg)` | 覆盖确认框；沙箱/无 confirm 环境放行 |
+| `confirmDanger(msg)` | 覆盖确认框；沙箱/无 confirm 环境放行；**简化模式下仍弹** |
+| `confirmSoft(msg)` | 例行确认；**简化模式下自动跳过** |
 | `uiDebounce(key,ms)` | 连点窗口内二次触发拦截（重开 800ms） |
 
-接入点：`applyImport` 覆盖前确认 · `resetGame` 自动备份 `_pre_reset` + 确认 · `fireCoach`/`fireAssistant`/`fireHost`/`releasePlayer` 确认 · `delistPlayer` 有报价时确认作废 · `playerToCoach` 不可逆身份切换确认 · `uiAdvanceCalendar` 年度收官/年总大步确认。
+接入点：`applyImport` 覆盖前确认 · `resetGame` 自动备份 `_pre_reset` + 确认 · `fireCoach`/`fireAssistant`/`fireHost`/`releasePlayer` 确认 · `delistPlayer` 有报价时确认作废 · `playerToCoach` 不可逆身份切换确认 · `uiAdvanceCalendar` 年度收官/年总大步确认（走 `confirmSoft`）。
 
 回归：`tests/verify-prevent.js`（取消路径均不改动状态）。
+
+## 2026-09 本机偏好体验包（简化模式 / 高对比 / 双开检测）
+
+借鉴开源经理游戏的「深度可选 / 无障碍不是事后补丁」原则，三项本机级体验开关——**只存 `localStorage.km_prefs`，不进存档、不随导出走**（同 AI 战报设置的边界）。经营页「本机偏好」面板切换。
+
+### 简化模式（`simple`）
+
+- **跳过例行确认**：`confirmSoft` 在开启时直接放行（`uiAdvanceCalendar` 年度收官等）；导入覆盖、解雇、放走等高代价操作仍走 `confirmDanger` 弹窗
+- **赛前自动优化首发**：`showPreMatch` → `optimizeLineup`——同位置在「可出场」池（排除伤停/集训/K甲锻炼）里把战力更高者换进首发；非简化模式该函数直接 return，**默认玩法与平衡门禁零影响**
+- 按钮文案：经营页「开启/关闭简化模式」
+
+### 高对比（`hc`）
+
+- `html.hc` 拉高 `--line/--txt/--dim/--faint` 与强调色亮度
+- 胜负**不只靠红绿色相**：`.match.win/.lose` 加粗左边框 + `.score::before` 文字角标；直播 log 行加 ▲/▼ 前缀；`:focus-visible` 加粗焦点环
+- 适合色弱或强光环境；与 `prefers-reduced-motion` 互不干扰
+
+### 双开检测（`km_tab_lock`）
+
+- 每标签生成随机 `_tabId`，启动 `initTabGuard()` + 每次 `save()` 刷新锁心跳（`{id,t}`）
+- **BroadcastChannel**（`kpl-mgr-tab`）即时互报；**storage 事件**兜底（file:// 也可用）
+- 检测到别的 tabId 即 toast：「存档可能互相覆盖，建议只保留一个窗口」——锁键不是存档，不占 SAVE_KEY
+
+### 回归
+
+`tests/verify-prefs.js`：默认全关 / 简化跳过例行且高代价仍拦 / 偏好不进存档对象 / 双开锁 id 与 save 刷新 / 沙箱无 BroadcastChannel 不炸 / 非简化首发不变 + 简化换入更强 / 经营页面板渲染。平衡门禁不读 `km_prefs`，默认关闭下 `optimizeLineup` 为空操作。
 
 ## 2026-09 工资帽经济修复
 

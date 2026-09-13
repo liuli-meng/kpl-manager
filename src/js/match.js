@@ -281,6 +281,7 @@ function startMatch(){
 /* ================= 赛前准备（调整首发 → 对手情报 → 进入 BP） ================= */
 function showPreMatch(title){
  autoFillLineup(S);
+ optimizeLineup(S); // 简化模式：按战力自动优化首发（非简化模式空操作）
  window._prepTitle=title||'';
  window._prepPos=null;
  renderPreMatch();
@@ -438,6 +439,32 @@ function recordSeason(s){
  s.honors=s.honors.slice(-20);
  }catch(e){}
 }
+/* 以下克上：击败纸面明显更强的对手（战力高出 ≥15%）→ 士气/涨粉/本赛段战力加成 + 成就 */
+function maybeUpsetWin(s,finalWin,opName){
+ if(!finalWin||!opName||!s)return false;
+ let my=0,op=0;
+ try{my=teamPower(s)||0;op=powerOf(s,opName)||0;}catch(e){return false;}
+ if(!my||!op||op<my*1.15)return false;
+ s.upsetCount=(s.upsetCount||0)+1;
+ s.upsetBoost=clamp((s.upsetBoost||0)+3,0,9);
+ rosterLineup(s).forEach(p=>{p.morale=clamp(p.morale+5,20,100);});
+ try{addFans(s,6,'以下克上');}catch(e){}
+ logEvent(s,' 以下克上！'+s.teamName+' 击败纸面更强的 '+opName+'（战力 '+Math.round(my)+' vs '+Math.round(op)+'）——全队士气+5、粉丝大涨，本赛段战力 +'+s.upsetBoost+'%');
+ return true;
+}
+/* 阴沟翻船：纸面明显更强却输给弱队（高出 ≥15% 仍败）→ 士气/掉粉/本赛段战力减益 */
+function maybeUpsetLoss(s,finalWin,opName){
+ if(finalWin||!opName||!s)return false;
+ let my=0,op=0;
+ try{my=teamPower(s)||0;op=powerOf(s,opName)||0;}catch(e){return false;}
+ if(!my||!op||my<op*1.15)return false;
+ s.fumbleCount=(s.fumbleCount||0)+1;
+ s.fumbleBoost=clamp((s.fumbleBoost||0)-2,-6,0);
+ rosterLineup(s).forEach(p=>{p.morale=clamp(p.morale-6,20,100);});
+ try{addFans(s,-3,'阴沟翻船');}catch(e){}
+ logEvent(s,' 阴沟翻船！'+s.teamName+' 竟负于纸面更弱的 '+opName+'（战力 '+Math.round(my)+' vs '+Math.round(op)+'）——全队士气-6、粉丝流失，本赛段战力 '+s.fumbleBoost+'%');
+ return true;
+}
 function finishSeries(finalWin){
  const sr=S.series;
  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
@@ -457,6 +484,9 @@ function finishSeries(finalWin){
  if(S.streak>=3)logEvent(S,' '+S.streak+'连胜！队伍手感火热（全队战力+'+clamp(S.streak,-5,5)*2+'%）');
  else if(S.streak<=-3)logEvent(S,' '+(-S.streak)+'连败，士气低迷（全队战力'+clamp(S.streak,-5,5)*2+'%）');
  }
+ // 以下克上 / 阴沟翻船：任何系列赛（常规/卡位/季后/杯赛）按纸面差结算
+ if(finalWin)try{maybeUpsetWin(S,true,sr.opName);}catch(e){}
+ else try{maybeUpsetLoss(S,false,sr.opName);}catch(e){}
  let title='';
  if(sr.stage==='regular'){
  const g=myGroup(S);

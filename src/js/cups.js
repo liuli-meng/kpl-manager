@@ -116,6 +116,8 @@ function finishChallenger(s){
  s.honors.push({season:s.season,title:gameYear(s)+' 挑战者杯 '+(c.champ===s.teamName?'冠军':'亚军'),champion:c.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
  }
+ if(c.champ===s.teamName)registerChampCore(s,gameYear(s)+' 挑战者杯'); // 冠军班底羁绊
+ else if(c.champ)registerAiChampCore(s,c.champ);
  awardFMVP(s,c.champ,gameYear(s)+' 挑战者杯');
  // 成绩曲线：挑杯名次入档（冠军/亚军/四强/八强/16强/32强）
  s.yearStages=s.yearStages||[];
@@ -194,6 +196,8 @@ function finishEWC(s){
  s.honors.push({season:s.season,title:gameYear(s)+' EWC 电竞世界杯 '+(e.champ===s.teamName?'冠军':'亚军'),champion:e.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
  }
+ if(e.champ===s.teamName)registerChampCore(s,gameYear(s)+' EWC 电竞世界杯'); // 冠军班底羁绊
+ else if(e.champ)registerAiChampCore(s,e.champ);
  awardFMVP(s,e.champ,gameYear(s)+' EWC 电竞世界杯');
  // 成绩曲线：EWC 名次入档
  s.yearStages=s.yearStages||[];
@@ -462,6 +466,8 @@ function finishAnnual(s,silent){
  s.honors.push({season:s.season,title:gameYear(s)+' KPL年度总决赛 '+(p.champ===s.teamName?'冠军':'亚军'),champion:p.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
  }
+ if(p.champ===s.teamName)registerChampCore(s,gameYear(s)+' KPL 年度总决赛'); // 冠军班底羁绊
+ else if(p.champ)registerAiChampCore(s,p.champ);
  awardFMVP(s,p.champ,gameYear(s)+' KPL 年度总决赛');
  s.champion=p.champ===s.teamName;
  addFans(s,p.champ===s.teamName?25:(runner===s.teamName?12:6),'KPL 年度总决赛'); // 年总是全年最大的曝光

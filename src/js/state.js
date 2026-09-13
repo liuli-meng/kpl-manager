@@ -21,7 +21,8 @@ let S=null; // 全局状态
 
 /* ================= 预防性守卫（防误碰/空档/连点） =================
   UI 入口用：requireSave 挡未开局操作；confirmDanger 挡高代价点击；
-  uiDebounce 挡连点重复触发。引擎层保持无 UI 依赖（门禁可直接驱动）。 */
+  confirmSoft 挡例行确认（简化模式可跳过）；uiDebounce 挡连点。
+  引擎层保持无 UI 依赖（门禁可直接驱动）。 */
 function requireSave(what){
  if(!S||!S.players||!S.players.length){
  try{toast('尚未开局，'+(what||'该操作')+'不可用');}catch(_){}
@@ -32,6 +33,11 @@ function requireSave(what){
 function confirmDanger(msg){
  try{return typeof confirm==='function'?!!confirm(msg):true;}catch(e){return true;}
 }
+/* 例行确认：简化模式跳过（导入/解雇等高代价仍走 confirmDanger） */
+function confirmSoft(msg){
+ try{if(simpleMode())return true;}catch(e){}
+ return confirmDanger(msg);
+}
 const _uiArm=Object.create(null);
 function uiDebounce(key,ms){
  const now=Date.now();
@@ -39,6 +45,72 @@ function uiDebounce(key,ms){
  if(_uiArm[key]&&now-_uiArm[key]<gap)return true; // 连点中：应拦截
  _uiArm[key]=now;
  return false;
+}
+
+/* ================= 本机 UI 偏好（不进存档、不随导出走） =================
+  simple=简化模式：跳过例行确认 + 赛前自动按战力优化首发
+  hc=高对比：加亮描边/正文，胜负不只靠红绿色相 */
+const PREF_KEY='km_prefs';
+function uiPrefs(){
+ try{return JSON.parse(localStorage.getItem(PREF_KEY))||{};}catch(e){return {};}
+}
+function uiPref(k){return !!uiPrefs()[k];}
+function setUiPref(k,v){
+ const p=uiPrefs();p[k]=!!v;
+ try{localStorage.setItem(PREF_KEY,JSON.stringify(p));}catch(e){}
+ applyUiPrefs();
+}
+function applyUiPrefs(){
+ try{
+  const r=document.documentElement;
+  if(!r||!r.classList)return;
+  r.classList.toggle('hc',uiPref('hc'));
+  r.classList.toggle('simple',uiPref('simple'));
+ }catch(e){}
+}
+function simpleMode(){return uiPref('simple');}
+function highContrast(){return uiPref('hc');}
+function toggleSimpleMode(){
+ setUiPref('simple',!simpleMode());
+ try{renderAll();}catch(e){}
+ toast(simpleMode()?' 简化模式已开启：例行确认跳过 · 赛前自动优化首发':' 简化模式已关闭');
+}
+function toggleHighContrast(){
+ setUiPref('hc',!highContrast());
+ try{renderAll();}catch(e){}
+ toast(highContrast()?' 高对比已开启：描边/正文加亮，胜负辅以标记':' 高对比已关闭');
+}
+
+/* ================= 双开检测（同一 origin 多标签会互写 localStorage） =================
+  锁键 km_tab_lock 只记 tabId+时间戳，不是存档；BroadcastChannel 即时互通，
+  storage 事件兜底（file:// 也适用）。save() 每次落盘刷新心跳。 */
+const _tabId='t'+Math.random().toString(36).slice(2,10);
+const _tabLockKey='km_tab_lock';
+function _touchTabLock(){
+ try{localStorage.setItem(_tabLockKey,JSON.stringify({id:_tabId,t:Date.now()}));}catch(e){}
+}
+function _warnDualTab(why){
+ try{toast(' 检测到同一浏览器另开一局（'+(why||'多标签')+'）——存档可能互相覆盖，建议只保留一个窗口');}catch(e){}
+}
+function initTabGuard(){
+ try{
+  _touchTabLock();
+  if(typeof BroadcastChannel==='function'){
+   const ch=new BroadcastChannel('kpl-mgr-tab');
+   ch.onmessage=function(ev){
+    const d=ev&&ev.data;
+    if(d&&d.id&&d.id!==_tabId)_warnDualTab('另一窗口已打开');
+   };
+   try{ch.postMessage({id:_tabId,hello:1});}catch(e){}
+  }
+  window.addEventListener('storage',function(e){
+   if(!e||e.key!==_tabLockKey||!e.newValue)return;
+   try{
+    const o=JSON.parse(e.newValue);
+    if(o&&o.id&&o.id!==_tabId)_warnDualTab('另一窗口已写入');
+   }catch(_){}
+  });
+ }catch(e){}
 }
 
 function newState(teamName,icon){
@@ -69,7 +141,13 @@ function newState(teamName,icon){
  coachDeal:null, // 教练执教履历（mode=coach）：{years:0,honors:[],log:[]}
  fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
  captain:null, // 队长（选手 id）：全队战力小幅加成 + 士气激励，离队自动摘除
+ upsetBoost:0, // 以下克上：本赛段爆冷累积战力%（每胜+3，封顶9；startSplit 清零）
+ upsetCount:0, // 队史以下克上次数（成就解锁依据）
+ fumbleBoost:0, // 阴沟翻船：本赛段被爆冷累积负战力%（每败-2，下限-6；startSplit 清零）
+ fumbleCount:0, // 队史被爆冷次数
  kjia:null, // K甲联赛（二队）：独立赛程/积分榜/二队班底，每赛段重开——见 season.js「K甲联赛」
+ champCore:null, // 冠军班底：最近一次夺冠首发 id 列表 + 夺冠次数——同场触发羁绊（见 activeBonds）
+ aiChampCore:{}, // AI 冠军班底：队名→{titles}——按难度档给 AI 战力加成（见 aiRosterPower）
  offers:[], // 赛中转会报价（表现火热选手被挖角）：留人/放人/抬价三选——见 transfer.js
  transfers:[], // 转会台账（买入/卖出/放走）：年度回顾·转会记录数据源
  yearReviews:[], // 年度回顾（每年一份快照）：成绩曲线/转会记录/董事会评价/关键战役
@@ -146,7 +224,26 @@ function aiRosterPower(roster,s,tn){
  if(!cnt)return 0;
  roster.forEach(p=>mSum+=(p.morale||80));
  const morale=clamp(mSum/roster.length/100,0.82,1.1);
- return Math.round(sum*morale*(1+aiCoachBonus(s,tn)/100));
+ let pow=sum*morale*(1+aiCoachBonus(s,tn)/100);
+ // AI 冠军班底：按难度档缩放（豪门王朝更硬、弱旅不滚雪球）
+ pow*=1+aiChampBondPct(s,tn)/100;
+ return Math.round(pow);
+}
+/* AI 夺冠累计：联赛/挑杯/EWC/年总 AI 冠军入册；titles 越多加成越高（由 aiChampBondPct 消费） */
+function registerAiChampCore(s,teamName){
+ if(!s||!teamName||teamName===s.teamName)return; // 玩家队走 champCore
+ s.aiChampCore=s.aiChampCore||{};
+ const prev=s.aiChampCore[teamName];
+ s.aiChampCore[teamName]={titles:((prev&&prev.titles)||0)+1};
+}
+/* AI 班底加成百分比：elite 1.25× / mid 0.8× / weak 0.35×，基座 首冠4% · 连冠≥2 为 6% */
+function aiChampBondPct(s,tn){
+ const cc=s&&s.aiChampCore&&s.aiChampCore[tn];
+ if(!cc||!cc.titles)return 0;
+ const tier=aiTierOf(s,tn);
+ const base=cc.titles>=2?6:4;
+ const scale=tier==='elite'?1.25:tier==='mid'?0.8:0.35;
+ return Math.round(base*scale*10)/10;
 }
 /* picks 可选：BP 进行中实时结算用（未选位置回退招牌）；缺省走 S.pick */
 function teamPower(s,picks){
@@ -175,6 +272,10 @@ function teamPower(s,picks){
  }
  // 连胜/连败手感：±2%/场，上限 ±10%
  if(s.streak)pow*=1+clamp(s.streak,-5,5)*0.02;
+ // 以下克上：本赛段爆冷胜场累积（每胜 +3%，上限 +9%），开赛段时清零
+ if(s.upsetBoost)pow*=1+clamp(s.upsetBoost,0,9)/100;
+ // 阴沟翻船：本赛段被弱队掀翻（每败 -2%，下限 -6%），开赛段时清零
+ if(s.fumbleBoost)pow*=1+clamp(s.fumbleBoost,-6,0)/100;
  // 队长加成：队长在首发阵中，全队战力 +2%（队长被卖/退役/换下则不生效）
  if(s.captain&&ls.some(p=>p.id===s.captain))pow*=1.02;
  return Math.round(pow);
@@ -189,7 +290,27 @@ function activeBonds(s){
  if(cnt[t]>=def.full)act.push({bonus:def.bonusFull,desc:def.descFull});
  else if(cnt[t]>=def.min)act.push({bonus:def.bonusMin,desc:def.descMin});
  }
+ // 冠军班底羁绊：最近一次夺冠首发同场 ≥3 人触发；连冠（titles≥2）加成升一档
+ const cc=s.champCore;
+ if(cc&&cc.ids&&cc.ids.length){
+ const idset=new Set(cc.ids);
+ const n=ls.filter(p=>idset.has(p.id)).length;
+ const tier=(cc.titles||1)>=2;
+ const bMin=tier?6:4,bFull=tier?12:10;
+ if(n>=5)act.push({bonus:bFull,desc:'冠军班底（满编5人）：全队战力+'+bFull+'%'+(tier?' · 连冠加成':'')});
+ else if(n>=3)act.push({bonus:bMin,desc:'冠军班底（同场'+n+'人）：全队战力+'+bMin+'%'+(tier?' · 连冠加成':'')});
+ }
  return act;
+}
+/* 夺冠时把当前首发记为冠军班底（联赛/挑杯/EWC/年总共用）。连冠刷新名单并累计次数。 */
+function registerChampCore(s,title){
+ if(!s)return;
+ const ls=rosterLineup(s);
+ const ids=ls.map(p=>p.id);
+ if(!ids.length)return;
+ const prev=s.champCore;
+ s.champCore={ids,titles:((prev&&prev.titles)||0)+1,label:title||'',names:ls.map(p=>p.name)};
+ try{logEvent(s,' 冠军班底成型！'+(s.champCore.names||[]).join('、')+'——此后同场 ≥3 人触发羁绊加成'+(s.champCore.titles>=2?'（连冠加成已升级）':''));}catch(e){}
 }
 function weeklyWage(s){
  // 租借选手租金已一次性支付，工资由原俱乐部承担，不计入本队周薪
@@ -211,7 +332,7 @@ function serializeForSave(s){
 function save(){
  if(!S)return false;
  try{checkAchievements(S);}catch(e){}
- try{localStorage.setItem(slotKey(),serializeForSave(S));return true;}
+ try{localStorage.setItem(slotKey(),serializeForSave(S));try{_touchTabLock();}catch(_){}return true;}
  catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}return false;}
 }
 /* 赛制形态校验：当前阶段的分组结构是否存在且匹配。
@@ -277,7 +398,11 @@ function migrateSave(){
  // 缺工资帽：按现役经济刻度回落 150（旧写 90 会让 mid 阵容开局即超帽）
  if(!S.wageCap||S.wageCap<50)S.wageCap=150;
  if(!S.seedPower)S.seedPower=280;
- if(!S.streak)S.streak=0;
+ if(S.streak)S.streak=0;
+ if(S.upsetBoost==null)S.upsetBoost=0; // 以下克上本赛段加成
+ if(S.upsetCount==null)S.upsetCount=0; // 队史爆冷次数（成就）
+ if(S.fumbleBoost==null)S.fumbleBoost=0; // 阴沟翻船本赛段减益
+ if(S.fumbleCount==null)S.fumbleCount=0;
  if(S.preseason==null)S.preseason=false; // 旧档迁移：默认已过转会期
  if(!S.transferWindow)S.transferWindow=0;
  S.transferList=S.transferList||[];
@@ -285,6 +410,8 @@ function migrateSave(){
  (S.transferList||[]).forEach(p=>{if(p.untouchable&&p.willingness===100)p.willingness=rnd(85,100);});
  S.listed=S.listed||[];
  S.bids=S.bids||[];
+ if(S.champCore===undefined)S.champCore=null; // 冠军班底羁绊（旧档迁移）
+ S.aiChampCore=S.aiChampCore||{}; // AI 冠军班底（旧档迁移）
  S.history=S.history||[];
  S.academy=S.academy||[];
  S.retiredCoaches=S.retiredCoaches||[];

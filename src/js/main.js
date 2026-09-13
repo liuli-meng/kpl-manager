@@ -747,6 +747,8 @@ function _reportErr(tag,msg){
 window.addEventListener('error', e => _reportErr('全局异常', e.message||'未知错误'));
 window.addEventListener('unhandledrejection', e => _reportErr('Promise拒绝', e.reason));
 $$('nav button').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
+applyUiPrefs(); // 本机偏好（简化/高对比）立即生效
+initTabGuard(); // 双开检测：多标签互写存档时提示
 if(load()&&S&&S.teamName){
  ensureSeason(S); // 旧档自动迁移到 KPL 2025 赛制
  applyModeNav();

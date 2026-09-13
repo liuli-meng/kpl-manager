@@ -662,6 +662,7 @@ const ACHIEVEMENTS=[
  {id:'coach',icon:'教',name:'良师入帐',desc:'签下第一名主教练',test:s=>!!s.coach},
  // —— 比赛 ——
  {id:'first_win',icon:'胜',name:'旗开得胜',desc:'拿下队史首场系列赛胜利',test:s=>(s.history||[]).some(h=>h.win)},
+ {id:'upset',icon:'冷',name:'以下克上',desc:'击败纸面战力高出 15% 的对手',test:s=>(s.upsetCount||0)>=1},
  {id:'streak10',icon:'焰',name:'势如破竹',desc:'单赛季取得 10 连胜',test:s=>(s.streak||0)>=10},
  // —— 冠军 ——
  {id:'first_title',icon:'冠',name:'首冠时刻',desc:'夺得队史第一个冠军',test:s=>(s.honors||[]).some(h=>h.champion)},

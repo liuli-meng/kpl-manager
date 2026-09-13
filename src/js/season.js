@@ -351,7 +351,9 @@ function playoffStep(s){
  // 夺冠人气暴涨：全队商业价值提升（代言收入增加）
  s.players.forEach(p=>p.popularity=Math.min(99,(p.popularity||0)+5));
  logEvent(s,' 夺冠带来巨大曝光！全队选手人气+5，代言收入提升');
+ registerChampCore(s,splitLabel(s)+' 总冠军'); // 冠军班底羁绊：记下夺冠首发
  }
+ else if(p.final.r)registerAiChampCore(s,p.final.r); // AI 夺冠：记入 AI 冠军班底（按难度档加成）
  leaguePayout(s,s.champion?'冠军':'亚军');
  logEvent(s,splitLabel(s)+'总冠军：'+p.final.r+'！'+(s.champion?'你就是冠军！':''));
  // ===== 年度赛历衔接：年度积分 + FMVP，等待进入下一赛段（EWC/年总） =====
@@ -639,7 +641,7 @@ function newSeason(s){
 /* 开启一个联赛赛段（春季/夏季）：转会期 + 分组 + 赛程。
  年龄/合同/退役/工资帽结算只在年度轮换（newSeason）做，夏季赛年中直开（不老化）。 */
 function startSplit(s,split){
- s.split=split;s.streak=0;s.stage='regular';
+ s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
  if(s.mode==='player')applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
