@@ -14,7 +14,14 @@ const isAsiadYear=s=>gameYear(s)%4===2; // 亚运会四年一届（2026 名古�
 const SPLIT_NAME={spring:'春季赛',summer:'夏季赛'};
 const ANNUAL_PTS={spring:{p1:100,p2:80,p34:60,p56:40,p78:20,p910:10,p1112:5,p1318:0},
  summer:{p1:120,p2:100,p34:80,p56:50,p78:30,p910:20,p1112:10,p1318:0}};
-const gameYear=s=>2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
+const gameYear=s=>{
+ // 历代/生涯选了时代：从该时代元年起算（2017 档 season1=2017）；现役缺省 2026
+ if(s&&s.era&&KPL_ERAS[s.era]&&KPL_ERAS[s.era].year){
+  const y0=parseInt(KPL_ERAS[s.era].year,10);
+  if(!isNaN(y0))return y0+((s.season||1)-1);
+ }
+ return 2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
+};
 const splitLabel=s=>gameYear(s)+' '+(SPLIT_NAME[s.split]||'春季赛');
 function leaguePayout(s,place){
  const map={'冠军':830,'亚军':500,'四强':250,'八强':133}; // 联盟版权/商务分润（真实对齐 ÷6）：按成绩加权、非平均分配
@@ -412,6 +419,9 @@ function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
  kjiaTick(s); // K甲下放倒计时：到期归队并成长
  kjiaDayTick(s); // K甲联赛：二队每 2 天一轮，下放选手真实出战
+ if(s.mode==='player'){tickPlayerBench(s);} // 选手板凳计数（自请租借/K甲的门槛）
+ loanOutTick(s); // 任何外租选手日结（选手自请 + 俱乐部外租共用）
+ natCampTick(s); // 亚运集训日结：征召选手在国家队合练涨状态
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
  if(s.transferWindow>0){
@@ -525,8 +535,8 @@ function newSeason(s){
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
  s.academyTrained=false;
  // 亚运会状态归零：仅当届有效（防 agDone 跨年残留导致下一届亚运年不触发）
- s.agDone=false;s.ag=null;s.natSquad=null;s.natCampIds=[];s.natAnnounced=false;
- s.players.forEach(p=>{p.natCamp=false;p.natFill=false;});
+ s.agDone=false;s.ag=null;s.natSquad=null;s.natCampIds=[];s.natAnnounced=false;s.natCampDay=0;
+ s.players.forEach(p=>{p.natCamp=false;p.natFill=false;p.natCampForm=0;});
  // 年龄增长：黄金期属性成长，下滑期按位置衰减，达到位置退役年龄离队
  const retired=[];
  s.players.forEach(p=>{
@@ -644,8 +654,13 @@ function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
- if(s.mode==='player')applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
+ if(s.mode==='player'){
+ applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
+ coachAutoSquad(s); // 俱乐部同样自动续约/补缺——选手只管自己，班底不能散架
+ }
  s.pick={};
+ // 亚运征召必须与经理模式同规则：夏赛开打前宣布并自动换下集训选手，否则选手/教练档永远打满夏季赛
+ if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s);
  aiTransferWindow(s); // AI 俱乐部生态照常演化
  s.aiRosters={};s.aiInj={};
  initGroups(s);

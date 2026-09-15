@@ -876,18 +876,19 @@ const TEAM_BONDS={
 
 /* ================= 对手战队（2025 KPL 全部 18 队，玩家加入后 17 支 AI） ================= */
 const AI_TEAMS=[
- {name:'常山UUG',icon:'猿',power:300},
- {name:'桐乡情久',icon:'灯',power:320},
- {name:'西安WE',icon:'狼',power:340},
- {name:'长沙TES.A',icon:'拳',power:360},
- {name:'上海RNG.M',icon:'狮',power:380},
- {name:'北京JDG',icon:'鹰',power:400},
- {name:'深圳DYG',icon:'影',power:420},
+ // power 与 CLUB_TEMPLATES.seed 对齐（aiTierOf 两表都读；错位会让 JDG/LGD 等队难度档与执教模板矛盾）
+ {name:'常山UUG',icon:'猿',power:390},
+ {name:'桐乡情久',icon:'灯',power:400},
+ {name:'西安WE',icon:'狼',power:410},
+ {name:'长沙TES.A',icon:'拳',power:450},
+ {name:'上海RNG.M',icon:'狮',power:420},
+ {name:'北京JDG',icon:'鹰',power:570},
+ {name:'深圳DYG',icon:'影',power:480},
  {name:'上海EDG.M',icon:'电',power:440},
  {name:'南京Hero久竞',icon:'影',power:460},
- {name:'佛山DRG',icon:'龙',power:480},
+ {name:'佛山DRG',icon:'龙',power:500},
  {name:'苏州KSG',icon:'虎',power:500},
- {name:'杭州LGD.NBW',icon:'狼',power:520},
+ {name:'杭州LGD.NBW',icon:'狼',power:430},
  {name:'广州TTG',icon:'环',power:540},
  {name:'济南RW侠',icon:'剑',power:560},
  {name:'北京WB',icon:'熊',power:580},
@@ -1144,7 +1145,7 @@ const SCENARIOS=[
  {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 90万/周，豪华阵容养不起，只能靠青训与规划',
   apply:s=>{s.wageCap=90;}},
  {id:'cursed',name:'无冠魔咒',hard:true,desc:'常年无冠、士气低落：全队属性 -4 · 初始士气 50，等你破咒',
-  apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));});}},
+  apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));p.morale=50;});}},
 ];
 function scenarioById(id){return SCENARIOS.find(s=>s.id===id)||SCENARIOS[0];}
 /* 核心出走：队内战力最高者被挖走（人已离队，不返还资金） */
@@ -1667,6 +1668,38 @@ function rosterAll(s){return s.players;}
 function rosterLineup(s){const set=new Set(s.lineup);return s.players.filter(p=>set.has(p.id));}
 function rosterBench(s){const set=new Set(s.lineup);return s.players.filter(p=>!set.has(p.id));}
 function myPlayer(s){return (s&&s.mode==='player'&&s.career)?s.players.find(p=>p.id===s.career.me)||null:null;} // 选手生涯：我扮演的选手
+/* 统一出战资格：伤停 / 亚运集训 / 未满18岁（KPL 注册规则）——青训晋升、首发、比赛共用 */
+const MATCH_MIN_AGE=18;
+function matchEligible(s,p){
+ if(!p)return false;
+ if((p.injury||0)>0)return false;
+ if(p.loanOut)return false; // 本人租借在外：不能为母队出场
+ if((p.kjia||0)>0)return false; // K甲锻炼中：在二队打，不占一队
+ if(typeof natCamping==='function'&&natCamping(s,p))return false;
+ if((p.age||0)<MATCH_MIN_AGE)return false;
+ return true;
+}
+function matchIneligibleReason(s,p){
+ if(!p)return '选手不存在';
+ if((p.injury||0)>0)return '伤停 '+p.injury+' 天';
+ if(p.loanOut)return '租借效力 '+(p.loanOut.team||'外队')+'（剩 '+(p.loanOut.days||0)+' 天）';
+ if((p.kjia||0)>0)return 'K甲锻炼中（剩 '+p.kjia+' 天）';
+ if(typeof natCamping==='function'&&natCamping(s,p))return '国家队集训中';
+ if((p.age||0)<MATCH_MIN_AGE)return '未满 '+MATCH_MIN_AGE+' 岁（KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场）';
+ return '';
+}
+/* 按位置择优排首发：只排「当前可出场」的人（伤停/集训/租借/K甲/未成年跳过）。
+ 开局、换队、转会落地、教练换队共用——避免各处复制粘贴又漏过滤。 */
+function buildBestLineup(s){
+ const byPos={};
+ (s.players||[]).forEach(p=>{if(!p)return;(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
+ const lineup=[];
+ POS_ORDER.forEach(pos=>{
+ const cand=(byPos[pos]||[]).filter(p=>matchEligible(s,p)).sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig));
+ if(cand[0])lineup.push(cand[0].id);
+ });
+ return lineup;
+}
 /* 夺冠阵容快照：冠军/亚军入册时记录当时的首发名单（荣誉室可回看"这冠是谁打下来的"） */
 function titleRoster(s){
  try{return rosterLineup(s).map(p=>p.name).join('、')||'—';}catch(e){return '';}
@@ -2287,7 +2320,8 @@ function aiTransferWindow(s){
  const releasedFrom={};
  teams.forEach(tn=>{
  const tier=aiTierOf(s,tn);
- const holdBias=tier==='elite'?0.25:tier==='weak'?-0.15:0; // 负=更容易放人
+ // 负=更愿留人（豪门），正=更愿放人（弱旅）——Math.random()<阈值 才判 badForm 放人
+  const holdBias=tier==='elite'?-0.25:tier==='weak'?0.15:0;
  map[tn]=map[tn].filter(pid=>{
  const def=defOf(s,pid);
  if(!def)return false;
@@ -2711,6 +2745,7 @@ function openSellNego(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，不能出售');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
  if(p.natFill){toast(p.name+' 是亚运集训期的借调顶位，归还青训前不能出售');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
@@ -2855,7 +2890,9 @@ function listPlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能挂牌');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，归队后再挂牌');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再挂牌');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训，不能挂牌');return;}
  if(s.lineup.includes(pid)){toast('请先将该选手移出首发');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已在挂牌名单');return;}
  if(!sellGuard(s))return; // 联盟规则：一个转会期卖出不得超过队内一半
@@ -3070,6 +3107,7 @@ function submitRenewNego(){
 function releasePlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p||p.contract>0){toast('该选手合同未到期');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，归队后再操作');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能放走');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作');return;}
  if(!confirmDanger('确定不续约并放走 '+p.name+'（总值 '+overall(p)+'）？\n选手将进入自由市场，其他队可直签。'))return;
@@ -3151,7 +3189,7 @@ function skipTransferWindow(s){
 }
 function autoDoTrain(s){
  if(s.fund<13)return;
- const p=s.players.filter(x=>x.injury<=0&&x.energy>=10).sort((a,b)=>overall(b)-overall(a))[0];
+ const p=s.players.filter(x=>!trainBlockedReason(s,x)&&x.energy>=10).sort((a,b)=>overall(b)-overall(a))[0];
  if(!p)return;
  const key=['lane','farm','team','mind'].sort((a,b)=>p.attrs[a]-p.attrs[b])[0]; // 练最弱属性
  doTrain(s,p.id,key);
@@ -3278,7 +3316,7 @@ function tickLoans(s){
  门禁模拟不结算真实比赛表现（val 只在 gamePerform 更新），不会触发本系统。 */
 const OFFER_TTL=3; // 报价有效期（天）
 function eligibleForOffer(s,p){
- if(!p||p.loan||p.kjia>0)return false;
+ if(!p||p.loan||p.loanOut||p.kjia>0)return false;
  if(typeof natCamping==='function'&&natCamping(s,p))return false; // 国家队集训缺席，不接 offer
  if((p.val||100)<112)return false; // 表现门槛：打出名堂（火热≥112%）
  return true;
@@ -3395,10 +3433,21 @@ function recordTransfer(s,dir,p,fee,team,note){
 <script>
 
 /* ================= 训练 ================= */
+/* 统一训练可用性：伤停/集训/租借在外/K甲 期间不能加练（经理/教练/选手同一套） */
+function trainBlockedReason(s,p){
+ if(!p)return '选手不存在';
+ if((p.injury||0)>0)return p.name+' 伤停中（'+p.injury+'天），先休息养伤';
+ if(p.loanOut)return p.name+' 租借在外，无法在母队加练';
+ if((p.kjia||0)>0)return p.name+' 正在 K甲锻炼，二队有自己的安排';
+ if(typeof natCamping==='function'&&natCamping(s,p))return p.name+' 国家队集训中，暂不能加练';
+ return '';
+}
 function doTrain(s,pid,attr){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
+ const blocked=trainBlockedReason(s,p);
+ if(blocked){toast(blocked);return;}
  if(p.energy<10){toast(`${p.name} 体力不足`);return;}
  if(s.fund<13){toast('资金不足（训练需 13万）');return;}
  s.fund-=13;p.energy-=10;s.trained=true;
@@ -3420,6 +3469,8 @@ function doHeroTrain(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
+ const blocked=trainBlockedReason(s,p);
+ if(blocked){toast(blocked);return;}
  if(p.energy<15){toast(`${p.name} 体力不足`);return;}
  if(s.fund<25){toast('资金不足（英雄特训需 25万）');return;}
  // 找熟练度最低的英雄提升
@@ -3513,7 +3564,7 @@ function promoteRookie(s,id){
  const r=(s.academy||[]).find(x=>x.id===id);
  if(!r)return;
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
- if(r.age<18){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 18 岁才能上场比赛——再等一年');return;}
+ if(r.age<MATCH_MIN_AGE){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛——再等一年');return;}
  if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
  s.academy=s.academy.filter(x=>x.id!==id);
  r.isRookie=false;
@@ -3536,6 +3587,9 @@ function convertPos(s,pid,newPos){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.pos===newPos){toast('已经是该位置');return;}
+ const blocked=trainBlockedReason(s,p);
+ if(blocked){toast(blocked+'，归队/伤愈后再改造');return;}
+ if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 未满 '+MATCH_MIN_AGE+' 岁，先专心成长');return;}
  const cost=50;
  if(s.fund<cost){toast('位置改造需要 '+cost+'万');return;}
  if(s.lineup.includes(pid)&&s.lineup.some(id=>{
@@ -3579,7 +3633,14 @@ const isAsiadYear=s=>gameYear(s)%4===2; // 亚运会四年一届（2026 名古�
 const SPLIT_NAME={spring:'春季赛',summer:'夏季赛'};
 const ANNUAL_PTS={spring:{p1:100,p2:80,p34:60,p56:40,p78:20,p910:10,p1112:5,p1318:0},
  summer:{p1:120,p2:100,p34:80,p56:50,p78:30,p910:20,p1112:10,p1318:0}};
-const gameYear=s=>2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
+const gameYear=s=>{
+ // 历代/生涯选了时代：从该时代元年起算（2017 档 season1=2017）；现役缺省 2026
+ if(s&&s.era&&KPL_ERAS[s.era]&&KPL_ERAS[s.era].year){
+  const y0=parseInt(KPL_ERAS[s.era].year,10);
+  if(!isNaN(y0))return y0+((s.season||1)-1);
+ }
+ return 2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
+};
 const splitLabel=s=>gameYear(s)+' '+(SPLIT_NAME[s.split]||'春季赛');
 function leaguePayout(s,place){
  const map={'冠军':830,'亚军':500,'四强':250,'八强':133}; // 联盟版权/商务分润（真实对齐 ÷6）：按成绩加权、非平均分配
@@ -3977,6 +4038,9 @@ function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
  kjiaTick(s); // K甲下放倒计时：到期归队并成长
  kjiaDayTick(s); // K甲联赛：二队每 2 天一轮，下放选手真实出战
+ if(s.mode==='player'){tickPlayerBench(s);} // 选手板凳计数（自请租借/K甲的门槛）
+ loanOutTick(s); // 任何外租选手日结（选手自请 + 俱乐部外租共用）
+ natCampTick(s); // 亚运集训日结：征召选手在国家队合练涨状态
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
  if(s.transferWindow>0){
@@ -4090,8 +4154,8 @@ function newSeason(s){
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
  s.academyTrained=false;
  // 亚运会状态归零：仅当届有效（防 agDone 跨年残留导致下一届亚运年不触发）
- s.agDone=false;s.ag=null;s.natSquad=null;s.natCampIds=[];s.natAnnounced=false;
- s.players.forEach(p=>{p.natCamp=false;p.natFill=false;});
+ s.agDone=false;s.ag=null;s.natSquad=null;s.natCampIds=[];s.natAnnounced=false;s.natCampDay=0;
+ s.players.forEach(p=>{p.natCamp=false;p.natFill=false;p.natCampForm=0;});
  // 年龄增长：黄金期属性成长，下滑期按位置衰减，达到位置退役年龄离队
  const retired=[];
  s.players.forEach(p=>{
@@ -4209,8 +4273,13 @@ function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
- if(s.mode==='player')applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
+ if(s.mode==='player'){
+ applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
+ coachAutoSquad(s); // 俱乐部同样自动续约/补缺——选手只管自己，班底不能散架
+ }
  s.pick={};
+ // 亚运征召必须与经理模式同规则：夏赛开打前宣布并自动换下集训选手，否则选手/教练档永远打满夏季赛
+ if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s);
  aiTransferWindow(s); // AI 俱乐部生态照常演化
  s.aiRosters={};s.aiInj={};
  initGroups(s);
@@ -4306,12 +4375,13 @@ function advanceCalendar(s){
 function natCamping(s,p){return !!(p&&p.natCamp&&!s.agDone&&s.split==='summer');}
 function announceNatCamp(s){
  s.natAnnounced=true;
+ s.natCampDay=0;
  const squad=agSelectSquad(s); // 全联盟各位置总值最高（实时阵容）
  const owned=new Set(s.players.map(p=>p.id));
  const mine=squad.filter(p=>owned.has(p.id));
  s.natSquad=squad.map(p=>({name:p.name,pos:p.pos,mine:owned.has(p.id),ovr:overall(p)}));
  s.natCampIds=mine.map(p=>p.id);
- mine.forEach(p=>{p.natCamp=true;});
+ mine.forEach(p=>{p.natCamp=true;p.natCampForm=0;});
  autoFillLineup(s); // 集训选手立刻换下首发（同位置替补择优顶上；无替补则位置空缺）
  if(mine.length){
  const names=mine.map(p=>p.name+'（'+POS[p.pos][0]+'）').join('、');
@@ -4321,6 +4391,37 @@ function announceNatCamp(s){
  }else{
  logEvent(s,' '+gameYear(s)+' 亚运年：中国代表队集结完毕（本队无选手入选，不受影响）');
  }
+}
+/* 集训日结：征召选手在国家队有球可打——状态/默契随集训累积，出征前热身赛再抬一档。
+ 与俱乐部训练互斥（natCamping 时 doTrain/playerTrain 已拦截），集训本身就是他们的「训练」。 */
+function natCampTick(s){
+ if(!s||s.split!=='summer'||s.agDone||!s.natAnnounced)return;
+ const camped=(s.players||[]).filter(p=>p.natCamp);
+ if(!camped.length)return;
+ s.natCampDay=(s.natCampDay||0)+1;
+ const day=s.natCampDay;
+ // 每 5 天一次集训汇报：属性小幅上探 + 集训状态（出征战力加成）
+ if(day%5===0){
+ camped.forEach(p=>{
+ const key=pick(['lane','farm','team','mind']);
+ p.attrs[key]=clamp(p.attrs[key]+rnd(0,1),40,99);
+ p.natCampForm=clamp((p.natCampForm||0)+1,0,5);
+ p.energy=clamp(p.energy+8,0,ENERGY_MAX);
+ p.morale=clamp(p.morale+2,20,100);
+ });
+ const names=camped.map(p=>p.name).join('、');
+ logEvent(s,' 国家队集训第'+day+'天：'+names+' 与国家队合练（状态 +'+camped[0].natCampForm+' · 小幅成长）——俱乐部只能靠替补顶住夏赛');
+ }
+ // 集训热身：开赛前最后阶段（第 20 天）打一场教学赛，状态再抬
+ if(day===20){
+ camped.forEach(p=>{p.natCampForm=clamp((p.natCampForm||0)+2,0,5);p.morale=clamp(p.morale+4,20,100);});
+ logEvent(s,' 国家队集训热身赛：中国代表队内部对抗收官，'+camped.map(p=>p.name).join('、')+' 状态拉满，即将出征亚运会');
+ }
+}
+/* 出征时把集训状态折算进中国队战力（setupAsianGames 读） */
+function natCampFormBonus(s,p){
+ if(!p||!p.natCamp)return 0;
+ return Math.round((p.natCampForm||0)*1.5); // 最高 +7.5 点有效战力刻度
 }
 /* 旧版「青训临时借调」机制已移除（2026-09：顶位一律用队内替补，没有就签人——买替补成为正式策略）。
  旧档中残留的 natFill 选手由 finishAsianGames 收官清理与禁售守卫兼容处理。 */
@@ -4345,10 +4446,11 @@ function myAnnualRank(s){ // 本队年度积分排名（从 1 起）；本队不
 }
 function boardKpiTarget(prevRank,s){ // 豪门保前4 / 争冠组保前8 / 其余保前12（进年总线）
  if(prevRank)return prevRank<=4?4:prevRank<=8?8:12;
- // 首年没有历史名次：按分组档位定目标（S组=争冠区→前4，A组→前8，B组=重建中→前12）
+ // 首年没有历史名次：按分组档位定目标。
+ // S/A/B=第一轮后重组分组；G1/G2/G3=开档抽签组（按真实战力蛇形）——两者都认，避免开档时全员「前12」。
  const inG=g=>(s&&s.groups&&s.groups[g]||[]).indexOf(s.teamName)>=0;
- if(inG('S'))return 4;
- if(inG('A'))return 8;
+ if(inG('S')||inG('G1'))return 4;
+ if(inG('A')||inG('G2'))return 8;
  return 12;
 }
 function setBoardKpi(s){
@@ -4485,7 +4587,7 @@ function dressingRoomCheck(s){
  const ref=ls.reduce((t,p)=>t+(p.apps||0),0)/ls.length; // 首发场均出场：替补的参照基准
  let unhappy=0;
  (s.players||[]).filter(p=>!s.lineup.includes(p.id)).forEach(p=>{
- if(p.retiring||p.loan||p.kjia>0)return; // 下放 K甲的选手在次级联赛有球可打，不按"坐板凳"记不满
+ if(p.retiring||p.loan||p.loanOut||p.kjia>0)return; // 下放 K甲/外租的选手有球可打，不按"坐板凳"记不满
  if(s.mode==='player'&&p.id===(s.career&&s.career.me))return; // 选手模式：你的不满由你自己写在生涯页（不重复记）
  const ovr=overall(p);
  if(ovr<DRESS_OVR_MIN)return;
@@ -4714,8 +4816,10 @@ function sendKjia(s,id){
  const p=(s.players||[]).find(x=>x.id===id);
  if(!p){toast('选手不在阵中');return;}
  if(p.kjia){toast(p.name+' 已在 K甲锻炼（剩余 '+p.kjia+' 天）');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，不能下放 K甲');return;}
  if(p.injury>0){toast(p.name+' 正在伤停，无法下放');return;}
  if(p.loan){toast(p.name+' 是租借选手，不能下放 K甲');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 国家队集训中，不能下放');return;}
  if((s.listed||[]).some(x=>x.id===id)){toast(p.name+' 挂牌中（已有报价会一并作废），请先撤牌再下放');return;}
  s.players=s.players.filter(x=>x.id!==id||true); // 保留在册（仅离开首发）
  if(s.captain===id){s.captain=null;logEvent(s,' 队长 '+p.name+' 下放 K甲，袖标摘除');}
@@ -4956,12 +5060,14 @@ function finishEWC(s){
  但麾下入选选手会带回来奖牌加成：人气/身价/士气 + 协会奖金，代价是年总体力下滑。 */
 const AG_NATIONS=[['韩国',470],['中国台北',432],['越南',427],['泰国',416],['日本',400],['沙特阿拉伯',385],['印度',365]];
 const AG_CITY='名古屋';
-function agSelectSquad(s){
+ function agSelectSquad(s){
  const pool=[];
  (s.players||[]).forEach(p=>{if(!p.loan&&!p.retiring)pool.push(p);});
  AI_TEAMS.forEach(t=>ensureAiRosters(s,t.name).forEach(p=>pool.push(p)));
- return POS_ORDER.map(pos=>pool.filter(p=>p.pos===pos).sort((a,b)=>overall(b)-overall(a))[0]).filter(Boolean);
-}
+ // 集训状态抬一档：合练久的优先入选同位置竞争（打破纯总值平手）
+ return POS_ORDER.map(pos=>pool.filter(p=>p.pos===pos)
+ .sort((a,b)=>(overall(b)+(natCampFormBonus(s,b)||0))-(overall(a)+(natCampFormBonus(s,a)||0)))[0]).filter(Boolean);
+ }
 function setupAsianGames(s){
  // 名单以夏初宣布的 natSquad 为准（征召后中途转会不换人）；残缺时按当前最强兜底补位
  const ownedIds=new Set((s.players||[]).map(p=>p.id));
@@ -4976,7 +5082,7 @@ function setupAsianGames(s){
  }).filter(Boolean);
  }
  if(squad.length<5)squad=agSelectSquad(s); // 兜底：名单残缺（退役/异常）按当前最强补
- const myPow=Math.round(squad.reduce((m,p)=>m+playerPower(p),0));
+ const myPow=Math.round(squad.reduce((m,p)=>m+playerPower(p)+(natCampFormBonus(s,p)||0),0));
  s.aiPower=s.aiPower||{};
  s.aiPower['中国代表队']=myPow;
  AG_NATIONS.forEach(([n,pw])=>{s.aiPower[n]=pw+(gameYear(s)-2026)*3;}); // 海外对手逐年小幅变强
@@ -5052,9 +5158,9 @@ function finishAsianGames(s){
  s.yearStages.push({ev:'亚运会',place:a.medal==='金牌'?'金牌':a.medal==='银牌'?'银牌':a.medal==='铜牌'?'铜牌':'无奖牌'});
  }
  s.agDone=true;
- // 集训归队：清除征召标记 + 撤掉青训临时借调（亚运后恢复完整阵容打年总）
- s.players.forEach(p=>{p.natCamp=false;});
- s.natCampIds=[];
+ // 集训归队：清除征召标记 + 集训状态 + 撤掉青训临时借调（亚运后恢复完整阵容打年总）
+ s.players.forEach(p=>{p.natCamp=false;p.natCampForm=0;});
+ s.natCampIds=[];s.natCampDay=0;
  const fills=s.players.filter(p=>p.natFill);
  if(fills.length){
  fills.forEach(p=>{const li=s.lineup.indexOf(p.id);if(li>=0)s.lineup.splice(li,1);});
@@ -5290,6 +5396,38 @@ function startCup(s){ // 杯赛 UI 入口（进行下一场 / 快进）
 <script>
 /* 选手/教练生涯引擎 + 年度回顾 + 退役名宿市场（season.js 机械拆出） */
 /* ================= 选手生涯 / 教练生涯（引擎侧） ================= */
+/* 选手主动申请转会：不再只能干等「身价≥112% 被动报价」——
+ 总值/身价/人气决定是否有人接盘；合同最后一年更主动，豪门更爱挖即战力。 */
+function playerRequestTransfer(s){
+ s=s||S;
+ if(!s||s.mode!=='player')return false;
+ const me=myPlayer(s);
+ if(!me)return false;
+ if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
+ if(s.career&&s.career.pendingMove){toast('已有转会意向（'+s.career.pendingMove.team+'），先打完当前赛段');return false;}
+ s.offers=s.offers||[];
+ if(s.offers.some(o=>o.pid===me.id)){toast('已有俱乐部在谈，先处理现有报价');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,me)){toast('国家队集训期间不能申请转会');return false;}
+ if(me.loanOut){toast('你已在外租借（剩 '+me.loanOut.days+' 天），归队后再申请');return false;}
+ if(me.kjia>0){toast('正在 K甲锻炼，归队后再申请');return false;}
+ // 接盘意愿：总值是硬门槛，身价/人气/合同年加成；表现低迷很难有人要
+ const ovr=overall(me),val=me.val||100,pop=me.popularity||0;
+ const lastYear=(me.contract||0)<=1;
+ const score=ovr+(val-100)*0.35+pop*0.15+(lastYear?6:0);
+ if(score<78){toast('暂时没有俱乐部愿意接盘（总值/表现再打高一点，或进入合同年）');return false;}
+ const fee=capFee(buyoutPrice(me)*(0.9+Math.random()*0.35));
+ const pool=AI_TEAMS.filter(t=>t.name!==s.teamName);
+ if(!pool.length)return false;
+ // 强队更爱挖高总值；弱队捡漏合同年
+ const pref=pool.slice().sort((a,b)=>(b.power||0)-(a.power||0));
+ const idx=ovr>=86?rnd(0,Math.min(3,pref.length-1)):rnd(0,pref.length-1);
+ const buyer=pref[idx]||pick(pool);
+ s.offers.push({pid:me.id,name:me.name,team:buyer.name,fee,expire:s.day+OFFER_TTL,status:'open'});
+ logEvent(s,' 经纪人官宣申请转会：'+buyer.name+' 迅速报价 '+fee+'万（生涯页 '+OFFER_TTL+' 天内答复）');
+ save();renderAll();
+ toast(buyer.name+' 对你报价 '+fee+'万！去「生涯」页答复');
+ return true;
+}
 function playerYearSettle(s){ // 选手模式年度结算：本赛季个人数据入册生涯履历
  const me=myPlayer(s);
  if(!me||!s.career)return;
@@ -5317,18 +5455,169 @@ function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地�
  me.team=tmpl.name;
  me.wage=Math.max(me.wage,Math.max(5,Math.round(mv.fee/50))); // 报价越高，薪资待遇越好
  me.contract=2;me.morale=clamp(me.morale+8,20,100);me.val=clamp((me.val||100)+4,70,150);
+ me.loanOut=null;me.kjia=0; // 转会落地：结束租借/K甲状态，直接进新东家竞争
+ if(s.career){s.career.benchDays=0;}
  s.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
- s.lineup=[]; // 新东家首发由教练按战力重排（coachPickLineup）
+ s.lineup=buildBestLineup(s); // 统一可出场过滤排满首发
+ s.pick={};
  s.seedPower=teamPower(s)||300;
  logEvent(s,' 转会完成：'+me.name+' 正式加盟 '+tmpl.name+'（转会费 '+mv.fee+'万 · 年薪 '+me.wage+'万/周）——首发位置要重新证明');
 }
-function coachAutoSquad(s){ // 教练模式：俱乐部自动续约与引援（你只管排人用兵）
+/* 选手板凳计数：健康可出场却连续坐板凳 → 可申请租借/K甲练级（生涯页出路面板） */
+function tickPlayerBench(s){
+ if(!s||s.mode!=='player'||!s.career)return;
+ const me=myPlayer(s);
+ if(!me)return;
+ const eligible=matchEligible(s,me)&&!me.loanOut&&(me.kjia||0)<=0;
+ const benched=eligible&&!s.lineup.includes(me.id);
+ if(benched){
+ const was=s.career.benchDays||0;
+ s.career.benchDays=was+1;
+ if(was===0)logEvent(s,' 你连续坐上替补席——经纪人建议：加练反超首发，或申请租借/K甲寻找出场时间');
+ else if(was===9)logEvent(s,' 板凳已坐 10 天：士气承压，认真考虑租借离队或下放 K甲吧');
+ if(s.career.benchDays>=3)me.morale=clamp(me.morale-1,20,100);
+ }else if(s.career.benchDays){
+ s.career.benchDays=0;
+ }
+}
+/* 选手自请租借：去缺人的 AI 队打 21 天主力（有球可打 + 归队带成长），母队自动补位 */
+function playerRequestLoanOut(s){
+ s=s||S;
+ if(!s||s.mode!=='player')return false;
+ const me=myPlayer(s);
+ if(!me)return false;
+ if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
+ if(s.career&&s.career.pendingMove){toast('已有转会意向，先处理完再说');return false;}
+ if(me.loanOut){toast('你已在外租借（剩 '+me.loanOut.days+' 天）');return false;}
+ if((me.kjia||0)>0){toast('正在 K甲锻炼，归队后再申请租借');return false;}
+ if(me.injury>0){toast('伤停中，先养伤');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,me)){toast('国家队集训期间不能租借');return false;}
+ if(s.lineup.includes(me.id)){toast('你目前是首发——先让教练把你换下，再申请租借');return false;}
+ if((s.career.benchDays||0)<3){toast('刚坐上板凳，再观察几天（连续替补 3 天后经纪人会出手）');return false;}
+ // 找缺同位置的 AI 队（优先弱旅：更愿意给出场）
+ const map=aiRosterDefMap(s);
+ const cands=Object.keys(map).filter(tn=>tn!==s.teamName).map(tn=>{
+ const roster=ensureAiRosters(s,tn)||[];
+ const has=roster.some(p=>p.pos===me.pos);
+ const pow=(s.aiPower&&s.aiPower[tn])||400;
+ return {tn,has,pow,need:!has||pow<460};
+ }).filter(x=>x.need).sort((a,b)=>a.pow-b.pow);
+ const dest=cands[0]?cands[0].tn:pick(AI_TEAMS.filter(t=>t.name!==s.teamName).map(t=>t.name));
+ if(!dest){toast('暂时没有俱乐部愿意接手租借');return false;}
+ if(!confirm('申请租借离队？\n将租借至 '+dest+' '+LOAN_DAYS+' 天寻求出场，母队会补同位置替补；归队时按表现带回成长。'))return false;
+ me.loanOut={team:dest,days:LOAN_DAYS,gain:0};
+ const li=s.lineup.indexOf(me.id);
+ if(li>=0)s.lineup.splice(li,1);
+ s.career.benchDays=0;
+ s.career.loanStint=(s.career.loanStint||0)+1;
+ autoFillLineup(s);
+ logEvent(s,' 租借达成：'+me.name+' 租借至 '+dest+' '+LOAN_DAYS+' 天——争取出场时间，归队后回 '+s.teamName);
+ save();renderAll();
+ toast('已租借至 '+dest+'！'+LOAN_DAYS+' 天后归队');
+ return true;
+}
+/* 选手自请下放 K甲：二队真实出战练级（复用 sendKjia，身份换成「我」） */
+function playerRequestKjia(s){
+ s=s||S;
+ if(!s||s.mode!=='player')return false;
+ const me=myPlayer(s);
+ if(!me)return false;
+ if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
+ if(s.career&&s.career.pendingMove){toast('已有转会意向，先处理完再说');return false;}
+ if(me.loanOut){toast('你已在外租借');return false;}
+ if((me.kjia||0)>0){toast('已在 K甲锻炼');return false;}
+ if(me.injury>0){toast('伤停中，先养伤');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,me)){toast('国家队集训期间不能下放');return false;}
+ if(s.lineup.includes(me.id)){toast('你目前是首发——先让教练把你换下，再申请下放');return false;}
+ if(!confirm('申请下放 K甲？\n加入二队征战次级联赛 '+KJIA_DAYS+' 天，真实出战积累数据，归队时带属性成长。'))return false;
+ sendKjia(s,me.id);
+ s.career.benchDays=0;
+ s.career.kjiaStint=(s.career.kjiaStint||0)+1;
+ save();renderAll();
+ return true;
+}
+/* 租借日结：任何 loanOut 选手（选手自请 / 俱乐部外租）——出场表现→成长，到期归队争首发 */
+function loanOutTick(s){
+ if(!s)return;
+ (s.players||[]).slice().forEach(p=>{
+ if(!p||!p.loanOut)return;
+ p.loanOut.days--;
+ // 每 3 天一场：有球可打（模拟租借队首发）
+ if(p.loanOut.days%3===0||p.loanOut.days>=LOAN_DAYS-1){
+ p.apps=(p.apps||0)+1;
+ p.caps=(p.caps||0)+1;
+ const k=rnd(2,8),d=rnd(1,5),a=rnd(2,9);
+ p.kTotal=(p.kTotal||0)+k;p.dTotal=(p.dTotal||0)+d;p.aTotal=(p.aTotal||0)+a;
+ p.energy=clamp(p.energy-8,0,ENERGY_MAX);
+ p.val=clamp((p.val||100)+rnd(0,2),70,150);
+ if(Math.random()<0.35){
+ const key=pick(['lane','farm','team','mind']);
+ p.attrs[key]=clamp(p.attrs[key]+1,40,99);
+ p.loanOut.gain=(p.loanOut.gain||0)+1;
+ }
+ logEvent(s,' 租借出场：'+p.name+' 代表 '+p.loanOut.team+' 出战（'+k+'/'+d+'/'+a+'）');
+ }
+ if(p.loanOut.days<=0){
+ const team=p.loanOut.team,gain=p.loanOut.gain||0;
+ p.loanOut=null;
+ p.morale=clamp(p.morale+6,20,100);
+ if(gain){
+ const key=pick(['lane','farm','team','mind']);
+ p.attrs[key]=clamp(p.attrs[key]+rnd(1,2),40,99);
+ }
+ logEvent(s,' 租借归队：'+p.name+' 结束 '+team+' 租借回到 '+s.teamName+'（出场时间换回成长 +'+gain+(gain?'+归队奖励':'')+'）——重新竞争首发');
+ if(s.mode==='player')coachPickLineup(s);
+ autoFillLineup(s);
+ }
+ });
+}
+/* 俱乐部外租（教练/经理）：板凳上有潜力但没出场的选手，租去缺人的队打主力练级。
+ 与选手自请租借同一套 loanOut 状态/日结——三个身份共用同一世界规则，只是发起人不同。 */
+function clubLoanOutPlayer(s,pid){
+ s=s||S;
+ if(!s||s.mode==='player'){toast('选手生涯请在「生涯」页自行申请租借');return false;}
+ const p=(s.players||[]).find(x=>x.id===pid);
+ if(!p)return false;
+ if(s.lineup.includes(pid)){toast(p.name+' 是首发——先换下再外租');return false;}
+ if(p.loan){toast(p.name+' 是租入选手，不能外租');return false;}
+ if(p.loanOut){toast(p.name+' 已在外租借');return false;}
+ if((p.kjia||0)>0){toast(p.name+' 正在 K甲，归队后再外租');return false;}
+ if(p.injury>0){toast(p.name+' 伤停中，不能外租');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 国家队集训中，不能外租');return false;}
+ if((s.listed||[]).some(x=>x.id===pid)){toast(p.name+' 挂牌中，请先撤牌');return false;}
+ if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 未满 '+MATCH_MIN_AGE+' 岁，先在青训/一队跟训');return false;}
+ const map=aiRosterDefMap(s);
+ const cands=Object.keys(map).filter(tn=>tn!==s.teamName).map(tn=>{
+ const roster=ensureAiRosters(s,tn)||[];
+ const has=roster.some(x=>x.pos===p.pos);
+ const pow=(s.aiPower&&s.aiPower[tn])||400;
+ return {tn,has,pow,need:!has||pow<470};
+ }).filter(x=>x.need).sort((a,b)=>a.pow-b.pow);
+ const dest=cands[0]?cands[0].tn:pick(AI_TEAMS.filter(t=>t.name!==s.teamName).map(t=>t.name));
+ if(!dest){toast('暂无俱乐部愿意接手租借');return false;}
+ const fee=Math.round(loanRent(p)); // 租入方付租金：俱乐部小赚，选手换出场
+ if(!confirm('将 '+p.name+' 外租至 '+dest+' '+LOAN_DAYS+' 天？\n租金 +'+fee+'万；选手在那边打主力练级，归队时带回成长。'))return false;
+ s.fund+=fee;
+ p.loanOut={team:dest,days:LOAN_DAYS,gain:0};
+ const li=s.lineup.indexOf(pid);
+ if(li>=0)s.lineup.splice(li,1);
+ autoFillLineup(s);
+ logEvent(s,' 外租练级：'+p.name+' 租借至 '+dest+' '+LOAN_DAYS+' 天（租金 +'+fee+'万）——教练组认为他需要出场时间');
+ save();renderAll();
+ toast(p.name+' 已外租 '+dest);
+ return true;
+}
+function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引援（你只管竞技）
  (s.expiring||[]).slice().forEach(pid=>{
  const p=s.players.find(x=>x.id===pid);
- if(p&&!p.loan)p.contract=(p.contract||0)+1; // 俱乐部统一续约一年
+ if(!p||p.loan)return;
+ if(s.mode==='player'&&s.career&&pid===s.career.me)return; // 你本人的合同由选手分支单独谈/续
+ p.contract=(p.contract||0)+1; // 俱乐部统一续约一年
  });
  s.expiring=[];
- let need=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos));
+ // 缺位判定看「现在能不能打」：伤停/集训/租借/未成年/K甲不算可用首发
+ const playable=p=>p&&!p.loan&&!p.loanOut&&(p.kjia||0)<=0&&matchEligible(s,p);
+ let need=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos&&playable(p)));
  const u=new Set(s.players.map(p=>p.name));
  let g=0;
  while((s.players.length<7||need.length)&&g++<10){
@@ -5337,8 +5626,9 @@ function coachAutoSquad(s){ // 教练模式：俱乐部自动续约与引援（�
  const p=genPlayer(def);
  p.contract=2;
  s.players.push(p);
- logEvent(s,' 俱乐部引援：签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
- if(need.length&&s.players.some(x=>x.pos===need[0]))need.shift();
+ u.add(p.name);
+ logEvent(s,(s.mode==='player'?' 俱乐部运作：':' 俱乐部引援：')+'签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
+ if(need.length&&s.players.some(x=>x.pos===need[0]&&playable(x)))need.shift();
  }
 }
 function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；接受=换队执教，履历入册）
@@ -5380,14 +5670,7 @@ function playerToCoach(s){
  s.career.coachPath=false; // 邀请已消费（防重复点）
  // 退役后名单缺位：补齐至可开赛（不止「全空」才补——少一个位置也会卡首发出场）
  if((s.players||[]).length<5||POS_ORDER.some(pos=>!s.players.some(p=>p.pos===pos)))coachAutoSquad(s);
- const byPos={};
- s.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
- const lineup=[];
- POS_ORDER.forEach(pos=>{
- const cand=byPos[pos];
- if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}
- });
- if(lineup.length)s.lineup=lineup;
+ s.lineup=buildBestLineup(s);
  s.seedPower=teamPower(s)||s.seedPower||300;
  if(!s.board.kpi)setBoardKpi(s); // 中途转型：补发本赛季 KPI，避免董事会面板空目标
  logEvent(s,' 退役转教练：'+L.name+' 出任 '+s.teamName+' 主教练（评分 '+rating+' · 全队战力+'+bonus+'%）——执教合同 2 年，用另一种方式留在赛场');
@@ -5981,7 +6264,7 @@ function expandSteps(sr,isPeak){
 }
 /* 首发缺位时从替补席同位置自动递补（退役/转会后防呆）；伤停/国家队集训必须休息：
  无健康替补时位置空缺，由 lineupNoGo 在开赛入口统一拦截（签替补/提拔青训是玩家决策） */
-function natBusy(s,p){return !!(p&&(p.injury>0||(typeof natCamping==='function'&&natCamping(s,p))));}
+function natBusy(s,p){return !matchEligible(s,p);} // 统一不可出战：伤停/集训/未满18岁
 /* 当前首发里无法出战的位置（无人/伤停/集训）——openBP 与 autoPlayNext 共用同一判定 */
 function lineupNoGo(s){
  return POS_ORDER.filter(pos=>{
@@ -5992,25 +6275,26 @@ function lineupNoGo(s){
 function noGoDetail(s,noGo){
  return noGo.map(pos=>{
  const p=rosterLineup(s).find(x=>x.pos===pos);
- return POS[pos][0]+(p?(p.natCamp?'（'+p.name+' 国家队集训）':'（'+p.name+' 伤停'+p.injury+'天）'):'（无人）');
+ return POS[pos][0]+(p?('（'+p.name+' '+(matchIneligibleReason(s,p)||'无法出战')+'）'):'（无人）');
  }).join('、');
 }
 function autoFillLineup(s){
  POS_ORDER.forEach(pos=>{
  const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
  const inPos=cur.find(p=>p.pos===pos);
- if(inPos&&natBusy(s,inPos)){ // 伤员/集训自动下场
+ if(inPos&&natBusy(s,inPos)){ // 伤员/集训/未成年自动下场
  const cands=s.players.filter(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p))
  .sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig)); // 替补择优上场
  const fit=cands[0];
+ const why=matchIneligibleReason(s,inPos)||'无法出战';
  if(fit){
  s.lineup[s.lineup.indexOf(inPos.id)]=fit.id;
- logEvent(s,' '+inPos.name+(inPos.natCamp?' 国家队集训中，缺席夏季赛；':' 伤停（还剩'+inPos.injury+'天），')+fit.name+' 顶替首发（'+POS[pos][0]+'）');
+ logEvent(s,' '+inPos.name+'（'+why+'）'+fit.name+' 顶替首发（'+POS[pos][0]+'）');
  return;
  }
- if(inPos.natCamp){ // 集训缺席且无替补：强制下场留空位（开赛拦截——签替补是正式策略，不再凭空借调青训）
+ if(inPos.natCamp||(inPos.age||0)<MATCH_MIN_AGE){ // 集训/未成年且无替补：强制下场留空位
  s.lineup.splice(s.lineup.indexOf(inPos.id),1);
- logEvent(s,' '+inPos.name+' 国家队集训中且无替补可顶——'+POS[pos][0]+'空缺！转会市场签一名替补，否则该位置无法出战');
+ logEvent(s,' '+inPos.name+' '+why+'且无替补可顶——'+POS[pos][0]+'空缺！转会市场签一名替补，否则该位置无法出战');
  return;
  }
  // 伤停无替补：留在首发（伤员自动下场后会无人可换），留给 openBP 拦截
@@ -6684,13 +6968,18 @@ function gamePerform(winner){
 /* ================= 选手生涯：比赛引擎（教练指挥，你专注表现） =================
  首发由「教练」按同位置战力每场评定；系列赛自动打完（复用文字直播/个人 KDA/MVP 结算），
  你在结算弹窗看直播和「本场你的数据」。季后赛/杯赛同理自动推进。 */
-function coachPickLineup(s){ // 教练排首发：同位置健康者中取战力更强者（体力/士气实时影响评定）
+function coachPickLineup(s){ // 教练排首发：同位置健康者中取战力更强者（体力/士气实时计入）
  if(s.mode!=='player')return;
  const me=myPlayer(s);
  if(!me)return;
- if(me.injury>0){if(!s._meOutNoted){logEvent(s,' 伤停报告：'+me.name+'（'+me.injury+' 天恢复）本场缺席');s._meOutNoted=true;}return;}
+ // 统一出战资格：伤停/亚运集训/未满18岁均不可进首发（与青训晋升、swapPlayer 同规则）
+ if(!matchEligible(s,me)){
+ if(me.injury>0&&!s._meOutNoted){logEvent(s,' 伤停报告：'+me.name+'（'+me.injury+' 天恢复）本场缺席');s._meOutNoted=true;}
+ if(s.lineup.includes(me.id))s.lineup.splice(s.lineup.indexOf(me.id),1);
+ return;
+ }
  s._meOutNoted=false;
- const rival=s.players.filter(p=>p.pos===me.pos&&p.id!==me.id&&p.injury<=0)
+ const rival=s.players.filter(p=>p.pos===me.pos&&p.id!==me.id&&matchEligible(s,p))
  .sort((a,b)=>playerPower(b)-playerPower(a))[0];
  const li=s.lineup.indexOf(me.id);
  if(!rival){if(li<0)s.lineup.push(me.id);return;}
@@ -6702,6 +6991,7 @@ function coachPickLineup(s){ // 教练排首发：同位置健康者中取战力
 }
 function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 series 形状对象（finishSeries 可直接消费）
  coachPickLineup(s);
+ autoFillLineup(s); // 我方不可出战时同位置替补顶上；转会/伤停/集训后不留空位
  resetOppEnergy(s,opName);
  const sr={used:[],usedOpp:[],mw:0,ow:0,max:bo,logs:[],myName:s.teamName,opName,side:firstSide(s,'regular',opName)};
  const need=Math.ceil(bo/2);
@@ -6728,10 +7018,19 @@ function startPlayerMatch(){ // 常规赛入口（选手模式：代替 startMat
  if(S.career&&S.career.retired){toast('职业生涯已退役');return;}
  const m=S.schedule[S.matchIdx];
  if(!m){toast('赛程已结束');return;}
+ const me=myPlayer(S);
+ if(me&&me.loanOut)logEvent(S,' 你正租借效力 '+me.loanOut.team+'（剩 '+me.loanOut.days+' 天），本场由母队友军出战');
+ else if(me&&(me.kjia||0)>0)logEvent(S,' 你正在 K甲锻炼（剩 '+me.kjia+' 天），一场比赛由队友顶上');
+ else if(me&&!matchEligible(S,me)){
+ const why=matchIneligibleReason(S,me);
+ if((me.age||0)<MATCH_MIN_AGE)logEvent(S,' 注册规则：'+me.name+'（'+me.age+'岁）未满 '+MATCH_MIN_AGE+' 岁，本场不可登场——教练会安排其他选手顶上');
+ else logEvent(S,' '+me.name+' '+why+'，本场由队友顶上');
+ }
  const sr=playerAutoSeries(S,m.opp,KPL.BO5);
  sr.stage='regular';
  S.series=sr;
  finishSeries(sr.mw>sr.ow);
+ tickPlayerBench(S); // 赛后同步板凳计数（打上首发会清零，连续替补累加）
 }
 
 function startMatch(){
@@ -7184,7 +7483,7 @@ function pcard(p,extra){
  // 出场统计 + 更衣室/K甲状态（apps 由 finishSeries 累计；transferRequest 由更衣室年检标记）
  // K甲表现：下放期间的出场与场均 KDA（kjiaStats 由二队每场结算累计）
  const kjStat=(p.kjiaStats&&p.kjiaStats.apps)?` · K甲${p.kjiaStats.apps}场 场均${Math.round(p.kjiaStats.k/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.d/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.a/p.kjiaStats.apps*10)/10}`:'';
- const appsHtml=(p.apps||p.transferRequest||p.kjia>0)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?` <span style="color:var(--cyan)">· K甲锻炼剩 ${p.kjia} 天${kjStat}</span>`:''}</div>`:'';
+ const appsHtml=(p.apps||p.transferRequest||p.kjia>0||p.loanOut)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?` <span style="color:var(--cyan)">· K甲锻炼剩 ${p.kjia} 天${kjStat}</span>`:''}${p.loanOut?` <span style="color:var(--cyan)">· 租借 ${p.loanOut.team} 剩 ${p.loanOut.days} 天</span>`:''}</div>`:'';
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
  const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
@@ -7424,7 +7723,7 @@ function renderClub(){
  if(S.mode==='coach'){ // 教练模式：执教合同 + 履历 + 豪门邀约
  const d=S.coachDeal||{years:0,honors:[],log:[]};
  html+=`<div class="panel"><h3>执教履历 <span class="tag">现合同 ${d.years||0} 年 · ${d.honors.length||0} 冠</span></h3>
- <div class="hint" style="margin-bottom:6px">只管竞技：转会与资金由俱乐部打理（自动引援/续约），你的 KPI 是带队成绩——信任度耗尽即解约</div>
+ <div class="hint" style="margin-bottom:6px">你管竞技：首发/战术/训练/外租练级/K甲；俱乐部管钱与自动引援续约。KPI 是带队成绩——信任度耗尽即解约</div>
  ${(d.log||[]).slice(0,4).map(l=>`<div class="hint">${l.year} · ${l.note||l.team||''}</div>`).join('')}
  ${(S.coachOffer)?`<div class="event-card" style="margin-top:8px"><div class="et">豪门邀约：${S.coachOffer.team} 邀请你执教</div>
  <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm primary" onclick="respondCoachOffer(true)">接受（换队执教）</button><button class="btn sm" onclick="respondCoachOffer(false)">婉拒（留任）</button></div></div>`:''}
@@ -7612,9 +7911,19 @@ function renderClub(){
  <div class="hint" style="margin-bottom:8px">上一年的成绩曲线、转会记录、董事会评价与关键战役已归档。</div>
  <button class="btn gold" onclick="showYearReview(0)"> 查看 ${S._reviewNew} 年度回顾</button></div>`;
  }
- // 赛中转会报价：留人/放人/抬价三选（引擎在 transfer.js；报价 3 天过期）——选手模式在生涯页处理自己的报价
- if(S.mode==='manager'&&(S.offers||[]).length){
+ // 亚运集训：本队有人被征召时，俱乐部/教练页展示名单与状态（选手模式在生涯页）
+ if((S.mode==='manager'||S.mode==='coach')&&S.natAnnounced&&!S.agDone&&S.split==='summer'){
+ const mine=(S.players||[]).filter(p=>p.natCamp);
+ if(mine.length){
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训 <span class="tag" style="color:var(--gold)">第 ${S.natCampDay||0} 天 · 状态 ${mine[0].natCampForm||0}/5</span></h3>
+ <div class="hint">${mine.map(p=>p.name+'（'+POS[p.pos][0]+' · 状态'+(p.natCampForm||0)+'）').join('、')} 随中国代表队合练，缺席整个夏季赛。集训会涨状态，出征战力上浮；你这边靠替补/外租/签人顶住。</div>
+ </div>`;
+ }
+ }
+ // 赛中转会报价：留人/放人/抬价三选——经理管钱与名单，教练管战力与轮换，选手只处理自己的（生涯页）
+ if((S.mode==='manager'||S.mode==='coach')&&(S.offers||[]).length){
  html+=`<div class="panel"><h3>赛中转会报价 <span class="tag">${S.offers.length} 份待答复 · ${OFFER_TTL} 天内有效 · 过期作废</span></h3>
+ <div class="hint" style="margin-bottom:8px">${S.mode==='coach'?'转会资金由俱乐部打理，但阵容得失是你的事：留人保战力，放人换预算。':'留人/放人/抬价三选：钱、名单、更衣室一起权衡。'}</div>
  ${S.offers.map((o,i)=>{
  const p=S.players.find(x=>x.id===o.pid);
  const meta=p?`${POS[p.pos][1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 周薪 ${p.wage}万`:'';
@@ -7802,7 +8111,16 @@ function renderLineup(){
  return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div><button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`);
  }).join('')}</div></div>`;
  html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
- ${bn.length?`<div class="grid g4">${bn.map(p=>pcard(p,`${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}<button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${p.kjia>0?'disabled':''}>↑ 放入首发</button><button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')"> 出售（谈判）</button><button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 30 天：不占首发、不计出场，归队时属性成长" ${p.kjia>0?'disabled':''}> 下放 K甲</button>`)).join('')}</div>`:'<div class="hint">暂无替补，快去转会市场谈判补充阵容！</div>'}
+ <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长。</div>
+ ${bn.length?`<div class="grid g4">${bn.map(p=>{
+ const lo=p.loanOut;
+ const busy=(p.kjia||0)>0||!!lo||p.injury>0||(typeof natCamping==='function'&&natCamping(S,p));
+ return pcard(p,`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}
+ <button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${busy?'disabled':''}>↑ 放入首发</button>
+ ${S.mode==='manager'?`<button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')" ${busy?'disabled':''}> 出售（谈判）</button>`:''}
+ <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长" ${busy?'disabled':''}> 下放 K甲</button>
+ <button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="外租 ${LOAN_DAYS} 天：去缺人的俱乐部打主力，租金入账，归队带成长" ${busy?'disabled':''}> 外租练级</button>`);
+ }).join('')}</div>`:'<div class="hint">暂无替补——转会市场签人，或等俱乐部自动引援</div>'}
  </div>`;
  // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算
  {
@@ -7834,8 +8152,7 @@ function swapPlayer(pid){
  const p=S.players.find(x=>x.id===pid);
  const inLineup=S.lineup.includes(pid);
  if(!inLineup&&p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），暂不能进入首发');return;}
- if(!inLineup&&p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），不能进入首发');return;}
- if(!inLineup&&typeof natCamping==='function'&&natCamping(S,p)){toast(p.name+' 正在国家队集训（缺席整个夏季赛），不能进入首发');return;}
+ if(!inLineup&&!matchEligible(S,p)){toast(p.name+' '+matchIneligibleReason(S,p)+'，不能进入首发');return;}
  if(inLineup){
  // 有同位置替补则对位换人；没有也允许直接下场（位置空缺）——否则满员时卖不掉、工资帽腾不出，买不了新人的死锁
  const bn=rosterBench(S).filter(x=>x.pos===p.pos&&x.injury<=0); // 伤员不可顶替上场
@@ -8029,15 +8346,15 @@ function renderTrain(){
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
  ${sortChips('train')}
  ${S.players.length?`<div class="grid g4">${applySortPref('train',S.players).map(p=>pcard(p,`<div class="g2" style="gap:6px">
- ${TRAIN_ITEMS.map(t=>`<button class="btn sm" onclick="doTrain(S,'${p.id}','${t.k}')" ${S.trained||p.energy<10?'disabled':''}>${t.n}+1~2</button>`).join('')}
- <button class="btn sm gold" onclick="doHeroTrain(S,'${p.id}')" ${S.trained||p.energy<15||(p.heroPool||[]).length>=80?'disabled':''}>英雄特训 ${(p.heroPool||[]).length}/80</button>
+ ${TRAIN_ITEMS.map(t=>`<button class="btn sm" onclick="doTrain(S,'${p.id}','${t.k}')" ${S.trained||p.energy<10||trainBlockedReason(S,p)?'disabled':''}>${t.n}+1~2</button>`).join('')}
+ <button class="btn sm gold" onclick="doHeroTrain(S,'${p.id}')" ${S.trained||p.energy<15||(p.heroPool||[]).length>=80||trainBlockedReason(S,p)?'disabled':''}>英雄特训 ${(p.heroPool||[]).length}/80</button>
  </div>`)).join('')}</div>`:'<div class="hint">没有选手可训练</div>'}
  </div>`;
  // 青训营
  const aca=S.academy||[];
  const acaHtml=aca.map(r=>{
  const total=['lane','farm','team','mind'].reduce((t,k)=>t+r.attrs[k],0);
- const ready=total>=300,adult=r.age>=18;
+ const ready=total>=300,adult=r.age>=MATCH_MIN_AGE;
  return `<div class="pcard" style="border-color:${ready&&adult?'var(--green)':'var(--line)'}">
  <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
  <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 周薪${r.wage}万</div>
@@ -8048,7 +8365,7 @@ function renderTrain(){
  <div class="p-foot"><span>四维 <b class="${ready?'green':'gold'}">${total}/300</b></span><span> ${r.sig}</span></div>
  <div style="display:flex;gap:6px;margin-top:8px">
  <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 17万</button>
- <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满18岁':'未达标')}</button>
+ <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满'+MATCH_MIN_AGE+'岁':'未达标')}</button>
  </div>
  <div class="hint" style="margin-top:6px">${S.academyTrained?'今日已培养过青训':'培养：潜力越高成长越快'}</div>
  </div>`;
@@ -8574,17 +8891,21 @@ function renderCareer(){
  <div class="dim" style="font-size:12px">${crest(S.icon,S.teamName,18)} ${S.teamName} · 合同 ${me.contract>0?me.contract+' 年':'到期'} · 周薪 ${me.wage}万 · 总值 <b style="color:${ovrColor(overall(me))}">${overall(me)}</b> · 身价系数 ${me.val||100}%${me.injury>0?' · <span class="red">伤停 '+me.injury+' 天</span>':''}</div></div>
  <div style="margin-left:auto;text-align:right"><div class="gold" style="font-size:16px;font-weight:800">${c.titles||0} 冠 · ${c.fmvp||0} FMVP · ${c.allstar||0} 一阵</div><div class="dim" style="font-size:11px">生涯荣誉</div></div>
  </div></div>`;
- // 成长 + 每日行动
- html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':'每天一项'}</span></h3>
+ // 成长 + 每日行动（伤停/未满18岁不可加练；休息仍可回体力并加速养伤）
+ const trainLock=S.trained||me.injury>0;
+ const canTrain=!trainLock&&me.energy>=10;
+ const canHero=!trainLock&&me.energy>=15;
+ const underAge=(me.age||0)<MATCH_MIN_AGE;
+ html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':me.injury>0?'伤停中 · 先养伤':'每天一项'}</span></h3>
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(me,84)}
- <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
+ <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：可加练成长，满 '+MATCH_MIN_AGE+' 岁才能代表俱乐部出场</span>':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
- <button class="btn sm" onclick="playerTrain('lane')" ${S.trained||me.energy<10?'disabled':''}>练对线 +1~2</button>
- <button class="btn sm" onclick="playerTrain('farm')" ${S.trained||me.energy<10?'disabled':''}>练运营 +1~2</button>
- <button class="btn sm" onclick="playerTrain('team')" ${S.trained||me.energy<10?'disabled':''}>练团战 +1~2</button>
- <button class="btn sm" onclick="playerTrain('mind')" ${S.trained||me.energy<10?'disabled':''}>练心态 +1~2</button>
- <button class="btn sm gold" onclick="playerHeroTrain()" ${S.trained||me.energy<15?'disabled':''}>英雄特训（练绝活）</button>
- <button class="btn sm" onclick="playerRest()" ${S.trained?'disabled':''}>休息（体力+55）</button>
+ <button class="btn sm" onclick="playerTrain('lane')" ${canTrain?'':'disabled'}>练对线 +1~2</button>
+ <button class="btn sm" onclick="playerTrain('farm')" ${canTrain?'':'disabled'}>练运营 +1~2</button>
+ <button class="btn sm" onclick="playerTrain('team')" ${canTrain?'':'disabled'}>练团战 +1~2</button>
+ <button class="btn sm" onclick="playerTrain('mind')" ${canTrain?'':'disabled'}>练心态 +1~2</button>
+ <button class="btn sm gold" onclick="playerHeroTrain()" ${canHero?'':'disabled'}>英雄特训（练绝活）</button>
+ <button class="btn sm" onclick="playerRest()" ${S.trained?'disabled':''}>休息（体力+55 · 养伤）</button>
  </div>
  <div class="hint mt8">战力↑ = 首发竞争力↑；英雄特训把一个熟练英雄练成绝活（战力 +8%）。体力不足时教练不会让你进首发。</div>
  </div>`;
@@ -8595,19 +8916,42 @@ function renderCareer(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><b>${rival.name}</b>${starter?'':' <span class="gold">目前压你</span>'}</span></div></div>
  <div class="hint mt8">每场比赛前教练按双方当前战力（体力/士气/伤停实时计入）决定首发——反超即夺回位置。</div>
  </div>`;
- // 转会报价（只有自己的）
- if(myOffers.length){
- html+=`<div class="panel"><h3>转会报价 <span class="tag">${myOffers.length} 份 · ${OFFER_TTL} 天内有效</span></h3>
- ${myOffers.map(o=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+ // 板凳出路：连续替补可自请租借/K甲（有球可打 + 归队成长）
+ const benchDays=c.benchDays||0;
+ if(natCamping(S,me)){
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训中 <span class="tag" style="color:var(--gold)">状态 ${me.natCampForm||0}/5</span></h3>
+ <div class="hint">你入选中国代表队，整个夏季赛随国家队合练——俱乐部比赛由队友顶上。集训每 5 天汇报一次成长，开赛前还有热身赛；出征战力随集训状态上浮。亚运收官后归队备战年总。</div>
+ <div class="hint mt8">国家队名单：${(S.natSquad||[]).filter(x=>x.mine).map(x=>x.name+'（'+POS[x.pos][0]+'）').join('、')||'—'}</div>
+ </div>`;
+ }else if(me.loanOut){
+ html+=`<div class="panel" style="border-color:var(--cyan)"><h3>租借中 <span class="tag">剩 ${me.loanOut.days} 天</span></h3>
+ <div class="hint">你正租借效力 <b>${me.loanOut.team}</b>——争取出场时间，归队时按表现带回成长。母队由教练组打理。</div></div>`;
+ }else if((me.kjia||0)>0){
+ html+=`<div class="panel" style="border-color:var(--cyan)"><h3>K甲锻炼中 <span class="tag">剩 ${me.kjia} 天</span></h3>
+ <div class="hint">你在二队征战次级联赛（「二队」页可查表现）。归队时结算属性成长，然后重新竞争首发。</div></div>`;
+ }else if(!starter&&!c.retired&&(me.age||0)>=MATCH_MIN_AGE&&me.injury<=0&&!natCamping(S,me)){
+ const canOut=benchDays>=3;
+ html+=`<div class="panel"><h3>板凳出路 <span class="tag">${benchDays?('连续替补 '+benchDays+' 天'):'暂未首发'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">长期没球打会伤士气。连续替补满 3 天后，可向经纪人申请<b>租借离队</b>（去缺人的俱乐部打 ${LOAN_DAYS} 天主力）或<b>下放 K甲</b>（二队练级 ${KJIA_DAYS} 天）——两条路都带成长，归队再争首发。</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap">
+ <button class="btn sm gold" onclick="playerRequestLoanOut(S)" ${canOut?'':'disabled'}> 租借离队（${LOAN_DAYS}天）</button>
+ <button class="btn sm" onclick="playerRequestKjia(S)"> 下放 K甲（${KJIA_DAYS}天练级）</button>
+ </div>
+ ${canOut?'':'<div class="hint mt8">租借需连续替补满 3 天（K甲可随时申请）</div>'}
+ </div>`;
+ }
+ // 转会报价（只有自己的）+ 主动申请转会
+ const canReq=!c.pendingMove&&!myOffers.length&&!me.loanOut&&(me.kjia||0)<=0&&!natCamping(S,me)&&!c.retired;
+ html+=`<div class="panel"><h3>转会 <span class="tag">${c.pendingMove?'已锁定下家':myOffers.length?myOffers.length+' 份报价':'可主动申请'}</span></h3>
+ ${myOffers.length?myOffers.map(o=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
  <div class="vs"><span class="tname" style="font-size:13px">${o.team} 邀请你加盟</span>
  <div class="power" style="font-size:10px">报价 <b class="gold">${o.fee}万</b>（转会费越高，新俱乐部给你的薪资越好）· 第 ${o.expire} 天到期</div></div>
  <div style="display:flex;gap:4px">
  <button class="btn sm" onclick="respondOffer(S,${S.offers.indexOf(o)},'keep')">留队（涨薪 8%）</button>
  <button class="btn sm primary" onclick="respondOffer(S,${S.offers.indexOf(o)},'sell')">接受（赛段结束后加盟）</button>
- </div></div>`).join('')}
- <div class="hint">表现火热（身价系数 ≥112%）才会被豪门盯上；接受后当前赛段继续为现队出战，赛季间正式转会。</div>
+ </div></div>`).join(''):`<div class="hint" style="margin-bottom:8px">表现火热（身价系数 ≥112%）会被动收到报价；也可主动向经纪人申请转会——总值/身价/人气决定有没有人接盘，合同最后一年更容易谈。</div>
+ <button class="btn gold" onclick="playerRequestTransfer(S)" ${canReq?'':'disabled'}>📣 申请转会（经纪人寻找下家）</button>`}
  </div>`;
- }
  if(c.pendingMove)html+=`<div class="panel" style="border-color:var(--gold)"><h3>转会意向 <span class="tag" style="color:var(--gold)">将加盟 ${c.pendingMove.team}</span></h3>
  <div class="hint">当前赛段继续为 ${S.teamName} 出战；打完挑战者杯/年总等收官战后，新赛季开始时正式加盟新东家。</div></div>`;
  // 履历
@@ -8622,7 +8966,8 @@ function playerTrain(k){
  if(S.trained){toast('今天已经练过了，明天再来');return;}
  const me=myPlayer(S);if(!me)return;
  if(S.career&&S.career.retired){toast('职业生涯已结束');return;}
- if(me.injury>0){toast('伤停中（'+me.injury+'天），先养伤');return;}
+ if(me.injury>0){toast('伤停中（'+me.injury+'天），先休息养伤');return;}
+ if(me.energy<10){toast('体力不足（需 10），先休息');return;}
  me.attrs[k]=clamp(me.attrs[k]+rnd(1,2),40,99);
  me.energy=clamp(me.energy-10,0,ENERGY_MAX);
  S.trained=true;
@@ -8634,9 +8979,10 @@ function playerHeroTrain(){
  if(S.trained){toast('今天已经练过了');return;}
  const me=myPlayer(S);if(!me)return;
  if(S.career&&S.career.retired){toast('职业生涯已结束');return;}
- if(me.injury>0){toast('伤停中，先养伤');return;}
+ if(me.injury>0){toast('伤停中，先休息养伤');return;}
+ if(me.energy<15){toast('体力不足（需 15），先休息');return;}
  const cand=(me.heroPool||[]).filter(h=>h.lv===2&&h.n!==me.sig);
- if(!cand.length){toast('没有可升绝活的熟练英雄（池内都已是绝活/招牌）');return;}
+ if(!cand.length){toast('没有可升绝活的熟练英雄（先在英雄池把英雄练到「熟练」）');return;}
  const h=pick(cand);h.lv=3;
  me.energy=clamp(me.energy-15,0,ENERGY_MAX);
  S.trained=true;
@@ -8647,10 +8993,12 @@ function playerRest(){
  if(S.mode!=='player')return;
  if(S.trained){toast('今天已经休息过了');return;}
  const me=myPlayer(S);if(!me)return;
+ const injBefore=me.injury||0;
  me.energy=clamp(me.energy+55,0,ENERGY_MAX);
  me.morale=clamp(me.morale+4,20,100);
+ if(me.injury>0)me.injury=Math.max(0,me.injury-2); // 与教练模式全队休息同规则：休息加速养伤
  S.trained=true;
- logEvent(S,' 休息一天：'+me.name+' 体力恢复，心态平稳');
+ logEvent(S,' 休息一天：'+me.name+' 体力恢复'+(injBefore>0?'，伤情 '+injBefore+'→'+me.injury+' 天':''));
  save();renderAll();
 }
 </script>
@@ -8872,11 +9220,7 @@ function respondCoachOffer(accept){
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
  S.players=[];
  tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
- const byPos={};
- S.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
- const lineup=[];
- POS_ORDER.forEach(pos=>{const cand=byPos[pos];if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}});
- S.lineup=lineup;
+ S.lineup=buildBestLineup(S);
  S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
  S.seedPower=teamPower(S)||tmpl.seed;
  S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
@@ -8928,7 +9272,7 @@ function cancelStartBack(){
 }
 function initStart(){
  _crReset(); // 新档：队徽生成器回默认（盾形·红金配色）
- installEra(null);_eraSel=null;_eraSelCoach=null;_pcTeam=null; // 开局界面从默认（现役）联盟起步
+ installEra(null);_eraSel=null;_eraSelCoach=null;_eraSelPlayer=null;_pcTeam=null; // 开局界面从默认（现役）联盟起步
  const clubs=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
  const eraBtns=Object.keys(KPL_ERAS).map(id=>`<button class="btn sm" id="era-btn-${id}" onclick="pickEra('${id}')">${KPL_ERAS[id].name}</button>`).join('');
  $('#start-modal-body').innerHTML=`
@@ -8949,6 +9293,9 @@ function initStart(){
  </div>
  <div id="tab-player-body" style="display:none">
  <div class="hint" style="text-align:center;margin-bottom:10px">扮演一名职业选手：签约球队 → 竞争首发 → 打出数据 → 收报价转会 → 冲击总冠军与 FMVP（比赛由教练组指挥，你专注成长与表现）</div>
+ <div class="center dim" style="font-size:12px;margin-bottom:6px">选择时代（决定联盟阵容与起始年份）</div>
+ <div class="center" style="margin-bottom:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" id="pc-era-btns"></div>
+ <div class="center hint" id="pc-era-desc" style="margin-bottom:10px"></div>
  <div class="center" style="margin-bottom:10px"><span class="dim">选手 ID：</span><input id="pc-name" maxlength="8" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:150px" placeholder="你的ID"></div>
  <div class="center" style="margin-bottom:10px"><span class="dim" style="margin-right:6px">位置：</span>${POS_ORDER.map(p=>`<button class="btn sm" id="pc-pos-${p}" onclick="pickPlayerPos('${p}')">${POS[p][0]}</button>`).join('')}</div>
  <div class="center" style="margin-bottom:10px"><span class="dim" style="margin-right:6px">出身：</span>${PLAYER_ARCHETYPES.map((a,i)=>`<button class="btn sm" id="pc-arch-${i}" onclick="pickPlayerArch(${i})" title="${a.desc}">${a.n}</button>`).join('')}</div>
@@ -8959,6 +9306,9 @@ function initStart(){
  </div>
  <div id="tab-coach-body" style="display:none">
  <div class="hint" style="margin-bottom:10px;text-align:center">只管竞技的执教生涯：BP/战术/训练/首发全权负责，转会与资金由俱乐部打理——成绩好被豪门挖角，连年失利会被解约（从任意一队起步）</div>
+ <div class="center dim" style="font-size:12px;margin-bottom:6px">选择时代（决定联盟阵容与起始年份）</div>
+ <div class="center" style="margin-bottom:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" id="coach-era-btns"></div>
+ <div class="center hint" id="coach-era-desc" style="margin-bottom:10px"></div>
  <div class="grid g4" id="coach-clubs" style="gap:8px">${CLUB_TEMPLATES.map((c,i)=>coachCardHTML(c,i)).join('')}</div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="coach-pick-tip"> 点击选择执教的俱乐部</div>
  <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyCoachClub()" id="coach-apply-btn" disabled>开始执教生涯</button></div>
@@ -8986,11 +9336,47 @@ function initStart(){
  <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyEraClub()" id="era-apply-btn" disabled>执教所选时代俱乐部</button></div>
  </div>`;
  $('#start-modal').classList.add('on');
+ renderEraBtns('pc-era-btns',_eraSelPlayer,'pickPlayerEra');
+ renderEraBtns('coach-era-btns',_eraSelCoach,'pickCoachEra');
+ const ped=$('#pc-era-desc');if(ped)ped.textContent='现役 KPL 联盟（2026）';
+ const ced=$('#coach-era-desc');if(ced)ced.textContent='现役 KPL 联盟（2026）';
  rollPlayerTeams();pickPlayerPos('mid');pickPlayerArch(0); // 选手页默认值
  pickScenario('normal'); // 剧本按钮默认高亮 + 描述以剧本为准——必须在 pickPlayerArch 之后，否则默认页（经理模式）的描述被选手出身文案覆盖
 }
 let _clubPick=-1,_eraSel=null,_scenario='normal';
-let _pcPos='mid',_pcArch=0,_pcTeam=null,_coachPick=-1,_eraSelCoach=null;
+let _pcPos='mid',_pcArch=0,_pcTeam=null,_coachPick=-1,_eraSelCoach=null,_eraSelPlayer=null;
+/* 时代选择（选手/教练/历代共用按钮样式，回调分开——避免 _eraSel 互相污染） */
+function renderEraBtns(containerId,selectedId,onPick){
+ const box=document.getElementById(containerId);
+ if(!box)return;
+ const keys=['',...Object.keys(KPL_ERAS)];
+ box.innerHTML=keys.map(id=>{
+  const n=id?(KPL_ERAS[id].name):'2026 · 现役';
+  const sel=(selectedId||'')===(id||'');
+  return `<button class="btn sm${sel?' primary':''}" onclick="${onPick}('${id}')">${n}</button>`;
+ }).join('');
+}
+function pickPlayerEra(id){
+ _eraSelPlayer=id||null;
+ installEra(_eraSelPlayer);
+ _pcTeam=null;
+ renderEraBtns('pc-era-btns',_eraSelPlayer,'pickPlayerEra');
+ const d=$('#pc-era-desc');
+ if(d)d.textContent=_eraSelPlayer?(KPL_ERAS[_eraSelPlayer].desc||''):'现役 KPL 联盟（2026）';
+ rollPlayerTeams();
+}
+function pickCoachEra(id){
+ _eraSelCoach=id||null;
+ installEra(_eraSelCoach);
+ _coachPick=-1;
+ renderEraBtns('coach-era-btns',_eraSelCoach,'pickCoachEra');
+ const d=$('#coach-era-desc');
+ if(d)d.textContent=_eraSelCoach?(KPL_ERAS[_eraSelCoach].desc||''):'现役 KPL 联盟（2026）';
+ const grid=document.getElementById('coach-clubs');
+ if(grid)grid.innerHTML=CLUB_TEMPLATES.map((c,i)=>coachCardHTML(c,i)).join('');
+ const tip=$('#coach-pick-tip');if(tip)tip.textContent=' 点击选择执教的俱乐部';
+ const btn=$('#coach-apply-btn');if(btn)btn.disabled=true;
+}
 /* 选手出身档（决定初始属性/年龄/知名度） */
 const PLAYER_ARCHETYPES=[
  {id:'youth',n:'青训新秀',age:17,base:[64,64,64,64],wageMul:0.4,pop:5,career:'青训营出道，天赋肉眼可见',desc:'17岁 · 属性低但成长空间全在面前'},
@@ -9017,29 +9403,56 @@ function rollPlayerTeams(){
  ${crest(c.icon,c.name,30)}<div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
  <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
 }
-function pickPlayerTeam(n){_pcTeam=n;rollPlayerTeams();}
-/* 开局身份切换（选手/教练/经理/执教/历代） */
+function pickPlayerTeam(n){ // 只改选中态，禁止整批重掷——否则永远点不中第 2/3 张卡
+  _pcTeam=n;
+  const box=$('#pc-teams');
+  if(box&&window._pcTeams){
+    box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${c.name}')">
+    ${crest(c.icon,c.name,30)}<div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
+    <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
+  }
+}
+/* 开局身份切换（选手/教练/经理/执教/历代）
+ 各页时代选择独立：player=_eraSelPlayer / coach=_eraSelCoach / era=_eraSel / club·self=现役。
+ 切页时按目标页重装联盟，避免 A 页选的时代污染 B 页名单。 */
 function switchStartTab(tab){
  const tabs=['player','coach','self','club','era'];
  tabs.forEach(t=>{const b=document.getElementById('tab-'+t);if(b)b.className='btn sm'+(t===tab?' primary':'');});
  ['player','coach','self','club','era'].forEach(t=>{
  const body=document.getElementById('tab-'+t+'-body');if(body)body.style.display=t===tab?'':'none';
  });
- {const d=$('#sc-desc');if(d)d.textContent=tab==='player'?PLAYER_ARCHETYPES[_pcArch].desc:scenarioById(_scenario).desc;} // 选手页显示出身档，其余身份恢复剧本描述
- if(tab!=='club'&&_eraActive){installEra(null);_eraSel=null;_clubPick=-1;}
+ {const d=$('#sc-desc');if(d)d.textContent=tab==='player'?PLAYER_ARCHETYPES[_pcArch].desc:scenarioById(_scenario).desc;}
+ if(tab==='player'){
+ installEra(_eraSelPlayer);
+ _pcTeam=null;
+ renderEraBtns('pc-era-btns',_eraSelPlayer,'pickPlayerEra');
+ const d=$('#pc-era-desc');if(d)d.textContent=_eraSelPlayer?(KPL_ERAS[_eraSelPlayer].desc||''):'现役 KPL 联盟（2026）';
+ rollPlayerTeams();
+ }
  if(tab==='coach'){
- // 教练页从默认（现役）联盟起步：若浏览过时代先还原
- installEra(null);_eraSelCoach=null;_coachPick=-1;
+ installEra(_eraSelCoach);_coachPick=-1;
+ renderEraBtns('coach-era-btns',_eraSelCoach,'pickCoachEra');
+ const d=$('#coach-era-desc');if(d)d.textContent=_eraSelCoach?(KPL_ERAS[_eraSelCoach].desc||''):'现役 KPL 联盟（2026）';
  const grid=document.getElementById('coach-clubs');
  if(grid)grid.innerHTML=CLUB_TEMPLATES.map((c,i)=>coachCardHTML(c,i)).join('');
  const tip=$('#coach-pick-tip');if(tip)tip.textContent=' 点击选择执教的俱乐部';
  const btn=$('#coach-apply-btn');if(btn)btn.disabled=true;
  }
+ if(tab==='self'||tab==='club'){
+ installEra(null);_eraSel=null;_clubPick=-1;
+ if(tab==='club'){
+ const tip=$('#club-pick-tip');if(tip)tip.textContent=' 点击选择俱乐部';
+ const btn=$('#club-apply-btn');if(btn)btn.disabled=true;
+ }
+ }
  if(tab==='era'){
+ _clubPick=-1;
+ installEra(_eraSel);
  Object.keys(KPL_ERAS).forEach(k=>{
  const b=document.getElementById('era-btn-'+k);if(b)b.className='btn sm'+(k===_eraSel?' primary':'');
  });
- const eb=$('#era-apply-btn');if(eb)eb.disabled=!(_eraSel&&_clubPick>=0);
+ const tip=$('#era-pick-tip');if(tip)tip.textContent=_eraSel?' 点击选择俱乐部':' 先选时代，再选俱乐部';
+ const ebtn=$('#era-apply-btn');if(ebtn)ebtn.disabled=!(_eraSel&&_clubPick>=0);
  }
 }
 /* 教练生涯：选俱乐部（与执教现役俱乐部同一套卡片） */
@@ -9056,6 +9469,7 @@ function pickCoachClub(i){
 function applyCoachClub(){
  if(_coachPick<0){toast('请先选择俱乐部');return;}
  const tmpl=CLUB_TEMPLATES[_coachPick];
+ if(_eraSelCoach)installEra(_eraSelCoach); // 确保时代联盟已装入（切页可能被还原）
  S=newState(tmpl.name,tmpl.icon);
  S.mode='coach';
  S.era=_eraSelCoach||null;
@@ -9065,14 +9479,7 @@ function applyCoachClub(){
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));
  });
- const byPos={};
- S.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
- const lineup=[];
- POS_ORDER.forEach(pos=>{
- const cand=byPos[pos];
- if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}
- });
- S.lineup=lineup;
+ S.lineup=buildBestLineup(S); // 统一可出场过滤（未成年/伤停不进首发）
  S.coachDeal={years:2,honors:[],log:[]}; // 教练合同：2 年起步，成绩决定去留
  S.seedPower=teamPower(S)||tmpl.seed;
  initGroups(S);
@@ -9080,6 +9487,7 @@ function applyCoachClub(){
  setBoardKpi(S);initFans(S);
  initKjia(S);
  logEvent(S,' 教练生涯开启：你出任 '+tmpl.name+' 主教练（合同 2 年）——竞技全权负责，转会资金由俱乐部打理');
+ if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'（'+gameYear(S)+' 起）：联盟与阵容回到当年，赛制沿用现行年度赛历');
  logEvent(S,' 目标：带队出成绩。连续未达标会被解约；打出名气会有豪门来挖你');
  $('#start-modal').classList.remove('on');
  applyModeNav();
@@ -9089,11 +9497,13 @@ function applyCoachClub(){
 }
 /* 选手生涯开局：创建选手 → 加盟球队 → 竞争首发 */
 function createPlayerCareer(){
- installEra(null);_eraSel=null;
+ if(_eraSelPlayer)installEra(_eraSelPlayer); // 时代档：联盟/模板已换成当年
+ else installEra(null);
  const name=$('#pc-name').value.trim()||'无名小将';
- const tmpl=CLUB_TEMPLATES.find(c=>c.name===_pcTeam)||window._pcTeams[0];
+ const tmpl=CLUB_TEMPLATES.find(c=>c.name===_pcTeam)||window._pcTeams[0]||CLUB_TEMPLATES[0];
  S=newState(tmpl.name,tmpl.icon);
  S.mode='player';
+ S.era=_eraSelPlayer||null;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
  S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
  tmpl.players.forEach(pid=>{
@@ -9113,27 +9523,23 @@ function createPlayerCareer(){
  me.popularity=Math.max(me.popularity,arch.pop);
  S.players.push(me);
  S.career={me:me.id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
- // 首发按俱乐部最强阵容（同位置有我时取更强者——首发要靠竞争）
- const byPos={};
- S.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
- const lineup=[];
- POS_ORDER.forEach(pos=>{
- const cand=byPos[pos];
- if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}
- });
- S.lineup=lineup;
+ // 首发统一走 buildBestLineup（未成年/伤停不进首发；同位置取可出场中最强）
+ S.lineup=buildBestLineup(S);
  S.seedPower=teamPower(S)||300;
  initGroups(S);
  S.preseason=false;S.transferWindow=0;
  initKjia(S);
  initFans(S);
  const starter=S.lineup.includes(me.id);
+ const underAge=(me.age||0)<MATCH_MIN_AGE;
  logEvent(S,' 选手生涯开启：'+me.name+'（'+POS[_pcPos][0]+' · '+arch.n+'）签约 '+tmpl.name+'（2 年合同）');
- logEvent(S,starter?' 你已进入首发轮换——用表现锁住它':' 首发竞争激烈：先在「生涯」页加练，教练会在每场比赛前按状态排首发');
+ if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'（'+gameYear(S)+' 起）：你走进的是那个时代的 KPL');
+ if(underAge)logEvent(S,' KPL 注册规则：满 '+MATCH_MIN_AGE+' 岁才能上场比赛——先在「生涯」页加练成长，满龄后自动进入首发竞争');
+ else logEvent(S,starter?' 你已进入首发轮换——用表现锁住它':' 首发竞争激烈：先在「生涯」页加练，教练会在每场比赛前按状态排首发');
  $('#start-modal').classList.remove('on');
  applyModeNav();
  goPage('career');
- toast(' 选手生涯开启：'+(starter?'你已在首发阵容':'先争取首发位置！'));
+ toast(underAge?(' 选手生涯开启：'+me.age+'岁跟训，满 '+MATCH_MIN_AGE+' 岁登场！'):(' 选手生涯开启：'+(starter?'你已在首发阵容':'先争取首发位置！')));
  save();
 }
 /* 开局剧本（难度档）：选中态只影响开局初始值，见 data.js SCENARIOS */
@@ -9231,8 +9637,8 @@ function createTeam(){
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
- logEvent(S,`战队 ${name} 成立！初始资金1300万，目标：KPL 总冠军！`);
- logEvent(S,' 开局直签 5 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容');
+ logEvent(S,`战队 ${name} 成立！初始资金${S.fund}万，目标：KPL 总冠军！`);
+ logEvent(S,` 开局直签 ${S.players.length} 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容`);
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
  logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
@@ -9253,18 +9659,8 @@ function applyClub(){
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));
  });
- // 首发直接安排模板阵容（同位置多取战力最高）
- const byPos={};
- S.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
- const lineup=[];
- POS_ORDER.forEach(pos=>{
- const cand=byPos[pos];
- if(cand&&cand.length){
- cand.sort((a,b)=>playerPower(b)-playerPower(a));
- lineup.push(cand[0].id);
- }
- });
- S.lineup=lineup;
+ // 首发直接安排模板阵容（统一可出场过滤：未成年/异常状态不进首发）
+ S.lineup=buildBestLineup(S);
  applyScenario(S); // 开局剧本：同上，须在 seedPower 与 initGroups 之前
  S.seedPower=teamPower(S)||tmpl.seed; // 种子=执教班底真实战力（决定分组落位）
  initGroups(S);
@@ -9274,7 +9670,7 @@ function applyClub(){
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
- logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${lineup.map(id=>S.players.find(p=>p.id===id).name).join(' / ')}`);
+ logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${S.lineup.map(id=>(S.players.find(p=>p.id===id)||{name:'?'}).name).join(' / ')}`);
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
  else logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');

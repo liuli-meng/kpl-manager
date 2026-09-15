@@ -41,13 +41,15 @@ const out = vm.runInContext(`
   else if(s.lineup.some(id=>!s.players.some(p=>p.id===id)))fail('核心出走后首发仍指向离队选手');
   else log('② 核心出走：'+before+'→'+s.players.length+' 人，空出 '+POS[hole[0]][0]+'，首发同步清理');
 
-  s=mk();const pw0=s.players.map(p=>playerPower(p));
+  s=mk();const pw0=s.players.map(p=>playerPower(p));const mor0=s.players.map(p=>p.morale);
   pick('cursed').apply(s);
   const dropped=pw0.map((v,i)=>v-playerPower(s.players[i]));
   const low=s.players.some(p=>['lane','farm','team','mind'].some(k=>p.attrs[k]<40));
+  const morBad=s.players.filter(p=>p.morale!==50).length;
   if(dropped.some(d=>d<3))fail('无冠魔咒属性削减不足: '+JSON.stringify(dropped));
   else if(low)fail('属性削减越界（低于下限 40）');
-  else log('② 无冠魔咒：全队战力各降 '+dropped.join('/')+'，属性不越界');
+  else if(morBad)fail('无冠魔咒未把士气设为 50（'+morBad+' 人未生效，原值 '+mor0.join('/')+'）');
+  else log('② 无冠魔咒：全队战力各降 '+dropped.join('/')+'，属性不越界，士气统一 50');
 
   // ③ createTeam 真开局链路：剧本经 _scenario 生效，且开局三步能识别空缺
   document.querySelector('#new-team-name').value='剧本队';

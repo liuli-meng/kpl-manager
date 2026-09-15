@@ -213,12 +213,14 @@ function finishEWC(s){
  但麾下入选选手会带回来奖牌加成：人气/身价/士气 + 协会奖金，代价是年总体力下滑。 */
 const AG_NATIONS=[['韩国',470],['中国台北',432],['越南',427],['泰国',416],['日本',400],['沙特阿拉伯',385],['印度',365]];
 const AG_CITY='名古屋';
-function agSelectSquad(s){
+ function agSelectSquad(s){
  const pool=[];
  (s.players||[]).forEach(p=>{if(!p.loan&&!p.retiring)pool.push(p);});
  AI_TEAMS.forEach(t=>ensureAiRosters(s,t.name).forEach(p=>pool.push(p)));
- return POS_ORDER.map(pos=>pool.filter(p=>p.pos===pos).sort((a,b)=>overall(b)-overall(a))[0]).filter(Boolean);
-}
+ // 集训状态抬一档：合练久的优先入选同位置竞争（打破纯总值平手）
+ return POS_ORDER.map(pos=>pool.filter(p=>p.pos===pos)
+ .sort((a,b)=>(overall(b)+(natCampFormBonus(s,b)||0))-(overall(a)+(natCampFormBonus(s,a)||0)))[0]).filter(Boolean);
+ }
 function setupAsianGames(s){
  // 名单以夏初宣布的 natSquad 为准（征召后中途转会不换人）；残缺时按当前最强兜底补位
  const ownedIds=new Set((s.players||[]).map(p=>p.id));
@@ -233,7 +235,7 @@ function setupAsianGames(s){
  }).filter(Boolean);
  }
  if(squad.length<5)squad=agSelectSquad(s); // 兜底：名单残缺（退役/异常）按当前最强补
- const myPow=Math.round(squad.reduce((m,p)=>m+playerPower(p),0));
+ const myPow=Math.round(squad.reduce((m,p)=>m+playerPower(p)+(natCampFormBonus(s,p)||0),0));
  s.aiPower=s.aiPower||{};
  s.aiPower['中国代表队']=myPow;
  AG_NATIONS.forEach(([n,pw])=>{s.aiPower[n]=pw+(gameYear(s)-2026)*3;}); // 海外对手逐年小幅变强
@@ -309,9 +311,9 @@ function finishAsianGames(s){
  s.yearStages.push({ev:'亚运会',place:a.medal==='金牌'?'金牌':a.medal==='银牌'?'银牌':a.medal==='铜牌'?'铜牌':'无奖牌'});
  }
  s.agDone=true;
- // 集训归队：清除征召标记 + 撤掉青训临时借调（亚运后恢复完整阵容打年总）
- s.players.forEach(p=>{p.natCamp=false;});
- s.natCampIds=[];
+ // 集训归队：清除征召标记 + 集训状态 + 撤掉青训临时借调（亚运后恢复完整阵容打年总）
+ s.players.forEach(p=>{p.natCamp=false;p.natCampForm=0;});
+ s.natCampIds=[];s.natCampDay=0;
  const fills=s.players.filter(p=>p.natFill);
  if(fills.length){
  fills.forEach(p=>{const li=s.lineup.indexOf(p.id);if(li>=0)s.lineup.splice(li,1);});

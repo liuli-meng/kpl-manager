@@ -162,7 +162,8 @@ function aiTransferWindow(s){
  const releasedFrom={};
  teams.forEach(tn=>{
  const tier=aiTierOf(s,tn);
- const holdBias=tier==='elite'?0.25:tier==='weak'?-0.15:0; // 负=更容易放人
+ // 负=更愿留人（豪门），正=更愿放人（弱旅）——Math.random()<阈值 才判 badForm 放人
+  const holdBias=tier==='elite'?-0.25:tier==='weak'?0.15:0;
  map[tn]=map[tn].filter(pid=>{
  const def=defOf(s,pid);
  if(!def)return false;
@@ -586,6 +587,7 @@ function openSellNego(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，不能出售');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
  if(p.natFill){toast(p.name+' 是亚运集训期的借调顶位，归还青训前不能出售');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
@@ -730,7 +732,9 @@ function listPlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能挂牌');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，归队后再挂牌');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再挂牌');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训，不能挂牌');return;}
  if(s.lineup.includes(pid)){toast('请先将该选手移出首发');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已在挂牌名单');return;}
  if(!sellGuard(s))return; // 联盟规则：一个转会期卖出不得超过队内一半
@@ -945,6 +949,7 @@ function submitRenewNego(){
 function releasePlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p||p.contract>0){toast('该选手合同未到期');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，归队后再操作');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能放走');return;}
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作');return;}
  if(!confirmDanger('确定不续约并放走 '+p.name+'（总值 '+overall(p)+'）？\n选手将进入自由市场，其他队可直签。'))return;
@@ -1026,7 +1031,7 @@ function skipTransferWindow(s){
 }
 function autoDoTrain(s){
  if(s.fund<13)return;
- const p=s.players.filter(x=>x.injury<=0&&x.energy>=10).sort((a,b)=>overall(b)-overall(a))[0];
+ const p=s.players.filter(x=>!trainBlockedReason(s,x)&&x.energy>=10).sort((a,b)=>overall(b)-overall(a))[0];
  if(!p)return;
  const key=['lane','farm','team','mind'].sort((a,b)=>p.attrs[a]-p.attrs[b])[0]; // 练最弱属性
  doTrain(s,p.id,key);
@@ -1153,7 +1158,7 @@ function tickLoans(s){
  门禁模拟不结算真实比赛表现（val 只在 gamePerform 更新），不会触发本系统。 */
 const OFFER_TTL=3; // 报价有效期（天）
 function eligibleForOffer(s,p){
- if(!p||p.loan||p.kjia>0)return false;
+ if(!p||p.loan||p.loanOut||p.kjia>0)return false;
  if(typeof natCamping==='function'&&natCamping(s,p))return false; // 国家队集训缺席，不接 offer
  if((p.val||100)<112)return false; // 表现门槛：打出名堂（火热≥112%）
  return true;

@@ -23,7 +23,7 @@ function pcard(p,extra){
  // 出场统计 + 更衣室/K甲状态（apps 由 finishSeries 累计；transferRequest 由更衣室年检标记）
  // K甲表现：下放期间的出场与场均 KDA（kjiaStats 由二队每场结算累计）
  const kjStat=(p.kjiaStats&&p.kjiaStats.apps)?` · K甲${p.kjiaStats.apps}场 场均${Math.round(p.kjiaStats.k/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.d/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.a/p.kjiaStats.apps*10)/10}`:'';
- const appsHtml=(p.apps||p.transferRequest||p.kjia>0)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?` <span style="color:var(--cyan)">· K甲锻炼剩 ${p.kjia} 天${kjStat}</span>`:''}</div>`:'';
+ const appsHtml=(p.apps||p.transferRequest||p.kjia>0||p.loanOut)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?` <span style="color:var(--cyan)">· K甲锻炼剩 ${p.kjia} 天${kjStat}</span>`:''}${p.loanOut?` <span style="color:var(--cyan)">· 租借 ${p.loanOut.team} 剩 ${p.loanOut.days} 天</span>`:''}</div>`:'';
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
  const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
@@ -263,7 +263,7 @@ function renderClub(){
  if(S.mode==='coach'){ // 教练模式：执教合同 + 履历 + 豪门邀约
  const d=S.coachDeal||{years:0,honors:[],log:[]};
  html+=`<div class="panel"><h3>执教履历 <span class="tag">现合同 ${d.years||0} 年 · ${d.honors.length||0} 冠</span></h3>
- <div class="hint" style="margin-bottom:6px">只管竞技：转会与资金由俱乐部打理（自动引援/续约），你的 KPI 是带队成绩——信任度耗尽即解约</div>
+ <div class="hint" style="margin-bottom:6px">你管竞技：首发/战术/训练/外租练级/K甲；俱乐部管钱与自动引援续约。KPI 是带队成绩——信任度耗尽即解约</div>
  ${(d.log||[]).slice(0,4).map(l=>`<div class="hint">${l.year} · ${l.note||l.team||''}</div>`).join('')}
  ${(S.coachOffer)?`<div class="event-card" style="margin-top:8px"><div class="et">豪门邀约：${S.coachOffer.team} 邀请你执教</div>
  <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm primary" onclick="respondCoachOffer(true)">接受（换队执教）</button><button class="btn sm" onclick="respondCoachOffer(false)">婉拒（留任）</button></div></div>`:''}
@@ -451,9 +451,19 @@ function renderClub(){
  <div class="hint" style="margin-bottom:8px">上一年的成绩曲线、转会记录、董事会评价与关键战役已归档。</div>
  <button class="btn gold" onclick="showYearReview(0)"> 查看 ${S._reviewNew} 年度回顾</button></div>`;
  }
- // 赛中转会报价：留人/放人/抬价三选（引擎在 transfer.js；报价 3 天过期）——选手模式在生涯页处理自己的报价
- if(S.mode==='manager'&&(S.offers||[]).length){
+ // 亚运集训：本队有人被征召时，俱乐部/教练页展示名单与状态（选手模式在生涯页）
+ if((S.mode==='manager'||S.mode==='coach')&&S.natAnnounced&&!S.agDone&&S.split==='summer'){
+ const mine=(S.players||[]).filter(p=>p.natCamp);
+ if(mine.length){
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训 <span class="tag" style="color:var(--gold)">第 ${S.natCampDay||0} 天 · 状态 ${mine[0].natCampForm||0}/5</span></h3>
+ <div class="hint">${mine.map(p=>p.name+'（'+POS[p.pos][0]+' · 状态'+(p.natCampForm||0)+'）').join('、')} 随中国代表队合练，缺席整个夏季赛。集训会涨状态，出征战力上浮；你这边靠替补/外租/签人顶住。</div>
+ </div>`;
+ }
+ }
+ // 赛中转会报价：留人/放人/抬价三选——经理管钱与名单，教练管战力与轮换，选手只处理自己的（生涯页）
+ if((S.mode==='manager'||S.mode==='coach')&&(S.offers||[]).length){
  html+=`<div class="panel"><h3>赛中转会报价 <span class="tag">${S.offers.length} 份待答复 · ${OFFER_TTL} 天内有效 · 过期作废</span></h3>
+ <div class="hint" style="margin-bottom:8px">${S.mode==='coach'?'转会资金由俱乐部打理，但阵容得失是你的事：留人保战力，放人换预算。':'留人/放人/抬价三选：钱、名单、更衣室一起权衡。'}</div>
  ${S.offers.map((o,i)=>{
  const p=S.players.find(x=>x.id===o.pid);
  const meta=p?`${POS[p.pos][1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 周薪 ${p.wage}万`:'';
@@ -641,7 +651,16 @@ function renderLineup(){
  return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div><button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`);
  }).join('')}</div></div>`;
  html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
- ${bn.length?`<div class="grid g4">${bn.map(p=>pcard(p,`${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}<button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${p.kjia>0?'disabled':''}>↑ 放入首发</button><button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')"> 出售（谈判）</button><button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 30 天：不占首发、不计出场，归队时属性成长" ${p.kjia>0?'disabled':''}> 下放 K甲</button>`)).join('')}</div>`:'<div class="hint">暂无替补，快去转会市场谈判补充阵容！</div>'}
+ <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长。</div>
+ ${bn.length?`<div class="grid g4">${bn.map(p=>{
+ const lo=p.loanOut;
+ const busy=(p.kjia||0)>0||!!lo||p.injury>0||(typeof natCamping==='function'&&natCamping(S,p));
+ return pcard(p,`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}
+ <button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${busy?'disabled':''}>↑ 放入首发</button>
+ ${S.mode==='manager'?`<button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')" ${busy?'disabled':''}> 出售（谈判）</button>`:''}
+ <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长" ${busy?'disabled':''}> 下放 K甲</button>
+ <button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="外租 ${LOAN_DAYS} 天：去缺人的俱乐部打主力，租金入账，归队带成长" ${busy?'disabled':''}> 外租练级</button>`);
+ }).join('')}</div>`:'<div class="hint">暂无替补——转会市场签人，或等俱乐部自动引援</div>'}
  </div>`;
  // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算
  {
@@ -673,8 +692,7 @@ function swapPlayer(pid){
  const p=S.players.find(x=>x.id===pid);
  const inLineup=S.lineup.includes(pid);
  if(!inLineup&&p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），暂不能进入首发');return;}
- if(!inLineup&&p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），不能进入首发');return;}
- if(!inLineup&&typeof natCamping==='function'&&natCamping(S,p)){toast(p.name+' 正在国家队集训（缺席整个夏季赛），不能进入首发');return;}
+ if(!inLineup&&!matchEligible(S,p)){toast(p.name+' '+matchIneligibleReason(S,p)+'，不能进入首发');return;}
  if(inLineup){
  // 有同位置替补则对位换人；没有也允许直接下场（位置空缺）——否则满员时卖不掉、工资帽腾不出，买不了新人的死锁
  const bn=rosterBench(S).filter(x=>x.pos===p.pos&&x.injury<=0); // 伤员不可顶替上场
@@ -868,15 +886,15 @@ function renderTrain(){
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
  ${sortChips('train')}
  ${S.players.length?`<div class="grid g4">${applySortPref('train',S.players).map(p=>pcard(p,`<div class="g2" style="gap:6px">
- ${TRAIN_ITEMS.map(t=>`<button class="btn sm" onclick="doTrain(S,'${p.id}','${t.k}')" ${S.trained||p.energy<10?'disabled':''}>${t.n}+1~2</button>`).join('')}
- <button class="btn sm gold" onclick="doHeroTrain(S,'${p.id}')" ${S.trained||p.energy<15||(p.heroPool||[]).length>=80?'disabled':''}>英雄特训 ${(p.heroPool||[]).length}/80</button>
+ ${TRAIN_ITEMS.map(t=>`<button class="btn sm" onclick="doTrain(S,'${p.id}','${t.k}')" ${S.trained||p.energy<10||trainBlockedReason(S,p)?'disabled':''}>${t.n}+1~2</button>`).join('')}
+ <button class="btn sm gold" onclick="doHeroTrain(S,'${p.id}')" ${S.trained||p.energy<15||(p.heroPool||[]).length>=80||trainBlockedReason(S,p)?'disabled':''}>英雄特训 ${(p.heroPool||[]).length}/80</button>
  </div>`)).join('')}</div>`:'<div class="hint">没有选手可训练</div>'}
  </div>`;
  // 青训营
  const aca=S.academy||[];
  const acaHtml=aca.map(r=>{
  const total=['lane','farm','team','mind'].reduce((t,k)=>t+r.attrs[k],0);
- const ready=total>=300,adult=r.age>=18;
+ const ready=total>=300,adult=r.age>=MATCH_MIN_AGE;
  return `<div class="pcard" style="border-color:${ready&&adult?'var(--green)':'var(--line)'}">
  <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
  <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 周薪${r.wage}万</div>
@@ -887,7 +905,7 @@ function renderTrain(){
  <div class="p-foot"><span>四维 <b class="${ready?'green':'gold'}">${total}/300</b></span><span> ${r.sig}</span></div>
  <div style="display:flex;gap:6px;margin-top:8px">
  <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 17万</button>
- <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满18岁':'未达标')}</button>
+ <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满'+MATCH_MIN_AGE+'岁':'未达标')}</button>
  </div>
  <div class="hint" style="margin-top:6px">${S.academyTrained?'今日已培养过青训':'培养：潜力越高成长越快'}</div>
  </div>`;
@@ -1413,17 +1431,21 @@ function renderCareer(){
  <div class="dim" style="font-size:12px">${crest(S.icon,S.teamName,18)} ${S.teamName} · 合同 ${me.contract>0?me.contract+' 年':'到期'} · 周薪 ${me.wage}万 · 总值 <b style="color:${ovrColor(overall(me))}">${overall(me)}</b> · 身价系数 ${me.val||100}%${me.injury>0?' · <span class="red">伤停 '+me.injury+' 天</span>':''}</div></div>
  <div style="margin-left:auto;text-align:right"><div class="gold" style="font-size:16px;font-weight:800">${c.titles||0} 冠 · ${c.fmvp||0} FMVP · ${c.allstar||0} 一阵</div><div class="dim" style="font-size:11px">生涯荣誉</div></div>
  </div></div>`;
- // 成长 + 每日行动
- html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':'每天一项'}</span></h3>
+ // 成长 + 每日行动（伤停/未满18岁不可加练；休息仍可回体力并加速养伤）
+ const trainLock=S.trained||me.injury>0;
+ const canTrain=!trainLock&&me.energy>=10;
+ const canHero=!trainLock&&me.energy>=15;
+ const underAge=(me.age||0)<MATCH_MIN_AGE;
+ html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':me.injury>0?'伤停中 · 先养伤':'每天一项'}</span></h3>
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(me,84)}
- <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
+ <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：可加练成长，满 '+MATCH_MIN_AGE+' 岁才能代表俱乐部出场</span>':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
- <button class="btn sm" onclick="playerTrain('lane')" ${S.trained||me.energy<10?'disabled':''}>练对线 +1~2</button>
- <button class="btn sm" onclick="playerTrain('farm')" ${S.trained||me.energy<10?'disabled':''}>练运营 +1~2</button>
- <button class="btn sm" onclick="playerTrain('team')" ${S.trained||me.energy<10?'disabled':''}>练团战 +1~2</button>
- <button class="btn sm" onclick="playerTrain('mind')" ${S.trained||me.energy<10?'disabled':''}>练心态 +1~2</button>
- <button class="btn sm gold" onclick="playerHeroTrain()" ${S.trained||me.energy<15?'disabled':''}>英雄特训（练绝活）</button>
- <button class="btn sm" onclick="playerRest()" ${S.trained?'disabled':''}>休息（体力+55）</button>
+ <button class="btn sm" onclick="playerTrain('lane')" ${canTrain?'':'disabled'}>练对线 +1~2</button>
+ <button class="btn sm" onclick="playerTrain('farm')" ${canTrain?'':'disabled'}>练运营 +1~2</button>
+ <button class="btn sm" onclick="playerTrain('team')" ${canTrain?'':'disabled'}>练团战 +1~2</button>
+ <button class="btn sm" onclick="playerTrain('mind')" ${canTrain?'':'disabled'}>练心态 +1~2</button>
+ <button class="btn sm gold" onclick="playerHeroTrain()" ${canHero?'':'disabled'}>英雄特训（练绝活）</button>
+ <button class="btn sm" onclick="playerRest()" ${S.trained?'disabled':''}>休息（体力+55 · 养伤）</button>
  </div>
  <div class="hint mt8">战力↑ = 首发竞争力↑；英雄特训把一个熟练英雄练成绝活（战力 +8%）。体力不足时教练不会让你进首发。</div>
  </div>`;
@@ -1434,19 +1456,42 @@ function renderCareer(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><span style="display:inline-flex;align-items:center;gap:6px"><b>${rival.name}</b>${starter?'':' <span class="gold">目前压你</span>'}</span></div></div>
  <div class="hint mt8">每场比赛前教练按双方当前战力（体力/士气/伤停实时计入）决定首发——反超即夺回位置。</div>
  </div>`;
- // 转会报价（只有自己的）
- if(myOffers.length){
- html+=`<div class="panel"><h3>转会报价 <span class="tag">${myOffers.length} 份 · ${OFFER_TTL} 天内有效</span></h3>
- ${myOffers.map(o=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+ // 板凳出路：连续替补可自请租借/K甲（有球可打 + 归队成长）
+ const benchDays=c.benchDays||0;
+ if(natCamping(S,me)){
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训中 <span class="tag" style="color:var(--gold)">状态 ${me.natCampForm||0}/5</span></h3>
+ <div class="hint">你入选中国代表队，整个夏季赛随国家队合练——俱乐部比赛由队友顶上。集训每 5 天汇报一次成长，开赛前还有热身赛；出征战力随集训状态上浮。亚运收官后归队备战年总。</div>
+ <div class="hint mt8">国家队名单：${(S.natSquad||[]).filter(x=>x.mine).map(x=>x.name+'（'+POS[x.pos][0]+'）').join('、')||'—'}</div>
+ </div>`;
+ }else if(me.loanOut){
+ html+=`<div class="panel" style="border-color:var(--cyan)"><h3>租借中 <span class="tag">剩 ${me.loanOut.days} 天</span></h3>
+ <div class="hint">你正租借效力 <b>${me.loanOut.team}</b>——争取出场时间，归队时按表现带回成长。母队由教练组打理。</div></div>`;
+ }else if((me.kjia||0)>0){
+ html+=`<div class="panel" style="border-color:var(--cyan)"><h3>K甲锻炼中 <span class="tag">剩 ${me.kjia} 天</span></h3>
+ <div class="hint">你在二队征战次级联赛（「二队」页可查表现）。归队时结算属性成长，然后重新竞争首发。</div></div>`;
+ }else if(!starter&&!c.retired&&(me.age||0)>=MATCH_MIN_AGE&&me.injury<=0&&!natCamping(S,me)){
+ const canOut=benchDays>=3;
+ html+=`<div class="panel"><h3>板凳出路 <span class="tag">${benchDays?('连续替补 '+benchDays+' 天'):'暂未首发'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">长期没球打会伤士气。连续替补满 3 天后，可向经纪人申请<b>租借离队</b>（去缺人的俱乐部打 ${LOAN_DAYS} 天主力）或<b>下放 K甲</b>（二队练级 ${KJIA_DAYS} 天）——两条路都带成长，归队再争首发。</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap">
+ <button class="btn sm gold" onclick="playerRequestLoanOut(S)" ${canOut?'':'disabled'}> 租借离队（${LOAN_DAYS}天）</button>
+ <button class="btn sm" onclick="playerRequestKjia(S)"> 下放 K甲（${KJIA_DAYS}天练级）</button>
+ </div>
+ ${canOut?'':'<div class="hint mt8">租借需连续替补满 3 天（K甲可随时申请）</div>'}
+ </div>`;
+ }
+ // 转会报价（只有自己的）+ 主动申请转会
+ const canReq=!c.pendingMove&&!myOffers.length&&!me.loanOut&&(me.kjia||0)<=0&&!natCamping(S,me)&&!c.retired;
+ html+=`<div class="panel"><h3>转会 <span class="tag">${c.pendingMove?'已锁定下家':myOffers.length?myOffers.length+' 份报价':'可主动申请'}</span></h3>
+ ${myOffers.length?myOffers.map(o=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
  <div class="vs"><span class="tname" style="font-size:13px">${o.team} 邀请你加盟</span>
  <div class="power" style="font-size:10px">报价 <b class="gold">${o.fee}万</b>（转会费越高，新俱乐部给你的薪资越好）· 第 ${o.expire} 天到期</div></div>
  <div style="display:flex;gap:4px">
  <button class="btn sm" onclick="respondOffer(S,${S.offers.indexOf(o)},'keep')">留队（涨薪 8%）</button>
  <button class="btn sm primary" onclick="respondOffer(S,${S.offers.indexOf(o)},'sell')">接受（赛段结束后加盟）</button>
- </div></div>`).join('')}
- <div class="hint">表现火热（身价系数 ≥112%）才会被豪门盯上；接受后当前赛段继续为现队出战，赛季间正式转会。</div>
+ </div></div>`).join(''):`<div class="hint" style="margin-bottom:8px">表现火热（身价系数 ≥112%）会被动收到报价；也可主动向经纪人申请转会——总值/身价/人气决定有没有人接盘，合同最后一年更容易谈。</div>
+ <button class="btn gold" onclick="playerRequestTransfer(S)" ${canReq?'':'disabled'}>📣 申请转会（经纪人寻找下家）</button>`}
  </div>`;
- }
  if(c.pendingMove)html+=`<div class="panel" style="border-color:var(--gold)"><h3>转会意向 <span class="tag" style="color:var(--gold)">将加盟 ${c.pendingMove.team}</span></h3>
  <div class="hint">当前赛段继续为 ${S.teamName} 出战；打完挑战者杯/年总等收官战后，新赛季开始时正式加盟新东家。</div></div>`;
  // 履历
@@ -1461,7 +1506,8 @@ function playerTrain(k){
  if(S.trained){toast('今天已经练过了，明天再来');return;}
  const me=myPlayer(S);if(!me)return;
  if(S.career&&S.career.retired){toast('职业生涯已结束');return;}
- if(me.injury>0){toast('伤停中（'+me.injury+'天），先养伤');return;}
+ if(me.injury>0){toast('伤停中（'+me.injury+'天），先休息养伤');return;}
+ if(me.energy<10){toast('体力不足（需 10），先休息');return;}
  me.attrs[k]=clamp(me.attrs[k]+rnd(1,2),40,99);
  me.energy=clamp(me.energy-10,0,ENERGY_MAX);
  S.trained=true;
@@ -1473,9 +1519,10 @@ function playerHeroTrain(){
  if(S.trained){toast('今天已经练过了');return;}
  const me=myPlayer(S);if(!me)return;
  if(S.career&&S.career.retired){toast('职业生涯已结束');return;}
- if(me.injury>0){toast('伤停中，先养伤');return;}
+ if(me.injury>0){toast('伤停中，先休息养伤');return;}
+ if(me.energy<15){toast('体力不足（需 15），先休息');return;}
  const cand=(me.heroPool||[]).filter(h=>h.lv===2&&h.n!==me.sig);
- if(!cand.length){toast('没有可升绝活的熟练英雄（池内都已是绝活/招牌）');return;}
+ if(!cand.length){toast('没有可升绝活的熟练英雄（先在英雄池把英雄练到「熟练」）');return;}
  const h=pick(cand);h.lv=3;
  me.energy=clamp(me.energy-15,0,ENERGY_MAX);
  S.trained=true;
@@ -1486,9 +1533,11 @@ function playerRest(){
  if(S.mode!=='player')return;
  if(S.trained){toast('今天已经休息过了');return;}
  const me=myPlayer(S);if(!me)return;
+ const injBefore=me.injury||0;
  me.energy=clamp(me.energy+55,0,ENERGY_MAX);
  me.morale=clamp(me.morale+4,20,100);
+ if(me.injury>0)me.injury=Math.max(0,me.injury-2); // 与教练模式全队休息同规则：休息加速养伤
  S.trained=true;
- logEvent(S,' 休息一天：'+me.name+' 体力恢复，心态平稳');
+ logEvent(S,' 休息一天：'+me.name+' 体力恢复'+(injBefore>0?'，伤情 '+injBefore+'→'+me.injury+' 天':''));
  save();renderAll();
 }

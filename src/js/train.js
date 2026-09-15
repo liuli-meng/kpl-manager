@@ -1,9 +1,20 @@
 
 /* ================= 训练 ================= */
+/* 统一训练可用性：伤停/集训/租借在外/K甲 期间不能加练（经理/教练/选手同一套） */
+function trainBlockedReason(s,p){
+ if(!p)return '选手不存在';
+ if((p.injury||0)>0)return p.name+' 伤停中（'+p.injury+'天），先休息养伤';
+ if(p.loanOut)return p.name+' 租借在外，无法在母队加练';
+ if((p.kjia||0)>0)return p.name+' 正在 K甲锻炼，二队有自己的安排';
+ if(typeof natCamping==='function'&&natCamping(s,p))return p.name+' 国家队集训中，暂不能加练';
+ return '';
+}
 function doTrain(s,pid,attr){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
+ const blocked=trainBlockedReason(s,p);
+ if(blocked){toast(blocked);return;}
  if(p.energy<10){toast(`${p.name} 体力不足`);return;}
  if(s.fund<13){toast('资金不足（训练需 13万）');return;}
  s.fund-=13;p.energy-=10;s.trained=true;
@@ -25,6 +36,8 @@ function doHeroTrain(s,pid){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
+ const blocked=trainBlockedReason(s,p);
+ if(blocked){toast(blocked);return;}
  if(p.energy<15){toast(`${p.name} 体力不足`);return;}
  if(s.fund<25){toast('资金不足（英雄特训需 25万）');return;}
  // 找熟练度最低的英雄提升
@@ -118,7 +131,7 @@ function promoteRookie(s,id){
  const r=(s.academy||[]).find(x=>x.id===id);
  if(!r)return;
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
- if(r.age<18){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 18 岁才能上场比赛——再等一年');return;}
+ if(r.age<MATCH_MIN_AGE){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛——再等一年');return;}
  if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
  s.academy=s.academy.filter(x=>x.id!==id);
  r.isRookie=false;
@@ -141,6 +154,9 @@ function convertPos(s,pid,newPos){
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.pos===newPos){toast('已经是该位置');return;}
+ const blocked=trainBlockedReason(s,p);
+ if(blocked){toast(blocked+'，归队/伤愈后再改造');return;}
+ if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 未满 '+MATCH_MIN_AGE+' 岁，先专心成长');return;}
  const cost=50;
  if(s.fund<cost){toast('位置改造需要 '+cost+'万');return;}
  if(s.lineup.includes(pid)&&s.lineup.some(id=>{

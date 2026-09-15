@@ -11,22 +11,27 @@ const out = vm.runInContext(`
   const log=t=>res.push('[PASS] '+t);
 
   // ① 选手生涯开局：创建选手 → 加盟球队 → 状态完备
+  // 用 19 岁「次级联赛」出身：17 岁青训档按 KPL 规则不可登场（回归覆盖未成年跟训路径）
   initStart();
+  pickPlayerArch(1);
   createPlayerCareer();
   if(!S||S.mode!=='player')fail('开局后 mode 应为 player');
   else{
    const me=myPlayer(S);
    if(!me)fail('career.me 未指向阵中选手');
+   else if((me.age||0)<MATCH_MIN_AGE)fail('测试档应满 '+MATCH_MIN_AGE+' 岁，实际 '+me.age);
    else if(!S.players.some(p=>p.id===me.id))fail('我不在球队名单');
    else if(!S.schedule||!S.schedule.length)fail('赛程未生成');
    else if(S.preseason||S.transferWindow>0)fail('选手模式不应有转会期');
-   else log('① 选手开局：'+me.name+'（'+POS[me.pos][0]+'）加盟 '+S.teamName+'，赛程就绪、无转会期');
+   else log('① 选手开局：'+me.name+'（'+POS[me.pos][0]+' · '+me.age+'岁）加盟 '+S.teamName+'，赛程就绪、无转会期');
 
    // ② 首发竞争：强制我全面落后 → 教练把我按在替补；全面反超 → 夺回首发
+   S.pick={}; // 清掉 BP 残留，避免 pick 英雄抬高我的评定导致用例抖动
    coachPickLineup(S);
-   const rival=S.players.filter(p=>p.pos===me.pos&&p.id!==me.id).sort((a,b)=>playerPower(b)-playerPower(a))[0];
+   const rival=S.players.filter(p=>p.pos===me.pos&&p.id!==me.id&&matchEligible(S,p)).sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig))[0];
    if(rival){
-   ['lane','farm','team','mind'].forEach(k=>{me.attrs[k]=Math.max(40,me.attrs[k]-25);});
+   ['lane','farm','team','mind'].forEach(k=>{me.attrs[k]=40;});
+   me.energy=50;me.morale=50;
    coachPickLineup(S);
    const benched=!S.lineup.includes(me.id);
    if(!benched&&playerPower(rival,rival.sig)>playerPower(me,me.sig))fail('战力全面落后却仍首发（竞争判定失效）');
@@ -57,7 +62,12 @@ const out = vm.runInContext(`
    else log('③ 自动比赛：BO5 打完进入下一轮 · 我累计出场 '+(me3.caps-caps0)+' 小局（KDA '+(me3.kTotal||0)+'/'+(me3.dTotal||0)+'/'+(me3.aTotal||0)+'）· 复盘已入册');
 
    // ④ 训练行动：加练属性 + 英雄特训 + 休息（每天一项）
-   S.trained=false;
+   // 比赛后可能伤停/低体力：先复位，专测训练通路本身
+   me3.injury=0;me3.energy=ENERGY_MAX;S.trained=false;
+   if(!(me3.heroPool||[]).some(h=>h.lv===2&&h.n!==me3.sig)){
+    const extra=HEROES.filter(h=>h.pos.includes(me3.pos)&&h.n!==me3.sig&&!me3.heroPool.some(x=>x.n===h.n))[0];
+    if(extra)me3.heroPool.push({n:extra.n,lv:2});
+   }
    me3.attrs.lane=90; // 留出成长空间（③拉满 99 会被上限钳住）
    const attr0=me3.attrs.lane;
    playerTrain('lane');
@@ -124,7 +134,7 @@ const out = vm.runInContext(`
   }
 
   // ⑥b 老将带新：清空名单只留老将+新人 → 配对 + 新人成长 + 老将人气
-  S=null;initStart();createPlayerCareer();
+  S=null;initStart();pickPlayerArch(1);createPlayerCareer();
   {
    const meB=myPlayer(S);
    const vet=genPlayer(genFreeAgentDef(meB.pos==='mid'?'jg':'mid','star',new Set([meB.name])));
@@ -201,6 +211,74 @@ const out = vm.runInContext(`
   const s8=newState('回归队','x');fillRoster(s8,'mid','star');
   if(s8.mode!=='manager')fail('新档默认 mode 应为 manager');
   else log('⑧ 兼容：新档默认 manager，旧档缺 mode 字段由迁移兜底');
+
+  // ⑨ 选队卡片：点第 2/3 张只改选中，不整批重掷（旧版永远选不中）
+  {
+   S=null;initStart();switchStartTab('player');
+   const batch=(window._pcTeams||[]).map(c=>c.name).join('|');
+   if(window._pcTeams&&window._pcTeams.length>=3){
+    const target=window._pcTeams[2].name;
+    pickPlayerTeam(target);
+    const after=(window._pcTeams||[]).map(c=>c.name).join('|');
+    if(_pcTeam!==target)fail('pickPlayerTeam 未记录第3张卡: '+_pcTeam);
+    else if(after!==batch)fail('点选战队触发了整批重掷');
+    else log('⑨ 选队：第2/3张可稳定选中，不再整批重掷');
+   }else log('⑨ 选队：沙箱未生成3张卡，跳过');
+  }
+
+  // ⑩ 选手主动申请转会 + 未成年出战资格
+  {
+   S=null;initStart();pickPlayerArch(1);createPlayerCareer();
+   const meX=myPlayer(S);
+   meX.age=MATCH_MIN_AGE;['lane','farm','team','mind'].forEach(k=>{meX.attrs[k]=Math.min(99,meX.attrs[k]+20);});
+   meX.val=130;meX.popularity=40;meX.contract=1;
+   const okReq=playerRequestTransfer(S);
+   if(!okReq||!(S.offers||[]).some(o=>o.pid===meX.id))fail('申请转会未产生报价');
+   else{
+    S.offers=[];
+    meX.age=MATCH_MIN_AGE-1;
+    if(matchEligible(S,meX))fail('未满'+MATCH_MIN_AGE+'岁仍可出战');
+    else if(S.lineup.includes(meX.id)){coachPickLineup(S);autoFillLineup(S);
+     if(S.lineup.includes(meX.id))fail('未成年选手仍在首发');
+     else log('⑩ 申请转会出报价 · 未满'+MATCH_MIN_AGE+'岁被移出首发');
+    }else log('⑩ 申请转会出报价 · 未满'+MATCH_MIN_AGE+'岁不可出战');
+   }
+  }
+
+  // ⑪ 板凳出路：连续替补 → 租借离队 / K甲下放；俱乐部自动补缺
+  {
+   S=null;initStart();pickPlayerArch(1);createPlayerCareer();
+   const meY=myPlayer(S);
+   // 强行按在板凳
+   if(S.lineup.includes(meY.id))S.lineup=S.lineup.filter(id=>id!==meY.id);
+   S.career.benchDays=0;
+   for(let i=0;i<3;i++)tickPlayerBench(S);
+   if((S.career.benchDays||0)<3)fail('板凳天数未累计: '+(S.career.benchDays||0));
+   else{
+    const okLoan=playerRequestLoanOut(S);
+    if(!okLoan||!meY.loanOut)fail('连续替补后租借离队失败');
+    else if(S.lineup.includes(meY.id))fail('租借中仍在母队首发');
+    else if(!matchEligible(S,meY))log('⑪ 租借离队 OK（'+meY.loanOut.team+' · 剩 '+meY.loanOut.days+' 天）· 不可为母队出场');
+    else fail('租借中仍 matchEligible');
+    // 日结到归队
+    let g=0;while(meY.loanOut&&g++<40)loanOutTick(S);
+    if(meY.loanOut)fail('租借到期未归队');
+    else log('⑪b 租借归队：出场 '+meY.apps+' 次 · 重新可竞争首发');
+   }
+   // K甲路径
+   if(S.lineup.includes(meY.id))S.lineup=S.lineup.filter(id=>id!==meY.id);
+   const okK=playerRequestKjia(S);
+   if(!okK||(meY.kjia||0)<=0)fail('自请下放 K甲失败');
+   else if(S.lineup.includes(meY.id))fail('K甲中仍在母队首发');
+   else log('⑪c 自请下放 K甲 OK（剩 '+meY.kjia+' 天）');
+   // 俱乐部自动运营：砍到 3 人 → startSplit 应自动补强
+   S.players=S.players.filter(p=>p.id===meY.id).concat(S.players.filter(p=>p.id!==meY.id).slice(0,2));
+   S.expiring=[];
+   const n0=S.players.length;
+   startSplit(S,'summer');
+   if(S.players.length<=n0&&S.players.length<7)fail('选手模式俱乐部未自动补强: '+S.players.length);
+   else log('⑪d 俱乐部自动运营：阵容 '+n0+'→'+S.players.length+' 人（选手只管自己，班底由俱乐部打理）');
+  }
 
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');

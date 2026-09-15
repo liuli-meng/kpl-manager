@@ -375,18 +375,19 @@ const TEAM_BONDS={
 
 /* ================= 对手战队（2025 KPL 全部 18 队，玩家加入后 17 支 AI） ================= */
 const AI_TEAMS=[
- {name:'常山UUG',icon:'猿',power:300},
- {name:'桐乡情久',icon:'灯',power:320},
- {name:'西安WE',icon:'狼',power:340},
- {name:'长沙TES.A',icon:'拳',power:360},
- {name:'上海RNG.M',icon:'狮',power:380},
- {name:'北京JDG',icon:'鹰',power:400},
- {name:'深圳DYG',icon:'影',power:420},
+ // power 与 CLUB_TEMPLATES.seed 对齐（aiTierOf 两表都读；错位会让 JDG/LGD 等队难度档与执教模板矛盾）
+ {name:'常山UUG',icon:'猿',power:390},
+ {name:'桐乡情久',icon:'灯',power:400},
+ {name:'西安WE',icon:'狼',power:410},
+ {name:'长沙TES.A',icon:'拳',power:450},
+ {name:'上海RNG.M',icon:'狮',power:420},
+ {name:'北京JDG',icon:'鹰',power:570},
+ {name:'深圳DYG',icon:'影',power:480},
  {name:'上海EDG.M',icon:'电',power:440},
  {name:'南京Hero久竞',icon:'影',power:460},
- {name:'佛山DRG',icon:'龙',power:480},
+ {name:'佛山DRG',icon:'龙',power:500},
  {name:'苏州KSG',icon:'虎',power:500},
- {name:'杭州LGD.NBW',icon:'狼',power:520},
+ {name:'杭州LGD.NBW',icon:'狼',power:430},
  {name:'广州TTG',icon:'环',power:540},
  {name:'济南RW侠',icon:'剑',power:560},
  {name:'北京WB',icon:'熊',power:580},
@@ -643,7 +644,7 @@ const SCENARIOS=[
  {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 90万/周，豪华阵容养不起，只能靠青训与规划',
   apply:s=>{s.wageCap=90;}},
  {id:'cursed',name:'无冠魔咒',hard:true,desc:'常年无冠、士气低落：全队属性 -4 · 初始士气 50，等你破咒',
-  apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));});}},
+  apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));p.morale=50;});}},
 ];
 function scenarioById(id){return SCENARIOS.find(s=>s.id===id)||SCENARIOS[0];}
 /* 核心出走：队内战力最高者被挖走（人已离队，不返还资金） */

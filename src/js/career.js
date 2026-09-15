@@ -1,5 +1,37 @@
 /* 选手/教练生涯引擎 + 年度回顾 + 退役名宿市场（season.js 机械拆出） */
 /* ================= 选手生涯 / 教练生涯（引擎侧） ================= */
+/* 选手主动申请转会：不再只能干等「身价≥112% 被动报价」——
+ 总值/身价/人气决定是否有人接盘；合同最后一年更主动，豪门更爱挖即战力。 */
+function playerRequestTransfer(s){
+ s=s||S;
+ if(!s||s.mode!=='player')return false;
+ const me=myPlayer(s);
+ if(!me)return false;
+ if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
+ if(s.career&&s.career.pendingMove){toast('已有转会意向（'+s.career.pendingMove.team+'），先打完当前赛段');return false;}
+ s.offers=s.offers||[];
+ if(s.offers.some(o=>o.pid===me.id)){toast('已有俱乐部在谈，先处理现有报价');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,me)){toast('国家队集训期间不能申请转会');return false;}
+ if(me.loanOut){toast('你已在外租借（剩 '+me.loanOut.days+' 天），归队后再申请');return false;}
+ if(me.kjia>0){toast('正在 K甲锻炼，归队后再申请');return false;}
+ // 接盘意愿：总值是硬门槛，身价/人气/合同年加成；表现低迷很难有人要
+ const ovr=overall(me),val=me.val||100,pop=me.popularity||0;
+ const lastYear=(me.contract||0)<=1;
+ const score=ovr+(val-100)*0.35+pop*0.15+(lastYear?6:0);
+ if(score<78){toast('暂时没有俱乐部愿意接盘（总值/表现再打高一点，或进入合同年）');return false;}
+ const fee=capFee(buyoutPrice(me)*(0.9+Math.random()*0.35));
+ const pool=AI_TEAMS.filter(t=>t.name!==s.teamName);
+ if(!pool.length)return false;
+ // 强队更爱挖高总值；弱队捡漏合同年
+ const pref=pool.slice().sort((a,b)=>(b.power||0)-(a.power||0));
+ const idx=ovr>=86?rnd(0,Math.min(3,pref.length-1)):rnd(0,pref.length-1);
+ const buyer=pref[idx]||pick(pool);
+ s.offers.push({pid:me.id,name:me.name,team:buyer.name,fee,expire:s.day+OFFER_TTL,status:'open'});
+ logEvent(s,' 经纪人官宣申请转会：'+buyer.name+' 迅速报价 '+fee+'万（生涯页 '+OFFER_TTL+' 天内答复）');
+ save();renderAll();
+ toast(buyer.name+' 对你报价 '+fee+'万！去「生涯」页答复');
+ return true;
+}
 function playerYearSettle(s){ // 选手模式年度结算：本赛季个人数据入册生涯履历
  const me=myPlayer(s);
  if(!me||!s.career)return;
@@ -27,18 +59,169 @@ function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地�
  me.team=tmpl.name;
  me.wage=Math.max(me.wage,Math.max(5,Math.round(mv.fee/50))); // 报价越高，薪资待遇越好
  me.contract=2;me.morale=clamp(me.morale+8,20,100);me.val=clamp((me.val||100)+4,70,150);
+ me.loanOut=null;me.kjia=0; // 转会落地：结束租借/K甲状态，直接进新东家竞争
+ if(s.career){s.career.benchDays=0;}
  s.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
- s.lineup=[]; // 新东家首发由教练按战力重排（coachPickLineup）
+ s.lineup=buildBestLineup(s); // 统一可出场过滤排满首发
+ s.pick={};
  s.seedPower=teamPower(s)||300;
  logEvent(s,' 转会完成：'+me.name+' 正式加盟 '+tmpl.name+'（转会费 '+mv.fee+'万 · 年薪 '+me.wage+'万/周）——首发位置要重新证明');
 }
-function coachAutoSquad(s){ // 教练模式：俱乐部自动续约与引援（你只管排人用兵）
+/* 选手板凳计数：健康可出场却连续坐板凳 → 可申请租借/K甲练级（生涯页出路面板） */
+function tickPlayerBench(s){
+ if(!s||s.mode!=='player'||!s.career)return;
+ const me=myPlayer(s);
+ if(!me)return;
+ const eligible=matchEligible(s,me)&&!me.loanOut&&(me.kjia||0)<=0;
+ const benched=eligible&&!s.lineup.includes(me.id);
+ if(benched){
+ const was=s.career.benchDays||0;
+ s.career.benchDays=was+1;
+ if(was===0)logEvent(s,' 你连续坐上替补席——经纪人建议：加练反超首发，或申请租借/K甲寻找出场时间');
+ else if(was===9)logEvent(s,' 板凳已坐 10 天：士气承压，认真考虑租借离队或下放 K甲吧');
+ if(s.career.benchDays>=3)me.morale=clamp(me.morale-1,20,100);
+ }else if(s.career.benchDays){
+ s.career.benchDays=0;
+ }
+}
+/* 选手自请租借：去缺人的 AI 队打 21 天主力（有球可打 + 归队带成长），母队自动补位 */
+function playerRequestLoanOut(s){
+ s=s||S;
+ if(!s||s.mode!=='player')return false;
+ const me=myPlayer(s);
+ if(!me)return false;
+ if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
+ if(s.career&&s.career.pendingMove){toast('已有转会意向，先处理完再说');return false;}
+ if(me.loanOut){toast('你已在外租借（剩 '+me.loanOut.days+' 天）');return false;}
+ if((me.kjia||0)>0){toast('正在 K甲锻炼，归队后再申请租借');return false;}
+ if(me.injury>0){toast('伤停中，先养伤');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,me)){toast('国家队集训期间不能租借');return false;}
+ if(s.lineup.includes(me.id)){toast('你目前是首发——先让教练把你换下，再申请租借');return false;}
+ if((s.career.benchDays||0)<3){toast('刚坐上板凳，再观察几天（连续替补 3 天后经纪人会出手）');return false;}
+ // 找缺同位置的 AI 队（优先弱旅：更愿意给出场）
+ const map=aiRosterDefMap(s);
+ const cands=Object.keys(map).filter(tn=>tn!==s.teamName).map(tn=>{
+ const roster=ensureAiRosters(s,tn)||[];
+ const has=roster.some(p=>p.pos===me.pos);
+ const pow=(s.aiPower&&s.aiPower[tn])||400;
+ return {tn,has,pow,need:!has||pow<460};
+ }).filter(x=>x.need).sort((a,b)=>a.pow-b.pow);
+ const dest=cands[0]?cands[0].tn:pick(AI_TEAMS.filter(t=>t.name!==s.teamName).map(t=>t.name));
+ if(!dest){toast('暂时没有俱乐部愿意接手租借');return false;}
+ if(!confirm('申请租借离队？\n将租借至 '+dest+' '+LOAN_DAYS+' 天寻求出场，母队会补同位置替补；归队时按表现带回成长。'))return false;
+ me.loanOut={team:dest,days:LOAN_DAYS,gain:0};
+ const li=s.lineup.indexOf(me.id);
+ if(li>=0)s.lineup.splice(li,1);
+ s.career.benchDays=0;
+ s.career.loanStint=(s.career.loanStint||0)+1;
+ autoFillLineup(s);
+ logEvent(s,' 租借达成：'+me.name+' 租借至 '+dest+' '+LOAN_DAYS+' 天——争取出场时间，归队后回 '+s.teamName);
+ save();renderAll();
+ toast('已租借至 '+dest+'！'+LOAN_DAYS+' 天后归队');
+ return true;
+}
+/* 选手自请下放 K甲：二队真实出战练级（复用 sendKjia，身份换成「我」） */
+function playerRequestKjia(s){
+ s=s||S;
+ if(!s||s.mode!=='player')return false;
+ const me=myPlayer(s);
+ if(!me)return false;
+ if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
+ if(s.career&&s.career.pendingMove){toast('已有转会意向，先处理完再说');return false;}
+ if(me.loanOut){toast('你已在外租借');return false;}
+ if((me.kjia||0)>0){toast('已在 K甲锻炼');return false;}
+ if(me.injury>0){toast('伤停中，先养伤');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,me)){toast('国家队集训期间不能下放');return false;}
+ if(s.lineup.includes(me.id)){toast('你目前是首发——先让教练把你换下，再申请下放');return false;}
+ if(!confirm('申请下放 K甲？\n加入二队征战次级联赛 '+KJIA_DAYS+' 天，真实出战积累数据，归队时带属性成长。'))return false;
+ sendKjia(s,me.id);
+ s.career.benchDays=0;
+ s.career.kjiaStint=(s.career.kjiaStint||0)+1;
+ save();renderAll();
+ return true;
+}
+/* 租借日结：任何 loanOut 选手（选手自请 / 俱乐部外租）——出场表现→成长，到期归队争首发 */
+function loanOutTick(s){
+ if(!s)return;
+ (s.players||[]).slice().forEach(p=>{
+ if(!p||!p.loanOut)return;
+ p.loanOut.days--;
+ // 每 3 天一场：有球可打（模拟租借队首发）
+ if(p.loanOut.days%3===0||p.loanOut.days>=LOAN_DAYS-1){
+ p.apps=(p.apps||0)+1;
+ p.caps=(p.caps||0)+1;
+ const k=rnd(2,8),d=rnd(1,5),a=rnd(2,9);
+ p.kTotal=(p.kTotal||0)+k;p.dTotal=(p.dTotal||0)+d;p.aTotal=(p.aTotal||0)+a;
+ p.energy=clamp(p.energy-8,0,ENERGY_MAX);
+ p.val=clamp((p.val||100)+rnd(0,2),70,150);
+ if(Math.random()<0.35){
+ const key=pick(['lane','farm','team','mind']);
+ p.attrs[key]=clamp(p.attrs[key]+1,40,99);
+ p.loanOut.gain=(p.loanOut.gain||0)+1;
+ }
+ logEvent(s,' 租借出场：'+p.name+' 代表 '+p.loanOut.team+' 出战（'+k+'/'+d+'/'+a+'）');
+ }
+ if(p.loanOut.days<=0){
+ const team=p.loanOut.team,gain=p.loanOut.gain||0;
+ p.loanOut=null;
+ p.morale=clamp(p.morale+6,20,100);
+ if(gain){
+ const key=pick(['lane','farm','team','mind']);
+ p.attrs[key]=clamp(p.attrs[key]+rnd(1,2),40,99);
+ }
+ logEvent(s,' 租借归队：'+p.name+' 结束 '+team+' 租借回到 '+s.teamName+'（出场时间换回成长 +'+gain+(gain?'+归队奖励':'')+'）——重新竞争首发');
+ if(s.mode==='player')coachPickLineup(s);
+ autoFillLineup(s);
+ }
+ });
+}
+/* 俱乐部外租（教练/经理）：板凳上有潜力但没出场的选手，租去缺人的队打主力练级。
+ 与选手自请租借同一套 loanOut 状态/日结——三个身份共用同一世界规则，只是发起人不同。 */
+function clubLoanOutPlayer(s,pid){
+ s=s||S;
+ if(!s||s.mode==='player'){toast('选手生涯请在「生涯」页自行申请租借');return false;}
+ const p=(s.players||[]).find(x=>x.id===pid);
+ if(!p)return false;
+ if(s.lineup.includes(pid)){toast(p.name+' 是首发——先换下再外租');return false;}
+ if(p.loan){toast(p.name+' 是租入选手，不能外租');return false;}
+ if(p.loanOut){toast(p.name+' 已在外租借');return false;}
+ if((p.kjia||0)>0){toast(p.name+' 正在 K甲，归队后再外租');return false;}
+ if(p.injury>0){toast(p.name+' 伤停中，不能外租');return false;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 国家队集训中，不能外租');return false;}
+ if((s.listed||[]).some(x=>x.id===pid)){toast(p.name+' 挂牌中，请先撤牌');return false;}
+ if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 未满 '+MATCH_MIN_AGE+' 岁，先在青训/一队跟训');return false;}
+ const map=aiRosterDefMap(s);
+ const cands=Object.keys(map).filter(tn=>tn!==s.teamName).map(tn=>{
+ const roster=ensureAiRosters(s,tn)||[];
+ const has=roster.some(x=>x.pos===p.pos);
+ const pow=(s.aiPower&&s.aiPower[tn])||400;
+ return {tn,has,pow,need:!has||pow<470};
+ }).filter(x=>x.need).sort((a,b)=>a.pow-b.pow);
+ const dest=cands[0]?cands[0].tn:pick(AI_TEAMS.filter(t=>t.name!==s.teamName).map(t=>t.name));
+ if(!dest){toast('暂无俱乐部愿意接手租借');return false;}
+ const fee=Math.round(loanRent(p)); // 租入方付租金：俱乐部小赚，选手换出场
+ if(!confirm('将 '+p.name+' 外租至 '+dest+' '+LOAN_DAYS+' 天？\n租金 +'+fee+'万；选手在那边打主力练级，归队时带回成长。'))return false;
+ s.fund+=fee;
+ p.loanOut={team:dest,days:LOAN_DAYS,gain:0};
+ const li=s.lineup.indexOf(pid);
+ if(li>=0)s.lineup.splice(li,1);
+ autoFillLineup(s);
+ logEvent(s,' 外租练级：'+p.name+' 租借至 '+dest+' '+LOAN_DAYS+' 天（租金 +'+fee+'万）——教练组认为他需要出场时间');
+ save();renderAll();
+ toast(p.name+' 已外租 '+dest);
+ return true;
+}
+function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引援（你只管竞技）
  (s.expiring||[]).slice().forEach(pid=>{
  const p=s.players.find(x=>x.id===pid);
- if(p&&!p.loan)p.contract=(p.contract||0)+1; // 俱乐部统一续约一年
+ if(!p||p.loan)return;
+ if(s.mode==='player'&&s.career&&pid===s.career.me)return; // 你本人的合同由选手分支单独谈/续
+ p.contract=(p.contract||0)+1; // 俱乐部统一续约一年
  });
  s.expiring=[];
- let need=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos));
+ // 缺位判定看「现在能不能打」：伤停/集训/租借/未成年/K甲不算可用首发
+ const playable=p=>p&&!p.loan&&!p.loanOut&&(p.kjia||0)<=0&&matchEligible(s,p);
+ let need=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos&&playable(p)));
  const u=new Set(s.players.map(p=>p.name));
  let g=0;
  while((s.players.length<7||need.length)&&g++<10){
@@ -47,8 +230,9 @@ function coachAutoSquad(s){ // 教练模式：俱乐部自动续约与引援（�
  const p=genPlayer(def);
  p.contract=2;
  s.players.push(p);
- logEvent(s,' 俱乐部引援：签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
- if(need.length&&s.players.some(x=>x.pos===need[0]))need.shift();
+ u.add(p.name);
+ logEvent(s,(s.mode==='player'?' 俱乐部运作：':' 俱乐部引援：')+'签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
+ if(need.length&&s.players.some(x=>x.pos===need[0]&&playable(x)))need.shift();
  }
 }
 function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；接受=换队执教，履历入册）
@@ -90,14 +274,7 @@ function playerToCoach(s){
  s.career.coachPath=false; // 邀请已消费（防重复点）
  // 退役后名单缺位：补齐至可开赛（不止「全空」才补——少一个位置也会卡首发出场）
  if((s.players||[]).length<5||POS_ORDER.some(pos=>!s.players.some(p=>p.pos===pos)))coachAutoSquad(s);
- const byPos={};
- s.players.forEach(p=>{(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
- const lineup=[];
- POS_ORDER.forEach(pos=>{
- const cand=byPos[pos];
- if(cand&&cand.length){cand.sort((a,b)=>playerPower(b)-playerPower(a));lineup.push(cand[0].id);}
- });
- if(lineup.length)s.lineup=lineup;
+ s.lineup=buildBestLineup(s);
  s.seedPower=teamPower(s)||s.seedPower||300;
  if(!s.board.kpi)setBoardKpi(s); // 中途转型：补发本赛季 KPI，避免董事会面板空目标
  logEvent(s,' 退役转教练：'+L.name+' 出任 '+s.teamName+' 主教练（评分 '+rating+' · 全队战力+'+bonus+'%）——执教合同 2 年，用另一种方式留在赛场');

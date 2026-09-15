@@ -158,6 +158,38 @@ function rosterAll(s){return s.players;}
 function rosterLineup(s){const set=new Set(s.lineup);return s.players.filter(p=>set.has(p.id));}
 function rosterBench(s){const set=new Set(s.lineup);return s.players.filter(p=>!set.has(p.id));}
 function myPlayer(s){return (s&&s.mode==='player'&&s.career)?s.players.find(p=>p.id===s.career.me)||null:null;} // 选手生涯：我扮演的选手
+/* 统一出战资格：伤停 / 亚运集训 / 未满18岁（KPL 注册规则）——青训晋升、首发、比赛共用 */
+const MATCH_MIN_AGE=18;
+function matchEligible(s,p){
+ if(!p)return false;
+ if((p.injury||0)>0)return false;
+ if(p.loanOut)return false; // 本人租借在外：不能为母队出场
+ if((p.kjia||0)>0)return false; // K甲锻炼中：在二队打，不占一队
+ if(typeof natCamping==='function'&&natCamping(s,p))return false;
+ if((p.age||0)<MATCH_MIN_AGE)return false;
+ return true;
+}
+function matchIneligibleReason(s,p){
+ if(!p)return '选手不存在';
+ if((p.injury||0)>0)return '伤停 '+p.injury+' 天';
+ if(p.loanOut)return '租借效力 '+(p.loanOut.team||'外队')+'（剩 '+(p.loanOut.days||0)+' 天）';
+ if((p.kjia||0)>0)return 'K甲锻炼中（剩 '+p.kjia+' 天）';
+ if(typeof natCamping==='function'&&natCamping(s,p))return '国家队集训中';
+ if((p.age||0)<MATCH_MIN_AGE)return '未满 '+MATCH_MIN_AGE+' 岁（KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场）';
+ return '';
+}
+/* 按位置择优排首发：只排「当前可出场」的人（伤停/集训/租借/K甲/未成年跳过）。
+ 开局、换队、转会落地、教练换队共用——避免各处复制粘贴又漏过滤。 */
+function buildBestLineup(s){
+ const byPos={};
+ (s.players||[]).forEach(p=>{if(!p)return;(byPos[p.pos]=byPos[p.pos]||[]).push(p);});
+ const lineup=[];
+ POS_ORDER.forEach(pos=>{
+ const cand=(byPos[pos]||[]).filter(p=>matchEligible(s,p)).sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig));
+ if(cand[0])lineup.push(cand[0].id);
+ });
+ return lineup;
+}
 /* 夺冠阵容快照：冠军/亚军入册时记录当时的首发名单（荣誉室可回看"这冠是谁打下来的"） */
 function titleRoster(s){
  try{return rosterLineup(s).map(p=>p.name).join('、')||'—';}catch(e){return '';}

@@ -61,7 +61,7 @@ function dressingRoomCheck(s){
  const ref=ls.reduce((t,p)=>t+(p.apps||0),0)/ls.length; // 首发场均出场：替补的参照基准
  let unhappy=0;
  (s.players||[]).filter(p=>!s.lineup.includes(p.id)).forEach(p=>{
- if(p.retiring||p.loan||p.kjia>0)return; // 下放 K甲的选手在次级联赛有球可打，不按"坐板凳"记不满
+ if(p.retiring||p.loan||p.loanOut||p.kjia>0)return; // 下放 K甲/外租的选手有球可打，不按"坐板凳"记不满
  if(s.mode==='player'&&p.id===(s.career&&s.career.me))return; // 选手模式：你的不满由你自己写在生涯页（不重复记）
  const ovr=overall(p);
  if(ovr<DRESS_OVR_MIN)return;

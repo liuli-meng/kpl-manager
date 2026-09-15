@@ -16,11 +16,13 @@ const out = vm.runInContext(`
   S=newState('探针队','⚔️');
   fillRoster(S);
 
-  // ① 首年 KPI：按分组档位下发（S组→前4 / A组→前8 / B组→前12）
-  const kpiOf=g=>{S.groups={S:[],A:[],B:[]};S.groups[g]=['探针队'];S.managerCareer={years:0,titles:0,lastRank:null};setBoardKpi(S);return S.board.kpi.target;};
+  // ① 首年 KPI：按分组档位下发（S组→前4 / A组→前8 / B组→前12；开档 G1/G2/G3 同口径）
+  const kpiOf=g=>{S.groups={S:[],A:[],B:[],G1:[],G2:[],G3:[]};S.groups[g]=['探针队'];S.managerCareer={years:0,titles:0,lastRank:null};setBoardKpi(S);return S.board.kpi.target;};
   const kS=kpiOf('S'),kA=kpiOf('A'),kB=kpiOf('B');
+  const kG1=kpiOf('G1'),kG2=kpiOf('G2'),kG3=kpiOf('G3');
   if(kS!==4||kA!==8||kB!==12)fail('首年 KPI 未按分组档位下发: S='+kS+' A='+kA+' B='+kB);
-  else log('① 首年 KPI：S组→前'+kS+' / A组→前'+kA+' / B组→前'+kB);
+  else if(kG1!==4||kG2!==8||kG3!==12)fail('开档 G1/G2/G3 未映射 KPI: G1='+kG1+' G2='+kG2+' G3='+kG3);
+  else log('① 首年 KPI：S/G1→前'+kS+' / A/G2→前'+kA+' / B/G3→前'+kB);
 
   // ② 有历史名次时按名次定目标
   S.managerCareer={years:1,titles:0,lastRank:3};setBoardKpi(S);

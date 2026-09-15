@@ -214,13 +214,18 @@ function gamePerform(winner){
 /* ================= 选手生涯：比赛引擎（教练指挥，你专注表现） =================
  首发由「教练」按同位置战力每场评定；系列赛自动打完（复用文字直播/个人 KDA/MVP 结算），
  你在结算弹窗看直播和「本场你的数据」。季后赛/杯赛同理自动推进。 */
-function coachPickLineup(s){ // 教练排首发：同位置健康者中取战力更强者（体力/士气实时影响评定）
+function coachPickLineup(s){ // 教练排首发：同位置健康者中取战力更强者（体力/士气实时计入）
  if(s.mode!=='player')return;
  const me=myPlayer(s);
  if(!me)return;
- if(me.injury>0){if(!s._meOutNoted){logEvent(s,' 伤停报告：'+me.name+'（'+me.injury+' 天恢复）本场缺席');s._meOutNoted=true;}return;}
+ // 统一出战资格：伤停/亚运集训/未满18岁均不可进首发（与青训晋升、swapPlayer 同规则）
+ if(!matchEligible(s,me)){
+ if(me.injury>0&&!s._meOutNoted){logEvent(s,' 伤停报告：'+me.name+'（'+me.injury+' 天恢复）本场缺席');s._meOutNoted=true;}
+ if(s.lineup.includes(me.id))s.lineup.splice(s.lineup.indexOf(me.id),1);
+ return;
+ }
  s._meOutNoted=false;
- const rival=s.players.filter(p=>p.pos===me.pos&&p.id!==me.id&&p.injury<=0)
+ const rival=s.players.filter(p=>p.pos===me.pos&&p.id!==me.id&&matchEligible(s,p))
  .sort((a,b)=>playerPower(b)-playerPower(a))[0];
  const li=s.lineup.indexOf(me.id);
  if(!rival){if(li<0)s.lineup.push(me.id);return;}
@@ -232,6 +237,7 @@ function coachPickLineup(s){ // 教练排首发：同位置健康者中取战力
 }
 function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 series 形状对象（finishSeries 可直接消费）
  coachPickLineup(s);
+ autoFillLineup(s); // 我方不可出战时同位置替补顶上；转会/伤停/集训后不留空位
  resetOppEnergy(s,opName);
  const sr={used:[],usedOpp:[],mw:0,ow:0,max:bo,logs:[],myName:s.teamName,opName,side:firstSide(s,'regular',opName)};
  const need=Math.ceil(bo/2);
@@ -258,10 +264,19 @@ function startPlayerMatch(){ // 常规赛入口（选手模式：代替 startMat
  if(S.career&&S.career.retired){toast('职业生涯已退役');return;}
  const m=S.schedule[S.matchIdx];
  if(!m){toast('赛程已结束');return;}
+ const me=myPlayer(S);
+ if(me&&me.loanOut)logEvent(S,' 你正租借效力 '+me.loanOut.team+'（剩 '+me.loanOut.days+' 天），本场由母队友军出战');
+ else if(me&&(me.kjia||0)>0)logEvent(S,' 你正在 K甲锻炼（剩 '+me.kjia+' 天），一场比赛由队友顶上');
+ else if(me&&!matchEligible(S,me)){
+ const why=matchIneligibleReason(S,me);
+ if((me.age||0)<MATCH_MIN_AGE)logEvent(S,' 注册规则：'+me.name+'（'+me.age+'岁）未满 '+MATCH_MIN_AGE+' 岁，本场不可登场——教练会安排其他选手顶上');
+ else logEvent(S,' '+me.name+' '+why+'，本场由队友顶上');
+ }
  const sr=playerAutoSeries(S,m.opp,KPL.BO5);
  sr.stage='regular';
  S.series=sr;
  finishSeries(sr.mw>sr.ow);
+ tickPlayerBench(S); // 赛后同步板凳计数（打上首发会清零，连续替补累加）
 }
 
 function startMatch(){

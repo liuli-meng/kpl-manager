@@ -17,10 +17,11 @@ function myAnnualRank(s){ // 本队年度积分排名（从 1 起）；本队不
 }
 function boardKpiTarget(prevRank,s){ // 豪门保前4 / 争冠组保前8 / 其余保前12（进年总线）
  if(prevRank)return prevRank<=4?4:prevRank<=8?8:12;
- // 首年没有历史名次：按分组档位定目标（S组=争冠区→前4，A组→前8，B组=重建中→前12）
+ // 首年没有历史名次：按分组档位定目标。
+ // S/A/B=第一轮后重组分组；G1/G2/G3=开档抽签组（按真实战力蛇形）——两者都认，避免开档时全员「前12」。
  const inG=g=>(s&&s.groups&&s.groups[g]||[]).indexOf(s.teamName)>=0;
- if(inG('S'))return 4;
- if(inG('A'))return 8;
+ if(inG('S')||inG('G1'))return 4;
+ if(inG('A')||inG('G2'))return 8;
  return 12;
 }
 function setBoardKpi(s){

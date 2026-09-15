@@ -52,15 +52,28 @@ const out = vm.runInContext(`
   initGroups(s4);
   const elite=aiTierOf(s4,'成都AG超玩会'); // seed 640
   const weak=aiTierOf(s4,'常山UUG'); // 弱旅
+  // power/seed 对齐：执教模板与 AI_TEAMS 同一档（修复前 JDG 被 power 打成 weak）
+  const jdg=aiTierOf(s4,'北京JDG'); // seed/power 均 570 → elite
+  const lgd=aiTierOf(s4,'杭州LGD.NBW'); // seed/power 均 430 → weak
   if(elite!=='elite')fail('AG 应为 elite，实为 '+elite);
   else if(weak!=='weak')fail('UUG 应为 weak，实为 '+weak);
+  else if(jdg!=='elite')fail('北京JDG 应为 elite（power=seed=570），实为 '+jdg);
+  else if(lgd!=='weak')fail('杭州LGD.NBW 应为 weak（power=seed=430），实为 '+lgd);
   const mE=aiDiffMul(s4,'成都AG超玩会'),mW=aiDiffMul(s4,'常山UUG');
   if(!(mE>mW))fail('豪门难度系数应高于弱旅: '+mE+' vs '+mW);
   s4.titleHistory=[{season:1,split:'spring',event:'春季赛',champ:'难度队'},
                    {season:1,split:'summer',event:'夏季赛',champ:'难度队'}];
   const mPress=aiDiffMul(s4,'成都AG超玩会');
   if(!(mPress>mE))fail('玩家连冠后 AI 难度应加压: '+mE+' → '+mPress);
-  log('④ AI 难度：AG=elite('+mE+') · UUG=weak('+mW+') · 玩家两连冠后豪门系数 → '+mPress.toFixed(2));
+  // holdBias 方向：豪门更愿留人（放人阈值更低）、弱旅更愿放人
+  // elite -0.25 → badForm 阈值 0.30/0.25；weak +0.15 → 0.70/0.65
+  const hbE=aiTierOf(s4,'成都AG超玩会')==='elite'?-0.25:0;
+  const hbW=aiTierOf(s4,'常山UUG')==='weak'?0.15:0;
+  const thrE=0.55+hbE, thrW=0.55+hbW; // 固定 random=0.5：elite 不触发放人，weak 触发
+  const eliteDrops=(0.5<thrE)||(0.5<0.5+hbE);
+  const weakDrops=(0.5<thrW)||(0.5<0.5+hbW);
+  if(eliteDrops||!weakDrops)fail('holdBias 方向错误：random=0.5 时 elite 放人='+eliteDrops+' weak 放人='+weakDrops+'（应 false/true）');
+  else log('④ AI 难度：AG=elite('+mE+') · UUG=weak('+mW+') · JDG=elite · LGD=weak · 连冠加压 → '+mPress.toFixed(2)+' · holdBias 豪门更留人');
 
   // ⑤ 三身份 MODE_PAGES 含 hall
   if(!MODE_PAGES.manager.includes('hall')||!MODE_PAGES.player.includes('hall')||!MODE_PAGES.coach.includes('hall'))

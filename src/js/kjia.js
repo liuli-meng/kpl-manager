@@ -119,8 +119,10 @@ function sendKjia(s,id){
  const p=(s.players||[]).find(x=>x.id===id);
  if(!p){toast('选手不在阵中');return;}
  if(p.kjia){toast(p.name+' 已在 K甲锻炼（剩余 '+p.kjia+' 天）');return;}
+ if(p.loanOut){toast(p.name+' 正租借在外，不能下放 K甲');return;}
  if(p.injury>0){toast(p.name+' 正在伤停，无法下放');return;}
  if(p.loan){toast(p.name+' 是租借选手，不能下放 K甲');return;}
+ if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 国家队集训中，不能下放');return;}
  if((s.listed||[]).some(x=>x.id===id)){toast(p.name+' 挂牌中（已有报价会一并作废），请先撤牌再下放');return;}
  s.players=s.players.filter(x=>x.id!==id||true); // 保留在册（仅离开首发）
  if(s.captain===id){s.captain=null;logEvent(s,' 队长 '+p.name+' 下放 K甲，袖标摘除');}
