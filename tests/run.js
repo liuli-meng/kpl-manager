@@ -10,6 +10,7 @@ const SUITES = [
   { id: 'verify-regression', file: 'tests/verify-regression.js', label: '历史回归' },
   { id: 'verify-ai-coach', file: 'tests/verify-ai-coach.js', label: 'AI 教练' },
   { id: 'verify-annual', file: 'tests/verify-annual.js', label: '年度赛历' },
+  { id: 'verify-entrypoints', file: 'tests/verify-entrypoints.js', label: '全赛段入口审计' },
   { id: 'verify-fixes', file: 'tests/verify-fixes.js', label: '历史修复点' },
   { id: 'verify-contract', file: 'tests/verify-contract.js', label: '合同续约' },
   { id: 'verify-natcamp', file: 'tests/verify-natcamp.js', label: '亚运征召' },
