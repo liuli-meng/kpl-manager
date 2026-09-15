@@ -36,7 +36,7 @@ description: kpl-manager（王者电竞经理·KPL 篇，E:\sex\kpl-manager）�
 6. **构建**：`powershell -ExecutionPolicy Bypass -File build.ps1`（CI 会校验 game.html 与 src 一致）
 7. **浏览器实测**：见下方配方
 8. **README**：按 `## 2026-09 <功能名>` 格式补一节（含设计动机与回归用例说明）
-9. **提交推送**：中文功能摘要 commit；推送用 `git -c http.proxy= -c https.proxy= push origin main`（全局代理 127.0.0.1:10808 经常没开，失败就绕过直连重试几次）
+9. **提交推送**：中文功能摘要 commit；推送用 `GIT_TERMINAL_PROMPT=0 git -C . -c credential.helper= -c credential.helper=wincred -c http.proxy= -c https.proxy= push origin main`（**必须挂 wincred 绕过损坏的 GCM**——PortableGit 的 git-credential-manager.exe 已段错误，默认 helper 必报 could not read Username；全局代理 127.0.0.1:10808 常没开，直连 GitHub 是通的）
 
 ## 测试规范（tests/）
 
