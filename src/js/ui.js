@@ -223,7 +223,7 @@ function uiAdvanceCalendar(s){
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 function renderClub(){
  const ls=rosterLineup(S);
- let html=pageHint('club')+`
+ let html=(typeof missionStrip==='function'?missionStrip(S):'')+pageHint('club')+`
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
@@ -424,7 +424,7 @@ function renderClub(){
  html+=`<div class="panel"><h3>年度总决赛·淘汰赛 <span class="tag">8强 BO7 双败 · 圣龙杯</span></h3>
  ${p?p.wb1.map(m=>mrow(m,'胜者组R1')).join('')+p.wb2.map(m=>mrow(m,'胜者组SF')).join('')+(p.wf.a?mrow(p.wf,'胜者组决赛'):'')+p.lb1.map(m=>mrow(m,'败者组R1')).join('')+p.lb2.map(m=>mrow(m,'败者组R2')).join('')+(p.lbs.a?mrow(p.lbs,'败者组SF'):'')+(p.lbf.a?mrow(p.lbf,'败者组决赛'):'')+(p.final.a?mrow(p.final,'总决赛'):'')
  :'<div class="hint">待突围赛结束</div>'}
- ${p&&p.final.a&&!p.final.r?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场':'快进赛程'}</button>`:''}
+ ${p&&!p.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}
  ${p&&p.champ?`<div class="hint mt8">年度总冠军：${p.champ} —— 圣龙杯！</div>`:''}
  </div>`;
  }
@@ -930,6 +930,7 @@ function renderTrain(){
  $('#page-train').innerHTML=html;
 }
 function renderLeague(){
+ try{if(typeof markMissionSeen==='function')markMissionSeen('seenLeague');}catch(_){}
  const groups=phaseGroups(S);
  const myG=myGroup(S);
  let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
@@ -1424,7 +1425,7 @@ function renderCareer(){
  const myPow=playerPower(me,(S.pick&&S.pick[me.pos])||me.sig),rivPow=rival?playerPower(rival,rival.sig):0;
  const myOffers=(S.offers||[]).filter(o=>o.pid===me.id);
  const avg=me.caps?[me.kTotal,me.dTotal,me.aTotal].map(x=>Math.round(x/me.caps*10)/10).join('/'):'—';
- let html=pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
+ let html=(typeof missionStrip==='function'?missionStrip(S):'')+pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
  ${avatar(me,64)}
  <div><div style="font-size:20px;font-weight:800">${me.name} <span class="tag">${POS[me.pos][0]} · ${me.age}岁 · ${ageStage(me)}</span>${starter?' <span class="tag" style="border-color:var(--green);color:var(--green)">首发</span>':' <span class="tag" style="border-color:var(--gold);color:var(--gold)">替补</span>'}</div>
@@ -1436,9 +1437,10 @@ function renderCareer(){
  const canTrain=!trainLock&&me.energy>=10;
  const canHero=!trainLock&&me.energy>=15;
  const underAge=(me.age||0)<MATCH_MIN_AGE;
- html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':me.injury>0?'伤停中 · 先养伤':'每天一项'}</span></h3>
+ const roleKey=playerRole(S),role=PLAYER_ROLES[roleKey]||PLAYER_ROLES.rot;
+ html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':me.injury>0?'伤停中 · 先养伤':'每天一项'} · 合同角色：${role.n}</span></h3>
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(me,84)}
- <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：可加练成长，满 '+MATCH_MIN_AGE+' 岁才能代表俱乐部出场</span>':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
+ <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次 · 比赛 ${((S.career.stats||{}).matches)||0} 场<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：可加练成长，满 '+MATCH_MIN_AGE+' 岁才能代表俱乐部出场</span>':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}<br><span class="dim">${role.d}</span></div></div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
  <button class="btn sm" onclick="playerTrain('lane')" ${canTrain?'':'disabled'}>练对线 +1~2</button>
  <button class="btn sm" onclick="playerTrain('farm')" ${canTrain?'':'disabled'}>练运营 +1~2</button>
@@ -1448,7 +1450,25 @@ function renderCareer(){
  <button class="btn sm" onclick="playerRest()" ${S.trained?'disabled':''}>休息（体力+55 · 养伤）</button>
  </div>
  <div class="hint mt8">战力↑ = 首发竞争力↑；英雄特训把一个熟练英雄练成绝活（战力 +8%）。体力不足时教练不会让你进首发。</div>
+ <div class="hint mt8">合同角色：${Object.keys(PLAYER_ROLES).map(rk=>`<button class="btn sm ${rk===roleKey?'primary':''}" onclick="setPlayerRole(S,'${rk}')" title="${PLAYER_ROLES[rk].d}">${PLAYER_ROLES[rk].n}</button>`).join(' ')}</div>
  </div>`;
+ // 更衣室/社交（与训练并行）
+ html+=`<div class="panel"><h3>更衣室 · 社交 <span class="tag">${S.socialUsed?'今日已参与':'今天还可参与一次'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">训练管成长，社交管人缘：人气影响转会接盘与代言，士气影响首发竞争力。与「加练」互相独立。</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap">
+ ${Object.keys(SOCIAL_ACTIONS||{}).map(sk=>`<button class="btn sm" onclick="playerSocial(S,'${sk}')" ${S.socialUsed||c.retired||(sk!=='bond'&&me.injury>0)||(me.energy<(SOCIAL_ACTIONS[sk].energy||0))?'disabled':''}>${SOCIAL_ACTIONS[sk].n}</button>`).join('')}
+ </div>
+ <div class="hint mt8">${Object.keys(SOCIAL_ACTIONS||{}).map(sk=>SOCIAL_ACTIONS[sk].n+'：'+SOCIAL_ACTIONS[sk].d).join(' · ')}</div>
+ </div>`;
+ // 媒体采访
+ if(c.media){
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>媒体采访 <span class="tag" style="color:var(--gold)">待答复</span></h3>
+ <div class="hint" style="margin-bottom:8px">${c.media.q}</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap">
+ ${(c.media.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="playerRespondMedia(S,${i})" title="${o.tip}">${o.l}</button>`).join('')}
+ </div>
+ </div>`;
+ }
  // 首发竞争
  if(rival)html+=`<div class="panel"><h3>首发竞争 <span class="tag">${POS[me.pos][0]}</span></h3>
  <div class="match"><div class="vs"><span style="display:inline-flex;align-items:center;gap:6px">${avatar(me,28)} <b>${me.name}</b>${starter?' <span class="green">首发中</span>':''}</span></div>
@@ -1459,8 +1479,10 @@ function renderCareer(){
  // 板凳出路：连续替补可自请租借/K甲（有球可打 + 归队成长）
  const benchDays=c.benchDays||0;
  if(natCamping(S,me)){
- html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训中 <span class="tag" style="color:var(--gold)">状态 ${me.natCampForm||0}/5</span></h3>
+ const nf=(c.natFocus||'form');
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训中 <span class="tag" style="color:var(--gold)">状态 ${me.natCampForm||0}/5 · 专注：${(typeof NAT_FOCUS!=='undefined'&&NAT_FOCUS[nf]?NAT_FOCUS[nf].n:'状态')}</span></h3>
  <div class="hint">你入选中国代表队，整个夏季赛随国家队合练——俱乐部比赛由队友顶上。集训每 5 天汇报一次成长，开赛前还有热身赛；出征战力随集训状态上浮。亚运收官后归队备战年总。</div>
+ <div class="hint mt8">集训策略：${(typeof NAT_FOCUS!=='undefined'?Object.keys(NAT_FOCUS):[]).map(fk=>`<button class="btn sm ${fk===nf?'primary':''}" onclick="setNatFocus(S,'${fk}')" title="${NAT_FOCUS[fk].d}">${NAT_FOCUS[fk].n}</button>`).join(' ')}</div>
  <div class="hint mt8">国家队名单：${(S.natSquad||[]).filter(x=>x.mine).map(x=>x.name+'（'+POS[x.pos][0]+'）').join('、')||'—'}</div>
  </div>`;
  }else if(me.loanOut){
@@ -1508,10 +1530,12 @@ function playerTrain(k){
  if(S.career&&S.career.retired){toast('职业生涯已结束');return;}
  if(me.injury>0){toast('伤停中（'+me.injury+'天），先休息养伤');return;}
  if(me.energy<10){toast('体力不足（需 10），先休息');return;}
- me.attrs[k]=clamp(me.attrs[k]+rnd(1,2),40,99);
+ const gain=(typeof trainGainRoll==='function')?trainGainRoll(playerRole(S)):rnd(1,2);
+ me.attrs[k]=clamp(me.attrs[k]+gain,40,99);
  me.energy=clamp(me.energy-10,0,ENERGY_MAX);
  S.trained=true;
- logEvent(S,' 加练'+{lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k]+'：'+me.name+' 属性提升（体力-10）');
+ if(S.career){S.career.stats=S.career.stats||{trained:0,social:0,media:0,matches:0};S.career.stats.trained++;}
+ logEvent(S,' 加练'+{lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k]+'：'+me.name+' 属性提升 +'+gain+'（体力-10）');
  save();renderAll();
 }
 function playerHeroTrain(){

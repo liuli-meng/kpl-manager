@@ -121,6 +121,7 @@ function newState(teamName,icon){
  players:[],lineup:[],market:[],
  schedule:[],groups:{},tables:{},aiPower:{},card:null,playoff:null,eliminated:[],
  eventLog:[],trained:false,marketRefreshed:false,academyTrained:false,champion:false,
+ socialUsed:false, // 选手模式：更衣室/社交行动（与 trained 并行的第二行动位）
  academy:[],history:[],transferList:[],listed:[],bids:[],
  pick:{}, // 当前 BP 选定的英雄 {top:'花木兰',...}
  series:null, // 当前系列赛 {used:[],mw,ow,max,stage,oppName,logs,myName,opName,idx}
@@ -137,7 +138,7 @@ function newState(teamName,icon){
  managerCareer:{years:0,titles:0,lastRank:null},
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
  mode:'manager', // 游戏身份：manager=经理（全权经营）/ player=选手生涯（扮演一名选手）/ coach=教练生涯（只管竞技）
- career:null, // 选手生涯数据（mode=player）：{me:选手id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null}
+ career:null, // 选手生涯数据（mode=player）：{me,seasons,titles,fmvp,allstar,nat,retired,pendingMove,role,stats,media,natFocus}
  coachDeal:null, // 教练执教履历（mode=coach）：{years:0,honors:[],log:[]}
  fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
  captain:null, // 队长（选手 id）：全队战力小幅加成 + 士气激励，离队自动摘除
@@ -393,6 +394,13 @@ function migrateSave(){
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
  S.mode=S.mode||'manager'; // 旧档统一为经理模式
  if(S.mode==='player'&&!S.career)S.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
+ if(S.mode==='player'&&S.career){
+  S.career.role=S.career.role||'rot';
+  S.career.stats=S.career.stats||{trained:0,social:0,media:0,matches:0};
+  if(S.career.media===undefined)S.career.media=null;
+  if(S.career.natFocus===undefined)S.career.natFocus='form';
+ }
+ if(S.socialUsed===undefined)S.socialUsed=false;
  if(S.mode==='coach'&&!S.coachDeal)S.coachDeal={years:0,honors:[],log:[]};
  S.mentorPairs=S.mentorPairs||[]; // 老将带新配对（旧档兜底）
  S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值

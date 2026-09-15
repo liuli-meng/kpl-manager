@@ -20,6 +20,8 @@ description: kpl-manager（王者电竞经理·KPL 篇，E:\sex\kpl-manager）�
 | bp.js | KPL 两段式 BP 引擎与 BP 台 UI |
 | match.js | 比赛模拟（`singleGame`/`gamePerform`/`genMatchStory` 文案池）、赛前准备、`finishSeries` 收尾链、AI 赛后战报（默认关闭） |
 | ui.js | 各页渲染（`renderClub/Lineup/Market/Train/League/Kjia/Career/Union/Biz`）+ 生涯页动作（`playerTrain` 等） |
+| playerops.js | 选手日决策：媒体采访 / 更衣室社交 / 合同角色 / 国家队专注 |
+| guide.js | 3 步上手 + 完整 tour + 前 3 日任务条 + 每页提示 |
 | main.js | 开局（`createTeam`/`applyClub`/`createPlayerCareer`/`applyCoachClub`）、导航 `MODE_PAGES` 按身份适配、音效、启动 |
 
 三种身份 `s.mode`：manager（全权）/ player（选手生涯，导航精简、比赛走 `playerAutoSeries` 自动模拟）/ coach（竞技全权，俱乐部自动引援）。加新功能先想清楚它对三种模式分别意味着什么。

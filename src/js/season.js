@@ -416,10 +416,13 @@ function poPlace(slot,isFinal){
  return '四强';
 }
 function nextDay(s){
- s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
+ s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
  kjiaTick(s); // K甲下放倒计时：到期归队并成长
  kjiaDayTick(s); // K甲联赛：二队每 2 天一轮，下放选手真实出战
- if(s.mode==='player'){tickPlayerBench(s);} // 选手板凳计数（自请租借/K甲的门槛）
+ if(s.mode==='player'){
+  tickPlayerBench(s); // 选手板凳计数（自请租借/K甲的门槛）
+  if(typeof playerMediaDayTick==='function')playerMediaDayTick(s); // 偶发媒体邀约
+ }
  loanOutTick(s); // 任何外租选手日结（选手自请 + 俱乐部外租共用）
  natCampTick(s); // 亚运集训日结：征召选手在国家队合练涨状态
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）

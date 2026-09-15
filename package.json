@@ -10,6 +10,7 @@
     "fuzz": "node tests/fuzz.js",
     "sim": "node sim.js",
     "sim:quick": "node tests/sim-quick.js",
+    "sim:player": "node tests/sim-player.js",
     "sim:yearend": "node tests/sim-yearend.js",
     "test:built": "node tests/verify-built.js"
   },

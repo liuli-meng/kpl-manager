@@ -517,7 +517,8 @@ function createPlayerCareer(){
  me.contract=2;
  me.popularity=Math.max(me.popularity,arch.pop);
  S.players.push(me);
- S.career={me:me.id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
+ S.career={me:me.id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null,
+  role:defaultRoleForArch(_pcArch),stats:{trained:0,social:0,media:0,matches:0},media:null,natFocus:'form'};
  // 首发统一走 buildBestLineup（未成年/伤停不进首发；同位置取可出场中最强）
  S.lineup=buildBestLineup(S);
  S.seedPower=teamPower(S)||300;

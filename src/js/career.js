@@ -79,7 +79,10 @@ function tickPlayerBench(s){
  s.career.benchDays=was+1;
  if(was===0)logEvent(s,' 你连续坐上替补席——经纪人建议：加练反超首发，或申请租借/K甲寻找出场时间');
  else if(was===9)logEvent(s,' 板凳已坐 10 天：士气承压，认真考虑租借离队或下放 K甲吧');
- if(s.career.benchDays>=3)me.morale=clamp(me.morale-1,20,100);
+ if(s.career.benchDays>=3){
+  const d=(typeof benchMoraleDelta==='function')?benchMoraleDelta(s.career.role||playerRole(s),1):1;
+  me.morale=clamp(me.morale-d,20,100);
+ }
  }else if(s.career.benchDays){
  s.career.benchDays=0;
  }

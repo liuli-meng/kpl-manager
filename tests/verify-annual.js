@@ -101,10 +101,17 @@ const out = vm.runInContext(`
     }
     if(S.phase!=='annual'){fail('夏季赛后未进入年总: phase='+S.phase);}
     renderClub();renderLeague(); // 渲染冒烟：年总擂台赛面板模板
-    let g3=0;
+    let g3=0;let poUiChecked=false;
     while(S.phase==='annual'&&g3++<120){
       if(S.series){closeSeries();continue;}
       const a=S.annual;
+      if(a.stage==='po'&&a.po&&!a.po.wb1[0].r&&!poUiChecked){ // 回归：淘汰赛开幕（总决赛双方未定）必须能看到「进行下一场」按钮——曾因按钮条件写成 p.final.a 才显示，前半程只显示赛程打不了
+        poUiChecked=true;
+        renderClub();
+        const clubHtml=document.getElementById('page-club').innerHTML;
+        if(clubHtml.indexOf('uiStartCup')<0)fail('年总淘汰赛开幕无「进行下一场」按钮（只显示赛程打不了比赛）');
+        else log('年总淘汰赛开幕：俱乐部页有比赛入口按钮 OK');
+      }
       if(a.stage==='arena'&&a.roundIdx<6){startCup(S);if(!S.series)break;continue;}
       if(!S.series&&!a.po)break;
       startCup(S);

@@ -38,6 +38,7 @@ function natCampTick(s){
  p.natCampForm=clamp((p.natCampForm||0)+1,0,5);
  p.energy=clamp(p.energy+8,0,ENERGY_MAX);
  p.morale=clamp(p.morale+2,20,100);
+ if(typeof applyNatFocus==='function')applyNatFocus(s,p); // 选手可选集训专注
  });
  const names=camped.map(p=>p.name).join('、');
  logEvent(s,' 国家队集训第'+day+'天：'+names+' 与国家队合练（状态 +'+camped[0].natCampForm+' · 小幅成长）——俱乐部只能靠替补顶住夏赛');

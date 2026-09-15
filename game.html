@@ -1631,6 +1631,7 @@ function newState(teamName,icon){
  players:[],lineup:[],market:[],
  schedule:[],groups:{},tables:{},aiPower:{},card:null,playoff:null,eliminated:[],
  eventLog:[],trained:false,marketRefreshed:false,academyTrained:false,champion:false,
+ socialUsed:false, // 选手模式：更衣室/社交行动（与 trained 并行的第二行动位）
  academy:[],history:[],transferList:[],listed:[],bids:[],
  pick:{}, // 当前 BP 选定的英雄 {top:'花木兰',...}
  series:null, // 当前系列赛 {used:[],mw,ow,max,stage,oppName,logs,myName,opName,idx}
@@ -1647,7 +1648,7 @@ function newState(teamName,icon){
  managerCareer:{years:0,titles:0,lastRank:null},
  scenario:'normal', // 开局剧本（难度档）：normal/debt/exodus/cap/cursed —— 见 data.js SCENARIOS
  mode:'manager', // 游戏身份：manager=经理（全权经营）/ player=选手生涯（扮演一名选手）/ coach=教练生涯（只管竞技）
- career:null, // 选手生涯数据（mode=player）：{me:选手id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null}
+ career:null, // 选手生涯数据（mode=player）：{me,seasons,titles,fmvp,allstar,nat,retired,pendingMove,role,stats,media,natFocus}
  coachDeal:null, // 教练执教履历（mode=coach）：{years:0,honors:[],log:[]}
  fans:0, // 粉丝数（万）：由成绩与选手人气驱动，反过来放大赞助单价/门票/代言并作为赞助升级门槛
  captain:null, // 队长（选手 id）：全队战力小幅加成 + 士气激励，离队自动摘除
@@ -1903,6 +1904,13 @@ function migrateSave(){
  S.scenario=S.scenario||'normal'; // 缺剧本字段（旧档/中间版本）按常规档
  S.mode=S.mode||'manager'; // 旧档统一为经理模式
  if(S.mode==='player'&&!S.career)S.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
+ if(S.mode==='player'&&S.career){
+  S.career.role=S.career.role||'rot';
+  S.career.stats=S.career.stats||{trained:0,social:0,media:0,matches:0};
+  if(S.career.media===undefined)S.career.media=null;
+  if(S.career.natFocus===undefined)S.career.natFocus='form';
+ }
+ if(S.socialUsed===undefined)S.socialUsed=false;
  if(S.mode==='coach'&&!S.coachDeal)S.coachDeal={years:0,honors:[],log:[]};
  S.mentorPairs=S.mentorPairs||[]; // 老将带新配对（旧档兜底）
  S.fans=S.fans==null?8:S.fans; // 缺粉丝字段按中性起始值
@@ -4035,10 +4043,13 @@ function poPlace(slot,isFinal){
  return '四强';
 }
 function nextDay(s){
- s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;
+ s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
  kjiaTick(s); // K甲下放倒计时：到期归队并成长
  kjiaDayTick(s); // K甲联赛：二队每 2 天一轮，下放选手真实出战
- if(s.mode==='player'){tickPlayerBench(s);} // 选手板凳计数（自请租借/K甲的门槛）
+ if(s.mode==='player'){
+  tickPlayerBench(s); // 选手板凳计数（自请租借/K甲的门槛）
+  if(typeof playerMediaDayTick==='function')playerMediaDayTick(s); // 偶发媒体邀约
+ }
  loanOutTick(s); // 任何外租选手日结（选手自请 + 俱乐部外租共用）
  natCampTick(s); // 亚运集训日结：征召选手在国家队合练涨状态
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
@@ -4408,6 +4419,7 @@ function natCampTick(s){
  p.natCampForm=clamp((p.natCampForm||0)+1,0,5);
  p.energy=clamp(p.energy+8,0,ENERGY_MAX);
  p.morale=clamp(p.morale+2,20,100);
+ if(typeof applyNatFocus==='function')applyNatFocus(s,p); // 选手可选集训专注
  });
  const names=camped.map(p=>p.name).join('、');
  logEvent(s,' 国家队集训第'+day+'天：'+names+' 与国家队合练（状态 +'+camped[0].natCampForm+' · 小幅成长）——俱乐部只能靠替补顶住夏赛');
@@ -5475,7 +5487,10 @@ function tickPlayerBench(s){
  s.career.benchDays=was+1;
  if(was===0)logEvent(s,' 你连续坐上替补席——经纪人建议：加练反超首发，或申请租借/K甲寻找出场时间');
  else if(was===9)logEvent(s,' 板凳已坐 10 天：士气承压，认真考虑租借离队或下放 K甲吧');
- if(s.career.benchDays>=3)me.morale=clamp(me.morale-1,20,100);
+ if(s.career.benchDays>=3){
+  const d=(typeof benchMoraleDelta==='function')?benchMoraleDelta(s.career.role||playerRole(s),1):1;
+  me.morale=clamp(me.morale-d,20,100);
+ }
  }else if(s.career.benchDays){
  s.career.benchDays=0;
  }
@@ -5804,6 +5819,197 @@ function signFreeAgent(s,id){
 }
 </script>
 <script>
+/* 选手生涯日决策引擎（媒体采访 / 更衣室互动 / 合同角色 / 国家队专注）。
+   从 career/ui 拆出：选手主动路径的规则与结算集中在此，UI 只渲染与转发。
+   与 S.trained（每日成长行动）并行：社交有独立 socialUsed，媒体是事件驱动。 */
+const PLAYER_ROLES={
+  star:{n:'当家核心',d:'要求稳定首发；坐板凳时士气跌得更快，首发时人气与忠诚涨得更稳'},
+  rot:{n:'轮换拼图',d:'接受合理轮换；板凳士气更稳，出场时成长略快'},
+  proj:{n:'长期培养',d:'以成长为先；加练收益更稳，适合新秀/海归沉淀'},
+};
+function defaultRoleForArch(id){return id==='youth'?'proj':id==='returnee'?'star':'rot';}
+function playerRole(s){return (s&&s.career&&s.career.role)||'rot';}
+function setPlayerRole(s,role){
+  if(!s||s.mode!=='player'||!s.career)return false;
+  if(!PLAYER_ROLES[role])return false;
+  if(s.career.role===role)return false;
+  s.career.role=role;
+  const me=myPlayer(s);
+  logEvent(s,' 合同角色调整：'+((me&&me.name)||'你')+' 将以「'+PLAYER_ROLES[role].n+'」姿态征战（'+PLAYER_ROLES[role].d+'）');
+  save();renderAll();
+  return true;
+}
+/* ================= 更衣室互动（与训练并行的第二行动位） ================= */
+const SOCIAL_ACTIONS={
+  bond:{n:'更衣室聚餐',d:'全队士气+2 · 你士气+3 · 体力-5',energy:5},
+  help:{n:'陪替补加练',d:'一名队友属性+1 · 你人气+1 · 体力-8',energy:8},
+  stream:{n:'直播整活',d:'人气+3 · 心态-1（状态低迷时可能反噬）',energy:4},
+};
+function playerSocial(s,key){
+  s=s||S;
+  if(!s||s.mode!=='player')return false;
+  const me=myPlayer(s);
+  if(!me)return false;
+  if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
+  if(s.socialUsed){toast('今天已经参与过更衣室/社交活动了');return false;}
+  if(me.injury>0&&key!=='bond'){toast('伤停中，先养伤（聚餐仍可参加）');return false;}
+  const act=SOCIAL_ACTIONS[key];
+  if(!act)return false;
+  if(me.energy<act.energy){toast('体力不足（需 '+act.energy+'）');return false;}
+  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
+  if(key==='bond'){
+    s.players.forEach(p=>{p.morale=clamp(p.morale+2,20,100);});
+    me.morale=clamp(me.morale+3,20,100);
+    me.energy=clamp(me.energy-act.energy,0,ENERGY_MAX);
+    logEvent(s,' 更衣室：'+me.name+' 组局聚餐，全队士气回暖');
+  }else if(key==='help'){
+    const mates=(s.players||[]).filter(p=>p.id!==me.id&&!p.loanOut&&!(p.kjia>0)&&!p.retiring);
+    if(!mates.length){toast('队内暂无陪练对象');return false;}
+    const t=pick(mates);
+    const ak=pick(['lane','farm','team','mind']);
+    t.attrs[ak]=clamp(t.attrs[ak]+1,40,99);
+    me.popularity=Math.min(99,(me.popularity||0)+1);
+    me.energy=clamp(me.energy-act.energy,0,ENERGY_MAX);
+    t.morale=clamp(t.morale+4,20,100);
+    logEvent(s,' 更衣室：'+me.name+' 陪 '+t.name+' 加练，队友属性提升（'+{lane:'对线',farm:'运营',team:'团战',mind:'心态'}[ak]+'+1）');
+  }else if(key==='stream'){
+    const hot=(me.val||100)>=105;
+    const back=!hot&&(me.val||100)<92&&Math.random()<0.35;
+    me.popularity=Math.min(99,(me.popularity||0)+(back?0:3));
+    me.attrs.mind=clamp(me.attrs.mind-(back?2:1),40,99);
+    me.energy=clamp(me.energy-act.energy,0,ENERGY_MAX);
+    if(back){
+      logEvent(s,' 媒体：'+me.name+' 直播翻车被带节奏，人气未涨、心态受挫');
+    }else if(hot){
+      me.popularity=Math.min(99,(me.popularity||0)+1);
+      logEvent(s,' 直播：'+me.name+' 整活出圈（人气+4）——状态火热自带流量');
+    }else{
+      logEvent(s,' 直播：'+me.name+' 整活出圈（人气+3）');
+    }
+  }
+  s.socialUsed=true;
+  s.career.stats.social++;
+  save();renderAll();
+  return true;
+}
+/* ================= 媒体采访（赛后/偶发事件，三选一） ================= */
+function mediaPool(){
+  return [
+   {id:'form',q:'最近状态不错，媒体问你如何看待自己的发挥？',
+    opts:[
+     {id:'humble',l:'还没到巅峰，继续打磨',tip:'心态+1 · 人气+1',fn:(s,me)=>{me.attrs.mind=clamp(me.attrs.mind+1,40,99);me.popularity=Math.min(99,(me.popularity||0)+1);return '低调回应赢得尊重';}},
+     {id:'hype',l:'这就是我的时代',tip:'人气+4（状态低迷会翻车）',fn:(s,me)=>{const hot=(me.val||100)>=100;if(hot){me.popularity=Math.min(99,(me.popularity||0)+4);return '自信宣言引爆热搜';}me.popularity=Math.max(0,(me.popularity||0)-2);me.attrs.mind=clamp(me.attrs.mind-1,40,99);return '被嘲「言过其实」，人气下滑';}},
+     {id:'team',l:'功劳是全队的',tip:'全队士气+2 · 人气+1',fn:(s,me)=>{s.players.forEach(p=>{p.morale=clamp(p.morale+2,20,100);});me.popularity=Math.min(99,(me.popularity||0)+1);return '更衣室好感度上升';}},
+    ]},
+   {id:'bench',q:'连续坐板凳，记者追问你的未来。',
+    opts:[
+     {id:'fight',l:'用训练说话',tip:'心态+1 · 下次加练多+1',fn:(s,me)=>{me.attrs.mind=clamp(me.attrs.mind+1,40,99);s.career.mediaBuff='train';return '训练态度被点赞';}},
+     {id:'loan',l:'不排除租借找机会',tip:'人气+2 · 队友小幅寒心',fn:(s,me)=>{me.popularity=Math.min(99,(me.popularity||0)+2);const mates=(s.players||[]).filter(p=>p.id!==me.id);if(mates.length){const t=pick(mates);t.morale=clamp(t.morale-3,20,100);}return '转会传闻升温';}},
+     {id:'loyal',l:'我忠于这支队',tip:'全队士气+1 · 心态+1',fn:(s,me)=>{s.players.forEach(p=>{p.morale=clamp(p.morale+1,20,100);});me.attrs.mind=clamp(me.attrs.mind+1,40,99);return '队内口碑回暖';}},
+    ]},
+   {id:'title',q:'夺冠后发布会，镜头全部对准你。',
+    opts:[
+     {id:'share',l:'FMVP属于全队',tip:'全队士气+3 · 人气+2',fn:(s,me)=>{s.players.forEach(p=>{p.morale=clamp(p.morale+3,20,100);});me.popularity=Math.min(99,(me.popularity||0)+2);return '大气发言圈粉';}},
+     {id:'self',l:'我就是关键先生',tip:'人气+6 · 队友士气-1',fn:(s,me)=>{me.popularity=Math.min(99,(me.popularity||0)+6);s.players.forEach(p=>{if(p.id!==me.id)p.morale=clamp(p.morale-1,20,100);});return '个人品牌暴涨，更衣室微词';}},
+     {id:'next',l:'冠军只是开始',tip:'心态+2 · 人气+1',fn:(s,me)=>{me.attrs.mind=clamp(me.attrs.mind+2,40,99);me.popularity=Math.min(99,(me.popularity||0)+1);return '格局打开';}},
+    ]},
+  ];
+}
+function maybeOpenMedia(s,ctx){
+  if(!s||s.mode!=='player'||!s.career||s.career.retired)return false;
+  if(s.career.media)return false; // 已有待答采访
+  const me=myPlayer(s);
+  if(!me)return false;
+  // ctx: 'match' | 'day' | 'title'
+  let chance=0,pool=mediaPool();
+  if(ctx==='title')chance=1;
+  else if(ctx==='match')chance=0.45;
+  else chance=s.day%5===0?0.35:0.08;
+  if(Math.random()>chance)return false;
+  let q;
+  if(ctx==='title')q=pool.find(x=>x.id==='title');
+  else if((s.career.benchDays||0)>=3)q=pool.find(x=>x.id==='bench');
+  else q=pool.find(x=>x.id==='form');
+  if(!q)q=pool[0];
+  s.career.media={id:q.id,q:q.q,opts:q.opts.map(o=>({id:o.id,l:o.l,tip:o.tip})),day:s.day,ctx:ctx||'day'};
+  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
+  logEvent(s,' 媒体：赛后发布会邀约——去「生涯」页接受采访（三选一会影响人气/士气/心态）');
+  return true;
+}
+function playerRespondMedia(s,idx){
+  s=s||S;
+  if(!s||s.mode!=='player'||!s.career||!s.career.media)return false;
+  const me=myPlayer(s);
+  if(!me)return false;
+  const pool=mediaPool().find(x=>x.id===s.career.media.id);
+  const opt=pool&&pool.opts[idx|0];
+  if(!opt){toast('采访选项无效');return false;}
+  const why=opt.fn(s,me);
+  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
+  s.career.stats.media++;
+  s.career.media=null;
+  logEvent(s,' 媒体采访：'+me.name+' 选择「'+opt.l+'」——'+why);
+  toast(why);
+  save();renderAll();
+  return true;
+}
+function playerMediaDayTick(s){
+  if(!s||s.mode!=='player')return;
+  // 有待答采访就不再叠加；隔天仍有概率被追问
+  maybeOpenMedia(s,'day');
+}
+/* ================= 国家队集训专注（选手可操作面） ================= */
+const NAT_FOCUS={
+  form:{n:'状态拉满',d:'集训汇报额外状态+1，体力消耗+3'},
+  rest:{n:'养精蓄锐',d:'体力+8/次，状态成长放缓'},
+  bond:{n:'更衣室外交',d:'国家队队友人气+1，你心态+1'},
+};
+function setNatFocus(s,fk){
+  if(!s||s.mode!=='player'||!s.career)return false;
+  const me=myPlayer(s);
+  if(!me||!natCamping(s,me)){toast('你不在国家队集训中');return false;}
+  if(!NAT_FOCUS[fk])return false;
+  s.career.natFocus=fk;
+  logEvent(s,' 国家队集训策略：'+me.name+' 将「'+NAT_FOCUS[fk].n+'」（'+NAT_FOCUS[fk].d+'）');
+  save();renderAll();
+  return true;
+}
+/* 由 natCampTick 在玩家入选时调用：按专注微调日结 */
+function applyNatFocus(s,p){
+  if(!s||s.mode!=='player'||!s.career||!p)return;
+  const me=myPlayer(s);
+  if(!me||me.id!==p.id)return;
+  const fk=s.career.natFocus||'form';
+  if(fk==='form'){
+    p.natCampForm=clamp((p.natCampForm||0)+1,0,5);
+    p.energy=clamp(p.energy-3,0,ENERGY_MAX);
+  }else if(fk==='rest'){
+    p.energy=clamp(p.energy+8,0,ENERGY_MAX);
+    p.natCampForm=clamp((p.natCampForm||0)-0,0,5); // 不额外加状态
+  }else if(fk==='bond'){
+    p.attrs.mind=clamp(p.attrs.mind+1,40,99);
+    p.popularity=Math.min(99,(p.popularity||0)+1);
+  }
+}
+/* ================= 角色对板凳/成长的修正（由 career/train 调用） ================= */
+function benchMoraleDelta(role,base){
+  if(role==='star')return base*2;
+  return base;
+}
+function trainGainMin(role){return role==='proj'?2:1;}
+function trainGainRoll(role){
+  return rnd(trainGainMin(role),2);
+}
+/* 赛后钩子：选手模式可能触发媒体 */
+function playerAfterMatch(s,finalWin){
+  if(!s||s.mode!=='player')return;
+  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
+  s.career.stats.matches++;
+  if(finalWin&&s.phase==='champion')maybeOpenMedia(s,'title');
+  else maybeOpenMedia(s,'match');
+}
+</script>
+<script>
 /* 荣誉馆 + 战绩分享图（canvas 纯前端导出，零网络依赖） */
 /* ================= 荣誉馆数据聚合 ================= */
 function hallDynastyRuns(s){
@@ -6051,10 +6257,11 @@ function shareCareerCard(){
 }
 </script>
 <script>
-/* 新手引导 + 每页提示（纯 UI 层：进度存 localStorage，不进存档、不进迁移链）。
- 每页首行「这是什么」由各渲染函数拼 pageHint()；分步引导走 app-modal（移动端天然底栏化），
- 首进自动弹一次，之后从「存档管理 → 重玩新手引导」随时重放。 */
-const TOUR_KEY='km_tour',HINT_KEY='km_hints';
+/* 新手引导 + 每页提示 + 前 3 日任务线（纯 UI 层：进度存 localStorage，不进存档、不进迁移链）。
+ 每页首行「这是什么」由各渲染函数拼 pageHint()；
+ 首进默认「3 步上手」任务线（目标驱动），完整页码 tour 仍可重放；
+ 前 3 个游戏日顶部任务条（missionStrip）挂在 club/career 首行。 */
+const TOUR_KEY='km_tour',HINT_KEY='km_hints',MISSION_KEY='km_missions';
 const PAGE_HINTS={
  club:'推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发',
  lineup:'选手卡管一切：训练、身价、续约、挂牌出售、替补轮换',
@@ -6065,14 +6272,56 @@ const PAGE_HINTS={
  union:'联盟总览：18 队战力榜与历代联盟史册',
  hall:'荣誉馆：冠军墙/王朝纪录/FMVP/最佳阵容，夺冠后可生成战绩分享图',
  biz:'钱袋子：粉丝/赞助/代言/门票——收入全靠经营，别只顾战绩',
- career:'你的故事：训练/比赛数据/生涯目标，选手模式每天来这打卡'
+ career:'你的故事：训练/更衣室/媒体/生涯目标，选手模式每天来这打卡'
 };
 const TOUR_TITLES={
  club:'俱乐部 · 比赛主场',lineup:'阵容 · 管理选手',market:'转会 · 买卖选手',
  train:'训练 · 变强',league:'联赛 · 联盟战局',kjia:'二队 · K甲练级',
  union:'联盟 · 战力榜',hall:'荣誉馆 · 收藏馆',biz:'经营 · 钱袋子',career:'生涯 · 你的故事'
 };
-var _tour={on:false,i:0};
+var _tour={on:false,i:0,mode:'quick'}; // mode: quick=3步上手 | full=完整页码tour
+/* 前 3 日任务：目标驱动，不按页码背书 */
+function missionState(){
+ try{return JSON.parse(localStorage.getItem(MISSION_KEY)||'{}');}catch(_){return {};}
+}
+function saveMissionState(m){try{localStorage.setItem(MISSION_KEY,JSON.stringify(m));}catch(_){}}
+function clearMissionState(){try{localStorage.removeItem(MISSION_KEY);}catch(_){}}
+function missionDefs(mode){
+ if(mode==='player')return [
+  {id:'p1',day:1,title:'完成一次加练',text:'在「生涯」页练一项属性（体力不够先休息）',page:'career',
+   done:s=>!!(s&&s.career&&s.career.stats&&s.career.stats.trained>=1)},
+  {id:'p2',day:1,title:'更衣室走一遭',text:'「生涯」页聚餐/陪练/直播任选其一（与加练独立）',page:'career',
+   done:s=>!!(s&&s.career&&s.career.stats&&s.career.stats.social>=1)},
+  {id:'p3',day:2,title:'打完一场联赛',text:'「俱乐部」页开赛——比赛会自动模拟',page:'club',
+   done:s=>!!(s&&s.career&&s.career.stats&&s.career.stats.matches>=1)},
+ ];
+ return [
+  {id:'m1',day:1,title:'完成一次训练',text:'「训练」页给选手加练，或全队休息恢复',page:'train',
+   done:s=>!!(s&&s.trained)},
+  {id:'m2',day:1,title:'推进一场比赛',text:'「俱乐部」页开赛，赢下第一场联赛',page:'club',
+   done:s=>!!(s&&(s.matchIdx>0||(s.history&&s.history.length)))},
+  {id:'m3',day:2,title:'看清联盟格局',text:'打开「联赛」页看积分榜与下一对手',page:'league',
+   done:s=>!!(s&&(missionState().seenLeague||s.matchIdx>=2))},
+ ];
+}
+function markMissionSeen(key){const m=missionState();m[key]=1;saveMissionState(m);}
+function activeMissions(s){
+ const mode=(s&&s.mode)||'manager';
+ return missionDefs(mode).filter(m=>{
+  if((s&&s.day||1)>3)return false; // 只提示前 3 日
+  const st=missionState();
+  if(st['done_'+m.id])return false;
+  try{if(m.done(s)){st['done_'+m.id]=1;saveMissionState(st);return false;}}catch(_){}
+  return true;
+ });
+}
+function missionStrip(s){
+ const list=activeMissions(s);
+ if(!list.length)return '';
+ return `<div class="mission-strip" style="margin:0 0 8px;padding:8px 10px;border:1px solid rgba(217,164,65,.55);border-radius:8px;background:rgba(217,164,65,.08);font-size:12px">
+ <span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${m.text}">${m.title}</button>`).join('')}</span>
+ </div>`;
+}
 /* 每页一行提示；× 单页关闭（km_hints 按页记忆） */
 function pageHint(name){
  let hide=null;
@@ -6083,12 +6332,12 @@ function pageHint(name){
 }
 function dismissHint(name){
  try{
- const hide=JSON.parse(localStorage.getItem(HINT_KEY)||'{}');
- hide[name]=1;localStorage.setItem(HINT_KEY,JSON.stringify(hide));
+  const hide=JSON.parse(localStorage.getItem(HINT_KEY)||'{}');
+  hide[name]=1;localStorage.setItem(HINT_KEY,JSON.stringify(hide));
  }catch(_){}
  renderPage(typeof curPageName==='function'?curPageName():'club');
 }
-/* 分步引导：按当前身份遍历可见页（MODE_PAGES），首尾各一页说明 */
+/* 完整引导：按当前身份遍历可见页（MODE_PAGES），首尾各一页说明 */
 function tourSteps(){
  const mode=(S&&S.mode)||'manager';
  const pages=MODE_PAGES[mode]||MODE_PAGES.manager;
@@ -6098,40 +6347,57 @@ function tourSteps(){
  steps.push({page:null,title:'存档与目标',text:'进度自动保存在本机浏览器，「管理」里可 3 槽切换、导出备份、导入换机。目标只有一个：捧起银龙杯。上阵！'});
  return steps;
 }
+/* 3 步上手：目标驱动，不按页码背书 */
+function quickSteps(){
+ const mode=(S&&S.mode)||'manager';
+ const modeName=mode==='player'?'选手生涯':mode==='coach'?'教练生涯':'经理模式';
+ const m=missionDefs(mode);
+ return [
+  {page:null,title:'3 步上手 · '+modeName,text:'不用读完所有页面。先完成这三件事，比赛节奏就通了。之后随时「管理 → 重玩新手引导」看完整说明。'},
+  ...m.map(x=>({page:x.page,title:x.title,text:x.text,mission:true})),
+  {page:null,title:'冲！',text:'目标：捧起银龙杯。进度自动存本机；前 3 天顶部会有任务条提醒。'},
+ ];
+}
 function maybeStartTour(){
  if(_tour.on||!S)return;
  try{if(localStorage.getItem(TOUR_KEY))return;}catch(_){}
- startTour();
+ startQuickOnboard(); // 首进：3 步上手（目标驱动），完整 tour 从管理页重放
 }
-function startTour(){
- _tour={on:true,i:0};
+function startTour(){ // 完整页码 tour（管理页入口）
+ _tour={on:true,i:0,mode:'full'};
+ renderTour();
+}
+function startQuickOnboard(){ // 首进默认：3 步上手
+ _tour={on:true,i:0,mode:'quick'};
  renderTour();
 }
 function renderTour(){
- const steps=tourSteps();
+ const steps=_tour.mode==='quick'?quickSteps():tourSteps();
  const st=steps[_tour.i]||steps[0];
  if(st.page)goPage(st.page); // goPage 会再进 maybeStartTour：_tour.on 守卫挡住，不递归
  const n=steps.length;
+ const isQuick=_tour.mode==='quick';
  $('#app-modal-body').innerHTML=`<h2>${_escTxt(st.title)}</h2>
  <div class="hint" style="margin-bottom:10px">${st.text}</div>
  <div style="display:flex;gap:4px;margin-bottom:14px">${steps.map((_,i)=>`<span style="flex:1;height:3px;border-radius:2px;background:${i<=_tour.i?'var(--gold)':'var(--line)'}"></span>`).join('')}</div>
  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  ${_tour.i>0?'<button class="btn sm" onclick="tourPrev()">上一步</button>':''}
  <button class="btn sm" onclick="tourSkip()">跳过</button>
- ${_tour.i<n-1?'<button class="btn sm primary" onclick="tourNext()">下一步</button>':'<button class="btn sm gold" onclick="tourFinish()">开始征程</button>'}
+ ${isQuick?'<button class="btn sm" onclick="startTour()">看完整引导</button>':''}
+ ${_tour.i<n-1?'<button class="btn sm primary" onclick="tourNext()">下一步</button>':'<button class="btn sm gold" onclick="tourFinish()">'+(isQuick?'开始上手':'开始征程')+'</button>'}
  </div>`;
  $('#app-modal').classList.add('on');
 }
-function tourNext(){const n=tourSteps().length;if(_tour.i<n-1){_tour.i++;renderTour();}else tourFinish();}
+function tourNext(){const steps=_tour.mode==='quick'?quickSteps():tourSteps();const n=steps.length;if(_tour.i<n-1){_tour.i++;renderTour();}else tourFinish();}
 function tourPrev(){if(_tour.i>0){_tour.i--;renderTour();}}
 function _tourEnd(msg){
- _tour={on:false,i:0};
+ _tour={on:false,i:0,mode:'quick'};
  try{localStorage.setItem(TOUR_KEY,'1');}catch(_){}
  closeModal('app-modal');
  toast(msg);
 }
 function tourSkip(){_tourEnd('已跳过引导——「管理 → 重玩新手引导」随时再看');}
-function tourFinish(){_tourEnd('上阵！目标：总冠军');}
+function tourFinish(){_tourEnd('上手！前 3 天按顶部任务条走，目标：总冠军');}
 </script>
 <script>
 
@@ -7282,6 +7548,7 @@ function finishSeries(finalWin){
  simulateAiRound(S,m.round); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
+ if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
  }else if(sr.stage==='card'){
  const m=sr.cardMatch;
  m.r=finalWin?sr.myName:sr.opName;
@@ -7683,7 +7950,7 @@ function uiAdvanceCalendar(s){
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 function renderClub(){
  const ls=rosterLineup(S);
- let html=pageHint('club')+`
+ let html=(typeof missionStrip==='function'?missionStrip(S):'')+pageHint('club')+`
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
@@ -7884,7 +8151,7 @@ function renderClub(){
  html+=`<div class="panel"><h3>年度总决赛·淘汰赛 <span class="tag">8强 BO7 双败 · 圣龙杯</span></h3>
  ${p?p.wb1.map(m=>mrow(m,'胜者组R1')).join('')+p.wb2.map(m=>mrow(m,'胜者组SF')).join('')+(p.wf.a?mrow(p.wf,'胜者组决赛'):'')+p.lb1.map(m=>mrow(m,'败者组R1')).join('')+p.lb2.map(m=>mrow(m,'败者组R2')).join('')+(p.lbs.a?mrow(p.lbs,'败者组SF'):'')+(p.lbf.a?mrow(p.lbf,'败者组决赛'):'')+(p.final.a?mrow(p.final,'总决赛'):'')
  :'<div class="hint">待突围赛结束</div>'}
- ${p&&p.final.a&&!p.final.r?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场':'快进赛程'}</button>`:''}
+ ${p&&!p.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}
  ${p&&p.champ?`<div class="hint mt8">年度总冠军：${p.champ} —— 圣龙杯！</div>`:''}
  </div>`;
  }
@@ -8390,6 +8657,7 @@ function renderTrain(){
  $('#page-train').innerHTML=html;
 }
 function renderLeague(){
+ try{if(typeof markMissionSeen==='function')markMissionSeen('seenLeague');}catch(_){}
  const groups=phaseGroups(S);
  const myG=myGroup(S);
  let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
@@ -8884,7 +9152,7 @@ function renderCareer(){
  const myPow=playerPower(me,(S.pick&&S.pick[me.pos])||me.sig),rivPow=rival?playerPower(rival,rival.sig):0;
  const myOffers=(S.offers||[]).filter(o=>o.pid===me.id);
  const avg=me.caps?[me.kTotal,me.dTotal,me.aTotal].map(x=>Math.round(x/me.caps*10)/10).join('/'):'—';
- let html=pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
+ let html=(typeof missionStrip==='function'?missionStrip(S):'')+pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
  ${avatar(me,64)}
  <div><div style="font-size:20px;font-weight:800">${me.name} <span class="tag">${POS[me.pos][0]} · ${me.age}岁 · ${ageStage(me)}</span>${starter?' <span class="tag" style="border-color:var(--green);color:var(--green)">首发</span>':' <span class="tag" style="border-color:var(--gold);color:var(--gold)">替补</span>'}</div>
@@ -8896,9 +9164,10 @@ function renderCareer(){
  const canTrain=!trainLock&&me.energy>=10;
  const canHero=!trainLock&&me.energy>=15;
  const underAge=(me.age||0)<MATCH_MIN_AGE;
- html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':me.injury>0?'伤停中 · 先养伤':'每天一项'}</span></h3>
+ const roleKey=playerRole(S),role=PLAYER_ROLES[roleKey]||PLAYER_ROLES.rot;
+ html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':me.injury>0?'伤停中 · 先养伤':'每天一项'} · 合同角色：${role.n}</span></h3>
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(me,84)}
- <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：可加练成长，满 '+MATCH_MIN_AGE+' 岁才能代表俱乐部出场</span>':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}</div></div>
+ <div class="hint">对线 ${me.attrs.lane} · 运营 ${me.attrs.farm} · 团战 ${me.attrs.team} · 心态 ${me.attrs.mind}<br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次 · 比赛 ${((S.career.stats||{}).matches)||0} 场<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：可加练成长，满 '+MATCH_MIN_AGE+' 岁才能代表俱乐部出场</span>':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}<br><span class="dim">${role.d}</span></div></div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
  <button class="btn sm" onclick="playerTrain('lane')" ${canTrain?'':'disabled'}>练对线 +1~2</button>
  <button class="btn sm" onclick="playerTrain('farm')" ${canTrain?'':'disabled'}>练运营 +1~2</button>
@@ -8908,7 +9177,25 @@ function renderCareer(){
  <button class="btn sm" onclick="playerRest()" ${S.trained?'disabled':''}>休息（体力+55 · 养伤）</button>
  </div>
  <div class="hint mt8">战力↑ = 首发竞争力↑；英雄特训把一个熟练英雄练成绝活（战力 +8%）。体力不足时教练不会让你进首发。</div>
+ <div class="hint mt8">合同角色：${Object.keys(PLAYER_ROLES).map(rk=>`<button class="btn sm ${rk===roleKey?'primary':''}" onclick="setPlayerRole(S,'${rk}')" title="${PLAYER_ROLES[rk].d}">${PLAYER_ROLES[rk].n}</button>`).join(' ')}</div>
  </div>`;
+ // 更衣室/社交（与训练并行）
+ html+=`<div class="panel"><h3>更衣室 · 社交 <span class="tag">${S.socialUsed?'今日已参与':'今天还可参与一次'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">训练管成长，社交管人缘：人气影响转会接盘与代言，士气影响首发竞争力。与「加练」互相独立。</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap">
+ ${Object.keys(SOCIAL_ACTIONS||{}).map(sk=>`<button class="btn sm" onclick="playerSocial(S,'${sk}')" ${S.socialUsed||c.retired||(sk!=='bond'&&me.injury>0)||(me.energy<(SOCIAL_ACTIONS[sk].energy||0))?'disabled':''}>${SOCIAL_ACTIONS[sk].n}</button>`).join('')}
+ </div>
+ <div class="hint mt8">${Object.keys(SOCIAL_ACTIONS||{}).map(sk=>SOCIAL_ACTIONS[sk].n+'：'+SOCIAL_ACTIONS[sk].d).join(' · ')}</div>
+ </div>`;
+ // 媒体采访
+ if(c.media){
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>媒体采访 <span class="tag" style="color:var(--gold)">待答复</span></h3>
+ <div class="hint" style="margin-bottom:8px">${c.media.q}</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap">
+ ${(c.media.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="playerRespondMedia(S,${i})" title="${o.tip}">${o.l}</button>`).join('')}
+ </div>
+ </div>`;
+ }
  // 首发竞争
  if(rival)html+=`<div class="panel"><h3>首发竞争 <span class="tag">${POS[me.pos][0]}</span></h3>
  <div class="match"><div class="vs"><span style="display:inline-flex;align-items:center;gap:6px">${avatar(me,28)} <b>${me.name}</b>${starter?' <span class="green">首发中</span>':''}</span></div>
@@ -8919,8 +9206,10 @@ function renderCareer(){
  // 板凳出路：连续替补可自请租借/K甲（有球可打 + 归队成长）
  const benchDays=c.benchDays||0;
  if(natCamping(S,me)){
- html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训中 <span class="tag" style="color:var(--gold)">状态 ${me.natCampForm||0}/5</span></h3>
+ const nf=(c.natFocus||'form');
+ html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训中 <span class="tag" style="color:var(--gold)">状态 ${me.natCampForm||0}/5 · 专注：${(typeof NAT_FOCUS!=='undefined'&&NAT_FOCUS[nf]?NAT_FOCUS[nf].n:'状态')}</span></h3>
  <div class="hint">你入选中国代表队，整个夏季赛随国家队合练——俱乐部比赛由队友顶上。集训每 5 天汇报一次成长，开赛前还有热身赛；出征战力随集训状态上浮。亚运收官后归队备战年总。</div>
+ <div class="hint mt8">集训策略：${(typeof NAT_FOCUS!=='undefined'?Object.keys(NAT_FOCUS):[]).map(fk=>`<button class="btn sm ${fk===nf?'primary':''}" onclick="setNatFocus(S,'${fk}')" title="${NAT_FOCUS[fk].d}">${NAT_FOCUS[fk].n}</button>`).join(' ')}</div>
  <div class="hint mt8">国家队名单：${(S.natSquad||[]).filter(x=>x.mine).map(x=>x.name+'（'+POS[x.pos][0]+'）').join('、')||'—'}</div>
  </div>`;
  }else if(me.loanOut){
@@ -8968,10 +9257,12 @@ function playerTrain(k){
  if(S.career&&S.career.retired){toast('职业生涯已结束');return;}
  if(me.injury>0){toast('伤停中（'+me.injury+'天），先休息养伤');return;}
  if(me.energy<10){toast('体力不足（需 10），先休息');return;}
- me.attrs[k]=clamp(me.attrs[k]+rnd(1,2),40,99);
+ const gain=(typeof trainGainRoll==='function')?trainGainRoll(playerRole(S)):rnd(1,2);
+ me.attrs[k]=clamp(me.attrs[k]+gain,40,99);
  me.energy=clamp(me.energy-10,0,ENERGY_MAX);
  S.trained=true;
- logEvent(S,' 加练'+{lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k]+'：'+me.name+' 属性提升（体力-10）');
+ if(S.career){S.career.stats=S.career.stats||{trained:0,social:0,media:0,matches:0};S.career.stats.trained++;}
+ logEvent(S,' 加练'+{lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k]+'：'+me.name+' 属性提升 +'+gain+'（体力-10）');
  save();renderAll();
 }
 function playerHeroTrain(){
@@ -9522,7 +9813,8 @@ function createPlayerCareer(){
  me.contract=2;
  me.popularity=Math.max(me.popularity,arch.pop);
  S.players.push(me);
- S.career={me:me.id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
+ S.career={me:me.id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null,
+  role:defaultRoleForArch(_pcArch),stats:{trained:0,social:0,media:0,matches:0},media:null,natFocus:'form'};
  // 首发统一走 buildBestLineup（未成年/伤停不进首发；同位置取可出场中最强）
  S.lineup=buildBestLineup(S);
  S.seedPower=teamPower(S)||300;

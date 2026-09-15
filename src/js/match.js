@@ -528,6 +528,7 @@ function finishSeries(finalWin){
  simulateAiRound(S,m.round); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
+ if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
  }else if(sr.stage==='card'){
  const m=sr.cardMatch;
  m.r=finalWin?sr.myName:sr.opName;

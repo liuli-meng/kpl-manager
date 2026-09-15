@@ -31,6 +31,7 @@ const SUITES = [
   { id: 'verify-review', file: 'tests/verify-review.js', label: '赛季回顾' },
   { id: 'verify-commentary', file: 'tests/verify-commentary.js', label: '解说文案' },
   { id: 'verify-career', file: 'tests/verify-career.js', label: '选手教练生涯' },
+  { id: 'verify-playerops', file: 'tests/verify-playerops.js', label: '选手日决策' },
   { id: 'verify-hall', file: 'tests/verify-hall.js', label: '荣誉馆' },
   { id: 'verify-prevent', file: 'tests/verify-prevent.js', label: '防呆确认' },
   { id: 'verify-prefs', file: 'tests/verify-prefs.js', label: '本机偏好' },
@@ -38,6 +39,7 @@ const SUITES = [
   { id: 'verify-sort', file: 'tests/verify-sort.js', label: '市场排序' },
   { id: 'smoke', file: 'smoke.js', label: '冒烟' },
   { id: 'sim-quick', file: 'tests/sim-quick.js', label: '平衡门禁' },
+  { id: 'sim-player', file: 'tests/sim-player.js', label: '选手长局门禁' },
   { id: 'sim-yearend', file: 'tests/sim-yearend.js', label: '年终全链路门禁' },
   { id: 'verify-built', file: 'tests/verify-built.js', label: '构建产物校验' },
 ];
