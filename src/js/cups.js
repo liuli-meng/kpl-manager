@@ -31,11 +31,8 @@ function genChallengerDef(s,i,teamName,band){
  sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:'挑战者杯'+band+'赛道选手，'+(band==='K甲'?'K甲职业队':'来自'+band+'赛道')+'。'};
 }
 function setupChallenger(s){
- const p=s.playoff;
- if(!p||!p.final||!p.final.r){ // 季后赛未产生冠军：不能开挑杯（选手长局/弱队淘汰路径）
-  logEvent(s,' 挑战者杯待定：联赛季后赛尚未产生春冠/春亚种子');
-  return;
- }
+ const p=ensureLeagueChampion(s); // 玩家止步/季后赛未补完时先 AI 打出冠军，否则赛历卡死
+ if(!p){logEvent(s,' 挑战者杯暂缓：本赛季冠军尚未产生');return;}
  const champ=p.final.r,runner=p.final.r===p.final.a?p.final.b:p.final.a;
  // 挑战者队选手 def（挂 s.challDefMap；ensureAiRosters 兜底，BP/体力/战力全流程可用）
  s.challDefMap={};

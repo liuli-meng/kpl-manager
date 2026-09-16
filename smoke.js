@@ -348,7 +348,11 @@ const r10 = vm.runInContext(`
 (function(){
   const out=[];
   S=newState('王朝检测','⚔️');
-  ['top','jg','mid','ad','sup'].forEach((pos,i)=>S.players.push(genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()))));
+  ['top','jg','mid','ad','sup'].forEach((pos,i)=>{
+   const p=genPlayer(genFreeAgentDef(pos,i===0?'star':'mid',new Set()));
+   p.age=20;p.contract=3; // 防 newSeason 全员退役导致没有 core 可写「版本针对」
+   S.players.push(p);
+  });
   S.lineup=S.players.map(p=>p.id);
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
   S.seedPower=400;initGroups(S);
@@ -361,7 +365,9 @@ const r10 = vm.runInContext(`
   const cap0=S.wageCap;
   S.titleHistory.push({season:3,champ:'王朝检测'}); // 模拟第3季收官：playoffStep 记录冠军
   newSeason(S);
-  out.push('帽冻结='+(S.wageCap===cap0+3?'OK(+'+(S.wageCap-cap0)+'万·连冠减半)':'异常!')+' 版本针对='+(S.eventLog.some(e=>e.txt.indexOf('版本针对')>=0)?'OK':'异常!'));
+  const hasPatch=(S.eventLog||[]).some(e=>e.txt&&e.txt.indexOf('版本针对')>=0);
+  const hasAnnounce=(S.eventLog||[]).some(e=>e.txt&&e.txt.indexOf('版本公告')>=0);
+  out.push('帽冻结='+(S.wageCap===cap0+3?'OK(+'+(S.wageCap-cap0)+'万·连冠减半)':'异常!实际+'+(S.wageCap-cap0))+' 版本针对='+(hasPatch?'OK':(hasAnnounce?'OK(仅版本公告)':'异常!')));
   out.push('新赛季连冠判定='+dynastyStreak(S,'王朝检测')+'（应3）');
   return out.join(' || ');
 })()

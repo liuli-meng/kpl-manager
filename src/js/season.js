@@ -51,7 +51,7 @@ function logCat(txt){
  for(const c of LOG_CATS){if(c.re.test(t))return c.k;}
  return 'other';
 }
-function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,120);}
+function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,200);} // 200：newSeason 的 AI 转会/青训日志很多，120 会把王朝反制等玩家向文案挤掉
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(0,i);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function powerOf(s,name){
  if(name===s.teamName)return teamPower(s);
@@ -298,6 +298,46 @@ function finishCard(s){
  save();renderAll();
 }
 /* ===== 季后赛（10队双败淘汰 BO7） ===== */
+/* 确保本赛季联赛冠军已产生（玩家止步/中途淘汰时季后赛可能尚未补完）。
+   挑杯/EWC/年总赛历推进依赖春冠/春亚种子——这里 AI 补完季后赛，避免 advanceCalendar 卡死。 */
+function ensureLeagueChampion(s){
+ if(!s)return null;
+ let p=s.playoff;
+ if(p&&p.final&&p.final.r)return p;
+ // 开档 G1/G2/G3 未重组为 S/A 时，先按战力排出 S/A，否则 buildPlayoff 直接退出
+ if(!s.groups||!s.groups.S||!s.groups.S.length){
+  const all=(s.leagueTeams&&s.leagueTeams.length?s.leagueTeams.slice():AI_TEAMS.map(t=>t.name))
+   .filter(t=>t!==s.teamName)
+   .concat(s.teamName?[s.teamName]:[]);
+  const ranked=all.slice().sort((a,b)=>powerOf(s,b)-powerOf(s,a));
+  s.groups={S:ranked.slice(0,6),A:ranked.slice(6,12),B:ranked.slice(12,18)};
+ }
+ if(!p||!p.wb){
+  try{buildPlayoff(s);}catch(e){}
+  p=s.playoff;
+ }
+ if(!p)return null;
+ let guard=0;
+ while(!(p.final&&p.final.r)&&guard++<25){
+  try{playoffStep(s);}catch(e){break;}
+  p=s.playoff;
+  if(!p)break;
+ }
+ if(p&&p.final&&!p.final.r){
+  // 极端残局（对阵树缺口）：按 S/A 排名直接指定冠军，保证赛历可推进
+  const ranks=[...sortGroup(s,'S'),...sortGroup(s,'A')];
+  const champ=ranks[0]||s.teamName;
+  const runner=ranks[1]||champ;
+  p.final.a=p.final.a||champ;
+  p.final.b=p.final.b||runner;
+  p.final.r=p.final.r||champ;
+  p.champ=p.final.r;
+  if(s.phase!=='eliminated')s.phase='champion';
+  s.champion=p.final.r===s.teamName;
+  try{logEvent(s,' 季后赛残局补完：'+p.final.r+' 夺得 '+splitLabel(s)+' 冠军');}catch(e){}
+ }
+ return (p&&p.final&&p.final.r)?p:null;
+}
 function buildPlayoff(s){
  // 旧版残留的 simulateGroupAI 调用已删：r3 的 AI 场次由 simulateAiRound 逐轮模拟 + advancePhase 兜底补完，此处重跑会重复计分（且该函数在重构时已丢失导致进季后赛必崩）
  const sRank=sortGroup(s,'S'),aRank=sortGroup(s,'A');
