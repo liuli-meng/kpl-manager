@@ -12,9 +12,13 @@ const out = vm.runInContext(`
   const mkS=()=>{S=newState('爆冷队','x');fillRoster(S,'low','mid');S.fans=10;return S;};
 
   // ① 对阵弱队/平手不触发
+  // 必须把对手压成「明显更弱」：fillRoster('low') 本身战力偏低，AI 阵容又带随机，
+  // 不固定 aiPower 时偶发 UUG 反而高出 ≥15%，误触发爆冷（CI 曾 flaky 挂这里）
   const s1=mkS();
-  const p1=s1.players[0];
-  const r1=maybeUpsetWin(s1,true,'常山UUG'); // UUG 很弱
+  s1.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=80);});
+  powerOf(s1,'常山UUG');
+  s1.aiPower['常山UUG']=200;
+  const r1=maybeUpsetWin(s1,true,'常山UUG');
   if(r1||s1.upsetCount)fail('打弱队不应触发以下克上');
   else log('① 打弱队：不触发');
 
