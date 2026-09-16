@@ -415,10 +415,13 @@ function clubAnnualPanel(){
  try{st=arenaStandings(S)||st;}catch(e){}
  const rd=(a.rounds||[])[a.roundIdx];
  const myNext=rd?rd.find(m=>m.a===S.teamName||m.b===S.teamName):null;
+ const myPending=rd?rd.find(m=>(m.a===S.teamName||m.b===S.teamName)&&!m.r):null;
  const rankLine=(tbl,teams)=>(teams||[]).slice().sort((x,y)=>((tbl&&tbl[y]&&tbl[y].pts)||0)-((tbl&&tbl[x]&&tbl[x].pts)||0)||((tbl&&tbl[y]&&tbl[y].pw)||0)-((tbl&&tbl[x]&&tbl[x].pw)||0)).map(t=>t+' '+((tbl&&tbl[t]&&tbl[t].pts)||0)+'分').join(' · ');
+ // 按钮始终在：本轮无我队/我队已赛时点「推进本轮」走 annualArenaNext，避免「本轮赛程进行中」卡死
+ const btnTxt=myPending?'进行擂台赛 · 调整阵容 / BP 开赛':(rd?'推进本轮 · 补完赛程':'推进擂台赛');
  return `<div class="panel"><h3>年度总决赛·擂台赛 <span class="tag">第${Math.min(a.roundIdx+1,6)}/6轮 · BO5 组外单循环</span></h3>
- ${myNext?`<div class="match"><div class="vs"><span class="tname">${myNext.a} vs ${myNext.b}</span><span class="score" style="font-size:12px">${myNext.a===S.teamName||myNext.b===S.teamName?'本队':'—'}</span></div></div>
- <button class="btn primary" style="width:100%" onclick="uiStartCup(S)">进行擂台赛 · 调整阵容 / BP 开赛</button>`:`<div class="hint">本轮赛程进行中</div>`}
+ ${myNext?`<div class="match"><div class="vs"><span class="tname">${myNext.a} vs ${myNext.b}</span><span class="score" style="font-size:12px">${myNext.a===S.teamName||myNext.b===S.teamName?'本队':'—'}</span></div></div>`:''}
+ <button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${btnTxt}</button>
  <div class="hint mt8"><b>大师组</b>（积分前6）：${rankLine(st.M,a.masters)}</div>
  <div class="hint"><b>精英组</b>（积分7-12）：${rankLine(st.E,a.elites)}</div>
  <div class="hint mt8">大师组前4 + 精英组第1 直进淘汰赛；大师5/6 与精英2-5 打突围赛；精英第6名直接出局</div>

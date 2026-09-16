@@ -557,6 +557,7 @@ function finishSeries(finalWin){
  playoffStep(S);
  }else if(sr.stage==='cup'){
  // 杯赛系列赛（EWC / 年度总决赛：擂台赛·突围赛·淘汰赛）
+ try{if(typeof rebindSeriesMatch==='function')rebindSeriesMatch(S);}catch(e){}
  const m=sr.cupMatch;
  m.r=finalWin?sr.myName:sr.opName;
  if(m.a===sr.myName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;} // 擂台赛积分按 a/b 记小局

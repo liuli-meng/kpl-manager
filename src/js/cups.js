@@ -375,11 +375,16 @@ function annualStep(s){ // 年总推进分派（finishSeries cup 分支 / AI 场
 }
 function startAnnualArena(s){
  const a=s.annual;
+ if(!a)return;
  const rd=a.rounds[a.roundIdx];
  if(!rd){finishArena(s);return;}
- const my=rd.find(m=>m.a===s.teamName||m.b===s.teamName);
- if(!my){finishArena(s);return;}
+ // 本轮我队未赛：开打；已赛/本轮无对阵：补完 AI 并推进轮次（避免点按钮空转）
+ const my=rd.find(m=>(m.a===s.teamName||m.b===s.teamName)&&!m.r);
+ if(my){
  playCupMatch(s,my,'arena_r'+(a.roundIdx+1),'年总·擂台赛 第'+(a.roundIdx+1)+'轮',KPL.BO5);
+ return;
+ }
+ annualArenaNext(s);
 }
 function annualArenaNext(s){
  const a=s.annual;
@@ -498,6 +503,13 @@ function finishAnnual(s,silent){
 /* ================= 杯赛通用流程（EWC / 挑战者杯 / 年总共用） ================= */
 const BO_TXT=bo=>bo===5?'BO5 全局BP':bo===9?'BO9·第9局巅峰对决':'BO7·含巅峰对决';
 function playCupMatch(s,m,slot,label,bo){
+ if(!m)return;
+ if(m.r){ // 已赛场次：直接推进（读档残留/重复点击），避免重开幽灵系列赛
+ if(s.phase==='ewc')ewcStep(s);
+ else if(s.phase==='challenger')challengerStep(s);
+ else annualStep(s);
+ return;
+ }
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打完整场杯赛系列赛
