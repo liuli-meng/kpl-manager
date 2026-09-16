@@ -51,11 +51,12 @@ const out = vm.runInContext(`
   else log('② 赛程推进：7 轮全部出分，积分表胜场和 28，冠军「'+k2.champ+'」=榜首');
 
   // ③ 下放选手真实出战：进二队名单 → 二队战力提升 → 打一轮出 KDA/统计/近况日志
+  // 同时回归阵容页单参调用 sendKjia(id)（曾经把 id 当成 state，弹「选手不在阵中」）
   const s3=newState('练级队','x');fillRoster(s3,'mid','star');addBench(s3,'star');S=s3;
   initKjia(s3);
   const b3=s3.players.find(p=>!s3.lineup.includes(p.id));
   const basePow=kjiaTeamPower(s3);
-  sendKjia(s3,b3.id);
+  sendKjia(b3.id);
   const afterPow=kjiaTeamPower(s3);
   if(!kjiaSquad(s3).some(p=>p.id===b3.id))fail('下放选手未进入二队名单');
   else if(afterPow<=basePow)fail('下放后二队战力未提升: '+basePow+'→'+afterPow);

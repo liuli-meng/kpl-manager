@@ -4825,6 +4825,9 @@ function finishKjiaSplit(s){
  }
 }
 function sendKjia(s,id){
+ // 兼容两种调用：sendKjia(S,id)（引擎/测试）与 sendKjia(id)（阵容页按钮）
+ if(id===undefined){id=s;s=S;}
+ s=s||S;
  const p=(s.players||[]).find(x=>x.id===id);
  if(!p){toast('选手不在阵中');return;}
  if(p.kjia){toast(p.name+' 已在 K甲锻炼（剩余 '+p.kjia+' 天）');return;}
