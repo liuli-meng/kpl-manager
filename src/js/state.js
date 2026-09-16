@@ -732,6 +732,10 @@ function migrateSave(){
  migrateCoachRating(S);
  migrateSeasonShape(S);
  migratePlayerFields(S);
+ // 年总卡死恢复：决赛已打完/冠军已出但 newSeason 未完成 → 读档自动补完年度轮换
+ try{
+ if(typeof yearRollPending==='function'&&yearRollPending(S)&&typeof finishAnnual==='function')finishAnnual(S,true);
+ }catch(e){console.warn('year-roll recover fail',e);}
 }
 /* 货币缩放（一次性标记）：×10 → ÷6 */
 function migrateMoneyScale(s){

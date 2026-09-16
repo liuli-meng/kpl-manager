@@ -458,10 +458,21 @@ function annualPoStep(s){
  if(!p.final.r){P(p.final,'apo_final','年总·总决赛');return;}
  finishAnnual(s,true);
 }
+/* 年总已打完但尚未完成年度轮换（截图症状：圣龙杯已出、仍停在夏季末）。
+ 颁奖/settle 任一步抛错都会卡死——finishAnnual 可重试：champ 已写入时跳过颁奖，只补完 newSeason。 */
+function yearRollPending(s){
+ return !!(s&&s.phase==='annual'&&s.annual&&s.annual.po&&s.annual.po.final&&s.annual.po.final.r);
+}
 function finishAnnual(s,silent){
+ if(!s||s.phase!=='annual')return; // 已轮换/非年总：防重复结算（二次老化会毁档）
  const p=s.annual&&s.annual.po;
- if(p&&p.final.r&&!p.champ){
+ if(!p||!p.final||!p.final.r){
+ if(!silent)logEvent(s,' 年度总决赛尚未打完，无法开启新赛季');
+ return;
+ }
+ if(!p.champ){
  p.champ=p.final.r;
+ try{
  const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(p.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'年总',champ:p.champ}]).slice(-48);
@@ -482,22 +493,34 @@ function finishAnnual(s,silent){
  awardFMVP(s,p.champ,gameYear(s)+' KPL 年度总决赛');
  s.champion=p.champ===s.teamName;
  addFans(s,p.champ===s.teamName?25:(runner===s.teamName?12:6),'KPL 年度总决赛'); // 年总是全年最大的曝光
+ }catch(e){
+ logEvent(s,' 年总颁奖异常：'+(e&&e.message)+'（不影响赛季轮换，可重试）');
  }
- // 成绩曲线：年总名次入档
+ }
+ if(!s._annualSettled){
+ try{
  s.yearStages=s.yearStages||[];
- if(p&&p.final.r){
- const loserOf=m=>m.r===m.a?m.b:m.a; // 块内局部（冠军结算分支的同名工具）
+ const loserOf=m=>m.r===m.a?m.b:m.a;
  const myPlace=p.champ===s.teamName?'冠军':loserOf(p.final)===s.teamName?'亚军'
  :[p.lbf,p.lbs].some(m=>m.r&&loserOf(m)===s.teamName)?'四强'
  :p.lb2.concat(p.lb1).some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'参赛';
- s.yearStages.push({ev:'KPL年度总决赛',place:myPlace});
- }else s.yearStages.push({ev:'KPL年度总决赛',place:'未晋级'});
+ if(!(s.yearStages||[]).some(x=>x.ev==='KPL年度总决赛'))s.yearStages.push({ev:'KPL年度总决赛',place:myPlace});
  /* 赛季末结算：经理/教练走董事会评价；选手走个人赛季结算（冠军/FMVP 由荣誉室自然累计） */
  if(s.mode==='player')playerYearSettle(s);
  else boardSettle(s);
  if(s.mode==='coach')coachPoach(s); // 教练带队出色 → 豪门挖角邀约
  buildYearReview(s); // 年度回顾快照：成绩曲线/转会记录/董事会评价/关键战役（必须在 newSeason 前）
+ s._annualSettled=true;
+ }catch(e){
+ s._annualSettled=true; // 失败也标记，避免下次重试双份结算
+ logEvent(s,' 年末结算异常：'+(e&&e.message)+'（继续开启新赛季）');
+ }
+ }
+ try{
  newSeason(s); // 年度轮换：年龄/合同/退役结算 → 下一年春季赛
+ }catch(e){
+ logEvent(s,' 年度轮换异常：'+(e&&e.message)+'——请再点一次「进入新赛季」');
+ }
 }
 
 /* ================= 杯赛通用流程（EWC / 挑战者杯 / 年总共用） ================= */
@@ -557,6 +580,9 @@ function startCup(s){ // 杯赛 UI 入口（进行下一场 / 快进）
  if(s.phase==='challenger'){challengerStep(s);return;}
  if(s.phase==='annual'){
  const a=s.annual;
+ if(!a)return;
+ // 冠军已产生但年度轮换未完成：直接补 newSeason（读档残留 / 颁奖中途抛错后的恢复）
+ if(a.po&&a.po.champ&&yearRollPending(s)){finishAnnual(s,true);return;}
  if(a.stage==='arena')startAnnualArena(s);
  else if(a.stage==='breakthrough')annualBrkNext(s);
  else annualPoStep(s);

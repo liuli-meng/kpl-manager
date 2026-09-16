@@ -310,7 +310,10 @@ function nextAction(s){
  }
  if(p==='annual'){
  const a=s.annual;
- if(!a||(a.po&&a.po.champ))return null;
+ if(!a)return null;
+ // 冠军已出但轮换未完成：给恢复入口，而不是 null（null 会让兜底按钮消失 → 卡死）
+ if(yearRollPending(s))return {type:'finishAnnual',label:' 进入新赛季 · 年度轮换',fn:'uiFinishAnnual'};
+ if(a.po&&a.po.champ)return null; // 已轮换但 phase 残留：无需动作
  return {type:'startCup',label:' 进行年度总决赛',fn:'uiStartCup'};
  }
  if(p==='champion'||p==='eliminated'){
@@ -328,8 +331,15 @@ function uiDoNextAction(s){
  else if(a.fn==='startCard')startCard();
  else if(a.fn==='startPlayoff')startPlayoff();
  else if(a.fn==='uiStartCup')uiStartCup(s||S);
+ else if(a.fn==='uiFinishAnnual')uiFinishAnnual(s||S);
  else if(a.fn==='uiAsiadStep')uiAsiadStep(s||S);
  else if(a.fn==='uiAdvanceCalendar')uiAdvanceCalendar(s||S);
+}
+function uiFinishAnnual(s){
+ if(uiGuard())return;
+ try{finishAnnual(s||S,true);}
+ catch(e){toast('年度轮换失败：'+(e&&e.message||e));return;}
+ save();renderAll();
 }
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 /* ================= 俱乐部页：赛段入口面板（renderClub 按 phase 分发） ================= */
@@ -507,6 +517,8 @@ function clubAnnualPanel(){
  :'<div class="hint">待突围赛结束</div>'}
  ${p&&!p.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}
  ${p&&p.champ?`<div class="hint mt8">年度总冠军：${p.champ} —— 圣龙杯！</div>`:''}
+ ${yearRollPending(S)?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiFinishAnnual(S)"> 进入新赛季 · 年度轮换</button>
+ <div class="hint mt8">年总已收官，点此完成年龄/合同结算并开启下一年春季赛（可重复点击）</div>`:''}
  </div>`;
 }
 function clubResultPanel(){
