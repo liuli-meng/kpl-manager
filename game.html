@@ -2385,6 +2385,34 @@ function aiDiffMul(s,tn){
  const t=aiTierOf(s,tn);
  return (t==='elite'?1.35:t==='mid'?1:0.72)*pressure;
 }
+/* AI 赛训成长：每赛季给首发补最弱属性（模拟教练组日常特训）。
+ 玩家每天可练，AI 若只靠 ageDrift 会原地踏步——中下游尤其明显。
+ 额度按档位：elite 8 / mid 6 / weak 4 点，拆到 1~2 名最弱首发的最弱项。 */
+function aiDevelopStarters(s,tn,map,ovrOf){
+ const ids=(map[tn]||[]).slice();
+ if(ids.length<3)return;
+ const tier=aiTierOf(s,tn);
+ const budget=tier==='elite'?8:tier==='mid'?6:4;
+ // 按当前总值升序：优先练「短板」，而不是给顶星堆数值
+ const ranked=ids.map(id=>({id,def:defOf(s,id)})).filter(x=>x.def)
+  .sort((a,b)=>ovrOf(a.def)-ovrOf(b.def)).slice(0,2);
+ let left=budget;
+ ranked.forEach(({def})=>{
+  if(left<=0)return;
+  const keys=['lane','farm','team','mind'];
+  // 每人最多吃掉 budget 的 6 成，避免全砸一个人
+  const cap=Math.max(1,Math.round(budget*0.6));
+  let used=0;
+  while(left>0&&used<cap){
+   keys.sort((a,b)=>(def.base[keys.indexOf(a)]||0)-(def.base[keys.indexOf(b)]||0));
+   const k=keys[0],idx=keys.indexOf(k);
+   const step=Math.min(left,used+2<=cap?2:1);
+   def.base[idx]=clamp((def.base[idx]||70)+step,40,99);
+   left-=step;used+=step;
+  }
+  if(used)logEvent(s,' '+tn+' 赛训加练：'+def.name+' 最弱项 +'+used+'（教练组特训）');
+ });
+}
 function aiTransferWindow(s){
  const map=aiRosterDefMap(s);
  s.extraDefs=s.extraDefs||[];
@@ -9548,6 +9576,8 @@ function playerRest(){
 </script>
 <script>
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
+/* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
+const KM_BUILD='2026-09-05b';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） ================= */
 function foldCls(key,def){
@@ -9699,6 +9729,7 @@ function openSaveMgmt(){
  <button class="btn sm gold" onclick="toggleSaveHowto()"> 备份 / 导入教程</button>
  <button class="btn sm" onclick="downloadSaveHowto()"> 下载教程文档</button>
  </div>
+ <div class="hint center" style="margin-top:6px">客户端版本 ${KM_BUILD} · 存档 v${SAVE_VERSION}（若教程按钮不存在，请强退微信后重进或清缓存）</div>
  <div id="save-howto" class="panel" style="margin-top:10px;display:none">${saveHowtoHtml()}</div>`;
  $('#app-modal').classList.add('on');
 }

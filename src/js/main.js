@@ -1,4 +1,6 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
+/* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
+const KM_BUILD='2026-09-05b';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） ================= */
 function foldCls(key,def){
@@ -150,6 +152,7 @@ function openSaveMgmt(){
  <button class="btn sm gold" onclick="toggleSaveHowto()"> 备份 / 导入教程</button>
  <button class="btn sm" onclick="downloadSaveHowto()"> 下载教程文档</button>
  </div>
+ <div class="hint center" style="margin-top:6px">客户端版本 ${KM_BUILD} · 存档 v${SAVE_VERSION}（若教程按钮不存在，请强退微信后重进或清缓存）</div>
  <div id="save-howto" class="panel" style="margin-top:10px;display:none">${saveHowtoHtml()}</div>`;
  $('#app-modal').classList.add('on');
 }
