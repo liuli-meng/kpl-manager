@@ -9610,6 +9610,71 @@ function renderPage(name){
 function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
 
 /* ================= 存档管理（多槽位 + 导出/导入） ================= */
+function saveHowtoHtml(){
+ return `
+ <div class="hint" style="margin-bottom:10px;line-height:1.55">
+ <b>为什么要做备份？</b>进度只存在本机浏览器，换手机、清缓存、无痕模式都会丢。建议每赛季备份一次。<br>
+ <b>备份方式 A（推荐 · 跨设备）：下载 .json 文件</b><br>
+ 1. 电脑：点「下载存档文件」→ 浏览器下载到「下载」文件夹，文件名形如 <code>KPL存档_队名_2027年_槽1.json</code><br>
+ 2. 手机/微信：点「下载存档文件」→ 若弹出系统分享，选「存到文件 / 备忘录 / 微信传输助手」；若没反应，点「复制导出」后长按全选复制，粘贴到备忘录另存<br>
+ <b>备份方式 B：复制导出代码</b><br>
+ 1. 点「复制导出」→ 代码会填入下方文本框并尝试复制<br>
+ 2. 粘贴到备忘录 / 微信「文件传输助手」/ 邮件草稿（一整段 base64，勿截断）<br>
+ <b>换机 / 恢复怎么导入？</b><br>
+ 1. 把 .json 文件传到新设备，打开游戏 →「管理」→「从文件导入」选该文件<br>
+ 2. 或把备份代码整段粘贴进下方文本框 → 点「导入」<br>
+ 3. 导入会<b>覆盖当前槽</b>，确认框里会再问一次；建议先导出当前档再覆盖<br>
+ <b>赛季自动备份：</b>每个完整赛季结束会自动存一份「上赛季末」快照，可点「恢复赛季备份」回滚最多一年（覆盖前当前进度会另存「恢复前备份」）。<br>
+ <b>注意：</b>· 三个槽位互不影响 · 在线版与本地双击版存档不互通 · 导入比游戏更新的存档会被拒绝
+ </div>`;
+}
+function downloadSaveHowto(){
+ const txt=`王者电竞经理 · 存档备份与导入教程
+================================
+
+【为什么备份】
+进度只存在本机浏览器 localStorage。换设备、清缓存、无痕模式、重装浏览器都会丢档。
+
+【推荐：下载 .json 文件（跨设备）】
+1. 游戏内 → 管理 → 存档管理
+2. 点「下载存档文件」
+3. 电脑：文件会进「下载」文件夹
+   手机：优先走系统分享（存到文件/备忘录/微信传输助手）
+   若手机没下载成功：改用「复制导出」，长按文本框全选复制，粘贴到备忘录另存为 .json
+4. 文件名形如：KPL存档_队名_2027年_槽1.json
+
+【备选：复制导出代码】
+1. 点「复制导出」
+2. 整段 base64 代码会填入文本框（勿截断、勿加空格）
+3. 粘贴到备忘录 / 微信文件传输助手 / 邮件
+
+【换机恢复】
+方式一：新设备打开游戏 → 管理 → 从文件导入 → 选 .json
+方式二：把备份代码整段粘贴进存档管理文本框 → 点「导入」
+导入会覆盖当前槽（有确认框）。建议先导出当前档。
+
+【赛季自动备份】
+每个完整赛季结束自动备份上赛季末状态。
+管理 → 恢复赛季备份 可回滚最多一年；覆盖前当前进度会存到「恢复前备份」。
+
+【三个槽位】
+槽 1/2/3 互不影响，可分别玩不同队或不同身份。
+
+【注意】
+· 在线版（github.io）与本地双击 game.html 存档不互通
+· 比当前游戏更新的存档会被拒绝导入
+· 手机微信浏览器对「下载文件」支持较差，优先复制导出或系统分享
+
+生成时间：${new Date().toISOString().slice(0,19).replace('T',' ')}
+`;
+ const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+ const fname='存档备份教程.txt';
+ fallbackDownload(blob,fname,()=>{
+  const t=$('#save-io');
+  if(t){t.value=txt;}
+  toast('教程文本已填入文本框，请全选复制保存');
+ });
+}
 function openSaveMgmt(){
  const occ=i=>!!localStorage.getItem(SAVE_KEY+(i>1?'_'+i:''));
  $('#app-modal-body').innerHTML=`
@@ -9618,8 +9683,8 @@ function openSaveMgmt(){
  ${[1,2,3].map(i=>`<div class="pack-btn" ${i===curSlot?'style="border-color:var(--gold)"':''} onclick="setSlot(${i})">
  <b style="font-size:14px">槽${i}</b><span style="font-size:10px">${i===curSlot?'(当前)':occ(i)?'有档':'空槽'}</span></div>`).join('')}
  </div>
- <div class="hint" style="margin-bottom:8px">导出：电脑点「下载存档文件」存 .json；<b>手机/微信请优先「复制导出」</b>（或系统分享），再粘贴到备忘录/文件。导入：选本地 .json，或粘贴代码后点「导入」（覆盖当前槽）。</div>
- <textarea id="save-io" style="width:100%;min-height:90px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font-size:11px;resize:vertical" placeholder="也可把存档代码粘贴到这里"></textarea>
+ <div class="hint" style="margin-bottom:8px">电脑用「下载存档文件」；<b>手机/微信优先「复制导出」</b>。导入会覆盖当前槽。详细步骤见下方教程。</div>
+ <textarea id="save-io" style="width:100%;min-height:90px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font-size:11px;resize:vertical" placeholder="备份代码粘贴到这里；点「复制导出」也会填到这里"></textarea>
  <input type="file" id="save-file" accept=".json,application/json" style="display:none" onchange="importSaveFile(this)">
  <div class="center mt8" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn sm" onclick="save();exportSave()"> 复制导出</button>
@@ -9629,8 +9694,20 @@ function openSaveMgmt(){
  <button class="btn sm" onclick="restoreAutoBackup()" ${localStorage.getItem(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
  <button class="btn sm" onclick="startTour()"> 重玩新手引导</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
- </div>`;
+ </div>
+ <div class="center mt8" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+ <button class="btn sm gold" onclick="toggleSaveHowto()"> 备份 / 导入教程</button>
+ <button class="btn sm" onclick="downloadSaveHowto()"> 下载教程文档</button>
+ </div>
+ <div id="save-howto" class="panel" style="margin-top:10px;display:none">${saveHowtoHtml()}</div>`;
  $('#app-modal').classList.add('on');
+}
+function toggleSaveHowto(){
+ const el=$('#save-howto');
+ if(!el)return;
+ const show=el.style.display==='none';
+ el.style.display=show?'block':'none';
+ if(show)try{el.scrollIntoView({block:'nearest'});}catch(e){}
 }
 /* 赛季轮转自动备份的恢复：把 _auto 快照写回当前槽（覆盖前先把它再挪一份，防二次误操作） */
 function restoreAutoBackup(){

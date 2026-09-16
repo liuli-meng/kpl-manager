@@ -66,6 +66,16 @@ const out = vm.runInContext(`
   else log('⑤ 导出包装往返：'+S.teamName+' · 工资有限 · 可再导入');
   renderAll=_ra;save=_sv;
 
+  // ⑥ 存档教程：面板函数可解析且含关键步骤
+  if(typeof saveHowtoHtml!=='function'||typeof downloadSaveHowto!=='function'||typeof toggleSaveHowto!=='function')
+    fail('存档教程函数缺失');
+  else{
+    const html=saveHowtoHtml();
+    if(!html.includes('复制导出')||!html.includes('从文件导入')||!html.includes('手机'))
+      fail('教程 HTML 缺关键步骤');
+    else log('⑥ 存档教程：面板 HTML 含复制导出/文件导入/手机说明');
+  }
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()
