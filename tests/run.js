@@ -30,6 +30,7 @@ const SUITES = [
   { id: 'verify-kplrules', file: 'tests/verify-kplrules.js', label: 'KPL硬规则' },
   { id: 'verify-aiplan', file: 'tests/verify-aiplan.js', label: 'AI赛季规划' },
   { id: 'verify-wagecap', file: 'tests/verify-wagecap.js', label: '工资帽经济' },
+  { id: 'verify-playerstatus', file: 'tests/verify-playerstatus.js', label: '选手状态机' },
   { id: 'verify-nanwage', file: 'tests/verify-nanwage.js', label: '周薪NaN/杯赛面板守卫' },
   { id: 'verify-review', file: 'tests/verify-review.js', label: '赛季回顾' },
   { id: 'verify-commentary', file: 'tests/verify-commentary.js', label: '解说文案' },

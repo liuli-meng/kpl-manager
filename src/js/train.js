@@ -3,10 +3,11 @@
 /* 统一训练可用性：伤停/集训/租借在外/K甲 期间不能加练（经理/教练/选手同一套） */
 function trainBlockedReason(s,p){
  if(!p)return '选手不存在';
- if((p.injury||0)>0)return p.name+' 伤停中（'+p.injury+'天），先休息养伤';
- if(p.loanOut)return p.name+' 租借在外，无法在母队加练';
- if((p.kjia||0)>0)return p.name+' 正在 K甲锻炼，二队有自己的安排';
- if(typeof natCamping==='function'&&natCamping(s,p))return p.name+' 国家队集训中，暂不能加练';
+ const st=playerStatus(p,s);
+ if(st.injury)return p.name+' 伤停中（'+st.injuryDays+'天），先休息养伤';
+ if(st.loanOut)return p.name+' 租借在外，无法在母队加练';
+ if(st.kjia)return p.name+' 正在 K甲锻炼，二队有自己的安排';
+ if(st.natCamp)return p.name+' 国家队集训中，暂不能加练';
  return '';
 }
 function doTrain(s,pid,attr){

@@ -159,24 +159,67 @@ function rosterAll(s){return s.players;}
 function rosterLineup(s){const set=new Set(s.lineup);return s.players.filter(p=>set.has(p.id));}
 function rosterBench(s){const set=new Set(s.lineup);return s.players.filter(p=>!set.has(p.id));}
 function myPlayer(s){return (s&&s.mode==='player'&&s.career)?s.players.find(p=>p.id===s.career.me)||null:null;} // 选手生涯：我扮演的选手
+/* ================= 选手状态机（唯一出口） =================
+ 同一选手可能同时挂多枚状态旗（伤停/K甲/外租/集训/退役/闹离队…）。
+ 各处不要再用 if (p.kjia>0 || p.loanOut || …) 自行拼条件——一律读 playerStatus(p)。
+ 字段语义：
+   injury>0     伤停天数，不能训练/出战
+   kjia>0       K甲锻炼剩余天数（二队出战，不占一队）
+   loan         租入：属于别的俱乐部，本队临时使用权
+   loanOut      租出：本队选手在外队打主力
+   natCamp      亚运集训（整个夏季赛缺席俱乐部）
+   natFill      集训期临时借调顶位（归还前不可售）
+   retiring     临近退役（最后一年，转会价值下降）
+   transferRequest 已公开要求离队（更易被谈走）
+ 新状态若要挂到选手身上：先在本函数登记旗标，再在 UI/守卫里读——避免第 N 处漏判断。 */
+function playerStatus(p,s){
+ p=p||{};
+ return {
+  injury:(p.injury||0)>0,
+  injuryDays:p.injury||0,
+  kjia:(p.kjia||0)>0,
+  kjiaDays:p.kjia||0,
+  loan:!!p.loan, // 租入
+  loanOut:!!p.loanOut, // 租出
+  loanOutTeam:p.loanOut&&p.loanOut.team||null,
+  loanOutDays:p.loanOut&&p.loanOut.days||0,
+  natCamp:!!p.natCamp||(typeof natCamping==='function'&&!!(s&&natCamping(s,p))),
+  natFill:!!p.natFill,
+  retiring:!!p.retiring,
+  transferRequest:!!p.transferRequest,
+  minor:(p.age||0)<MATCH_MIN_AGE,
+  // 可否为母队出战/训练：任一占用性状态为 true 即否
+  busy:(p.injury||0)>0||(p.kjia||0)>0||!!p.loanOut||!!p.natCamp||(typeof natCamping==='function'&&!!(s&&natCamping(s,p))),
+ };
+}
+function playerStatusLabels(st){
+ const out=[];
+ if(st.injuryDays)out.push('伤停'+st.injuryDays+'天');
+ if(st.kjia)out.push('K甲锻炼'+st.kjiaDays+'天');
+ if(st.loanOut)out.push('租借'+(st.loanOutTeam||'外队')+st.loanOutDays+'天');
+ if(st.natCamp)out.push('国家队集训');
+ if(st.natFill)out.push('集训顶位');
+ if(st.retiring)out.push('临近退役');
+ if(st.transferRequest)out.push('要求离队');
+ if(st.minor)out.push('未满'+MATCH_MIN_AGE);
+ return out;
+}
 /* 统一出战资格：伤停 / 亚运集训 / 未满18岁（KPL 注册规则）——青训晋升、首发、比赛共用 */
 const MATCH_MIN_AGE=18;
 function matchEligible(s,p){
  if(!p)return false;
- if((p.injury||0)>0)return false;
- if(p.loanOut)return false; // 本人租借在外：不能为母队出场
- if((p.kjia||0)>0)return false; // K甲锻炼中：在二队打，不占一队
- if(typeof natCamping==='function'&&natCamping(s,p))return false;
- if((p.age||0)<MATCH_MIN_AGE)return false;
+ const st=playerStatus(p,s);
+ if(st.injury||st.loanOut||st.kjia||st.natCamp||st.minor)return false;
  return true;
 }
 function matchIneligibleReason(s,p){
  if(!p)return '选手不存在';
- if((p.injury||0)>0)return '伤停 '+p.injury+' 天';
- if(p.loanOut)return '租借效力 '+(p.loanOut.team||'外队')+'（剩 '+(p.loanOut.days||0)+' 天）';
- if((p.kjia||0)>0)return 'K甲锻炼中（剩 '+p.kjia+' 天）';
- if(typeof natCamping==='function'&&natCamping(s,p))return '国家队集训中';
- if((p.age||0)<MATCH_MIN_AGE)return '未满 '+MATCH_MIN_AGE+' 岁（KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场）';
+ const st=playerStatus(p,s);
+ if(st.injury)return '伤停 '+st.injuryDays+' 天';
+ if(st.loanOut)return '租借效力 '+(st.loanOutTeam||'外队')+'（剩 '+st.loanOutDays+' 天）';
+ if(st.kjia)return 'K甲锻炼中（剩 '+st.kjiaDays+' 天）';
+ if(st.natCamp)return '国家队集训中';
+ if(st.minor)return '未满 '+MATCH_MIN_AGE+' 岁（KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场）';
  return '';
 }
 /* 按位置择优排首发：只排「当前可出场」的人（伤停/集训/租借/K甲/未成年跳过）。
