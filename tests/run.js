@@ -12,6 +12,7 @@ const SUITES = [
   { id: 'verify-annual', file: 'tests/verify-annual.js', label: '年度赛历' },
   { id: 'verify-entrypoints', file: 'tests/verify-entrypoints.js', label: '全赛段入口审计' },
   { id: 'probe-annual-stuck', file: 'tests/probe-annual-stuck.js', label: '年总卡死探针' },
+  { id: 'probe-matchstore', file: 'tests/probe-matchstore.js', label: '扁平表 mid 探针' },
   { id: 'probe-startmatch', file: 'tests/probe-startmatch.js', label: '开赛探针' },
   { id: 'verify-fixes', file: 'tests/verify-fixes.js', label: '历史修复点' },
   { id: 'verify-contract', file: 'tests/verify-contract.js', label: '合同续约' },

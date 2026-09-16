@@ -259,7 +259,8 @@ function playCardNext(s){
  showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
  }
- s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'card',cardIdx:s.card.idx,cardMatch:m,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
+ tagMatch(s,m,'card_'+s.card.idx);
+ s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx,cardMatch:m,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
  resetOppEnergy(s,opName);
  showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第1局');
  }else{
@@ -432,7 +433,8 @@ function playPoMatch(s,m,slot){
  showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
  }
- s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'po',poSlot:slot,poMatch:m,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'playoff',opName)};s.seriesAuto=false;
+ tagMatch(s,m,'po_'+slot);
+ s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'po',mid:'po_'+slot,poSlot:slot,poMatch:m,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'playoff',opName)};s.seriesAuto=false;
  resetOppEnergy(s,opName);
  showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO7·含巅峰对决）vs '+opName+' · 第1局');
  return;

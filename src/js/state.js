@@ -68,6 +68,7 @@ const SAVE_DEFAULTS=[
  ['challenger',null,'挑战者杯'],
  ['crest',null,'自建队徽'],
  ['phase','r1','常规赛阶段'],
+ ['matches',{},'比赛扁平表 mid→match'],
  ['socialUsed',false,'选手社交已用'],
  ['wageCap',150,'工资帽（缺失按现役刻度）'],
 ];
@@ -518,9 +519,86 @@ function seasonShapeOk(s){
  if(['r3','playoff','champion','eliminated'].includes(s.phase))return !!(s.groups.S&&s.groups.A);
  return true; // 未知阶段不强判
 }
+/* ================= 比赛扁平表 L1 =================
+   所有杯赛/季后/卡位对阵登记进 s.matches[mid]；series 权威键是 mid。
+   bracket 树仍保留（渲染/推进），写结果一律 resolveSeriesMatch → getMatch。 */
+function ensureMatchStore(s){
+ if(!s)return {};
+ if(!s.matches||typeof s.matches!=='object')s.matches={};
+ return s.matches;
+}
+function tagMatch(s,m,mid){
+ if(!s||!m||!mid)return m;
+ const store=ensureMatchStore(s);
+ m.mid=mid;
+ store[mid]=m;
+ return m;
+}
+function getMatch(s,mid){
+ if(!s||!mid)return null;
+ if(s.matches&&s.matches[mid])return s.matches[mid];
+ return null;
+}
+function rebuildMatchStore(s){
+ if(!s)return;
+ ensureMatchStore(s);
+ s.matches={};
+ const reg=(m,mid)=>{if(m&&mid)tagMatch(s,m,mid);};
+ const regList=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+i));};
+ const regCup8=(p,prefix)=>{
+ if(!p)return;
+ regList(p.wb1,prefix+'wb1_');regList(p.lb1,prefix+'lb1_');
+ regList(p.wb2,prefix+'wb2_');regList(p.lb2,prefix+'lb2_');
+ reg(p.wf,prefix+'wf');reg(p.lbs,prefix+'lbs');reg(p.lbf,prefix+'lbf');reg(p.final,prefix+'final');
+ };
+ if(s.card&&s.card.matches)regList(s.card.matches,'card_');
+ if(s.playoff){
+ const p=s.playoff;
+ regList(p.wb,'po_wb');regList(p.lb,'po_lb');regList(p.lb2,'po_lb2');regList(p.lb3,'po_lb3');
+ reg(p.wf,'po_胜者组决赛');reg(p.lb4,'po_败者组半决赛');reg(p.lbf,'po_败者组决赛');reg(p.final,'po_总决赛');
+ }
+ if(s.annual){
+ if(s.annual.rounds)s.annual.rounds.forEach((rd,ri)=>{
+ (rd||[]).forEach((m,mi)=>{
+ reg(m,'arena_r'+(ri+1)+'_'+mi);
+ if(m&&(m.a===s.teamName||m.b===s.teamName))reg(m,'arena_r'+(ri+1)); // cupSlot 轮级别名
+ });
+ });
+ regList(s.annual.brk,'brk');
+ regCup8(s.annual.po,'apo_');
+ }
+ if(s.challenger){
+ const c=s.challenger;
+ regList(c.r1,'ch_r1_');regList(c.r2,'ch_r2_');
+ regCup8(c.po,'chpo_');
+ reg(c.final,'ch_final');
+ }
+ if(s.ewc){
+ const e=s.ewc;
+ regList(e.qf,'ewc_qf');regList(e.sf,'ewc_sf');reg(e.final,'ewc_final');
+ }
+ if(s.series){
+ const sr=s.series;
+ const src=sr.cupMatch||sr.poMatch||sr.cardMatch;
+ if(!sr.mid&&src){
+ let mid=null;
+ if(sr.stage==='card'&&sr.cardIdx!=null)mid='card_'+sr.cardIdx;
+ else if(sr.stage==='po'&&sr.poSlot)mid='po_'+sr.poSlot;
+ else if(sr.stage==='cup'&&sr.cupSlot){
+ mid=sr.cupSlot;
+ const hit=Object.keys(s.matches).find(k=>{
+ const m=s.matches[k];
+ return m&&(m.a===src.a&&m.b===src.b||m.a===src.b&&m.b===src.a)&&(k.indexOf(mid)===0||mid.indexOf(k)===0||k===mid);
+ });
+ if(hit)mid=hit;
+ }
+ if(mid)sr.mid=mid;
+ }
+ }
+}
 /* 对阵对象按 slot/id 解析回 bracket 真对象。JSON 存读会切断引用：
    finishSeries 若写到幽灵副本，对阵树永远无 r → 年总/季后赛卡死。
-   约定：series 只把 slot 当权威键；cupMatch/poMatch/cardMatch 仅作缓存，写结果前必须 resolve。 */
+   约定：series.mid 为权威键；cupMatch/poMatch/cardMatch 仅作缓存，写结果前必须 resolve。 */
 function findPoBracketMatch(p,slot){
 	if(!p||!slot)return null;
 	if(slot==='wb1')return p.wb&&p.wb[0]||null;
@@ -570,6 +648,10 @@ function resolveSeriesMatch(s,srIn){
 	if(!s)return null;
 	const sr=srIn||s.series;
 	if(!sr)return null;
+	if(sr.mid){
+	const live=getMatch(s,sr.mid);
+	if(live)return live;
+	}
 	if(sr.stage==='card'&&s.card&&s.card.matches){
 	if(sr.cardIdx!=null&&s.card.matches[sr.cardIdx])return s.card.matches[sr.cardIdx];
 	}
@@ -640,6 +722,7 @@ function migrateSave(){
  S.aiRosters={};
  migrateFixZeroZero(S);
  if(S.series&&!S.series.side)S.series.side='blue';
+ try{rebuildMatchStore(S);}catch(e){}
  try{rebindSeriesMatch(S);}catch(e){}
  (S.transferList||[]).forEach(p=>{if(p.untouchable&&p.willingness===100)p.willingness=rnd(85,100);});
  try{if(typeof gcDefs==='function')gcDefs(S);}catch(e){}
