@@ -16,6 +16,7 @@ const SUITES = [
   { id: 'verify-natcamp', file: 'tests/verify-natcamp.js', label: '亚运征召' },
   { id: 'verify-achieve', file: 'tests/verify-achieve.js', label: '成就' },
   { id: 'verify-save', file: 'tests/verify-save.js', label: '存档迁移' },
+  { id: 'verify-migrate', file: 'tests/verify-migrate.js', label: '迁移矩阵' },
   { id: 'verify-logcat', file: 'tests/verify-logcat.js', label: '日志分类' },
   { id: 'verify-names', file: 'tests/verify-names.js', label: '命名生成' },
   { id: 'verify-board', file: 'tests/verify-board.js', label: '董事会' },

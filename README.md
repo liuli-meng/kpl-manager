@@ -134,7 +134,7 @@ src/
 - **引擎与 UI 分离**：新系统先写「引擎文件」（规则/结算进 `transfer`/`playerops`/`clubops` 等），UI 只渲染与 `onclick` 转发——不要在 `ui*.js` 里改数值或写规则
 - **UI 按页拆**：`ui.js` 只留共享件（卡片、Header、守卫、排序、队徽、俱乐部赛段）；各页独立 `ui-<page>.js`。构建按 `index.html` 的 script 顺序拼接，新增页先加 script 标签再写文件
 - **选手状态唯一出口**：伤停/K甲/外租/集训/退役/闹离队等旗标一律读 `playerStatus(p,s)`（`state.js`），禁止各处 `if (p.kjia>0 || p.loanOut || …)` 自行拼条件。新旗标先在 `playerStatus` 登记，再在守卫/UI 里消费
-- **存档兼容**：结构变更走 `MIGRATIONS` / `migrateSave`；经济刻度变更打 `econReal` 等一次性标记；缺字段兜底在读档时补默认值——不要在渲染层散落 `|| 默认值` 把兼容逻辑埋进 UI
+- **存档兼容**：字段缺省一律登记 `SAVE_DEFAULTS`（`state.js`），由 `applySaveDefaults` 统一兜底——禁止再写散落的 `S.x=S.x||default`。结构变更走 `MIGRATIONS` 版本链；经济刻度走 `migrateMoneyScale`（×10）/ `migrateEconReal`（÷6）一次性标记；复杂变换拆成命名步骤（`migratePlayerFields` / `migrateSeasonShape`…）。矩阵单测 `tests/verify-migrate.js`：空壳档 / 已有值不覆盖 / v3 董事会 / 单段÷6 / 两段链 / 幂等
 - **全局 `S`**：允许引擎内直接改（单机单档），但新代码优先 `function foo(s, …)` 显式传状态，便于测试与子系统复用
 
 ## 设计系统 v4 「TOUCHLINE」FM 经理模式风（当前）
