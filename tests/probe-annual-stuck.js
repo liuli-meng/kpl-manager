@@ -177,6 +177,23 @@ const out = vm.runInContext(`
     else log('⑥ 淘汰赛按钮 OK');
   }
 
+  // ⑦ nextAction：可推进时俱乐部页必须出现对应 handler（或 uiDoNextAction 兜底）
+  prepToAnnual();
+  const act0=nextAction(S);
+  if(!act0)fail('⑦ 年总开幕 nextAction 为空');
+  else{
+    const h=clubHtml();
+    if(h.indexOf(act0.fn)<0&&h.indexOf('uiDoNextAction')<0)fail('⑦ nextAction 有动作但页面无入口 fn='+act0.fn);
+    else log('⑦ 年总 nextAction='+act0.type+' 入口 OK');
+  }
+  // 构造：清空赛段面板常用 handler 后，兜底按钮仍应出现
+  S.annual={stage:'po',roundIdx:6,masters:[],elites:[],q:[],rounds:[],brk:[],po:{wb1:[{a:'X',b:'Y',r:null}],lb1:[],wb2:[],lb2:[],wf:{a:null,b:null,r:null},lbs:{a:null,b:null,r:null},lbf:{a:null,b:null,r:null},final:{a:null,b:null,r:null},champ:null}};
+  S.phase='annual';
+  const act1=nextAction(S);
+  const h1=clubHtml();
+  if(act1&&h1.indexOf('uiStartCup')<0&&h1.indexOf('uiDoNextAction')<0)fail('⑦ 残缺 po 结构既无 uiStartCup 也无兜底');
+  else log('⑦ 残缺年总仍有入口 fn='+(act1&&act1.fn)+' hasCup='+(h1.indexOf('uiStartCup')>=0));
+
   return (errs.length?errs.map(e=>'[FAIL] '+e).join('\\n')+'\\n':'') + res.map(r=>'[INFO] '+r).join('\\n') + (errs.length?'\\n共 '+errs.length+' 失败':'\\n全部通过');
 })()
 `, dom);

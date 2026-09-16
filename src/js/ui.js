@@ -268,6 +268,69 @@ function uiAdvanceCalendar(s){
  }
  advanceCalendar(s);
 }
+/* 当前唯一「该点的比赛动作」：UI 按钮一律从这里派生，避免赛段面板漏按钮导致打不了。
+   引擎可直接调 startMatch/startCup；这里只回答「玩家下一步该点什么」。 */
+function nextAction(s){
+ if(!s||!s.players||!s.players.length)return null;
+ if(playerRetired(s))return null;
+ if(s.board&&s.board.fired)return null;
+ if(s.preseason)return {type:'endPreseason',label:' 结束转会期 · 开始赛季',fn:'uiEndPreseason'};
+ const p=s.phase;
+ if(p==='r1'||p==='r2'||p==='r3'){
+ if(!(s.schedule||[])[s.matchIdx])return null;
+ return s.mode==='player'
+ ?{type:'startPlayerMatch',label:' 出战比赛 · 教练指挥',fn:'startPlayerMatch'}
+ :{type:'startMatch',label:' 赛前准备 · 调整阵容 / BP 开赛',fn:'uiStartMatch'};
+ }
+ if(p==='card'){
+ const matches=(s.card&&s.card.matches)||[];
+ const myPending=matches.some(m=>m&&!m.r&&(m.a===s.teamName||m.b===s.teamName));
+ if(myPending||(s.card&&s.card.idx<matches.length))return {type:'startCard',label:' 进行卡位赛',fn:'startCard'};
+ return null;
+ }
+ if(p==='playoff'){
+ const pf=s.playoff;
+ if(!pf||!pf.final||pf.final.r)return null;
+ return {type:'startPlayoff',label:' 进行季后赛 / 快进',fn:'startPlayoff'};
+ }
+ if(p==='challenger'){
+ const c=s.challenger;
+ if(!c||c.champ)return null;
+ return {type:'startCup',label:' 进行挑战者杯',fn:'uiStartCup'};
+ }
+ if(p==='ewc'){
+ const e=s.ewc;
+ if(!e||e.champ)return null;
+ return {type:'startCup',label:' 进行 EWC',fn:'uiStartCup'};
+ }
+ if(p==='asiad'){
+ const a=s.ag;
+ if(!a||a.champ)return null;
+ return {type:'asiadStep',label:' 推进亚运会',fn:'uiAsiadStep'};
+ }
+ if(p==='annual'){
+ const a=s.annual;
+ if(!a||(a.po&&a.po.champ))return null;
+ return {type:'startCup',label:' 进行年度总决赛',fn:'uiStartCup'};
+ }
+ if(p==='champion'||p==='eliminated'){
+ return {type:'advanceCalendar',label:calendarNextLabel(s)||' 推进赛历',fn:'uiAdvanceCalendar'};
+ }
+ return null;
+}
+function uiDoNextAction(s){
+ if(uiGuard())return;
+ const a=nextAction(s||S);
+ if(!a){toast('当前没有可进行的比赛');return;}
+ if(a.fn==='uiEndPreseason')uiEndPreseason(s||S);
+ else if(a.fn==='uiStartMatch')uiStartMatch();
+ else if(a.fn==='startPlayerMatch'){if(!requireSave('出战'))return;startPlayerMatch();}
+ else if(a.fn==='startCard')startCard();
+ else if(a.fn==='startPlayoff')startPlayoff();
+ else if(a.fn==='uiStartCup')uiStartCup(s||S);
+ else if(a.fn==='uiAsiadStep')uiAsiadStep(s||S);
+ else if(a.fn==='uiAdvanceCalendar')uiAdvanceCalendar(s||S);
+}
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 /* ================= 俱乐部页：赛段入口面板（renderClub 按 phase 分发） ================= */
 function clubLeaguePhasePanel(){
@@ -466,15 +529,22 @@ function clubResultPanel(){
 }
 function clubPhasePanel(){
  const p=S.phase;
- if(p==='r1'||p==='r2'||p==='r3')return clubLeaguePhasePanel();
- if(p==='card')return clubCardPanel();
- if(p==='playoff')return clubPlayoffPanel();
- if(p==='challenger')return clubChallengerPanel();
- if(p==='ewc')return clubEwcPanel();
- if(p==='asiad')return clubAsiadPanel();
- if(p==='annual')return clubAnnualPanel();
- if(p==='champion'||p==='eliminated')return clubResultPanel();
- return '';
+ let html='';
+ if(p==='r1'||p==='r2'||p==='r3')html=clubLeaguePhasePanel();
+ else if(p==='card')html=clubCardPanel();
+ else if(p==='playoff')html=clubPlayoffPanel();
+ else if(p==='challenger')html=clubChallengerPanel();
+ else if(p==='ewc')html=clubEwcPanel();
+ else if(p==='asiad')html=clubAsiadPanel();
+ else if(p==='annual')html=clubAnnualPanel();
+ else if(p==='champion'||p==='eliminated')html=clubResultPanel();
+ // 兜底：nextAction 认为可推进、但赛段面板漏了按钮时补一条，消灭「打不了比赛」
+ const act=nextAction(S);
+ if(act&&html.indexOf(act.fn)<0&&html.indexOf('uiDoNextAction')<0){
+ html+=`<div class="panel"><button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)">${act.label}</button>
+ <div class="hint mt8">赛段入口由 nextAction 统一给出（防止面板漏渲染）</div></div>`;
+ }
+ return html;
 }
 /* 俱乐部页底部：回顾条 / 集训 / 报价 / 今日行动 / 主教练 / 事件动态 */
 function clubFooterPanels(){
