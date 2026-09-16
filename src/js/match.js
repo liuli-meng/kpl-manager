@@ -530,19 +530,20 @@ function finishSeries(finalWin){
  title=S.teamName+' vs '+sr.opName;
  if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
  }else if(sr.stage==='card'){
- const m=sr.cardMatch;
- m.r=finalWin?sr.myName:sr.opName;
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||sr.cardMatch;
+ if(m)m.r=finalWin?sr.myName:sr.opName;
  const bonus=winGames*20;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,'卡位赛：'+S.teamName+' '+(finalWin?'晋级':'遗憾落败')+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
  title='卡位赛'+(finalWin?'晋级':'出局');
- S.card.idx++;
+ if(m&&S.card)S.card.idx=Math.max(S.card.idx,(sr.cardIdx!=null?sr.cardIdx:S.card.idx)+1);
+ else if(S.card)S.card.idx++;
  if(S.card.idx>=S.card.matches.length)finishCard(S);
  else playCardNext(S);
  }else if(sr.stage==='po'){
- const m=sr.poMatch;
- m.r=finalWin?sr.myName:sr.opName;
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||sr.poMatch;
+ if(m)m.r=finalWin?sr.myName:sr.opName;
  const bonus=winGames*25;
  S.fund+=bonus;
  if(finalWin&&sr.poSlot==='总决赛')S.fund+=100;
@@ -556,11 +557,12 @@ function finishSeries(finalWin){
  title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':'出局');
  playoffStep(S);
  }else if(sr.stage==='cup'){
- // 杯赛系列赛（EWC / 年度总决赛：擂台赛·突围赛·淘汰赛）
- try{if(typeof rebindSeriesMatch==='function')rebindSeriesMatch(S);}catch(e){}
- const m=sr.cupMatch;
+ // 杯赛系列赛（EWC / 年度总决赛：擂台赛·突围赛·淘汰赛）——按 cupSlot 解析真对象，不信缓存引用
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||sr.cupMatch;
+ if(m){
  m.r=finalWin?sr.myName:sr.opName;
  if(m.a===sr.myName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;} // 擂台赛积分按 a/b 记小局
+ }
  const bonus=winGames*20;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));

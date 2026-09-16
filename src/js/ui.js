@@ -429,9 +429,11 @@ function clubAnnualPanel(){
  }
  if(a.stage==='breakthrough'){
  const myPending=hasMyPending(a.brk,S.teamName);
+ const brkDone=(a.brk||[]).every(m=>m&&m.r);
  return `<div class="panel"><h3>年度总决赛·突围赛 <span class="tag">6队 BO7 单败 · 3队晋级</span></h3>
  ${a.brk.map(cupRow).join('')}
- ${a.brk.every(m=>m.r)?'<div class="hint mt8">晋级淘汰赛：'+a.brk.map(m=>m.r).join('、')+'</div>':`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行突围赛':'快进赛程'}</button>`}
+ ${brkDone?'<div class="hint mt8">晋级淘汰赛：'+a.brk.map(m=>m.r).join('、')+' · 点按钮进入淘汰赛</div>':''}
+ <button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行突围赛':(brkDone?'进入淘汰赛':'快进赛程')}</button>
  </div>`;
  }
  const p=a.po;

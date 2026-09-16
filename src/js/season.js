@@ -259,7 +259,7 @@ function playCardNext(s){
  showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
  }
- s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'card',cardMatch:m,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
+ s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'card',cardIdx:s.card.idx,cardMatch:m,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
  resetOppEnergy(s,opName);
  showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第1局');
  }else{

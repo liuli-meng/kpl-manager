@@ -89,7 +89,7 @@ const out = vm.runInContext(`
     else log('① 擂台开幕按钮 OK');
   }
 
-  // ② 读档后杯赛系列赛：cupMatch 引用必须仍指向 bracket
+  // ② 读档/断引用后：仅凭 cupSlot 也能把结果写回 bracket
   if(S.phase==='annual'&&S.annual&&S.annual.stage==='arena'){
     startCup(S);
     if(!S.series)fail('② startCup 未建立 series');
@@ -100,18 +100,17 @@ const out = vm.runInContext(`
       S=JSON.parse(raw);
       migrateSave();
       const sr=S.series;
+      // 主动清掉缓存引用，强制走 cupSlot 解析
+      delete sr.cupMatch;
       const real=(S.annual.rounds[S.annual.roundIdx]||[]).find(m=>m.a===S.teamName||m.b===S.teamName);
-      const linked=real&&sr.cupMatch===real;
-      if(!linked)fail('② 读档后 cupMatch 与 bracket 引用断开（finishSeries 会写到幽灵对象）');
-      else log('② 读档后 cupMatch 引用仍绑定 OK');
-      // 打完这场：真实对象必须有 r
+      const resolved=resolveSeriesMatch(S);
+      if(!resolved||resolved!==real)fail('② resolveSeriesMatch 未按 cupSlot 找回真对象 slot='+sr.cupSlot);
+      else log('② cupSlot 解析回 bracket OK');
       sr.mw=Math.ceil(sr.max/2);sr.ow=1;
       finishSeries(true);
-      const rd=S.annual.rounds;
-      // 任意一轮里玩家场次应至少有一场已记 r（本轮写入或后续轮）
-      const anyR=rd.flat().some(m=>(m.a===S.teamName||m.b===S.teamName)&&!!m.r);
+      const anyR=(S.annual.rounds||[]).flat().some(m=>(m.a===S.teamName||m.b===S.teamName)&&!!m.r);
       if(!anyR)fail('② finishSeries 后 bracket 中玩家场次无 r（结果写丢）');
-      else log('② 读后 finishSeries 结果写回 bracket OK');
+      else log('② finishSeries 结果写回 bracket OK');
     }
   }
 
@@ -155,14 +154,18 @@ const out = vm.runInContext(`
   try{startCup(S);log('⑤ 残留regular series 后 startCup stage='+(S.series&&S.series.stage)+' cupSlot='+(S.series&&S.series.cupSlot));}
   catch(e){fail('⑤ 残留 series 时 startCup 抛错: '+e.message);}
 
-  // ⑥ 突围赛/淘汰赛按钮存在性（推进到 breakthrough / po）
+  // ⑥ 突围赛/淘汰赛按钮存在性（推进到 breakthrough / po）+ 每轮擂台赛后按钮仍在
   prepToAnnual();
   let g6=0;
+  let arenaBtnOk=true;
   while(S.phase==='annual'&&S.annual.stage==='arena'&&g6++<20){
+    const h0=clubHtml();
+    if(h0.indexOf('uiStartCup')<0){arenaBtnOk=false;fail('⑥ 擂台第'+(S.annual.roundIdx+1)+'轮无按钮');}
     if(S.series){closeSeries();continue;}
     startCup(S);
     if(S.series){closeSeries();continue;}
   }
+  if(arenaBtnOk)log('⑥ 擂台全程每轮均有 uiStartCup OK');
   if(S.annual.stage==='breakthrough'){
     const h=clubHtml();
     if(h.indexOf('uiStartCup')<0)fail('⑥ 突围赛面板无按钮');

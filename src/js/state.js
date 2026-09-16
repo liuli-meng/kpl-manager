@@ -518,53 +518,114 @@ function seasonShapeOk(s){
  if(['r3','playoff','champion','eliminated'].includes(s.phase))return !!(s.groups.S&&s.groups.A);
  return true; // 未知阶段不强判
 }
-/* 读档后把 series 上的 cupMatch/poMatch/cardMatch 重新绑回 bracket 真对象。
-   JSON 往返会切断引用：finishSeries 若写到幽灵副本，对阵树永远无 r → 年总/季后赛卡死。 */
-function rebindSeriesMatch(s){
-	if(!s||!s.series)return;
-	const sr=s.series;
+/* 对阵对象按 slot/id 解析回 bracket 真对象。JSON 存读会切断引用：
+   finishSeries 若写到幽灵副本，对阵树永远无 r → 年总/季后赛卡死。
+   约定：series 只把 slot 当权威键；cupMatch/poMatch/cardMatch 仅作缓存，写结果前必须 resolve。 */
+function findPoBracketMatch(p,slot){
+	if(!p||!slot)return null;
+	if(slot==='wb1')return p.wb&&p.wb[0]||null;
+	if(slot==='wb2')return p.wb&&p.wb[1]||null;
+	if(slot==='lb1')return p.lb&&p.lb[0]||null;
+	if(slot==='lb2')return p.lb&&p.lb[1]||null;
+	if(/^lb2_(\d+)$/.test(slot))return (p.lb2||[])[+RegExp.$1-1]||null;
+	if(slot==='胜者组决赛'||slot==='wf')return p.wf||null;
+	if(/^lb3_(\d+)$/.test(slot))return (p.lb3||[])[+RegExp.$1-1]||null;
+	if(slot==='败者组半决赛'||slot==='lb4')return p.lb4||null;
+	if(slot==='败者组决赛'||slot==='lbf')return p.lbf||null;
+	if(slot==='总决赛'||slot==='final')return p.final||null;
+	return null;
+}
+function findCup8BySuffix(p,suf){
+	if(!p||!suf)return null;
+	if(/^wb1_(\d+)$/.test(suf))return (p.wb1||[])[+RegExp.$1-1]||null;
+	if(/^lb1_(\d+)$/.test(suf))return (p.lb1||[])[+RegExp.$1-1]||null;
+	if(/^wb2_(\d+)$/.test(suf))return (p.wb2||[])[+RegExp.$1-1]||null;
+	if(/^lb2_(\d+)$/.test(suf))return (p.lb2||[])[+RegExp.$1-1]||null;
+	if(suf==='wf')return p.wf||null;
+	if(suf==='lbs')return p.lbs||null;
+	if(suf==='lbf')return p.lbf||null;
+	if(suf==='final')return p.final||null;
+	return null;
+}
+function findCupMatchBySlot(s,slot){
+	if(!s||!slot)return null;
+	const a=s.annual,c=s.challenger,e=s.ewc;
+	if(/^arena_r(\d+)$/.test(slot)&&a&&a.rounds){
+	const rd=a.rounds[+RegExp.$1-1];
+	if(!rd)return null;
+	return rd.find(m=>m.a===s.teamName||m.b===s.teamName)||null;
+	}
+	if(/^brk(\d+)$/.test(slot)&&a&&a.brk)return a.brk[+RegExp.$1-1]||null;
+	if(/^apo_/.test(slot)&&a&&a.po)return findCup8BySuffix(a.po,slot.slice(4));
+	if(/^ch_r1_(\d+)$/.test(slot)&&c&&c.r1)return c.r1[+RegExp.$1-1]||null;
+	if(/^ch_r2_(\d+)$/.test(slot)&&c&&c.r2)return c.r2[+RegExp.$1-1]||null;
+	if(/^chpo_/.test(slot)&&c&&c.po)return findCup8BySuffix(c.po,slot.slice(5));
+	if(slot==='ch_final'&&c)return c.final||null;
+	if(/^ewc_qf(\d+)$/.test(slot)&&e)return (e.qf||[])[+RegExp.$1-1]||null;
+	if(/^ewc_sf(\d+)$/.test(slot)&&e)return (e.sf||[])[+RegExp.$1-1]||null;
+	if(slot==='ewc_final'&&e)return e.final||null;
+	return null;
+}
+function resolveSeriesMatch(s,srIn){
+	if(!s)return null;
+	const sr=srIn||s.series;
+	if(!sr)return null;
+	if(sr.stage==='card'&&s.card&&s.card.matches){
+	if(sr.cardIdx!=null&&s.card.matches[sr.cardIdx])return s.card.matches[sr.cardIdx];
+	}
+	if(sr.stage==='po'){
+	const live=findPoBracketMatch(s.playoff,sr.poSlot);
+	if(live)return live;
+	}
+	if(sr.stage==='cup'){
+	const live=findCupMatchBySlot(s,sr.cupSlot);
+	if(live)return live;
+	}
+	// 槽位缺失时的兜底：按双方队名在当前赛段 bracket 里找回（旧档/测试手造 series）
 	const findPair=(list,a,b)=>(list||[]).find(m=>m&&(m.a===a&&m.b===b||m.a===b&&m.b===a));
 	const src=sr.cupMatch||sr.poMatch||sr.cardMatch;
-	if(!src||!src.a||!src.b)return;
+	if(!src||!src.a||!src.b)return null;
 	const a=src.a,b=src.b;
 	let live=null;
 	if(sr.stage==='card'&&s.card&&s.card.matches)live=findPair(s.card.matches,a,b);
 	else if(sr.stage==='po'&&s.playoff){
-		const p=s.playoff;
-		live=findPair(p.wb,a,b)||findPair(p.lb,a,b)||findPair(p.lb2,a,b)||findPair(p.lb3,a,b)
-		||findPair([p.wf],a,b)||findPair([p.lb4],a,b)||findPair([p.lbf],a,b)||findPair([p.final],a,b);
+	const p=s.playoff;
+	live=findPair(p.wb,a,b)||findPair(p.lb,a,b)||findPair(p.lb2,a,b)||findPair(p.lb3,a,b)
+	||findPair([p.wf],a,b)||findPair([p.lb4],a,b)||findPair([p.lbf],a,b)||findPair([p.final],a,b);
 	}
 	else if(sr.stage==='cup'){
-		if(s.phase==='annual'&&s.annual){
-			if(s.annual.stage==='arena'&&s.annual.rounds){
-				const idx=parseInt(String(sr.cupSlot||'').replace(/^arena_r/,''),10)-1;
-				const rounds=s.annual.rounds;
-				live=(idx>=0&&idx<rounds.length)?findPair(rounds[idx],a,b):null;
-				if(!live)live=rounds.flat().find(m=>findPair([m],a,b));
-			}else if(s.annual.stage==='breakthrough')live=findPair(s.annual.brk,a,b);
-			else if(s.annual.po){
-				const p=s.annual.po;
-				live=findPair(p.wb1,a,b)||findPair(p.lb1,a,b)||findPair(p.wb2,a,b)||findPair(p.lb2,a,b)
-				||findPair([p.wf],a,b)||findPair([p.lbs],a,b)||findPair([p.lbf],a,b)||findPair([p.final],a,b);
-			}
-		}else if(s.phase==='challenger'&&s.challenger){
-			const c=s.challenger;
-			live=findPair(c.r1,a,b)||findPair(c.r2,a,b);
-			if(!live&&c.po){
-				const p=c.po;
-				live=findPair(p.wb1,a,b)||findPair(p.lb1,a,b)||findPair(p.wb2,a,b)||findPair(p.lb2,a,b)
-				||findPair([p.wf],a,b)||findPair([p.lbs],a,b)||findPair([p.lbf],a,b);
-			}
-			if(!live)live=findPair([c.final],a,b);
-		}else if(s.phase==='ewc'&&s.ewc){
-			const e=s.ewc;
-			live=findPair(e.qf,a,b)||findPair(e.sf,a,b)||findPair([e.final],a,b);
-		}
+	if(s.phase==='annual'&&s.annual){
+	if(s.annual.stage==='arena'&&s.annual.rounds)live=s.annual.rounds.flat().find(m=>findPair([m],a,b));
+	else if(s.annual.stage==='breakthrough')live=findPair(s.annual.brk,a,b);
+	else if(s.annual.po){
+	const p=s.annual.po;
+	live=findPair(p.wb1,a,b)||findPair(p.lb1,a,b)||findPair(p.wb2,a,b)||findPair(p.lb2,a,b)
+	||findPair([p.wf],a,b)||findPair([p.lbs],a,b)||findPair([p.lbf],a,b)||findPair([p.final],a,b);
 	}
+	}else if(s.phase==='challenger'&&s.challenger){
+	const c=s.challenger;
+	live=findPair(c.r1,a,b)||findPair(c.r2,a,b);
+	if(!live&&c.po){
+	const p=c.po;
+	live=findPair(p.wb1,a,b)||findPair(p.lb1,a,b)||findPair(p.wb2,a,b)||findPair(p.lb2,a,b)
+	||findPair([p.wf],a,b)||findPair([p.lbs],a,b)||findPair([p.lbf],a,b);
+	}
+	if(!live)live=findPair([c.final],a,b);
+	}else if(s.phase==='ewc'&&s.ewc){
+	const e=s.ewc;
+	live=findPair(e.qf,a,b)||findPair(e.sf,a,b)||findPair([e.final],a,b);
+	}
+	}
+	return live||null;
+}
+function rebindSeriesMatch(s){
+	if(!s||!s.series)return;
+	const live=resolveSeriesMatch(s);
 	if(!live)return;
-	if(sr.cupMatch)sr.cupMatch=live;
-	if(sr.poMatch)sr.poMatch=live;
-	if(sr.cardMatch)sr.cardMatch=live;
+	const sr=s.series;
+	if(sr.stage==='cup'||sr.cupMatch)sr.cupMatch=live;
+	if(sr.stage==='po'||sr.poMatch)sr.poMatch=live;
+	if(sr.stage==='card'||sr.cardMatch)sr.cardMatch=live;
 }
 function migrateSave(){
  if(!S)return;
