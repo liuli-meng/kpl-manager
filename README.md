@@ -117,13 +117,25 @@ src/
   js/kjia.js       K甲联赛（二队）
   js/cups.js       挑战者杯 / EWC / 亚运会 / 年总 + 杯赛通用流程
   js/career.js     选手/教练生涯引擎 + 年度回顾 + 退役名宿市场
+  js/playerops.js  选手日决策引擎（媒体/更衣室/合同角色）——UI 只转发
   js/hall.js       荣誉馆 + 战绩分享图（canvas 导出）
   js/guide.js      新手引导（分步弹窗）+ 每页「这是什么」提示条
   js/bp.js         KPL 官方两段式 BP 引擎 + BP 台 UI
   js/match.js      比赛模拟、文字直播、系列赛收尾
-  js/ui.js         各页面渲染
+  js/ui.js         共享 UI：卡片/Header/董事会守卫/俱乐部赛段面板/排序/队徽
+  js/ui-lineup.js  阵容页渲染（renderLineup / swapPlayer）
+  js/ui-market.js  转会市场页渲染
+  js/ui-career.js  生涯页渲染（选手模式；日决策引擎在 playerops）
   js/main.js       开局创建 / 导航 / 启动
 ```
+
+### 架构约定（防再膨胀）
+
+- **引擎与 UI 分离**：新系统先写「引擎文件」（规则/结算进 `transfer`/`playerops`/`clubops` 等），UI 只渲染与 `onclick` 转发——不要在 `ui*.js` 里改数值或写规则
+- **UI 按页拆**：`ui.js` 只留共享件（卡片、Header、守卫、排序、队徽、俱乐部赛段）；各页独立 `ui-<page>.js`。构建按 `index.html` 的 script 顺序拼接，新增页先加 script 标签再写文件
+- **选手状态唯一出口**：伤停/K甲/外租/集训/退役/闹离队等旗标一律读 `playerStatus(p,s)`（`state.js`），禁止各处 `if (p.kjia>0 || p.loanOut || …)` 自行拼条件。新旗标先在 `playerStatus` 登记，再在守卫/UI 里消费
+- **存档兼容**：结构变更走 `MIGRATIONS` / `migrateSave`；经济刻度变更打 `econReal` 等一次性标记；缺字段兜底在读档时补默认值——不要在渲染层散落 `|| 默认值` 把兼容逻辑埋进 UI
+- **全局 `S`**：允许引擎内直接改（单机单档），但新代码优先 `function foo(s, …)` 显式传状态，便于测试与子系统复用
 
 ## 设计系统 v4 「TOUCHLINE」FM 经理模式风（当前）
 
