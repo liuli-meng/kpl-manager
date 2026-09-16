@@ -26,7 +26,6 @@ function missionState(){
  try{return JSON.parse(localStorage.getItem(MISSION_KEY)||'{}');}catch(_){return {};}
 }
 function saveMissionState(m){try{localStorage.setItem(MISSION_KEY,JSON.stringify(m));}catch(_){}}
-function clearMissionState(){try{localStorage.removeItem(MISSION_KEY);}catch(_){}}
 function missionDefs(mode){
  if(mode==='player')return [
   {id:'p1',day:1,title:'完成一次加练',text:'在「生涯」页练一项属性（体力不够先休息）',page:'career',
@@ -48,8 +47,11 @@ function missionDefs(mode){
 function markMissionSeen(key){const m=missionState();m[key]=1;saveMissionState(m);}
 function activeMissions(s){
  const mode=(s&&s.mode)||'manager';
+ const day=(s&&s.day)||1;
+ if(day>3)return []; // 只提示前 3 日
  return missionDefs(mode).filter(m=>{
-  if((s&&s.day||1)>3)return false; // 只提示前 3 日
+  if((m.day||1)>day)return false; // 按任务标注日解锁（避免第 1 天就出现「打完一场联赛」）
+  if((s&&s.preseason)&&m.id==='m2')return false; // 转会期还没开赛，先不催打比赛
   const st=missionState();
   if(st['done_'+m.id])return false;
   try{if(m.done(s)){st['done_'+m.id]=1;saveMissionState(st);return false;}}catch(_){}
@@ -102,6 +104,8 @@ function quickSteps(){
 function maybeStartTour(){
  if(_tour.on||!S)return;
  try{if(localStorage.getItem(TOUR_KEY))return;}catch(_){}
+ // 赛前转会期先组队：引导与「先组队再开赛」的落地页抢焦点，开赛后/非转会期再弹
+ if(S.preseason&&(S.transferWindow||0)>0)return;
  startQuickOnboard(); // 首进：3 步上手（目标驱动），完整 tour 从管理页重放
 }
 function startTour(){ // 完整页码 tour（管理页入口）

@@ -350,7 +350,7 @@ function playoffStep(s){
  if(p.final.r===null&&p.final.a&&p.final.b){playPoMatch(s,p.final,'总决赛');return;}
  if(p.final.r){
  p.champ=p.final.r;
- s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split||'spring',event:SPLIT_NAME[s.split]||'春季赛',champ:p.final.r}]).slice(-16); // 王朝统计（连冠反制用，一年两冠按时间序）
+ s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split||'spring',event:SPLIT_NAME[s.split]||'春季赛',champ:p.final.r}]).slice(-48); // 王朝统计（连冠反制用，一年两冠按时间序）
  if(s.phase!=='eliminated')s.phase='champion'; // 玩家提前出局时：补完的联盟赛季不覆盖"止步"状态
  s.champion=p.final.r===s.teamName;
  if(s.champion||p.final.a===s.teamName||p.final.b===s.teamName)recordSeason(s); // 冠军/亚军均入册荣誉室
@@ -433,8 +433,18 @@ function nextDay(s){
  if(s.transferWindow===0){
  endTransferWindow(s);
  if(s.preseason){
- s.preseason=false;
- logEvent(s,' 赛前转会期结束（天数用完），联赛正式开始！');
+ // 经理模式：窗耗尽前缺位自动补签，避免「五位置空、转会窗关、开赛卡死」
+ if(s.mode!=='player'&&s.mode!=='coach'){
+  try{ensureSeasonRoster(s);}catch(e){}
+ }
+ const missPos=POS_ORDER.filter(pos=>!(s.players||[]).some(p=>p.pos===pos&&!p.loan));
+ if(missPos.length){
+  s.transferWindow=3;
+  logEvent(s,' 转会窗原定关闭，但 '+missPos.map(pos=>POS[pos][0]).join('、')+' 仍无人——自动延长 3 天，请尽快签约');
+ }else{
+  s.preseason=false;
+  logEvent(s,' 赛前转会期结束（天数用完），联赛正式开始！');
+ }
  }else{
  logEvent(s,' 转会窗关闭，未成交的挂牌选手自动撤牌');
  }
@@ -457,10 +467,11 @@ function nextDay(s){
  save();
 }
 function payWage(s){
+ try{scrubWages(s);}catch(e){}
  const wage=weeklyWage(s);
  // 选手代言收入：人气 × 0.3万/周 × 粉丝系数（商业价值对冲工资帽压力）
  // 注意：×3 是旧千万级刻度残留——在现役「万」单位下会把基金刷爆（5 人人气 40 → 周入 600 万，远超周薪）
- const endorse=Math.round(s.players.reduce((t,p)=>t+((p.popularity||0)*0.3),0)*fanMul(s,300));
+ const endorse=Math.round((s.players||[]).reduce((t,p)=>t+((p.popularity||0)*0.3),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;
@@ -473,6 +484,7 @@ function payWage(s){
  logEvent(s,' 发放周薪 '+wage+'万（工资帽内 '+s.wageCap+'万）');
  }
  if(endorse>0)logEvent(s,' 选手代言收入 '+endorse+'万（人气变现）');
+ if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0; // 防 NaN 写入存档（JSON 会变 null）
  if(s.fund<0){
  s.fund=Math.max(0,s.fund);
  s.players.forEach(p=>p.morale=clamp(p.morale-15,20,100));
@@ -547,8 +559,11 @@ function newSeason(s){
  const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
  const key=pick(['lane','farm','team','mind']);
  if(p.age<=m.gold){
- // 黄金期（19-22 反应手速巅峰）：随机属性+1
- p.attrs[key]=clamp(p.attrs[key]+1,55,99);
+ // 黄金期：属性小幅上探，受个人天花板约束（不无限涨）
+ if(typeof ensurePlayerPeak==='function'){
+  const pk=ensurePlayerPeak(p);
+  if(p.attrs[key]<(pk[key]!=null?pk[key]:99))p.attrs[key]=clamp(p.attrs[key]+1,55,99);
+ }else p.attrs[key]=clamp(p.attrs[key]+1,55,99);
  }else if(p.age<m.retire){
  // 下滑期：按位置衰减（野射下滑快，辅助缓）
  p.attrs[key]=clamp(p.attrs[key]-rnd(1,m.decay),40,99);
@@ -583,8 +598,9 @@ function newSeason(s){
  if(p.age>m.gold)p.val=clamp(p.val-(p.age-m.gold)*4,70,150); // 过黄金期：身价随年龄贬值
  if(p.age>=m.retire-1)p.val=clamp(p.val-8,70,150); // 临近退役：额外折价
  if(p.val>=120){ // 巅峰表现 → 续约涨薪（工资帽压力随成绩增长）
+ if(typeof p.wage!=='number'||!isFinite(p.wage)||p.wage<0){try{p.wage=Math.max(2,Math.round(wageOf(overall(p))));}catch(e){p.wage=2;}}
  const nw=Math.min(Math.round(p.wage*1.15)+1,Math.round(wageOf(overall(p))*1.5));
- if(nw>p.wage){p.wage=nw;logEvent(s,' 赛季结算：'+p.name+' 续约涨薪至 '+nw+'万/周');}
+ if(isFinite(nw)&&nw>p.wage){p.wage=nw;logEvent(s,' 赛季结算：'+p.name+' 续约涨薪至 '+nw+'万/周');}
  }
  });
  // 青训新秀同步长一岁：满 18 岁才有晋升一线队资格（KPL 注册规则）；每年自然成长（潜力越高长得越快）
@@ -648,6 +664,7 @@ function newSeason(s){
  mentorSeasonSettle(s); // 老将带新：新人属性成长 + 老将人气（更衣室关系）
  boardApplyEffect(s); // 董事会：下赛季的干预（砍帽）或特权（追加预算）按月生效
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
+ try{gcDefs(s);}catch(e){} // 年度轮换：清杯赛临时 def / 退役 def / 青训幽灵
  startSplit(s,'spring');
 }
 

@@ -30,6 +30,64 @@ function ensureAiRosters(s,teamName){
  if(s.challDefMap&&s.challDefMap[teamName])s.aiPower[teamName]=Math.round(s.aiPower[teamName]*1.05); // 挑战者的祝福：低赛道队 vs KPL +5%（玩家对局同规则）
  return roster;
 }
+/* 后期存档 GC：杯赛临时 def / 退役 def / AI 青训幽灵 id
+ 挑杯 70 + EWC 30 每年只 push，20 年 extraDefs 可到 2000+、存档顶满 localStorage。
+ 在杯赛收官与年度轮换调用；live 引用必留。 */
+function gcDefs(s){
+ if(!s)return;
+ s.extraDefs=s.extraDefs||[];
+ s.retiredDefs=s.retiredDefs||[];
+ s.aiAcademy=s.aiAcademy||{};
+ const live=new Set();
+ const addId=x=>{if(x==null)return;live.add(typeof x==='string'?x:(x.id||null));};
+ (s.players||[]).forEach(addId);
+ (s.freeAgents||[]).forEach(addId);
+ (s.transferList||[]).forEach(addId);
+ Object.values(s.aiRosterDefs||{}).forEach(arr=>(arr||[]).forEach(addId));
+ Object.values(s.aiRosters||{}).forEach(r=>(r||[]).forEach(addId));
+ Object.values(s.challDefMap||{}).forEach(arr=>(arr||[]).forEach(addId));
+ Object.values(s.ewcDefMap||{}).forEach(arr=>(arr||[]).forEach(addId));
+ Object.values(s.aiAcademy||{}).forEach(arr=>(arr||[]).forEach(addId));
+ // AI 青训：清掉已退役/查无的幽灵 id（否则该队青训永久失效）
+ Object.keys(s.aiAcademy).forEach(tn=>{
+  s.aiAcademy[tn]=(s.aiAcademy[tn]||[]).filter(id=>{
+   if(!id||s.retiredDefs.includes(id))return false;
+   return !!defOf(s,id);
+  });
+  if(!s.aiAcademy[tn].length)delete s.aiAcademy[tn];
+ });
+ const year=gameYear(s)||2026;
+ s.extraDefs=s.extraDefs.filter(d=>{
+  if(!d||!d.id)return false;
+  if(live.has(d.id))return true;
+  if(s.retiredDefs.includes(d.id))return false; // 已退役：def 可丢，id 留在 retiredDefs
+  const m=/^(?:ch|ewc)(\d{4})_/.exec(d.id);
+  if(m){const y=parseInt(m[1],10);if(!isNaN(y)&&year>y)return false;} // 杯赛外援跨年后丢
+  return true;
+ });
+ const CAP=480;
+ if(s.extraDefs.length>CAP){
+  const must=s.extraDefs.filter(d=>live.has(d.id));
+  const rest=s.extraDefs.filter(d=>!live.has(d.id));
+  s.extraDefs=must.concat(rest.slice(-Math.max(0,CAP-must.length)));
+ }
+ s.retiredDefs=s.retiredDefs.slice(-350);
+}
+/* 经理模式转会窗耗尽：缺位自动补签，避免「窗关了、名单空了、开赛卡死」 */
+function ensureSeasonRoster(s){
+ if(!s)return;
+ const used=new Set((s.players||[]).map(p=>p.name));
+ POS_ORDER.forEach(pos=>{
+  if((s.players||[]).some(p=>p.pos===pos&&!p.loan))return;
+  const def=genFreeAgentDef(pos,'low',used);
+  used.add(def.name);
+  const p=genPlayer(def);
+  p.contract=1;
+  s.players.push(p);
+  logEvent(s,' 转会窗关闭前自动补签自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
+ });
+ try{autoFillLineup(s);}catch(e){}
+}
 /* AI 选手随赛季年龄成长/衰减（与玩家 newSeason 同规则），联赛会随赛季演化
  黄金期每年 +1~2 点（原固定 +1 追不上玩家的训练速度，AI 会原地踏步） */
 function ageDrift(p){
@@ -1042,12 +1100,14 @@ function autoTrainRookie(s){
  if(!r)return;
  trainRookie(s,r.id);
 }
-/* 刷新自由市场：转会窗内每日首次免费（可重复刷但按 5 万/次收费） */function refreshMarket(s){
+/* 刷新自由市场：转会窗内每日首次免费（可重复刷但按 5 万/次收费） */
+const MARKET_REFRESH_COST=5;
+function refreshMarket(s){
  const inWindow=s.transferWindow>0;
  const free=inWindow&&!s.marketRefreshed;
  if(!free){
- if(s.fund<50){toast('资金不足（刷新需 50 万）');return;}
- s.fund-=50;
+ if(s.fund<MARKET_REFRESH_COST){toast('资金不足（刷新需 '+MARKET_REFRESH_COST+' 万）');return;}
+ s.fund-=MARKET_REFRESH_COST;
  }
  const usedNames=rookieUsedNames(s); // 全局查重：市场生成的选手不与联盟任何人重名
  s.market=[];
@@ -1071,7 +1131,7 @@ function autoTrainRookie(s){
  }
  s.coachMarket.sort((a,b)=>(b.rating||0)-(a.rating||0));
  save();renderAll();
- toast(free?'转会窗内免费刷新（每日首次）':'市场已刷新（-5万）');
+ toast(free?'转会窗内免费刷新（每日首次）':'市场已刷新（-'+MARKET_REFRESH_COST+'万）');
 }
 /* 签约主教练：已有教练时直接换帅（旧帅离任） */
 function signCoach(s,c){

@@ -82,8 +82,8 @@ function renderHall(){
  html+=`<div class="panel"><h3>赛季最佳阵容 <span class="tag">历届一阵/二阵</span></h3>`;
  html+=awards.length?awards.map(a=>`<div style="margin-bottom:10px">
  <div class="hint" style="margin-bottom:4px">S${a.season} 赛季</div>
- <div style="font-size:12px;margin-bottom:2px"><span class="gold">一阵</span> ${(a.first||[]).map(x=>POS[x.pos][1]+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
- <div style="font-size:12px"><span class="dim">二阵</span> ${(a.second||[]).map(x=>POS[x.pos][1]+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
+ <div style="font-size:12px;margin-bottom:2px"><span class="gold">一阵</span> ${(a.first||[]).map(x=>(POS[x.pos]?POS[x.pos][1]:'?')+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
+ <div style="font-size:12px"><span class="dim">二阵</span> ${(a.second||[]).map(x=>(POS[x.pos]?POS[x.pos][1]:'?')+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
  </div>`).join('')
  :'<div class="hint">赛季结束后自动评选一阵/二阵</div>';
  html+=`</div>`;

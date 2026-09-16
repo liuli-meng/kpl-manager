@@ -69,10 +69,17 @@ const out = vm.runInContext(`
     if(extra)me3.heroPool.push({n:extra.n,lv:2});
    }
    me3.attrs.lane=90; // 留出成长空间（③拉满 99 会被上限钳住）
+   me3.val=140;me3.morale=90;me3.injury=0;me3.energy=ENERGY_MAX; // 状态驱动训练：拉高 form
+   delete me3.peak;ensurePlayerPeak(me3); // 重算天花板（ovr 很高时房间会被压到 3）
+   // 确保天花板至少留 2 点：避免测试因随机/房间计算抖动
+   if(me3.peak.lane-me3.attrs.lane<2)me3.peak.lane=Math.min(96,me3.attrs.lane+2);
    const attr0=me3.attrs.lane;
+   // 火热状态（val140）下 trainOutcome 必有收益；playerTrain 只是把它落地
+   const rTrain=trainOutcome(playerRole(S),me3,'lane');
+   if(rTrain.gain<=0)fail('火热状态 trainOutcome 应有收益，实际 +'+rTrain.gain+'（form='+rTrain.form+'）');
    playerTrain('lane');
    if(!S.trained)fail('训练后 trained 未置位');
-   else if(me3.attrs.lane<=attr0)fail('训练未涨属性');
+   else if(me3.attrs.lane<=attr0)fail('训练未涨属性（form 应火热 '+attr0+'→'+me3.attrs.lane+'）');
    else{
    S.trained=false;
    const pool0=(me3.heroPool||[]).filter(h=>h.lv===3).length;

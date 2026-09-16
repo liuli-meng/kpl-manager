@@ -347,10 +347,31 @@ function registerChampCore(s,title){
 }
 function weeklyWage(s){
  // 租借选手租金已一次性支付，工资由原俱乐部承担，不计入本队周薪
- let sum=s.players.reduce((t,p)=>t+(p.loan?0:p.wage),0);
- if(s.coach)sum+=s.coach.wage;
- (s.assistants||[]).forEach(a=>sum+=a.wage);
+ // NaN 守卫：旧档/异常写入可能让 wage 变成 undefined/NaN，连加会污染整个周薪显示与发薪
+ const num=v=>(typeof v==='number'&&isFinite(v))?v:0;
+ let sum=(s.players||[]).reduce((t,p)=>t+(p&&p.loan?0:num(p&&p.wage)),0);
+ if(s.coach)sum+=num(s.coach.wage);
+ (s.assistants||[]).forEach(a=>sum+=num(a&&a.wage));
  return sum;
+}
+/* 清洗工资脏数据：undefined/NaN/负值 → 按总值重估（读档、发薪前调用） */
+function scrubWages(s){
+ if(!s)return;
+ const fix=p=>{
+  if(!p)return;
+  const w=p.wage;
+  if(typeof w!=='number'||!isFinite(w)||w<0){
+   try{p.wage=Math.max(2,Math.min(PLAYER_WAGE_MAX,Math.round(wageOf(overall(p))*(p.val||100)/100)));}
+   catch(e){p.wage=2;}
+  }
+ };
+ (s.players||[]).forEach(fix);
+ (s.market||[]).forEach(fix);
+ (s.transferList||[]).forEach(fix);
+ (s.freeAgents||[]).forEach(fix);
+ (s.academy||[]).forEach(fix);
+ if(s.coach&&typeof s.coach.wage!=='number')s.coach.wage=Math.max(1,Math.round((s.coach.cost||80)/8));
+ (s.assistants||[]).forEach(a=>{if(a&&typeof a.wage!=='number')a.wage=5;});
 }
 /* 存档序列化：剔除可重建/仅运行期字段。
   aiRosters 读档时 migrateSave 统一清空重建，写进去纯属白占 localStorage；
@@ -461,6 +482,9 @@ function migrateSave(){
  S.retiredDefs=S.retiredDefs||[];
  S.aiInj=S.aiInj||{}; // AI 伤停表（def id → 缺阵系列赛数）
  S.assistants=S.assistants||[]; // 助教组（旧档迁移）
+ try{if(typeof gcDefs==='function')gcDefs(S);}catch(e){} // 读档即 GC：清杯赛残留/退役 def/青训幽灵
+ try{if(typeof scrubWages==='function')scrubWages(S);}catch(e){} // 读档清洗 NaN/缺省工资，避免周薪显示 NaN
+ if(typeof S.fund!=='number'||!isFinite(S.fund))S.fund=0;
  // 年度赛历迁移：旧档默认处于春季赛（春夏/EWC/年总为新引入赛段）
  S.split=S.split||'spring';
  S.annualPts=S.annualPts||{};
@@ -518,6 +542,7 @@ function migrateSave(){
  if(p.age==null)p.age=ageByPos(p.pos,false);
  if(!p.sig)p.sig=(HEROES.find(h=>h.pos[0]===p.pos)||{}).n||null;
  if(!p.career){const def=PLAYER_POOL.find(d=>d.id===p.id);if(def)p.career=def.career||'';}
+ try{if(typeof ensurePlayerPeak==='function'&&!p.peak)ensurePlayerPeak(p);}catch(e){}
  // 英雄池：字符串→对象；补全本职+摇摆位英雄，并清掉异位置英雄（旧档的储备/错位英雄统一洗掉）
  if(!p.heroPool||typeof p.heroPool[0]==='string'){
  const old=(p.heroPool||[]).map(h=>typeof h==='string'?h:h.n);

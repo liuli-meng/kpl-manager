@@ -170,14 +170,79 @@ function applyNatFocus(s,p){
     p.popularity=Math.min(99,(p.popularity||0)+1);
   }
 }
-/* ================= 角色对板凳/成长的修正（由 career/train 调用） ================= */
+/* ================= 状态驱动成长（加练不能一直涨） =================
+   状态 form：表现 val + 士气 + 体力 + 年龄（过黄金期扣分）
+   个人天花板 peak：开局按年龄/总值定房间；到顶后只维持，火热才偶发突破 */
+function playerForm(p){
+  if(!p)return 50;
+  const val=(p.val==null)?100:p.val;
+  // 表现是主信号：90→40 / 110→70 / 130→100
+  const v=clamp((val-90)*1.5+40,0,100);
+  const mo=clamp(p.morale==null?70:p.morale,0,100);
+  const en=p.energy==null?100:clamp(p.energy,0,ENERGY_MAX||100);
+  let f=v*0.5+mo*0.25+en*0.25;
+  const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
+  if((p.age||0)>m.gold)f-=(p.age-m.gold)*6;
+  if((p.injury||0)>0)f-=15;
+  return clamp(Math.round(f),0,100);
+}
+function formLabel(f){
+  return f>=80?'火热':f>=55?'平稳':'低迷';
+}
+function ensurePlayerPeak(p){
+  if(!p)return null;
+  if(p.peak&&p.peak.lane!=null)return p.peak;
+  const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
+  const age=p.age==null?20:p.age;
+  let room;
+  if(age<18)room=12;
+  else if(age<m.gold-1)room=8;
+  else if(age<=m.gold)room=5;
+  else if(age<m.retire)room=2;
+  else room=0;
+  const o=overall(p);
+  if(o>=90)room=Math.min(room,3);
+  else if(o>=85)room=Math.min(room,5);
+  p.peak={};
+  ['lane','farm','team','mind'].forEach(k=>{
+    const a=p.attrs[k]||70;
+    p.peak[k]=clamp(a+room,a,96);
+  });
+  return p.peak;
+}
+/* 加练一次的结果：看状态与天花板，不保证上涨 */
+function trainOutcome(role,p,k){
+  ensurePlayerPeak(p);
+  const form=playerForm(p);
+  const attr=p.attrs[k]||70;
+  const peak=(p.peak&&p.peak[k]!=null)?p.peak[k]:attr;
+  const room=Math.max(0,peak-attr);
+  const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
+  const pastGold=(p.age||0)>m.gold;
+  if(room<=0){
+    if(!pastGold&&form>=90&&Math.random()<0.08){
+      p.peak[k]=clamp(peak+1,40,98);
+      return {gain:1,form,peak:p.peak[k],note:'突破个人天花板'};
+    }
+    return {gain:0,form,peak,note:pastGold?'已过巅峰，只能维持':'已到个人天花板'};
+  }
+  let gain;
+  if(form>=80){
+    gain=(room>=2&&Math.random()<0.5)?2:1;
+    if(role==='proj'&&room>=2)gain=2;
+  }else if(form>=55){
+    gain=Math.random()<0.55?1:0;
+    if(gain===1&&room>=2&&Math.random()<0.2)gain=2;
+  }else{
+    gain=Math.random()<0.2?1:0;
+  }
+  if(pastGold&&gain>0&&Math.random()<0.5)gain=0; // 下滑期再砍半
+  if(gain>room)gain=room;
+  return {gain,form,peak,note:formLabel(form)};
+}
 function benchMoraleDelta(role,base){
   if(role==='star')return base*2;
   return base;
-}
-function trainGainMin(role){return role==='proj'?2:1;}
-function trainGainRoll(role){
-  return rnd(trainGainMin(role),2);
 }
 /* 赛后钩子：选手模式可能触发媒体 */
 function playerAfterMatch(s,finalWin){

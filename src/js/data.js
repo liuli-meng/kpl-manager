@@ -660,7 +660,7 @@ function dropBestPlayer(s){
 const ACHIEVEMENTS=[
  // —— 俱乐部 ——
  {id:'found',icon:'创',name:'白手起家',desc:'以自建俱乐部开启征程',test:s=>!!s.selfBuilt},
- {id:'coach',icon:'教',name:'良师入帐',desc:'签下第一名主教练',test:s=>!!s.coach},
+ {id:'coach',icon:'教',name:'良师入帐',desc:'签下第一名主教练',test:s=>!!s.coach&&(s.mode||'manager')==='manager'},
  // —— 比赛 ——
  {id:'first_win',icon:'胜',name:'旗开得胜',desc:'拿下队史首场系列赛胜利',test:s=>(s.history||[]).some(h=>h.win)},
  {id:'upset',icon:'冷',name:'以下克上',desc:'击败纸面战力高出 15% 的对手',test:s=>(s.upsetCount||0)>=1},

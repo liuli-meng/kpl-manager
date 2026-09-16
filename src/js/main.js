@@ -33,6 +33,13 @@ function applyModeNav(){
  if(cur&&cur.style.display==='none'){cur.classList.remove('on');goPage(pages[0]);}
 }
 function goPage(name){
+ // 身份门禁：导航只藏不够——教练/选手程序化 goPage 仍会进转会/经营等经理专属页
+ const allowed=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
+ if(S&&!allowed.includes(name)){
+  const fallback=allowed.includes('club')?'club':allowed[0];
+  toast('当前身份没有「'+(TOUR_TITLES[name]||name)+'」页，已回到'+(TOUR_TITLES[fallback]||fallback));
+  name=fallback;
+ }
  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.page===name));
  $$('section.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+name));
  renderHeader();
@@ -62,7 +69,7 @@ function openSaveMgmt(){
  ${[1,2,3].map(i=>`<div class="pack-btn" ${i===curSlot?'style="border-color:var(--gold)"':''} onclick="setSlot(${i})">
  <b style="font-size:14px">槽${i}</b><span style="font-size:10px">${i===curSlot?'(当前)':occ(i)?'有档':'空槽'}</span></div>`).join('')}
  </div>
- <div class="hint" style="margin-bottom:8px">导出：点「下载存档文件」存成 .json（推荐，不易丢）或「复制导出」得到存档代码；导入：选本地存档文件，或粘贴代码后点「导入」（覆盖当前槽）。</div>
+ <div class="hint" style="margin-bottom:8px">导出：电脑点「下载存档文件」存 .json；<b>手机/微信请优先「复制导出」</b>（或系统分享），再粘贴到备忘录/文件。导入：选本地 .json，或粘贴代码后点「导入」（覆盖当前槽）。</div>
  <textarea id="save-io" style="width:100%;min-height:90px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px;font-size:11px;resize:vertical" placeholder="也可把存档代码粘贴到这里"></textarea>
  <input type="file" id="save-file" accept=".json,application/json" style="display:none" onchange="importSaveFile(this)">
  <div class="center mt8" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -98,10 +105,20 @@ function setSlot(i){
 function exportSave(){
  if(!requireSave('导出'))return;
  const t=$('#save-io');
- t.value=b64e(serializeForSave(S));
- t.select();
- try{document.execCommand('copy');}catch(e){}
- toast('存档已复制，请妥善保存');
+ const code=b64e(serializeForSave(S));
+ t.value=code;
+ t.focus();
+ try{t.setSelectionRange(0,code.length);}catch(e){}
+ // 优先 Clipboard API（手机上 execCommand('copy') 经常静默失败）
+ const done=()=>toast('存档代码已填入文本框并尝试复制——若未复制成功，请长按全选手动复制');
+ if(navigator.clipboard&&navigator.clipboard.writeText){
+  navigator.clipboard.writeText(code).then(()=>toast('存档已复制，请妥善保存')).catch(()=>{
+   try{t.select();document.execCommand('copy');}catch(e){}
+   done();
+  });
+ }else{
+  try{t.select();document.execCommand('copy');toast('存档已复制，请妥善保存');}catch(e){done();}
+ }
 }
 function importSave(){
  const v=$('#save-io').value.trim();
@@ -111,20 +128,49 @@ function importSave(){
  applyImport(d,'粘贴代码');
  }catch(e){toast('导入失败：存档代码无效');}
 }
-/* 存档文件导出：下载 .json（含版本号与导出时间，跨设备备份推荐方式） */
+/* 存档文件导出：下载 .json（含版本号与导出时间，跨设备备份推荐方式）
+  手机端加固：iOS/微信对 a.download 支持差，优先 Web Share，失败再回落下载+文本框兜底 */
 function pickSaveFile(){$('#save-file').click();}
+function fallbackDownload(blob,fname,onFail){
+ try{
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=fname;a.rel='noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // 先存 url 再回收：remove 后部分浏览器会清空 a.href
+  setTimeout(()=>URL.revokeObjectURL(url),8000);
+  toast('已触发下载：'+fname+'（若无文件，请改用「复制导出」或系统分享）');
+ }catch(e){
+  if(onFail)onFail();
+  else toast('下载失败：'+(e.message||e));
+ }
+}
 function exportSaveFile(){
  try{
  if(!requireSave('导出文件'))return;
  save();
  const wrap={kplSave:true,v:SAVE_VERSION,exported:new Date().toISOString().slice(0,10),team:S.teamName,season:S.season,data:JSON.parse(serializeForSave(S))};
- const blob=new Blob([JSON.stringify(wrap)],{type:'application/json'});
- const a=document.createElement('a');
- a.href=URL.createObjectURL(blob);
- a.download='KPL存档_'+(S.teamName||'无名')+'_'+gameYear(S)+'年_槽'+curSlot+'.json';
- document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(a.href),5000);
- toast('存档文件已下载（'+a.download+'）');
+ const json=JSON.stringify(wrap);
+ const fname='KPL存档_'+(S.teamName||'无名')+'_'+gameYear(S)+'年_槽'+curSlot+'.json';
+ const blob=new Blob([json],{type:'application/json'});
+ const showFallback=()=>{
+  const t=$('#save-io');
+  if(t){t.value=json;t.focus();try{t.setSelectionRange(0,Math.min(80,json.length));}catch(e){}}
+  toast('本机浏览器可能拦截了文件下载——存档 JSON 已填入文本框，请全选复制另存为 .json');
+ };
+ // iOS/部分安卓微信：系统分享文件比 a.download 可靠
+ try{
+  if(navigator.canShare&&typeof File!=='undefined'){
+   const file=new File([blob],fname,{type:'application/json'});
+   if(navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:fname}).then(()=>toast('已通过系统分享导出存档（'+fname+'）')).catch(()=>fallbackDownload(blob,fname,showFallback));
+    return;
+   }
+  }
+ }catch(e){}
+ fallbackDownload(blob,fname,showFallback);
  }catch(e){toast('导出失败：'+(e.message||e));}
 }
 /* 存档文件导入：兼容两种格式——本游戏的包装格式{kplSave,data}与裸存档对象（含旧版剪贴板代码解出的对象） */
@@ -263,6 +309,8 @@ function gotoEraStart(){
 function cancelStartBack(){
  closeModal('start-modal');
  if(typeof installEra==='function')installEra((S&&S.era&&KPL_ERAS[S.era])?S.era:null);
+ // 浏览时代时可能已用时代 def 构建过 AI 名册：返回现役后必须丢弃，否则序列化进存档造成跨档残留
+ if(S){S.aiRosters={};S.aiRosterDefs=null;if(S.aiInj)S.aiInj={};}
  if(S)renderAll();
 }
 function initStart(){
@@ -635,6 +683,7 @@ function createTeam(){
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`战队 ${name} 成立！初始资金${S.fund}万，目标：KPL 总冠军！`);
  logEvent(S,` 开局直签 ${S.players.length} 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容`);
+ if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
  logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
@@ -667,6 +716,7 @@ function applyClub(){
  buildTransferMarket(S);refreshMarket(S);
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
  logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${S.lineup.map(id=>(S.players.find(p=>p.id===id)||{name:'?'}).name).join(' / ')}`);
+ if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税，转会期可卖人减负');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
  else logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');

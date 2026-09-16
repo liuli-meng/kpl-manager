@@ -10,7 +10,7 @@ function genPlayer(def){
  // 英雄池：招牌(绝活lv3) + 本职及摇摆位全会(熟练lv2) —— 只含本位置可用英雄，BP 候选与档案展示一致
  const heroPool=[{n:def.sig,lv:3}];
  HEROES.filter(h=>h.pos.includes(def.pos)&&h.n!==def.sig).forEach(h=>heroPool.push({n:h.n,lv:2}));
- return {id:def.id,name:def.name,pos:def.pos,team:def.team||null,tags:def.tags||[],
+ const p={id:def.id,name:def.name,pos:def.pos,team:def.team||null,tags:def.tags||[],
  attrs,skill:def.skill,sig:def.sig,heroPool,career:def.career||'',wage,energy:ENERGY_MAX,morale:rnd(75,92),injury:0,
  mvp:0,retiring:false,contract:rnd(2,3), // 合同年限：到期后需续约（转会期处理）
  // 传奇老将：最后一舞（退役前1-2年），普通选手按位置出道年龄
@@ -18,6 +18,9 @@ function genPlayer(def){
  // 商业价值（代言收入）与转会意愿（0=想走 100=死忠）
  popularity:Math.round((o>=90?rnd(38,65):o>=80?rnd(16,34):rnd(5,14))*(def.tags&&def.tags.includes('主播')?1.5:1)),
  willingness:rnd(45,90)};
+ // 个人天花板按年龄/总值定房间（防加练刷满 99）
+ try{if(typeof ensurePlayerPeak==='function')ensurePlayerPeak(p);}catch(e){}
+ return p;
 }
 /* 英雄熟练度：绝活+8% / 熟练+4% / 一般0% / 生疏-8% */
 const HERO_LV={

@@ -17,11 +17,14 @@ function doTrain(s,pid,attr){
  if(blocked){toast(blocked);return;}
  if(p.energy<10){toast(`${p.name} 体力不足`);return;}
  if(s.fund<13){toast('资金不足（训练需 13万）');return;}
+ // 状态 + 个人天花板：不再保证上涨（后期不能靠刷训练无敌）
+ const role=(s.mode==='player'&&typeof playerRole==='function')?playerRole(s):'rot';
+ const r=(typeof trainOutcome==='function')?trainOutcome(role,p,attr):{gain:rnd(0,1),note:'训练'};
  s.fund-=13;p.energy-=10;s.trained=true;
- const gain=1+rnd(0,1);
- p.attrs[attr]=clamp(p.attrs[attr]+gain,40,99);
+ p.attrs[attr]=clamp(p.attrs[attr]+r.gain,40,99);
  p.morale=clamp(p.morale-2,20,100);
- logEvent(s,` 训练完成：${p.name} 的「${TRAIN_ITEMS.find(t=>t.k===attr).n}」提升 ${gain} 点`);
+ if(r.gain>0)logEvent(s,` 训练完成：${p.name} 的「${TRAIN_ITEMS.find(t=>t.k===attr).n}」提升 ${r.gain} 点（${r.note||'状态'}）`);
+ else logEvent(s,` 训练完成：${p.name} ${r.note||'状态不佳'}，今天没有提升`);
  save();renderAll();
 }
 function doRest(s){

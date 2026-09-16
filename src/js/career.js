@@ -355,12 +355,6 @@ function signRetired(s,id){
  }
  save();renderAll();
 }
-function fireHost(s,id){
- const h=(s.hosts||[]).find(x=>x.id===id);
- if(h&&!confirmDanger('解除主播 '+h.name+' 的合约？\n每日人气收入 '+h.income+'万 将停止。'))return;
- s.hosts=(s.hosts||[]).filter(x=>x.id!==id);
- save();renderAll();toast('已解除主播合约');
-}
 /* 聘助教（上限2名，加成与主教练叠加）：助教池直聘，或退役名宿教练 6 折转任 */
 function hireAssistant(s,id){
  if((s.assistants||[]).length>=2){toast('助教席已满（上限2人），请先解约一名');return;}

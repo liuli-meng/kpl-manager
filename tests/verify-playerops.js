@@ -58,15 +58,35 @@ const out = vm.runInContext(`
       else log('④ 媒体：title 必开 · 三选一结算 · 答复后清空');
     }
 
-    // ⑤ proj 角色加练保底 +2
+    // ⑤ proj 角色 + 火热状态：加练保底 +2；贴天花板后 gain=0
     setPlayerRole(S,'proj');
     me.injury=0;me.energy=100;S.trained=false;
+    me.val=140;me.morale=90;me.age=20; // 拉高 form≥80（val=120 时 form≈78 不进火热档）
     me.attrs.lane=50;
+    delete me.peak; // 强制重算天花板
+    const pk=ensurePlayerPeak(me);
+    // 把天花板钳到刚好留 2 点空间，验证保底 +2
+    pk.lane=Math.max(52,me.attrs.lane+2);
     const lane0=me.attrs.lane;
     playerTrain('lane');
-    if(me.attrs.lane<=lane0)fail('proj 加练未涨');
-    else if(me.attrs.lane<52)fail('proj 加练保底应 +2，实际 +'+(me.attrs.lane-lane0));
-    else log('⑤ proj 角色：加练保底 +2（实际 +'+(me.attrs.lane-lane0)+'）');
+    if(me.attrs.lane<=lane0)fail('proj 火热加练未涨');
+    else if(me.attrs.lane-lane0<2)fail('proj 火热保底应 +2，实际 +'+(me.attrs.lane-lane0));
+    else{
+      // 顶到天花板后再练 → 0
+      me.attrs.lane=pk.lane;
+      S.trained=false;me.energy=100;
+      const at=pk.lane;
+      const r0=trainOutcome('proj',me,'lane');
+      if(r0.gain!==0)fail('贴天花板仍应 +0，实际 +'+r0.gain);
+      else log('⑤ 状态成长：火热 proj 保底 +'+(lane0===me.attrs.lane?0:me.attrs.lane-lane0)+' · 贴天花板 +0（'+r0.note+'）');
+    }
+
+    // ⑤b 状态低迷时大概率白练（用固定随机探测，不要求必中）
+    me.attrs.farm=50;delete me.peak;ensurePlayerPeak(me).farm=Math.max(80,me.attrs.farm);
+    me.val=75;me.morale=30;me.energy=40; // 压低状态
+    const coldForm=playerForm(me);
+    if(coldForm>=55)fail('压低 val/士气/体力后 form 应 <55，实际 '+coldForm);
+    else log('⑤b 状态公式：低迷 form='+coldForm+'（<55）');
 
     // ⑥ nextDay 重置 socialUsed 并可能触发日媒体
     S.socialUsed=true;S.career.media=null;
@@ -90,12 +110,44 @@ const out = vm.runInContext(`
       me.natCamp=false;S.split='spring';
     }
 
-    // ⑧ 任务条：选手模式 day=1 未完成时出现
+    // ⑧ 任务条：选手模式 day=1 未完成时出现（此前用例已做过训练/社交，需重置进度再验）
     try{localStorage.removeItem('km_missions');}catch(_){}
     S.day=1;
+    if(S.career&&S.career.stats){S.career.stats.trained=0;S.career.stats.social=0;S.career.stats.matches=0;}
     const strip=missionStrip(S);
     if(!strip.includes('新手任务'))fail('选手任务条未出现');
     else log('⑧ 任务条：选手模式前 3 日可渲染');
+
+    // ⑨ 集训/外租不可加练（与 doTrain 同一套 trainBlockedReason）
+    me.natCamp=true;S.split='summer';S.agDone=false;S.trained=false;me.injury=0;me.energy=100;
+    if(playerTrain('lane'))fail('集训中 playerTrain 应返回 false');
+    else if(S.trained)fail('集训拦截后不应置 trained');
+    else if(!trainBlockedReason(S,me))fail('集训应有 trainBlockedReason');
+    else log('⑨ 集训加练被拦截：'+trainBlockedReason(S,me));
+    me.natCamp=false;S.split='spring';
+    me.loanOut={team:'测试队',days:10,gain:0};S.trained=false;
+    if(playerTrain('mind'))fail('外租中 playerTrain 应失败');
+    else if(S.trained)fail('外租拦截后不应置 trained');
+    else log('⑨b 外租加练被拦截');
+    me.loanOut=null;
+
+    // ⑩ mediaBuff：采访「用训练说话」→ 下次加练有空间时至少 +1
+    S.career.media=null;
+    S.career.media={id:'bench',q:'q',opts:[{id:'fight',l:'用训练说话',tip:''},{id:'loan',l:'x',tip:''},{id:'loyal',l:'y',tip:''}],day:S.day,ctx:'day'};
+    playerRespondMedia(S,0);
+    if(S.career.mediaBuff!=='train')fail('选 fight 后 mediaBuff 应为 train，实际 '+S.career.mediaBuff);
+    else{
+     me.injury=0;me.energy=100;S.trained=false;me.val=120;me.morale=90;
+     me.attrs.team=40;delete me.peak;
+     const pk2=ensurePlayerPeak(me);
+     pk2.team=Math.max(70,me.attrs.team);
+     const t0=me.attrs.team;
+     playerTrain('team');
+     const d=me.attrs.team-t0;
+     if(d<1)fail('mediaBuff 未让加练至少 +1，实际 +'+d);
+     else if(S.career.mediaBuff)fail('mediaBuff 用后未清空');
+     else log('⑩ mediaBuff：采访加成生效（+'+d+'）且已消费');
+    }
   }
 
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');

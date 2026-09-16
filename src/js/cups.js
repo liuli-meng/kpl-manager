@@ -32,6 +32,10 @@ function genChallengerDef(s,i,teamName,band){
 }
 function setupChallenger(s){
  const p=s.playoff;
+ if(!p||!p.final||!p.final.r){ // 季后赛未产生冠军：不能开挑杯（选手长局/弱队淘汰路径）
+  logEvent(s,' 挑战者杯待定：联赛季后赛尚未产生春冠/春亚种子');
+  return;
+ }
  const champ=p.final.r,runner=p.final.r===p.final.a?p.final.b:p.final.a;
  // 挑战者队选手 def（挂 s.challDefMap；ensureAiRosters 兜底，BP/体力/战力全流程可用）
  s.challDefMap={};
@@ -95,7 +99,7 @@ function finishChallenger(s){
  c.champ=c.final.r;
  const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(c.final);
- s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'挑战者杯',champ:c.champ}]).slice(-16);
+ s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'挑战者杯',champ:c.champ}]).slice(-48);
  logEvent(s,' 挑战者杯落幕：'+c.champ+' 问鼎！（BO9 巅峰对决）'+(c.champ===s.teamName?'挑战者，皆王者！':''));
  // 年总积分：冠军85 / 亚军60 / 第3名40 / 第4名20 / 5-6名10
  const pts={};pts[c.champ]=85;pts[runner]=60;
@@ -127,6 +131,7 @@ function finishChallenger(s){
  :(c.r2||[]).some(m=>m.r&&loserOf(m)===s.teamName)?'16强'
  :c.r1.some(m=>m.r&&loserOf(m)===s.teamName)?'32强':'参赛';
  s.yearStages.push({ev:'挑战者杯',place:chPlace});
+ try{gcDefs(s);}catch(e){}
  setupEWC(s); // 挑杯收官 → EWC 电竞世界杯（夏季休赛）
 }
 /* ================= EWC 电竞世界杯（年中国际杯赛） =================
@@ -183,7 +188,7 @@ function finishEWC(s){
  e.champ=e.final.r;
  const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(e.final);
- s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'EWC',champ:e.champ}]).slice(-16);
+ s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'EWC',champ:e.champ}]).slice(-48);
  logEvent(s,' EWC 总决赛落幕：'+e.champ+' 捧杯！'+(e.champ===s.teamName?'中国赛区的世界之巅！':''));
  let prize=0; // 奖金（美元折算，真实对齐 ÷6）：冠军90万$≈900 / 亚军55万$≈550 / 四强24万$≈242 / 八强15.5万$≈155
  if(e.champ===s.teamName)prize=900;
@@ -205,6 +210,7 @@ function finishEWC(s){
  :e.sf.some(m=>m.r&&loserOf(m)===s.teamName)?'四强'
  :e.qf.some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'未晋级'});
  s.ewcDone=true;
+ try{gcDefs(s);}catch(e){}
  startSplit(s,'summer'); // EWC 收官 → 夏季赛转会期（年中不老化）
 }
 /* ================= 亚运会（四年一届 · 国家队征召） =================
@@ -273,7 +279,7 @@ function finishAsianGames(s){
  const runner=loserOf(a.final);
  const bronzes=a.sf.map(loserOf).filter(Boolean);
  a.medal=a.champ==='中国代表队'?'金牌':runner==='中国代表队'?'银牌':bronzes.includes('中国代表队')?'铜牌':'无';
- s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:null,event:'亚运会',champ:a.champ}]).slice(-16);
+ s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:null,event:'亚运会',champ:a.champ}]).slice(-48);
  logEvent(s,' '+gameYear(s)+' 亚运会王者荣耀项目落幕：'+a.champ+' 金牌 · '+(runner==='中国代表队'?'中国队':'韩国等队')+' 银牌');
  if(a.champ==='中国代表队')logEvent(s,' 中国代表队登顶亚洲之巅——国旗升起时刻，整个 KPL 都在看！');
  else if(a.medal==='无')logEvent(s,' 中国队无缘领奖台，舆论哗然');
@@ -352,9 +358,10 @@ function setupAnnual(s){
 }
 function arenaStandings(s){
  const M={},E={};
+ if(!s||!s.annual||!s.annual.masters||!s.annual.elites)return {M,E};
  s.annual.masters.forEach(t=>M[t]={pts:0,pw:0});
  s.annual.elites.forEach(t=>E[t]={pts:0,pw:0});
- s.annual.rounds.flat().forEach(m=>{
+ (s.annual.rounds||[]).flat().forEach(m=>{
  if(!m.r)return;
  const aWin=m.r===m.a,ms=m.ms==null?4:m.ms,es=m.es==null?0:m.es;
  const wT=aWin?M:E,lT=aWin?E:M;
@@ -455,7 +462,7 @@ function finishAnnual(s,silent){
  p.champ=p.final.r;
  const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(p.final);
- s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'年总',champ:p.champ}]).slice(-16);
+ s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'年总',champ:p.champ}]).slice(-48);
  logEvent(s,' '+gameYear(s)+' KPL 年度总决赛落幕：'+p.champ+' 捧起圣龙杯！'+(p.champ===s.teamName?'年度至尊荣耀！':''));
  let prize=0; // 年总奖金（真实 2000 万级冠军奖，游戏内取 800 万）
  if(p.champ===s.teamName)prize=1333;
