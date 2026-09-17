@@ -530,7 +530,7 @@ function finishSeries(finalWin){
  title=S.teamName+' vs '+sr.opName;
  if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
  }else if(sr.stage==='card'){
- const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||sr.cardMatch;
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
  const bonus=winGames*20;
  S.fund+=bonus;
@@ -542,7 +542,7 @@ function finishSeries(finalWin){
  if(S.card.idx>=S.card.matches.length)finishCard(S);
  else playCardNext(S);
  }else if(sr.stage==='po'){
- const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||sr.poMatch;
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
  const bonus=winGames*25;
  S.fund+=bonus;
@@ -557,8 +557,8 @@ function finishSeries(finalWin){
  title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':'出局');
  playoffStep(S);
  }else if(sr.stage==='cup'){
- // 杯赛系列赛（EWC / 年度总决赛：擂台赛·突围赛·淘汰赛）——按 cupSlot 解析真对象，不信缓存引用
- const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||sr.cupMatch;
+ // 杯赛系列赛（EWC / 年度总决赛）——按 mid/cupSlot 解析，不信对象缓存
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m){
  m.r=finalWin?sr.myName:sr.opName;
  if(m.a===sr.myName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;} // 擂台赛积分按 a/b 记小局

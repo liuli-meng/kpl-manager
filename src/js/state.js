@@ -596,9 +596,10 @@ function rebuildMatchStore(s){
  }
  }
 }
-/* 对阵对象按 slot/id 解析回 bracket 真对象。JSON 存读会切断引用：
+/* 对阵对象按 mid/slot 解析回 bracket 真对象。JSON 存读会切断引用：
    finishSeries 若写到幽灵副本，对阵树永远无 r → 年总/季后赛卡死。
-   约定：series.mid 为权威键；cupMatch/poMatch/cardMatch 仅作缓存，写结果前必须 resolve。 */
+   L2 约定：series.mid 为唯一权威键；不再挂 cupMatch/poMatch/cardMatch 对象引用。
+   旧档仍带缓存字段时，只借用其中的队名做兜底检索，不把缓存当结果落点。 */
 function findPoBracketMatch(p,slot){
 	if(!p||!slot)return null;
 	if(slot==='wb1')return p.wb&&p.wb[0]||null;
@@ -665,9 +666,13 @@ function resolveSeriesMatch(s,srIn){
 	}
 	// 槽位缺失时的兜底：按双方队名在当前赛段 bracket 里找回（旧档/测试手造 series）
 	const findPair=(list,a,b)=>(list||[]).find(m=>m&&(m.a===a&&m.b===b||m.a===b&&m.b===a));
-	const src=sr.cupMatch||sr.poMatch||sr.cardMatch;
-	if(!src||!src.a||!src.b)return null;
-	const a=src.a,b=src.b;
+	let a=sr.myName,b=sr.opName;
+	if((!a||!b)){
+		// 旧档缓存只借队名，不把缓存当结果落点
+		const src=sr.cupMatch||sr.poMatch||sr.cardMatch;
+		if(src){a=a||src.a;b=b||src.b;}
+	}
+	if(!a||!b)return null;
 	let live=null;
 	if(sr.stage==='card'&&s.card&&s.card.matches)live=findPair(s.card.matches,a,b);
 	else if(sr.stage==='po'&&s.playoff){
@@ -702,12 +707,11 @@ function resolveSeriesMatch(s,srIn){
 }
 function rebindSeriesMatch(s){
 	if(!s||!s.series)return;
-	const live=resolveSeriesMatch(s);
-	if(!live)return;
 	const sr=s.series;
-	if(sr.stage==='cup'||sr.cupMatch)sr.cupMatch=live;
-	if(sr.stage==='po'||sr.poMatch)sr.poMatch=live;
-	if(sr.stage==='card'||sr.cardMatch)sr.cardMatch=live;
+	if(sr.mid)return; // L2：有 mid 即可，不再回写对象缓存
+	if(sr.stage==='card'&&sr.cardIdx!=null)sr.mid='card_'+sr.cardIdx;
+	else if(sr.stage==='po'&&sr.poSlot)sr.mid='po_'+sr.poSlot;
+	else if(sr.stage==='cup'&&sr.cupSlot)sr.mid=sr.cupSlot;
 }
 function migrateSave(){
  if(!S)return;
