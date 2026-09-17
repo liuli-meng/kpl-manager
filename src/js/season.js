@@ -468,6 +468,7 @@ function nextDay(s){
   logEvent(s,' 转会窗原定关闭，但 '+missPos.map(pos=>POS[pos][0]).join('、')+' 仍无人——自动延长 3 天，请尽快签约');
  }else{
   s.preseason=false;
+  try{if(typeof draftForceFinish==='function')draftForceFinish(s);}catch(e){} // 同上：没打完的选秀必须收官
   logEvent(s,' 赛前转会期结束（天数用完），联赛正式开始！');
  }
  }else{

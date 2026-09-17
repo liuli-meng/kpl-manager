@@ -122,11 +122,10 @@ fillRoster(S,'mid');
       if(n===S.teamName){S.players.forEach(p=>names.push(p.name));return;}
       const r=ensureAiRosters(S,n)||[];
       /* 5 人=正常；超过 5 人是设计内的两种来源（2026-09-17 起选秀新秀以 def 注册进名册）：
-         ① 某位置伤停主力 + 青训递补（ac_ 顶伤员）
-         ② 选秀大会点名入册的新秀（drf_ 前缀，def 落在 aiRosterDefs）
-         上限 8 = draft.js 的注册上限（首发 5 + 新秀/轮换 3）。
+         ① 某位置伤停主力 + 青训递补（ac_ 顶伤员）② 选秀大会点名入册的新秀（drf_ 前缀 def）
+         上限 10 = 联盟大名单上限（draft.js 注册时按真实名册 9 人预检，留 1 个伤停递补余量）。
          位置多人时必须能解释来源，否则就是幽灵注册。 */
-      if(r.length<5||r.length>8)teamBad.push(n+':'+r.length+'人');
+      if(r.length<5||r.length>10)teamBad.push(n+':'+r.length+'人');
       else if(r.length>5){
         const bad=POS_ORDER.filter(pos=>{
           const at=r.filter(p=>p.pos===pos);

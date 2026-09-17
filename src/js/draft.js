@@ -235,14 +235,7 @@ function draftNextSlot(s){
  const d=s.draft;
  if(!d)return;
  if(d.slot>=d.order.length||!d.pool.length){
- d.done=true;d.phase='done';
- if(!d.pool.length)d.log.push('新秀池已选空');
- logEvent(s,' 选秀大会收官：'+d.picks.filter(x=>x.playerId).length+' 人签约'+(d.pool.length?'（'+d.pool.length+' 人落选进自由市场）':''));
- (d.pool||[]).forEach(p=>{
- draftFaInit(p);
- try{(s.freeAgents=s.freeAgents||[]).push(p);}catch(e){}
- });
- d.pool=[];
+ draftFinish(s);
  save();renderAll();
  return;
  }
@@ -251,6 +244,20 @@ function draftNextSlot(s){
  d.leader=null;
  d.passed={};
  draftAiAuction(s);
+}
+/* 收官：记日志 + 落选者带齐字段进自由市场 + 清空池子。
+   抽出来是因为「转会期结束时强制收官」也必须把池子处理掉，否则剩下的新秀直接蒸发。 */
+function draftFinish(s){
+ const d=s&&s.draft;
+ if(!d)return;
+ d.done=true;d.phase='done';
+ if(!d.pool.length)d.log.push('新秀池已选空');
+ logEvent(s,' 选秀大会收官：'+d.picks.filter(x=>x.playerId).length+' 人签约'+(d.pool.length?'（'+d.pool.length+' 人落选进自由市场）':''));
+ (d.pool||[]).forEach(p=>{
+ draftFaInit(p);
+ try{(s.freeAgents=s.freeAgents||[]).push(p);}catch(e){}
+ });
+ d.pool=[];
 }
 function draftBidRaise(s){
  if(s===undefined)s=S;
@@ -312,9 +319,19 @@ function draftRegisterAiPick(s,team,p){
  try{
   const map=aiRosterDefMap(s);
   map[team]=map[team]||[];
+  /* 名册硬上限 9 人（AI 队，玩家是 ROSTER_MAX=10）：注意真实名册 ≠ def 数量——
+     ensureAiRosters 会给「无人可用的位置」补青训递补（ac_），伤停时还会再补一个，
+     所以只看 def 数量控不住名册人数。这里按「注册后真实名册会有多大」先判一次。 */
+  const cur=ensureAiRosters(s,team)||[];
+  const wouldGrow=cur.some(x=>x.pos===p.pos)?0:1; // 该位置已有人 → 注册后人数不变
+  if(cur.length+wouldGrow>9){
+   (s.freeAgents=s.freeAgents||[]).push(draftFaInit(p));
+   d_logDraftOut(s,team,p);
+   return;
+  }
   /* 阵容容量：新秀进册若把该队 def 顶到上限之上，只有「比同位置最弱者更强」才顶替它上场，
      否则新秀打不上球——直接进自由市场（不出幽灵注册，也不让 20 年档攒出几百个挂名 def）。 */
-  const CAP=8; // 上限即「注册名单 8 人」（首发 5 + 轮换/新秀），到顶才顶替
+  const CAP=6; // def 注册上限（首发 5 + 1 个轮换/新秀位）；真实名册另由上面的 9 人硬上限兜住
   if(map[team].length>=CAP){
    const own=map[team].map(id=>defOf(s,id)).filter(d=>d&&d.pos===p.pos);
    const worst=own.map(d=>({d,o:overall(genSeasonPlayer(s,d))})).sort((a,b)=>a.o-b.o)[0];
@@ -405,6 +422,35 @@ function useReserveSlot(s){
  if(reserveLeft(s)<=0)return false;
  s.reserveUsed=(s.reserveUsed||0)+1;
  return true;
+}
+/* 季前赛结束（手动「结束转会期」/ 天数用尽自动开赛）时把没打完的选秀强制收官。
+   不这么做的话：选秀面板只在 preseason 显示，转会期一结束剩下的签位再也点不到，
+   池子里的新秀既没被任何队选中、也没进自由市场 —— 整场选秀（20 人）人间蒸发。
+   玩家只要没在 7 天窗口里点完 18 签就会白丢，属于静默数据丢失。
+   规则：玩家未表态的签位一律视为放弃，其余按 AI 正常竞拍/点名走完。 */
+function draftForceFinish(s){
+ const d=s&&s.draft;
+ if(!d||d.done)return;
+ draftRepair(s,d);
+ if(d.done)return;
+ const before=d.picks.filter(x=>x.playerId).length;
+ let g=0;
+ while(!d.done&&g++<60){
+  /* 每轮都要重新表态：draftNextSlot 会把 d.passed 清空（新签位重新开始竞拍），
+     不重设的话玩家又变成「未放弃」，draftAiAuction 会停在等玩家那一步，
+     整个池子就会被下面的兜底当成落选者一次性倒进自由市场（实测只剩 1 人被 AI 选中）。 */
+  d.passed[s.teamName]=true;
+  if(d.phase==='pick'){                  // 卡在「轮到你点名」也要放掉
+   d.picks.push({slot:d.slot,team:s.teamName,playerId:null});
+   d.log.push(s.teamName+' 放弃点名（转会期结束）');
+   d.slot++;
+   draftNextSlot(s);
+  }else if(d.phase==='auction'){
+   draftAiAuction(s);
+  }else break;
+ }
+ if(!d.done)draftFinish(s);               // 兜底：留下半场选秀等于半个池子蒸发
+ logEvent(s,' 转会期结束：选秀大会自动收官（共 '+d.picks.filter(x=>x.playerId).length+' 人签约 · 你未点完的签位视为放弃，此前已签 '+before+' 人）');
 }
 /* ---------- 面板 ---------- */
 function draftPanelHtml(){

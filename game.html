@@ -3120,6 +3120,7 @@ function endPreseason(s){
  s.preseason=false;
  s.transferWindow=0;
  endTransferWindow(s);
+ try{if(typeof draftForceFinish==='function')draftForceFinish(s);}catch(e){} // 没打完的选秀必须收官，否则整池新秀蒸发
  logEvent(s,' 转会期结束！'+s.teamName+' 赛季'+s.season+'阵容锁定，联赛正式开始');
  logEvent(s,' 首战在即：俱乐部页开赛，每场赛前可调整首发、BP 中可换替补');
  save();renderAll();
@@ -4083,6 +4084,7 @@ function nextDay(s){
   logEvent(s,' 转会窗原定关闭，但 '+missPos.map(pos=>POS[pos][0]).join('、')+' 仍无人——自动延长 3 天，请尽快签约');
  }else{
   s.preseason=false;
+  try{if(typeof draftForceFinish==='function')draftForceFinish(s);}catch(e){} // 同上：没打完的选秀必须收官
   logEvent(s,' 赛前转会期结束（天数用完），联赛正式开始！');
  }
  }else{
@@ -5135,14 +5137,7 @@ function draftNextSlot(s){
  const d=s.draft;
  if(!d)return;
  if(d.slot>=d.order.length||!d.pool.length){
- d.done=true;d.phase='done';
- if(!d.pool.length)d.log.push('新秀池已选空');
- logEvent(s,' 选秀大会收官：'+d.picks.filter(x=>x.playerId).length+' 人签约'+(d.pool.length?'（'+d.pool.length+' 人落选进自由市场）':''));
- (d.pool||[]).forEach(p=>{
- draftFaInit(p);
- try{(s.freeAgents=s.freeAgents||[]).push(p);}catch(e){}
- });
- d.pool=[];
+ draftFinish(s);
  save();renderAll();
  return;
  }
@@ -5151,6 +5146,19 @@ function draftNextSlot(s){
  d.leader=null;
  d.passed={};
  draftAiAuction(s);
+}
+
+function draftFinish(s){
+ const d=s&&s.draft;
+ if(!d)return;
+ d.done=true;d.phase='done';
+ if(!d.pool.length)d.log.push('新秀池已选空');
+ logEvent(s,' 选秀大会收官：'+d.picks.filter(x=>x.playerId).length+' 人签约'+(d.pool.length?'（'+d.pool.length+' 人落选进自由市场）':''));
+ (d.pool||[]).forEach(p=>{
+ draftFaInit(p);
+ try{(s.freeAgents=s.freeAgents||[]).push(p);}catch(e){}
+ });
+ d.pool=[];
 }
 function draftBidRaise(s){
  if(s===undefined)s=S;
@@ -5208,7 +5216,15 @@ function draftRegisterAiPick(s,team,p){
   const map=aiRosterDefMap(s);
   map[team]=map[team]||[];
 
-  const CAP=8; // 上限即「注册名单 8 人」（首发 5 + 轮换/新秀），到顶才顶替
+  const cur=ensureAiRosters(s,team)||[];
+  const wouldGrow=cur.some(x=>x.pos===p.pos)?0:1; // 该位置已有人 → 注册后人数不变
+  if(cur.length+wouldGrow>9){
+   (s.freeAgents=s.freeAgents||[]).push(draftFaInit(p));
+   d_logDraftOut(s,team,p);
+   return;
+  }
+
+  const CAP=6; // def 注册上限（首发 5 + 1 个轮换/新秀位）；真实名册另由上面的 9 人硬上限兜住
   if(map[team].length>=CAP){
    const own=map[team].map(id=>defOf(s,id)).filter(d=>d&&d.pos===p.pos);
    const worst=own.map(d=>({d,o:overall(genSeasonPlayer(s,d))})).sort((a,b)=>a.o-b.o)[0];
@@ -5297,6 +5313,29 @@ function useReserveSlot(s){
  if(reserveLeft(s)<=0)return false;
  s.reserveUsed=(s.reserveUsed||0)+1;
  return true;
+}
+
+function draftForceFinish(s){
+ const d=s&&s.draft;
+ if(!d||d.done)return;
+ draftRepair(s,d);
+ if(d.done)return;
+ const before=d.picks.filter(x=>x.playerId).length;
+ let g=0;
+ while(!d.done&&g++<60){
+
+  d.passed[s.teamName]=true;
+  if(d.phase==='pick'){                  // 卡在「轮到你点名」也要放掉
+   d.picks.push({slot:d.slot,team:s.teamName,playerId:null});
+   d.log.push(s.teamName+' 放弃点名（转会期结束）');
+   d.slot++;
+   draftNextSlot(s);
+  }else if(d.phase==='auction'){
+   draftAiAuction(s);
+  }else break;
+ }
+ if(!d.done)draftFinish(s);               // 兜底：留下半场选秀等于半个池子蒸发
+ logEvent(s,' 转会期结束：选秀大会自动收官（共 '+d.picks.filter(x=>x.playerId).length+' 人签约 · 你未点完的签位视为放弃，此前已签 '+before+' 人）');
 }
 
 function draftPanelHtml(){

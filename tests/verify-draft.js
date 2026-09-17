@@ -221,6 +221,30 @@ const out = vm.runInContext(`
   if(b14a!==b14b)fail('⑭ 同队同签位的出价上限不稳定（'+b14a+' vs '+b14b+'）');
   else log('⑭ AI 预算稳定：同签位两次评估均为 '+b14a+'万');
 
+  // ⑮ 季前赛结束时没打完的选秀必须自动收官，一个新秀都不能凭空消失
+  //   （历史 bug：面板只在 preseason 显示，转会期一结束剩下的签位再也点不到，
+  //     池子既没进任何队也没进自由市场 —— 整场选秀蒸发）
+  for(const path of ['endPreseason','nextDay']){
+    const s15=mkS(0);const d15=initDraft(s15,true);
+    if(d15.phase!=='auction'||d15.done){fail('⑮ 开局应停在玩家竞拍，无法验证 '+path);continue;}
+    const poolIds=d15.pool.map(p=>p.id);
+    if(path==='endPreseason')endPreseason(s15);
+    else{s15.transferWindow=1;for(let i=0;i<3&&s15.preseason;i++)nextDay(s15);}
+    if(s15.preseason)fail('⑮ '+path+' 未能结束季前赛');
+    const picked=d15.picks.filter(x=>x.playerId).map(x=>x.playerId);
+    const faIds=(s15.freeAgents||[]).map(p=>p.id);
+    const rosterIds=[];Object.values(s15.aiRosters||{}).forEach(r=>(r||[]).forEach(p=>rosterIds.push(p.id)));
+    // 每个新秀必须恰好有下落：被选中并入册 / 被选中但阵容无位转自由市场 / 落选进自由市场
+    const missing=poolIds.filter(id=>!picked.includes(id)&&!faIds.includes(id)&&!rosterIds.includes(id));
+    const dbl=poolIds.filter(id=>rosterIds.includes(id)&&faIds.includes(id));       // 既在名册又在市场 = 双挂
+    const dangling=picked.filter(id=>!faIds.includes(id)&&!rosterIds.includes(id)); // 记为选中却两地无此人
+    if(!d15.done||d15.pool.length)fail('⑮ '+path+' 后选秀未收官（phase='+d15.phase+' 池='+d15.pool.length+'）');
+    else if(missing.length)fail('⑮ '+path+' 后 '+missing.length+'/'+poolIds.length+' 名新秀人间蒸发');
+    else if(dbl.length)fail('⑮ '+path+' 后 '+dbl.length+' 人既在 AI 名册又在自由市场（双挂）');
+    else if(dangling.length)fail('⑮ '+path+' 后 '+dangling.length+' 人被记为选中却无处可寻');
+    else log('⑮ '+path+' 强制收官：'+d15.order.length+' 签走完 · 名册入册 '+poolIds.filter(id=>rosterIds.includes(id)).length+' 人 · 转/落自由市场 '+poolIds.filter(id=>faIds.includes(id)).length+' 人 · 无人蒸发/双挂');
+  }
+
   // ⑬ 池空的点名阶段不能卡死：渲染时必须能自愈（要么给放弃按钮，要么直接收官）
   const s13=mkS(0);const d13=initDraft(s13,true);
   let g13=0;while(d13.phase==='auction'&&g13++<25)draftBidRaise(s13);
