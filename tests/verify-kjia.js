@@ -101,6 +101,36 @@ const out = vm.runInContext(`
   else if(!s5.eventLog.some(e=>/K甲归队/.test(e.txt)))fail('归队日志缺失');
   else log('⑤ 归队成长：30 天归队 K甲成长 +'+g5+'（kjiaGain 口径，含场上即时成长），归队日志已广播');
 
+  // ⑤b 提前召回：未满 KJIA_MIN_RECALL 天拒绝；练满后可召回，成长按已练天数折算
+  const s5b=newState('召回队','x');fillRoster(s5b,'mid','star');addBench(s5b);S=s5b;
+  initKjia(s5b);
+  const b5b=s5b.players.find(p=>!s5b.lineup.includes(p.id));
+  sendKjia(s5b,b5b.id);
+  // 下放当天（已练 0 天）召回应被拒
+  recallKjia(s5b,b5b.id);
+  if(!(b5b.kjia>0))fail('未满 '+KJIA_MIN_RECALL+' 天却被召回');
+  else{
+   // 推进到已练满最小天数（kjia 每天 -1；nextDay 会走 kjiaTick）
+   for(let i=0;i<KJIA_MIN_RECALL;i++)nextDay(s5b);
+   const served=kjiaDaysServed(b5b);
+   if(served<KJIA_MIN_RECALL)fail('推进后仍不足最小召回天数: '+served);
+   else{
+    const gainBefore=b5b.kjiaGain||0;
+    recallKjia(s5b,b5b.id);
+    const gRec=(b5b.kjiaGain||0)-gainBefore;
+    if(b5b.kjia!==0)fail('召回后仍停留在 K甲: '+b5b.kjia);
+    else if(gRec<=0)fail('提前召回未结算成长');
+    else if(!s5b.eventLog.some(e=>/提前召回/.test(e.txt)))fail('提前召回日志缺失');
+    else if(!kjiaSquad(s5b).every(p=>p.id!==b5b.id))fail('召回后选手仍在二队名单');
+    else{
+     // 召回后可重新放入首发（同位置对位）
+     swapPlayer(b5b.id);
+     if(!s5b.lineup.includes(b5b.id))fail('召回后无法放入首发');
+     else log('⑤b 提前召回：未满 '+KJIA_MIN_RECALL+' 天拦截；练满 '+served+' 天召回成功（成长 +'+gRec+'），可回首发');
+    }
+   }
+  }
+
   // ⑥ 旧档懒初始化：kjia 缺字段时 nextDay 自动补建联赛
   const s6=newState('旧档队','x');fillRoster(s6,'mid','star');S=s6;
   s6.kjia=undefined; // 模拟旧档

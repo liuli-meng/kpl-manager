@@ -6,6 +6,7 @@
  成长两条路：场上好表现小概率即时 +1；归队时 kjiaTick 结算 +2~4×2——都计入
  p.kjiaGain（成就「练级成功」依据）。平衡门禁的模拟不下放选手，本系统不触碰门禁校准区间。 */
 const KJIA_DAYS=30;
+const KJIA_MIN_RECALL=7; // 提前召回最少已练天数（不足则拒绝，防「下放第二天就拉回」）
 const KJIA_AI_TEAMS=['K甲·苍穹','K甲·星火','K甲·沧澜','K甲·曜石','K甲·铁鳞','K甲·游隼','K甲·雾嶂'];
 const KJIA_EVERY=2; // 每 2 天一轮（7 轮=14 天，转会期 7 天内先打 3 轮）
 const KJIA_FILLER_NAMES=['冷峤','照野','束禾','闻鹿','栖迟','枕流','叩舷','扫雪','拾星','衔山','汲露','司南','执桨','引笛','泊岸','拓海','听澜','折桨','纵马','悬旌','负剑','摘星','衔烛','趁风'];
@@ -135,17 +136,48 @@ function sendKjia(s,id){
  logEvent(s,' 下放 K甲：'+p.name+'（'+POS[p.pos][0]+'）加入二队征战 K甲联赛 '+KJIA_DAYS+' 天——真实出战积累表现数据，「二队」页可查，归队时带成长回来');
  save();renderAll();
 }
+function kjiaDaysServed(p){return Math.max(0,KJIA_DAYS-(p.kjia||0));}
+function kjiaGrantReturnGrowth(p,daysServed){ // 归队/召回结算成长；满期两项 +2~4，提前按进度缩档
+ const keys=['lane','farm','team','mind'];
+ let gain=0;
+ const nAttrs=daysServed>=20?2:1;
+ const dMax=daysServed>=KJIA_DAYS?4:(daysServed>=20?3:2);
+ const dMin=daysServed>=KJIA_DAYS?2:1;
+ for(let i=0;i<nAttrs;i++){
+ const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];
+ const d=rnd(dMin,dMax);
+ p.attrs[k]=clamp(p.attrs[k]+d,40,99);
+ gain+=d;
+ }
+ p.kjiaGain=(p.kjiaGain||0)+gain; // 成就「练级成功」依据（含 K甲场上的即时成长）
+ return gain;
+}
+function kjiaReturnNote(p){ // 归队日志共用后缀
+ const st=p.kjiaStats;
+ return '（K甲累计出场 '+(st?st.apps:0)+' 场'+(st&&st.apps?' · 场均 '+Math.round(st.k/st.apps*10)/10+'/'+Math.round(st.d/st.apps*10)/10+'/'+Math.round(st.a/st.apps*10)/10:'')+'）';
+}
+function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉回一队，成长按已练天数折算
+ if(id===undefined){id=s;s=S;}
+ s=s||S;
+ const p=(s.players||[]).find(x=>x.id===id);
+ if(!p){toast('选手不在阵中');return;}
+ if(!(p.kjia>0)){toast(p.name+' 不在 K甲锻炼中');return;}
+ const served=kjiaDaysServed(p);
+ if(served<KJIA_MIN_RECALL){toast(p.name+' 至少练满 '+KJIA_MIN_RECALL+' 天才能召回（已练 '+served+' 天）');return;}
+ const left=p.kjia;
+ p.kjia=0;
+ const gain=kjiaGrantReturnGrowth(p,served);
+ logEvent(s,' 提前召回：'+p.name+' 结束 K甲锻炼（已练 '+served+'/'+KJIA_DAYS+' 天，提前 '+left+' 天），属性成长 +'+gain+kjiaReturnNote(p));
+ toast(p.name+' 已召回一队（成长 +'+gain+'）');
+ save();renderAll();
+}
 function kjiaTick(s){ // 每天结算一次；到期归队并成长
  (s.players||[]).forEach(p=>{
  if(!p.kjia)return;
  p.kjia--;
  if(p.kjia>0)return;
  p.kjia=0;
- const keys=['lane','farm','team','mind'];
- let gain=0;
- for(let i=0;i<2;i++){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];const d=rnd(2,4);p.attrs[k]=clamp(p.attrs[k]+d,40,99);gain+=d;}
- p.kjiaGain=(p.kjiaGain||0)+gain; // 成就「练级成功」依据（含 K甲场上的即时成长）
- const st=p.kjiaStats;
- logEvent(s,' K甲归队：'+p.name+' 锻炼归来，属性成长 +'+gain+'（K甲累计出场 '+(st?st.apps:0)+' 场'+(st?' · 场均 '+Math.round(st.k/st.apps*10)/10+'/'+Math.round(st.d/st.apps*10)/10+'/'+Math.round(st.a/st.apps*10)/10:'')+'）');
+ const gain=kjiaGrantReturnGrowth(p,KJIA_DAYS);
+ logEvent(s,' K甲归队：'+p.name+' 锻炼归来，属性成长 +'+gain+kjiaReturnNote(p));
  });
 }

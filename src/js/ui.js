@@ -961,9 +961,10 @@ function renderKjia(){
  const wr=st.apps?Math.round(st.wins/st.apps*100)+'%':'—';
  return `<tr><td><b>${p.name}</b></td><td>${POS[p.pos][1]}</td><td>${st.apps}</td><td>${avg}</td><td>${st.mvp||0}</td><td>${wr}</td><td class="gold">+${p.kjiaGain||0}</td></tr>`;
  }).join('')}</table>
- <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">${(p.kjiaLog||[]).slice(0,3).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>`)).join('')}</div>`;
+  <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">已练 ${kjiaDaysServed(p)}/${KJIA_DAYS} 天 · 剩 ${p.kjia} 天<br>${(p.kjiaLog||[]).slice(0,2).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>
+  <button class="btn sm primary mt8" style="width:100%" onclick="recallKjia('${p.id}')" title="提前召回一队：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`)).join('')}</div>`;
  }else{
- html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 30 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长。</div>`;
+ html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 ${KJIA_DAYS} 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长；练满 ${KJIA_MIN_RECALL} 天后可在本页或阵容页「提前召回」。</div>`;
  }
  html+=`</div>`;
  // 二队班底（K甲注册选手）

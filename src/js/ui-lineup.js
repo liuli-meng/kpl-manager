@@ -1,4 +1,4 @@
-/* 阕容页 UI（从 ui.js 拆出：只搬渲染，引擎仍在 train/transfer/clubops） */
+/* 阵容页 UI（从 ui.js 拆出：只搬渲染，引擎仍在 train/transfer/clubops） */
 function renderLineup(){
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
@@ -10,15 +10,17 @@ function renderLineup(){
  return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div>${(S.mode||'manager')==='manager'?`<button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`:''}`);
  }).join('')}</div></div>`;
  html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
- <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长。</div>
+ <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长；练满 ${KJIA_MIN_RECALL} 天可提前召回。</div>
  ${bn.length?`<div class="grid g4">${bn.map(p=>{
  const lo=p.loanOut;
  const busy=playerBusy(S,p);
- return pcard(p,`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}
+ const onKjia=p.kjia>0;
+ return pcard(p,`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${onKjia?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天 · 已练 ${kjiaDaysServed(p)} 天</div>`:''}
+ ${onKjia?`<button class="btn sm primary" onclick="recallKjia('${p.id}')" title="提前召回：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`:`
  <button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${busy?'disabled':''}>↑ 放入首发</button>
  ${S.mode==='manager'?`<button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')" ${busy?'disabled':''}> 出售（谈判）</button>`:''}
- <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长" ${busy?'disabled':''}> 下放 K甲</button>
- <button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="外租 ${LOAN_DAYS} 天：去缺人的俱乐部打主力，租金入账，归队带成长" ${busy?'disabled':''}> 外租练级</button>`);
+ <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长"> 下放 K甲</button>
+ <button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="外租 ${LOAN_DAYS} 天：去缺人的俱乐部打主力，租金入账，归队带成长"> 外租练级</button>`}`);
  }).join('')}</div>`:'<div class="hint">暂无替补——转会市场签人，或等俱乐部自动引援</div>'}
  </div>`;
  // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算

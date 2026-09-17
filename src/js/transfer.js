@@ -1263,19 +1263,33 @@ function fireCoach(s){
  save();renderAll();
 }
 
-/* ================= 租借系统（非转会期唯一的人员流动方式） =================
- 转会窗关闭时不能买卖选手，但可以向其他战队租借替补：支付租金（身价 15%），
- 租借 21 天，到期自动归队；非卖品不可租，同时最多租 2 人；租借期间原队出青训递补。 */
+/* ================= 租借系统（全年可租；转会期买断优先，租借是应急补位） =================
+ 向其他战队租借替补：支付租金（身价 15%），租借 LOAN_DAYS 天，到期自动归队。
+ 非卖品不可租；同时最多 LOAN_CAP_BASE 人，某位置无健康选手时 +1 应急名额（上限 LOAN_CAP_MAX）。
+ 租借期间原队出青训递补。KPL 允许赛季中紧急租借——伤停缺人时这是合法补位手段。 */
 const LOAN_DAYS=21;
+const LOAN_CAP_BASE=2;
+const LOAN_CAP_MAX=3;
 function untouchableSet(){
  const U=new Set();
  for(const tn in AI_ROSTERS)AI_ROSTERS[tn].u.forEach(id=>U.add(id));
  return U;
 }
 function loanRent(p){return Math.max(80,Math.round(valueOf(overall(p))*0.15));}
+function healthyPosCount(s,pos){ // 当前能打该位置的人（不含外租/K甲/伤停/未成年）
+ return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)&&!p.loanOut&&(p.kjia||0)<=0).length;
+}
+function injuryGapPositions(s){ // 伤停/K甲后完全无人可打的位置——应急租借触发条件
+ return POS_ORDER.filter(pos=>healthyPosCount(s,pos)===0);
+}
+function loanCap(s){
+ const gap=injuryGapPositions(s).length;
+ return Math.min(LOAN_CAP_MAX,LOAN_CAP_BASE+(gap>0?1:0));
+}
 function loanCandidates(s){
  const U=untouchableSet();
  const map=aiRosterDefMap(s);
+ const need=new Set(injuryGapPositions(s)); // 缺人位置优先推人
  const out=[];
  for(const tn in map){
  if(tn===s.teamName)continue;
@@ -1284,11 +1298,18 @@ function loanCandidates(s){
  out.push({p,from:tn,rent:loanRent(p)});
  });
  }
- return out.sort((a,b)=>overall(b.p)-overall(a.p));
+ return out.sort((a,b)=>{
+ const an=need.has(a.p.pos)?1:0,bn=need.has(b.p.pos)?1:0;
+ if(an!==bn)return bn-an;
+ return overall(b.p)-overall(a.p);
+ });
 }
 function loanPlayer(s,teamName,pid){
- if(s.transferWindow>0){toast('转会窗内可以直接买断，无需租借');return;}
- if((s.players||[]).filter(p=>p.loan).length>=2){toast('租借名额已满（最多同时租借 2 人）');return;}
+ const cap=loanCap(s);
+ if((s.players||[]).filter(p=>p.loan).length>=cap){
+ toast('租借名额已满（当前上限 '+cap+' 人'+(cap>LOAN_CAP_BASE?' · 含伤停应急名额':'')+'）');
+ return;
+ }
  const p=(ensureAiRosters(s,teamName)||[]).find(x=>x.id===pid);
  if(!p){toast('该选手不在租借名单');return;}
  if(untouchableSet().has(p.id)){toast(p.name+' 是非卖品，不外借');return;}
@@ -1299,7 +1320,8 @@ function loanPlayer(s,teamName,pid){
  s.players.push(p);
  aiDetachDef(s,p.id); // 原队除名（真实 def）：租借期内原队青训递补
  s.aiRosters={}; // 名册缓存失效
- logEvent(s,' 租借达成：'+p.name+'（'+POS[p.pos][0]+' · 总值'+overall(p)+'）从 '+teamName+' 租借 '+LOAN_DAYS+' 天，租金 '+rent+'万');
+ const gap=injuryGapPositions(s).includes(p.pos);
+ logEvent(s,' 租借达成：'+p.name+'（'+POS[p.pos][0]+' · 总值'+overall(p)+'）从 '+teamName+' 租借 '+LOAN_DAYS+' 天，租金 '+rent+'万'+(gap?'——应急补位':''));
  save();renderAll();toast(p.name+' 租借加盟！'+LOAN_DAYS+' 天后自动归队');
 }
 function tickLoans(s){

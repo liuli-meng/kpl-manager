@@ -107,6 +107,33 @@ return JSON.stringify({rent, loaned:!!lp7.loan, cleared, returned:!S.players.som
   T.check(r.returned, '租借 21 天后未归队');
 }
 
+// ⑦b 应急租借：转会期可租 + 伤停缺人时名额 +1 + 缺位优先排序
+const r7b = run(`
+ S=newState('T7b','⚔️');
+ fillRoster(S,'mid');
+ S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+ S.transferWindow=5; // 转会期也允许租借
+ S.fund=5000;
+ const cap0=loanCap(S);
+ const t=loanCandidates(S)[0];
+ loanPlayer(S,t.from,t.p.id);
+ const loanedDuringWindow=!!(S.players.find(p=>p.id===t.p.id)||{}).loan;
+ // 把某位置所有人打成伤停/外租，制造缺位 → 名额 +1 且候选优先推该位置
+ const pos='top';
+ S.players.forEach(p=>{if(p.pos===pos){p.injury=5;}});
+ const gaps=injuryGapPositions(S);
+ const cap1=loanCap(S);
+ const cands=loanCandidates(S).slice(0,5);
+ const topPriority=gaps.includes(pos)&&cands.length&&cands[0].p.pos===pos;
+ return JSON.stringify({cap0,loanedDuringWindow,gaps,cap1,topPriority,base:LOAN_CAP_BASE,max:LOAN_CAP_MAX});
+`);
+{
+ const r=JSON.parse(r7b);
+ T.check(r.loanedDuringWindow, '转会期内未能租借: '+r7b);
+ T.check(r.cap0===r.base && r.cap1===r.max && r.gaps.includes('top'), '应急名额未生效: '+r7b);
+ T.check(r.topPriority, '缺位位置未优先推荐: '+r7b);
+}
+
 // ⑧ 跨队零重名（多赛季极端压力）
 const r8 = run(`
 S=newState('T8','⚔️');
