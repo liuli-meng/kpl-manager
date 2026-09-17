@@ -14,6 +14,7 @@ const SUITES = [
   { id: 'probe-annual-stuck', file: 'tests/probe-annual-stuck.js', label: '年总卡死探针' },
   { id: 'probe-yearroll', file: 'tests/probe-yearroll.js', label: '年总年度轮换探针' },
   { id: 'probe-matchstore', file: 'tests/probe-matchstore.js', label: '扁平表 mid 探针' },
+  { id: 'probe-calendar', file: 'tests/probe-calendar.js', label: '赛季状态机探针' },
   { id: 'probe-startmatch', file: 'tests/probe-startmatch.js', label: '开赛探针' },
   { id: 'verify-fixes', file: 'tests/verify-fixes.js', label: '历史修复点' },
   { id: 'verify-contract', file: 'tests/verify-contract.js', label: '合同续约' },
