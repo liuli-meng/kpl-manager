@@ -149,10 +149,15 @@ function initDraft(s,force){
  if(!force&&s.draft&&s.draft.season===s.season&&s.draft.split===s.split)return draftRepair(s,s.draft);
  /* 名字必须走全局查重（rookieUsedNames）：原来只塞了 players+academy，
     会跟市场/自由市场/各队名册/联盟新星 def 撞名——撞名会让 ensureAiRosters 把同名的
-    AI def 误判成「已被玩家签走」而剔除，球队出现幽灵空位。 */
+    AI def 误判成「已被玩家签走」而剔除，球队出现幽灵空位。
+    名字池也不能只给选秀专用的 44 个：全局查重下手池会很快耗尽，第 3 季起全池退化成
+    combName 三字拼接（「阿川澜」这种一眼机器名）。并上其它人名词池后可用名翻几倍。 */
  const used=rookieUsedNames(s);
  const kj=draftKjiaTier(s);
- const namePool=shuffle(DRAFT_NAMES.concat(KJIA_FILLER_NAMES)); // 调用方负责打散（poolName 是固定顺序扫描）
+ const namePool=shuffle([].concat(DRAFT_NAMES,KJIA_FILLER_NAMES,
+  typeof ERA_GEN_NAMES!=='undefined'?ERA_GEN_NAMES:[],
+  typeof ACADEMY_NAMES!=='undefined'?ACADEMY_NAMES:[],
+  typeof ROOKIE_NAMES!=='undefined'?ROOKIE_NAMES:[]));
  const pool=[];
  for(let i=0;i<DRAFT_SIZE;i++)pool.push(genDraftProspect(s,i,used,namePool));
  const order=draftOrder(s);

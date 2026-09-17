@@ -5055,7 +5055,10 @@ function initDraft(s,force){
 
  const used=rookieUsedNames(s);
  const kj=draftKjiaTier(s);
- const namePool=shuffle(DRAFT_NAMES.concat(KJIA_FILLER_NAMES)); // 调用方负责打散（poolName 是固定顺序扫描）
+ const namePool=shuffle([].concat(DRAFT_NAMES,KJIA_FILLER_NAMES,
+  typeof ERA_GEN_NAMES!=='undefined'?ERA_GEN_NAMES:[],
+  typeof ACADEMY_NAMES!=='undefined'?ACADEMY_NAMES:[],
+  typeof ROOKIE_NAMES!=='undefined'?ROOKIE_NAMES:[]));
  const pool=[];
  for(let i=0;i<DRAFT_SIZE;i++)pool.push(genDraftProspect(s,i,used,namePool));
  const order=draftOrder(s);
@@ -5637,13 +5640,25 @@ function finishChallenger(s){
 
 const EWC_OVERSEAS=['NOVA Esports','Blacklist International','Twisted Minds','Alpha7 Esports','Team Vitality','Gen.G Esports','Nongshim RedForce','PAWS Gaming','BOOM Esports','KAGENDRA'];
 const EWC_NAMES=['Niap','Dani','Fury','Cr7','Vilao1','Freaks','ABH','0ne','Vento','Xuan','Cy','Wendy','Muci','Weipit','Switch','Flukeyo','Shy','Miggie','Karlll','Tatsurii','Chammy1','Juschie','Dragon','Ihanss','Wiraww','Senkoo','Tufzzz','Zhanq','Wawa','Ray','Inua','Nighty','Clean','Snow','Myosotis','Keke','Daodao','Ran','Zoe','Sheng','Haku','Illusion','Musangking','Zhihong','Dian','Niel','Zaan','Guilv','Tianx','Fenrir'];
+
+const EWC_A=['Ra','Ze','Vi','Ka','Lo','Mi','Ne','Sa','Ti','Xa','Dy','Fe','Gu','Ha','Ji','Ky','Lu','Om','Pe','Qi','Ry','Su','Va','Wy','Ya','Zy','Da','Ki','Mo','Na','Or','Pa','Qu','Ri','Ta'];
+const EWC_B=['nox','den','ki','ro','za','mir','to','lys','ven','tar','ric','sha','lin','vos','dra','kon','gar','nis','tur','lex','pine','mos','rei','tan','wick','ley','ska','nix','u','o','er','ing','on','us','ay'];
+function ewcName(used){
+ let g=0;
+ while(g++<40){const n=pick(EWC_A)+pick(EWC_B);if(!used.has(n)){used.add(n);return n;}}
+ for(const a of EWC_A)for(const b of EWC_B){const n=a+b;if(!used.has(n)){used.add(n);return n;}}
+ for(const a of EWC_A)for(const b of EWC_B)for(const c of EWC_B){const n=a+b+c;if(!used.has(n)){used.add(n);return n;}}
+ return 'EWC'+(used?used.size:0); // 理论不可达（1200+ 组合）
+}
 function genEwcDef(s,i,teamName){
  const used=new Set();
  (s.extraDefs||[]).forEach(d=>used.add(d.name));
  Object.values(s.aiRosterDefs||{}).forEach(arr=>arr.forEach(id=>{const d=defOf(s,id);if(d)used.add(d.name);}));
  (s.players||[]).forEach(p=>used.add(p.name));
- let name=EWC_NAMES[i];
- if(!name||used.has(name))name='外援'+(i+1);
+
+ const rest=EWC_NAMES.filter(n=>!used.has(n));
+ const name=rest.length?rest[rnd(0,rest.length-1)]:ewcName(used);
+ used.add(name);
  const pos=POS_ORDER[i%5];
  const b=v=>clamp(v+rnd(-4,4),68,88);
  return {id:'ewc'+gameYear(s)+'_'+i,name,pos,team:teamName,tags:['国际'],

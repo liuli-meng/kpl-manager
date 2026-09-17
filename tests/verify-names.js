@@ -14,7 +14,7 @@ const out = vm.runInContext(`
   const res=[];let hadFail=false;
   const fail=m=>{res.push('[FAIL] '+m);hadFail=true;};
   const log=t=>res.push('[PASS] '+t);
-  const PLACE=/^(新人|新援|新星|青训|选手)\\d+$/;
+  const PLACE=/^(新人|新援|新星|青训|选手|外援|挑战者|路人)\\d+$/;
 
   S=newState('探针队','x');
   // ① 池尽兜底：把 36 个学院名全部占满，各生成器都不该吐占位名
@@ -82,6 +82,52 @@ const out = vm.runInContext(`
   else if(chPlace.length)fail('挑战者含占位名 '+chPlace.length+' 个: '+chPlace.slice(0,3).join('/'));
   else if(chDup)fail('挑战者重名 '+chDup+' 例（应 70 人全不同）');
   else log('⑥ 挑战者杯 '+chNames.length+' 人（池仅 '+CHALLENGER_NAMES.length+'）无占位名、无重名');
+
+  // ⑦ EWC 海外选手跨赛季命名：EWC_NAMES 只有 50 个而每年出 30 人，第二年就会撞满
+  //   （旧写法兜底成「外援1…外援30」，PLACE 词表与用例当年都漏了这条）
+  const ewcAll=[];
+  {
+    const se=newState('EWC探针队','x');
+    se.extraDefs=[];
+    for(let season=1;season<=5;season++){
+      se.season=season;
+      for(let i=0;i<30;i++){const d=genEwcDef(se,i,'全球·探针队');se.extraDefs.push(d);ewcAll.push(d.name);}
+    }
+    const place=ewcAll.filter(n=>PLACE.test(n));
+    const dupE=ewcAll.length-new Set(ewcAll).size;
+    const empty=ewcAll.filter(n=>!n||n.length<2);
+    if(place.length)fail('EWC 含占位名 '+place.length+' 个: '+place.slice(0,3).join('/'));
+    else if(dupE)fail('EWC 重名 '+dupE+' 例（5 季 150 人应全不同）');
+    else if(empty.length)fail('EWC 有空名');
+    else log('⑦ EWC 5 季 150 人（池仅 '+EWC_NAMES.length+'）无占位名、无重名');
+    // 既有 ID 池应被消费而不是第二年就整池浪费
+    const reuse=ewcAll.filter(n=>EWC_NAMES.includes(n)).length;
+    if(reuse<EWC_NAMES.length)fail('EWC 既有 ID 池只用掉 '+reuse+'/'+EWC_NAMES.length+' 个（池未被充分利用）');
+    else log('⑦ EWC 既有 ID 池 '+EWC_NAMES.length+' 个全部用上（池尽才走音节生成）');
+  }
+
+  // ⑧ 选秀池命名：全局查重后池名会更快耗尽，不得退化成占位名、也不得池内重名
+  {
+    const sd=newState('选秀命名队','x');
+    fillRoster(sd,'mid');
+    sd.coach={...COACH_POOL.find(c=>c.id==='co12')};
+    sd.preseason=true;sd.transferWindow=7;
+    S=sd;
+    let all=[];
+    for(let season=1;season<=6;season++){
+      sd.season=season;sd.draft=null;
+      const d=initDraft(sd,true);
+      const ns=d.pool.map(p=>p.name);
+      if(new Set(ns).size!==ns.length)fail('第'+season+'季选秀池内重名');
+      all=all.concat(ns);
+      draftForceFinish(sd);
+    }
+    const place=all.filter(n=>PLACE.test(n));
+    const dupD=all.length-new Set(all).size;
+    if(place.length)fail('选秀池含占位名 '+place.length+' 个: '+place.slice(0,3).join('/'));
+    else if(dupD)fail('选秀池跨季重名 '+dupD+' 例');
+    else log('⑧ 选秀池 6 季 '+all.length+' 人无占位名、无跨季重名');
+  }
 
   installEra(null);
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
