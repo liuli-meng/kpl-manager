@@ -37,6 +37,7 @@ const SUITES = [
   { id: 'verify-academy', file: 'tests/verify-academy.js', label: '青训一键培养' },
   { id: 'verify-offer', file: 'tests/verify-offer.js', label: '转会报价' },
   { id: 'verify-kplrules', file: 'tests/verify-kplrules.js', label: 'KPL硬规则' },
+  { id: 'verify-bp', file: 'tests/verify-bp.js', label: 'BP两段式引擎' },
   { id: 'verify-aiplan', file: 'tests/verify-aiplan.js', label: 'AI赛季规划' },
   { id: 'verify-wagecap', file: 'tests/verify-wagecap.js', label: '工资帽经济' },
   { id: 'verify-playerstatus', file: 'tests/verify-playerstatus.js', label: '选手状态机' },
@@ -54,6 +55,7 @@ const SUITES = [
   { id: 'sim-quick', file: 'tests/sim-quick.js', label: '平衡门禁' },
   { id: 'sim-player', file: 'tests/sim-player.js', label: '选手长局门禁' },
   { id: 'sim-yearend', file: 'tests/sim-yearend.js', label: '年终全链路门禁' },
+  { id: 'late-game-probe', file: 'tests/late-game-probe.js', label: '长局压测15年' },
   { id: 'verify-built', file: 'tests/verify-built.js', label: '构建产物校验' },
 ];
 

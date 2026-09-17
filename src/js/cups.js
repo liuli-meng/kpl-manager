@@ -535,20 +535,8 @@ function playCupMatch(s,m,slot,label,bo){
  }
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
- if(s.mode==='player'){ // 选手生涯：教练指挥，自动打完整场杯赛系列赛
- const sr=playerAutoSeries(s,opName,bo);
- const myWin=sr.mw>sr.ow;
- m.r=myWin?s.teamName:opName;
- if(m.a===s.teamName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;}
- s._lastMvps=(sr.mvpIds||[]).slice(); // 决赛 FMVP 评选用
- rosterLineup(s).forEach(p=>{p.apps=(p.apps||0)+1;});
- logEvent(s,' '+label+'：'+s.teamName+' '+(myWin?'胜':'负')+' '+opName+' '+sr.mw+':'+sr.ow+(myWin?'，晋级':'，止步'));
- (s.history=s.history||[]).unshift({yr:gameYear(s),opp:opName,stage:label,score:sr.mw+':'+sr.ow,win:myWin,logs:sr.logs,peak:sr.max>=7&&sr.mw+sr.ow===sr.max});
- s.history=s.history.slice(0,20);
- save();renderAll();
- if(s.phase==='ewc')ewcStep(s);
- else if(s.phase==='challenger')challengerStep(s);
- else annualStep(s);
+ if(s.mode==='player'){ // 选手生涯：教练指挥，自动打完整场杯赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
+ playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label});
  return;
  }
  if(s.series&&s.series.stage==='cup'&&s.series.cupSlot===slot){

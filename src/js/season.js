@@ -65,6 +65,7 @@ function phaseGroups(s){
  return [];
 }
 function myGroup(s){
+ if(!s||!s.groups)return null; // 读档残缺/迁移中途：不能在渲染里炸成整页空白
  for(const g of phaseGroups(s)){if(s.groups[g]&&s.groups[g].includes(s.teamName))return g;}
  return null;
 }
@@ -239,19 +240,8 @@ function playCardNext(s){
  if(!m){finishCard(s);return;}
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
- if(s.mode==='player'){ // 选手生涯：教练指挥，自动打卡位赛
- const sr=playerAutoSeries(s,opName,KPL.BO7);
- const myWin=sr.mw>sr.ow;
- m.r=myWin?s.teamName:opName;
- s._lastMvps=(sr.mvpIds||[]).slice();
- rosterLineup(s).forEach(p=>{p.apps=(p.apps||0)+1;});
- logEvent(s,' 卡位赛：'+s.teamName+' '+(myWin?'晋级':'遗憾落败')+' '+sr.mw+':'+sr.ow);
- (s.history=s.history||[]).unshift({yr:gameYear(s),opp:opName,stage:'卡位赛',score:sr.mw+':'+sr.ow,win:myWin,logs:sr.logs,peak:sr.max>=7&&sr.mw+sr.ow===sr.max});
- s.history=s.history.slice(0,20);
- save();renderAll();
- s.card.idx++;
- if(s.card.idx>=s.card.matches.length)finishCard(s);
- else playCardNext(s);
+ if(s.mode==='player'){ // 选手生涯：教练指挥，自动打卡位赛（走 finishSeries：结算弹窗 + 延后推进）
+ playerPlayAndFinish(s,opName,KPL.BO7,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
  return;
  }
  // 系列赛中断恢复：不重置比分
@@ -416,18 +406,8 @@ function playoffStep(s){
 function playPoMatch(s,m,slot){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
- if(s.mode==='player'){ // 选手生涯：教练指挥，自动打季后赛系列赛
- const sr=playerAutoSeries(s,opName,KPL.BO7);
- const myWin=sr.mw>sr.ow;
- m.r=myWin?s.teamName:opName;
- s._lastMvps=(sr.mvpIds||[]).slice();
- rosterLineup(s).forEach(p=>{p.apps=(p.apps||0)+1;});
- logEvent(s,' 季后赛（'+slot+'）：'+s.teamName+' '+(myWin?'晋级':'出局')+' '+sr.mw+':'+sr.ow+(slot==='总决赛'&&myWin?'——夺得总冠军！':''));
- (s.history=s.history||[]).unshift({yr:gameYear(s),opp:opName,stage:slot==='总决赛'?'总决赛':'季后赛·'+slot,score:sr.mw+':'+sr.ow,win:myWin,logs:sr.logs,peak:sr.max>=7&&sr.mw+sr.ow===sr.max});
- s.history=s.history.slice(0,20);
- if(slot==='总决赛'&&myWin)playChampionCeremony(splitLabel(s)+' 总冠军');
- save();renderAll();
- playoffStep(s);
+ if(s.mode==='player'){ // 选手生涯：教练指挥，自动打季后赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
+ playerPlayAndFinish(s,opName,KPL.BO7,{stage:'po',mid:'po_'+slot,poSlot:slot});
  return;
  }
  // 系列赛中断恢复：不重置比分

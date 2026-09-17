@@ -73,6 +73,7 @@ const SAVE_DEFAULTS=[
  ['phase','r1','常规赛阶段'],
  ['matches',{},'比赛扁平表 mid→match'],
  ['_poError',null,'季后赛推进异常原因（诊断用：非空说明 ensureLeagueChampion 走过 catch）'],
+ ['_migErr',null,'读档期完整性异常（迁移步骤失败 / 比赛索引重建失败；非空说明这个档需要人工看一眼）'],
  ['socialUsed',false,'选手社交已用'],
  ['wageCap',150,'工资帽（缺失按现役刻度）'],
  // —— 基础状态字段补齐（2026-09-17）：newState 一直有这些字段，但没登记进默认表，
@@ -369,14 +370,14 @@ function tacticWeights(){
  return t||BASE_W;
 }
 function playerPower(p,heroId){
- const a=p.attrs;
+ const a=p&&p.attrs?{lane:p.attrs.lane||70,farm:p.attrs.farm||70,team:p.attrs.team||70,mind:p.attrs.mind||70}:{lane:70,farm:70,team:70,mind:70};
  const w=tacticWeights();
  let pow=a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind;
- const sk=p.skill;
- if(sk.t==='lane')pow+=a.lane*0.12*w.lane;
- if(sk.t==='farm')pow+=a.farm*0.12*w.farm;
- if(sk.t==='team')pow+=a.team*0.12*w.team;
- if(sk.t==='mind')pow+=a.mind*0.12*w.mind;
+ const sk=p&&p.skill?p.skill:null;
+ if(sk&&sk.t==='lane')pow+=a.lane*0.12*w.lane;
+ if(sk&&sk.t==='farm')pow+=a.farm*0.12*w.farm;
+ if(sk&&sk.t==='team')pow+=a.team*0.12*w.team;
+ if(sk&&sk.t==='mind')pow+=a.mind*0.12*w.mind;
  // 英雄加成：按熟练度（绝活+8% / 熟练+4% / 一般0% / 生疏-8%），版本热门再 +2%
  const h=heroId?heroAtPos(heroId,p.pos):null;
  if(h){
@@ -446,23 +447,23 @@ function teamPower(s,picks){
  if(!ls.length)return 0;
  const ph=p=>(picks&&picks[p.pos])||pickedHero(s,p);
  let pow=ls.reduce((t,p)=>t+playerPower(p,ph(p)),0);
- const mAvg=ls.reduce((t,p)=>t+p.morale,0)/ls.length;
+ const mAvg=ls.reduce((t,p)=>t+(p&&typeof p.morale==='number'?p.morale:70),0)/ls.length;
  pow*=clamp(mAvg/100,0.82,1.1);
  activeBonds(s).forEach(b=>pow*=1+b.bonus/100);
  // 主教练加成：全队战力% + 侧重属性额外加成
  if(s.coach){
  const c=s.coach;
- const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[c.style];
- const attrSum=ls.reduce((t,p)=>t+p.attrs[c.style],0);
- pow+=attrSum*c.styleBonus/100*w;
- pow*=1+c.bonus/100;
+ const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[c.style]||0.25;
+ const attrSum=ls.reduce((t,p)=>t+(p&&p.attrs?p.attrs[c.style]||70:70),0);
+ pow+=attrSum*(c.styleBonus||0)/100*w;
+ pow*=1+(c.bonus||0)/100;
  }
  // 助教组（上限2人）：与主教练加成叠加，幅度较小
  if(s.assistants&&s.assistants.length){
  s.assistants.forEach(a=>{
- const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[a.style]; const attrSum=ls.reduce((t,p)=>t+p.attrs[a.style],0);
- pow+=attrSum*a.styleBonus/100*w;
- pow*=1+a.bonus/100;
+ const w={lane:0.25,farm:0.25,team:0.3,mind:0.2}[a.style]||0.25; const attrSum=ls.reduce((t,p)=>t+(p&&p.attrs?p.attrs[a.style]||70:70),0);
+ pow+=attrSum*(a.styleBonus||0)/100*w;
+ pow*=1+(a.bonus||0)/100;
  });
  }
  // 连胜/连败手感：±2%/场，上限 ±10%
@@ -765,17 +766,33 @@ function rebindSeriesMatch(s){
 function migrateSave(){
  if(!S)return;
  S.era=(S.era&&KPL_ERAS[S.era])?S.era:null;
- if(S.v==null)S.v=3;
+ // 版本号必须是数字：非数字（"3a"）会让 S.v<SAVE_VERSION 恒为 false，整条迁移链被静默跳过
+ S.v=Number(S.v)||3;
  while(S.v<SAVE_VERSION){
  const step=MIGRATIONS[S.v];
- try{if(step)step(S);}catch(e){console.warn('migrate '+S.v+' fail',e);}
+ if(step){
+  try{step(S);}
+  catch(e){
+   // ⚠ 迁移失败绝不能推进版本号：否则这个档被永久标记「已迁移」，而那一步永远不会再跑，
+   //   半迁移的档会被写回去伪装成完整档，玩家再也拿不回数据。中止链 → 下次读档自动重试。
+   S._migErr='迁移 v'+S.v+' 失败: '+(e&&e.message||e);
+   console.warn('migrate '+S.v+' fail',e);
+   break;
+  }
+ }
  S.v++;
  }
  applySaveDefaults(S); // 字段级兜底：一律走 SAVE_DEFAULTS
  S.aiRosters={};
  migrateFixZeroZero(S);
  if(S.series&&!S.series.side)S.series.side='blue';
- try{rebuildMatchStore(S);}catch(e){}
+ // 派生索引重建失败要留痕并清空：getMatch 只读 s.matches，留着半建的索引比空索引更危险
+ try{rebuildMatchStore(S);}
+ catch(e){
+  S._migErr='比赛索引重建失败: '+(e&&e.message||e);
+  S.matches={};
+  console.warn('rebuildMatchStore fail',e);
+ }
  try{rebindSeriesMatch(S);}catch(e){}
  // 转会列表不落盘：读档后若仍在转会期，立刻重建，避免空列表上的买卖/谈判路径踩坑
  if(S.preseason&&!(S.transferList||[]).length){
@@ -887,6 +904,14 @@ function ensureSeason(s){
  initGroups(s);
  logEvent(s,' 赛制升级为 KPL 2025 官方赛制（18队 · S/A/B 三组）');
  save();
+ }
+ // 常规赛阶段缺赛程：分组在但 schedule 丢了（迁移中断/异常写盘）——补生成，否则俱乐部页赛前面板空转
+ if((s.phase==='r1'||s.phase==='r2'||s.phase==='r3')&&(!Array.isArray(s.schedule)||!s.schedule.length)){
+ try{
+ if(typeof genRoundSchedule==='function')genRoundSchedule(s);
+ logEvent(s,' 赛程数据缺失，已按当前分组重新生成剩余轮次');
+ save();
+ }catch(e){console.warn('schedule recover fail',e);}
  }
 }
 function load(){

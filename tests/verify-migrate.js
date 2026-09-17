@@ -78,6 +78,27 @@ const out = vm.runInContext(`
   else if(keys.length<30)fail('⑦SAVE_DEFAULTS 过短: '+keys.length);
   else log('⑦SAVE_DEFAULTS：'+keys.length+' 项 · 键唯一 · 作为读档兜底唯一来源');
 
+  // ⑧ 迁移链失败语义：某一步抛错时**不得推进版本号**
+  //   旧行为是 catch 后照样 S.v++ → 该步永久跳过，半迁移的档被写回伪装成完整档，玩家数据拿不回来。
+  (function(){
+    const keep=MIGRATIONS[SAVE_VERSION-1];
+    S=newState('迁移失败队','迁');
+    S.v=SAVE_VERSION-1;S._migErr=null;
+    MIGRATIONS[SAVE_VERSION-1]=()=>{throw new Error('__probe_mig__');};
+    let threw=false;
+    try{migrateSave();}catch(e){threw=true;}
+    if(threw){MIGRATIONS[SAVE_VERSION-1]=keep;fail('⑧迁移抛错逃出了 migrateSave（应被兜住）');return;}
+    if(S.v!==SAVE_VERSION-1){MIGRATIONS[SAVE_VERSION-1]=keep;fail('⑧迁移失败后版本号被推进了（应停在 '+(SAVE_VERSION-1)+'，实际 '+S.v+'）');return;}
+    if(!S._migErr||S._migErr.indexOf('__probe_mig__')<0){MIGRATIONS[SAVE_VERSION-1]=keep;fail('⑧迁移失败未留痕 _migErr: '+S._migErr);return;}
+    // 修好后重试：换成不抛错的实现，应能推进到当前版本（用空实现隔离，不依赖真实迁移对合成档的预期）
+    MIGRATIONS[SAVE_VERSION-1]=()=>{};
+    S.v=SAVE_VERSION-1;S._migErr=null;
+    migrateSave();
+    MIGRATIONS[SAVE_VERSION-1]=keep;
+    if(S.v!==SAVE_VERSION)fail('⑧迁移修复后重试未推进到 v'+SAVE_VERSION+'（实际 '+S.v+'）');
+    else log('⑧迁移链失败语义：失败即中止不推进版本号 · 留痕 _migErr · 修复后重试可推进');
+  })();
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()

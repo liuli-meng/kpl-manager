@@ -46,6 +46,25 @@ const out = vm.runInContext(`
   applyImport({foo:1},'乱码');
   if(S.teamName!=='现役队')fail('⑥无效对象污染状态');
   else log('⑥无效对象被拒（缺 teamName/players）');
+
+  // ⑥b 导入清洗（安全）：分享码是别人给的，队名/选手名/id 会直插 innerHTML 与内联 onclick。
+  //     要求：标签注入与 onclick 引号逃逸必须被清掉，但长文本（比赛文案/履历）不得被误截断。
+  const evil={kplSave:true,v:SAVE_VERSION,team:'x',data:{
+    teamName:'<img src=x onerror=alert(1)>恶意队',
+    players:[{id:"');alert(1);//",name:'<b>选手</b>',pos:'mid',career:'正常履历文本'}],
+    fund:100,season:1,moneyScaled:true,econReal:true,
+    series:{logs:['第1局 我方 9-13 憾负 对手 ｜ 总比分 0:1 红方 教科书级团战！ ｜ MVP：某某（9/3/9）'.repeat(3)]},
+  }};
+  applyImport(evil,'恶意存档');
+  const evilTeam=S.teamName||'';
+  const evilId=(S.players&&S.players[0]&&S.players[0].id)||'';
+  const evilName=(S.players&&S.players[0]&&S.players[0].name)||'';
+  const evilLog=(S.series&&S.series.logs&&S.series.logs[0])||'';
+  if(evilTeam.indexOf('<')>=0||evilTeam.indexOf('>')>=0)fail('⑥b 队名未清洗标签注入: '+evilTeam);
+  else if(evilName.indexOf('<')>=0)fail('⑥b 选手名未清洗:\u0020'+evilName);
+  else if(/[^A-Za-z0-9_-]/.test(evilId))fail('⑥b 选手 id 仍含非法字符（可在 onclick 里引号逃逸）: '+evilId);
+  else if(evilLog.length<150)fail('⑥b 长文本被误截断（比赛文案应保原样），实际 '+evilLog.length+' 字');
+  else log('⑥b 导入清洗：标签注入与 id 引号逃逸已清掉 · 长文案完整保留（'+evilLog.length+' 字）');
   renderAll=_ra;save=_sv;
 
   // ⑦ serializeForSave：aiRosters 不落盘，运行期缓存保留

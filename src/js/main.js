@@ -1,10 +1,15 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-05b';
+const KM_BUILD='2026-09-17a';
 
-/* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） ================= */
+/* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
+   pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
+   原来每次渲染都同步读一次 localStorage。写入只有下面这个 click 处理器，缓存不会与存储分叉。 */
+const _foldCache=new Map();
 function foldCls(key,def){
- let v=null;try{v=localStorage.getItem('pfold_'+key);}catch(e){}
+ let v;
+ if(_foldCache.has(key))v=_foldCache.get(key);
+ else{try{v=localStorage.getItem('pfold_'+key);}catch(e){v=null;}_foldCache.set(key,v);}
  const collapsed=v==null?def==='collapsed':v==='1';
  return 'collapsible'+(collapsed?' collapsed':'');
 }
@@ -14,7 +19,10 @@ document.addEventListener('click',e=>{
  const panel=h3.parentElement;
  const folded=!panel.classList.contains('collapsed');
  panel.classList.toggle('collapsed',folded);
- try{localStorage.setItem('pfold_'+(panel.dataset.fold||h3.textContent.trim().slice(0,10)),folded?'1':'0');}catch(err){}
+ const fk=panel.dataset.fold||h3.textContent.trim().slice(0,10);
+ const fv=folded?'1':'0';
+ _foldCache.set(fk,fv);
+ try{localStorage.setItem('pfold_'+fk,fv);}catch(err){}
 });
 
 /* ================= 导航（按身份模式适配可见页签） ================= */
@@ -267,11 +275,45 @@ function importSaveFile(inp){
  rd.readAsText(f);
  inp.value='';
 }
-/* 导入共用：解包→版本校验→注入→迁移→落盘（剪贴板代码与文件导入共用） */
+/* ================= 导入清洗（安全） =================
+   存档码 / 存档文件是别人给的，而 teamName / players[].name / id 会被直插 innerHTML
+   与内联 onclick（全仓约 44 处 ${teamName}、79 处 ${.name}、20+ 处 ${p.id} 未转义）。
+   不清洗的话，一个恶意分享码就能在玩家浏览器里执行脚本——同源 localStorage（其它存档槽）全在射程内。
+   逐点转义 120+ 个渲染点不现实；在唯一入口做白名单清洗才是成比例的修法。
+   三条策略：① 所有字符串去控制字符与尖括号（没有 < 就开不了标签）；
+            ② id 类字段只留 [A-Za-z0-9_-]（防 onclick="f('${p.id}')" 里用引号逃逸）；
+            ③ 短展示字段截断（防超长队名撑爆卡片），但**不截断长文本**（履历/比赛文案/战报要保原样）。 */
+const IMPORT_SHORT_KEYS=new Set(['teamName','icon','name','sig','pos','stage','side','tier','cat','level','role','arch','opName','myName','team','ownerTeam','board','scenario','era']);
+const IMPORT_ID_RE=/[^A-Za-z0-9_-]/g;
+const IMPORT_STRIP_RE=/[\u0000-\u001f\u007f<>]/g;
+function cleanImportStr(v,short){
+	const s=String(v==null?'':v).replace(IMPORT_STRIP_RE,'');
+	return (short&&s.length>40)?s.slice(0,40):s;
+}
+function sanitizeImport(obj){
+	if(!obj||typeof obj!=='object')return obj;
+	const seen=new Set();
+	(function walk(o,depth){
+		if(!o||typeof o!=='object'||depth>8||seen.has(o))return;
+		seen.add(o);
+		Object.keys(o).forEach(k=>{
+			const v=o[k];
+			if(typeof v==='string'){
+				o[k]=(k==='id'||/Id$/.test(k))
+					?cleanImportStr(v,false).replace(IMPORT_ID_RE,'')
+					:cleanImportStr(v,IMPORT_SHORT_KEYS.has(k));
+			}else if(v&&typeof v==='object')walk(v,depth+1);
+		});
+	})(obj,0);
+	return obj;
+}
+/* 导入共用：清洗→解包→版本校验→注入→迁移→落盘（剪贴板代码与文件导入共用） */
 function applyImport(d,from){
  if(d&&d.kplSave&&d.data)d=d.data; // 文件包装格式→裸存档
  if(!d||!d.teamName||!d.players){toast('导入失败：'+from+' 不是有效存档');return;}
  if(d.v&&d.v>SAVE_VERSION){toast('导入失败：存档版本（v'+d.v+'）比当前游戏更新，请先更新游戏');return;}
+ sanitizeImport(d);
+ if(!d.teamName||!Array.isArray(d.players)){toast('导入失败：'+from+' 存档内容非法（清洗后队名/名单为空）');return;}
  // 覆盖当前档前确认（误粘贴/误选文件会直接冲掉进度）
  if(S&&S.players&&S.players.length){
  if(!confirmDanger('导入将覆盖当前槽进度（'+S.teamName+' · 第'+S.season+'赛季）。\n建议先「导出/下载存档」备份。确定导入？'))return;
@@ -919,11 +961,12 @@ window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档�
 })();
 function _reportErr(tag,msg){
  try{
- window.__errLog.push({t:Date.now(),tag,m:String(msg||'').slice(0,200)});
+ const m=String(msg||'未知错误').slice(0,220);
+ window.__errLog.push({t:Date.now(),tag,m});
  window.__errLog=window.__errLog.slice(-20);
  console.error('['+tag+']',msg);
- if(S)try{logEvent(S,' 程序异常：'+String(msg||'').slice(0,80));}catch(_){}
- toast(' 出现异常：'+(String(msg||'未知错误').slice(0,60))+'（建议先导出存档）');
+ if(S)try{logEvent(S,' 程序异常：'+m.slice(0,80));}catch(_){}
+ toast(' 出现异常：'+m.slice(0,60)+'（建议先导出存档）');
  }catch(_){}
 }
 window.addEventListener('error', e => _reportErr('全局异常', e.message||'未知错误'));

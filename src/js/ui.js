@@ -345,7 +345,7 @@ function uiFinishAnnual(s){
 function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
 /* ================= 俱乐部页：赛段入口面板（renderClub 按 phase 分发） ================= */
 function clubLeaguePhasePanel(){
- const m=S.schedule[S.matchIdx];
+ const m=(S.schedule||[])[S.matchIdx]; // 缺赛程时走下方 !m，不能整页 TypeError
  const g=myGroup(S);
  if(S.preseason){
  // 赛前转会期：先组队，再开赛（比赛面板隐藏）
@@ -571,7 +571,7 @@ function clubFooterPanels(){
  const mine=(S.players||[]).filter(p=>p.natCamp);
  if(mine.length){
  html+=`<div class="panel" style="border-color:var(--gold)"><h3>国家队集训 <span class="tag" style="color:var(--gold)">第 ${S.natCampDay||0} 天 · 状态 ${mine[0].natCampForm||0}/5</span></h3>
- <div class="hint">${mine.map(p=>p.name+'（'+POS[p.pos][0]+' · 状态'+(p.natCampForm||0)+'）').join('、')} 随中国代表队合练，缺席整个夏季赛。集训会涨状态，出征战力上浮；你这边靠替补/外租/签人顶住。</div>
+ <div class="hint">${mine.map(p=>p.name+'（'+((POS[p.pos]||['?','?'])[0])+' · 状态'+(p.natCampForm||0)+'）').join('、')} 随中国代表队合练，缺席整个夏季赛。集训会涨状态，出征战力上浮；你这边靠替补/外租/签人顶住。</div>
  </div>`;
  }
  }
@@ -580,7 +580,11 @@ function clubFooterPanels(){
  <div class="hint" style="margin-bottom:8px">${S.mode==='coach'?'转会资金由俱乐部打理，但阵容得失是你的事：留人保战力，放人换预算。':'留人/放人/抬价三选：钱、名单、更衣室一起权衡。'}</div>
  ${S.offers.map((o,i)=>{
  const p=S.players.find(x=>x.id===o.pid);
- const meta=p?`${POS[p.pos][1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 周薪 ${p.wage}万`:'';
+ let meta='';
+ if(p){
+ try{meta=`${(POS[p.pos]||['?','?'])[1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 周薪 ${p.wage||0}万`;}
+ catch(_){meta=`${p.name} · 数据不完整`;}
+ }
  const final=o.status==='final';
  return `<div class="match" style="margin-bottom:6px;padding:8px 10px;${final?'border-color:var(--gold)':''}">
  <div class="vs"><span class="tname" style="font-size:13px">${o.team} ⇒ ${o.name}</span>
@@ -614,10 +618,11 @@ function clubFooterPanels(){
  }
  if(S.coach){
  const c=S.coach;
- html+=`<div class="panel"><h3>主教练 <span class="tag">${c.rating||80}评分 · ${COACH_STYLE[c.style]}型</span></h3>
+ const sk=c.skill||{n:'—',d:'—'};
+ html+=`<div class="panel"><h3>主教练 <span class="tag">${c.rating||80}评分 · ${COACH_STYLE[c.style]||c.style||'—'}型</span></h3>
  <div class="sponsor"><span class="s-icon">教</span>
- <div><div class="s-name">${c.name} <span class="gold">(全队战力+${c.bonus}%)</span></div>
- <div class="s-desc"> ${c.skill.n}：${c.skill.d} · 周薪 ${c.wage}万 · 转会页可换帅</div></div></div></div>`;
+ <div><div class="s-name">${c.name} <span class="gold">(全队战力+${c.bonus||0}%)</span></div>
+ <div class="s-desc"> ${sk.n||'—'}：${sk.d||'—'} · 周薪 ${c.wage||0}万 · 转会页可换帅</div></div></div></div>`;
  }
  {
  const cats=[{k:'all',n:'全部'}].concat(LOG_CATS.map(c=>({k:c.k,n:c.n}))).concat([{k:'other',n:'其他动态'}]);
@@ -636,7 +641,16 @@ function clubFooterPanels(){
  return html;
 }
 function renderClub(){
- let html=(typeof missionStrip==='function'?missionStrip(S):'')+pageHint('club')+`
+ /* 任一面板抛错都不得清空整页：玩家看到的是「异常 toast + 空白俱乐部」。
+ 分段 try/catch，坏面板降级成诊断条，其余面板照常渲染。 */
+ const safe=(fn,tag)=>{
+ try{return fn()||'';}
+ catch(e){
+  _reportErr(tag,String(e&&e.message||e));
+  return `<div class="panel" style="border-color:var(--red)"><h3>${tag} 渲染失败</h3><div class="hint">${_escTxt(String(e&&e.message||e))}</div><div class="hint mt8">可先「管理 → 导出存档」备份；点上方导航切换页面通常仍可用。</div></div>`;
+ }
+ };
+ let html=safe(()=>((typeof missionStrip==='function'?missionStrip(S):'')+pageHint('club')+`
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
@@ -646,11 +660,11 @@ function renderClub(){
  <div class="gold" style="font-size:18px;font-weight:800">${fmt(S.fund)}</div>
  <div class="dim" style="font-size:11px">俱乐部资金</div>
  </div>
- </div>`;
- html+=clubBoardPanel();
- html+=clubCoachDealPanel();
- html+=clubPhasePanel();
- html+=clubFooterPanels();
+ </div>`),'club-banner');
+ html+=safe(clubBoardPanel,'club-board');
+ html+=safe(clubCoachDealPanel,'club-coach');
+ html+=safe(clubPhasePanel,'club-phase');
+ html+=safe(clubFooterPanels,'club-footer');
  $('#page-club').innerHTML=html;
 }
 /* ================= 经营页（赞助商 / 工资帽 / 荣誉室 / 比赛复盘） ================= */
@@ -1251,8 +1265,15 @@ function thSort(th){
 /* ================= 卡片列表排序 + 位置筛选（转会/自由市场等非表格列表） =================
  偏好存 localStorage.km_sort（UI 层偏好，不进存档），切页/重进保持；
  chips 行横向可滑，移动端 38px 触控高度。 */
-function _sortPrefs(){try{return JSON.parse(localStorage.getItem('km_sort')||'{}');}catch(_){return {};}}
-function _saveSortPrefs(p){try{localStorage.setItem('km_sort',JSON.stringify(p));}catch(_){}}
+/* km_sort 走内存缓存：排序偏好每次渲染列表都要读，原来每次 JSON.parse 一遍。
+   写入只有 _saveSortPrefs，缓存不会与存储分叉。 */
+let _sortCache=null;
+function _sortPrefs(){
+ if(_sortCache)return _sortCache;
+ try{_sortCache=JSON.parse(localStorage.getItem('km_sort')||'{}')||{};}catch(_){_sortCache={};}
+ return _sortCache;
+}
+function _saveSortPrefs(p){_sortCache=p;try{localStorage.setItem('km_sort',JSON.stringify(p));}catch(_){}}
 function getSortKey(key){return _sortPrefs()[key]||'ovr';}
 function getPosFilter(key){return _sortPrefs()[key+'|pos']||'';}
 function setSortKey(key,v){const p=_sortPrefs();p[key]=v;_saveSortPrefs(p);goPage(curPageName());}

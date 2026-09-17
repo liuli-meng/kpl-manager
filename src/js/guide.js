@@ -21,11 +21,17 @@ const TOUR_TITLES={
  union:'联盟 · 战力榜',hall:'荣誉馆 · 收藏馆',biz:'经营 · 钱袋子',career:'生涯 · 你的故事'
 };
 var _tour={on:false,i:0,mode:'quick'}; // mode: quick=3步上手 | full=完整页码tour
-/* 前 3 日任务：目标驱动，不按页码背书 */
+/* 前 3 日任务：目标驱动，不按页码背书。
+   km_missions 走内存缓存（性能）：activeMissions 原本在 filter 内部逐任务调 missionState()，
+   一次渲染要 JSON.parse 好几遍；现在只读一次、合并成一次写盘。
+   这些是本机 UI 进度，唯一的写入口就是本文件的 saveMissionState，缓存与存储不会分叉。 */
+let _missionCache=null;
 function missionState(){
- try{return JSON.parse(localStorage.getItem(MISSION_KEY)||'{}');}catch(_){return {};}
+ if(_missionCache)return _missionCache;
+ try{_missionCache=JSON.parse(localStorage.getItem(MISSION_KEY)||'{}')||{};}catch(_){_missionCache={};}
+ return _missionCache;
 }
-function saveMissionState(m){try{localStorage.setItem(MISSION_KEY,JSON.stringify(m));}catch(_){}}
+function saveMissionState(m){_missionCache=m;try{localStorage.setItem(MISSION_KEY,JSON.stringify(m));}catch(_){}}
 function missionDefs(mode){
  if(mode==='player')return [
   {id:'p1',day:1,title:'完成一次加练',text:'在「生涯」页练一项属性（体力不够先休息）',page:'career',
@@ -44,19 +50,26 @@ function missionDefs(mode){
    done:s=>!!(s&&(missionState().seenLeague||s.matchIdx>=2))},
  ];
 }
-function markMissionSeen(key){const m=missionState();m[key]=1;saveMissionState(m);}
+function markMissionSeen(key){
+ const m=missionState();
+ if(m[key])return; // 已是 1 就不再写盘：renderLeague 每次渲染都会调到这里
+ m[key]=1;saveMissionState(m);
+}
 function activeMissions(s){
  const mode=(s&&s.mode)||'manager';
  const day=(s&&s.day)||1;
  if(day>3)return []; // 只提示前 3 日
- return missionDefs(mode).filter(m=>{
+ const st=missionState(); // 只读一次（原来在 filter 内部逐任务读，一次渲染 parse 好几遍）
+ let dirty=false;
+ const out=missionDefs(mode).filter(m=>{
   if((m.day||1)>day)return false; // 按任务标注日解锁（避免第 1 天就出现「打完一场联赛」）
   if((s&&s.preseason)&&m.id==='m2')return false; // 转会期还没开赛，先不催打比赛
-  const st=missionState();
   if(st['done_'+m.id])return false;
-  try{if(m.done(s)){st['done_'+m.id]=1;saveMissionState(st);return false;}}catch(_){}
+  try{if(m.done(s)){st['done_'+m.id]=1;dirty=true;return false;}}catch(_){}
   return true;
  });
+ if(dirty)saveMissionState(st); // 本帧内多个任务同时达成：合并成一次写盘
+ return out;
 }
 function missionStrip(s){
  const list=activeMissions(s);
@@ -65,18 +78,24 @@ function missionStrip(s){
  <span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${m.text}">${m.title}</button>`).join('')}</span>
  </div>`;
 }
-/* 每页一行提示；× 单页关闭（km_hints 按页记忆） */
+/* 每页一行提示；× 单页关闭（km_hints 按页记忆）。
+   km_hints 走内存缓存：pageHint 每渲染一页都会调用，原来每次都 JSON.parse 一遍 localStorage */
+let _hintCache=null;
+function _hintState(){
+ if(_hintCache)return _hintCache;
+ try{_hintCache=JSON.parse(localStorage.getItem(HINT_KEY)||'{}')||{};}catch(_){_hintCache={};}
+ return _hintCache;
+}
 function pageHint(name){
- let hide=null;
- try{hide=JSON.parse(localStorage.getItem(HINT_KEY)||'{}');}catch(_){}
+ const hide=_hintState();
  if(hide&&hide[name])return '';
  const txt=PAGE_HINTS[name];if(!txt)return '';
  return `<div class="page-hint"><span>${txt}</span><button class="ph-x" onclick="dismissHint('${name}')" title="不再显示这条">×</button></div>`;
 }
 function dismissHint(name){
  try{
-  const hide=JSON.parse(localStorage.getItem(HINT_KEY)||'{}');
-  hide[name]=1;localStorage.setItem(HINT_KEY,JSON.stringify(hide));
+  const hide=_hintState();
+  hide[name]=1;_hintCache=hide;localStorage.setItem(HINT_KEY,JSON.stringify(hide));
  }catch(_){}
  renderPage(typeof curPageName==='function'?curPageName():'club');
 }
