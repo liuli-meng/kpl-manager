@@ -104,7 +104,12 @@ function ageDrift(p){
  （修复旧版年龄一次跳 N-1 岁但只结算 1 年成长的问题，黄金期选手会真实变强） */
 function genSeasonPlayer(s,def){
  const p=genPlayer(def);
- for(let i=0;i<s.season-1;i++){p.age++;ageDrift(p);}
+ /* 选秀新秀 def（draft.js 注册，带 age0/ageFrom）：年龄基准是「入盟赛季」而不是 2026 赛季序号——
+    否则第 10 季选中的 18 岁新秀会一出场就 27 岁。其余 def 走原路径，行为一字不变。 */
+ const born=(def.age0!=null)?(def.ageFrom||s.season||1):1;
+ const years=Math.max(0,(s.season||1)-born);
+ for(let i=0;i<years;i++){p.age++;ageDrift(p);}
+ if(def.age0!=null)p.age=def.age0+years;
  return p;
 }
 /* 青训递补选手定义（不占用联盟注册名额，与玩家、各队均不重名）

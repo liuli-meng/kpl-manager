@@ -121,21 +121,28 @@ fillRoster(S,'mid');
     (S.leagueTeams||[]).forEach(n=>{
       if(n===S.teamName){S.players.forEach(p=>names.push(p.name));return;}
       const r=ensureAiRosters(S,n)||[];
-      // 5 人=正常；6 人=某位置伤停主力+青训递补同时在场（设计行为，需验证递补确实在顶伤员）
-      if(r.length<5||r.length>6)teamBad.push(n+':'+r.length+'人');
-      else if(r.length===6){
-        const ok=POS_ORDER.some(pos=>{
+      /* 5 人=正常；超过 5 人是设计内的两种来源（2026-09-17 起选秀新秀以 def 注册进名册）：
+         ① 某位置伤停主力 + 青训递补（ac_ 顶伤员）
+         ② 选秀大会点名入册的新秀（drf_ 前缀，def 落在 aiRosterDefs）
+         上限 8 = draft.js 的注册上限（首发 5 + 新秀/轮换 3）。
+         位置多人时必须能解释来源，否则就是幽灵注册。 */
+      if(r.length<5||r.length>8)teamBad.push(n+':'+r.length+'人');
+      else if(r.length>5){
+        const bad=POS_ORDER.filter(pos=>{
           const at=r.filter(p=>p.pos===pos);
-          return at.length===2&&at.some(p=>p.id.startsWith('ac_'))
+          if(at.length<2)return false;
+          const injPair=at.some(p=>p.id.startsWith('ac_'))
             &&at.some(p=>!p.id.startsWith('ac_')&&(S.aiInj||{})[n]&&(S.aiInj[n]||{})[p.id]>0);
+          const drafted=at.some(p=>String(p.id).indexOf('drf_')===0);
+          return !injPair&&!drafted;
         });
-        if(!ok)teamBad.push(n+':6人但无伤停递补对');
+        if(bad.length)teamBad.push(n+':'+r.length+'人，'+bad.join('/')+' 位置多人且非递补/新秀');
       }
       const poss=r.map(p=>p.pos);
       const dup=poss.filter((p,i)=>poss.indexOf(p)!==i);
-      // 5 人不应有任何重复位置；6 人允许一个重复（伤停+递补）
+      // 5 人满编时不允许重复位置（>5 人的重复由上面的来源检查负责）
       if(dup.length&&r.length===5)teamBad.push(n+':位置重复'+dup.join(''));
-      if(dup.length>1)teamBad.push(n+':多处重复'+dup.join(''));
+      if(POS_ORDER.some(pos=>!poss.includes(pos)))teamBad.push(n+':位置不全');
       r.forEach(p=>names.push(p.name));
     });
     dupNames=names.filter((n,i)=>names.indexOf(n)!==i);

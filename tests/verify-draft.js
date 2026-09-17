@@ -148,9 +148,99 @@ const out = vm.runInContext(`
     else log('⑧ 坏档修复：NaN 竞拍价 → '+d8.bid+'万，叫价后 bid/资金均为有限数');
   }
 
+  // ⑨ 点名/放弃必须落盘 + 刷新（曾经两者都没有 save/renderAll：点完画面纹丝不动、刷新即丢）
+  for(const act of ['draftPick','draftSkip']){
+    const s9=mkS(0);const d9=initDraft(s9,true);
+    let g9=0;while(d9.phase==='auction'&&g9++<25)draftBidRaise(s9);
+    if(d9.phase!=='pick'){fail('⑨ 未进入点名阶段，无法验证 '+act);continue;}
+    let nSave=0,nRender=0;
+    const oSave=save,oRender=renderAll;
+    save=function(){nSave++;return oSave.apply(null,arguments);};
+    renderAll=function(){nRender++;return oRender.apply(null,arguments);};
+    try{if(act==='draftPick')draftPick(s9,d9.pool[0].id);else draftSkip(s9);}
+    finally{save=oSave;renderAll=oRender;}
+    if(!nSave||!nRender)fail('⑨ '+act+' 未落盘/未刷新（save='+nSave+' render'+nRender+'）');
+    else log('⑨ '+act+'：落盘 '+nSave+' 次 · 刷新 '+nRender+' 次');
+  }
+
+  // ⑩ 选秀池必须走全局查重（漏市场/自由市场/转会名单/新星 def 会撞名，撞名会把 AI def 误剔除）
+  const s10=mkS(0);
+  s10.extraDefs=[{id:'xd1',name:'青禾',pos:'mid'}];
+  s10.market=[{id:'xd2',name:'白榆',pos:'ad'}];
+  s10.transferList=[{id:'xd3',name:'赤霄',pos:'top'}];
+  s10.freeAgents=[{id:'xd4',name:'玄同',pos:'sup'}];
+  const d10=initDraft(s10,true);
+  const names10=d10.pool.map(p=>p.name);
+  const clash10=['青禾','白榆','赤霄','玄同'].filter(n=>names10.includes(n));
+  if(clash10.length)fail('⑩ 选秀池与联盟现有人重名：'+clash10.join(','));
+  else if(new Set(names10).size!==names10.length)fail('⑩ 池内重名');
+  else log('⑩ 全局查重：池 '+names10.length+' 人，市场/自由市场/转会名单/新星 def 均不撞名');
+
+  // ⑪ AI 点名的选手必须以 def 入册：读档（aiRosters 被剥离重建）后仍在名册，且年龄按入盟赛季算
+  const s11=mkS(999);const d11=initDraft(s11,true);
+  let g11=0;
+  while(!d11.done&&g11++<60){if(d11.phase==='auction')draftBidPass(s11);else if(d11.phase==='pick')draftSkip(s11);}
+  const ai11=d11.picks.filter(x=>x.team!==s11.teamName&&x.playerId)
+    .filter(x=>((s11.aiRosters[x.team])||[]).some(p=>p.id===x.playerId)); // 阵容满而转自由市场的不算
+  if(!ai11.length)fail('⑪ AI 点名后名册里找不到人');
+  else{
+    const s11b=JSON.parse(serializeForSave(s11));
+    s11b.aiRosters={};
+    AI_TEAMS.forEach(t=>ensureAiRosters(s11b,t.name));
+    const lost11=ai11.filter(x=>!((s11b.aiRosters[x.team])||[]).some(p=>p.id===x.playerId));
+    const ages11=ai11.slice(0,3).map(x=>{const q=(s11b.aiRosters[x.team]||[]).find(p=>p.id===x.playerId);return q?q.age:-1;});
+    if(lost11.length)fail('⑪ 读档后 AI 新秀丢失 '+lost11.length+'/'+ai11.length+' 人（应 def 入册，不被 aiRosters 剥离带走）');
+    else if(ages11.some(a=>a!==18))fail('⑪ 读档后新秀年龄应为 18（按入盟赛季算），实际 '+ages11.join(','));
+    else log('⑪ AI 点名 '+ai11.length+' 人：读档重建后全部保留 · 年龄 '+ages11.join('/')+' · aiPower='+(s11b.aiPower[ai11[0].team]||0));
+  }
+
+  // ⑫ 落选者进自由市场：字段必须齐（缺 freeAgent 会被当转会谈判凭空要转会费，缺 signCost 面板显示 undefined）
+  const s12=mkS(0);const d12=initDraft(s12,true);
+  let g12=0;
+  while(!d12.done&&g12++<200){if(d12.phase==='auction')draftBidPass(s12);else if(d12.phase==='pick')draftSkip(s12);}
+  const fa12=s12.freeAgents||[];
+  const bad12=fa12.filter(p=>p.freeAgent!==true||typeof p.signCost!=='number'||!Number.isFinite(p.signCost)||p.team);
+  if(!fa12.length)fail('⑫ 落选者未进自由市场');
+  else if(bad12.length)fail('⑫ 自由市场新秀字段不全 '+bad12.length+' 人（freeAgent/signCost/team）');
+  else log('⑫ 落选者 '+fa12.length+' 人进自由市场：freeAgent/signCost/team 齐备');
+  // ⑫b 谈判入口必须按「自由球员」处理（缺 freeAgent 会凭空要转会费）
+  if(fa12.length){
+    let negoErr='';
+    try{S=s12;openNegotiation(s12,fa12[0].id);}catch(e){negoErr=e.message;}
+    if(negoErr)fail('⑫b 自由市场新秀无法谈约: '+negoErr);
+    else if(!window._nego)fail('⑫b 未进入谈判');
+    else if(!window._nego.freeAgent)fail('⑫b 谈判按转会处理（应 freeAgent，转会费为 0）');
+    else log('⑫b 谈判：识别为自由球员 · 转会费 '+window._nego.askFee+'万 · 期望年薪 '+window._nego.askWage+'万');
+    window._nego=null;
+  }
+
+  // ⑭ AI 预算一场只摇一次（原来每次评估都重掷，同一签位内 AI 的心理上限会随机跳变）
+  const s14=mkS(0);const d14=initDraft(s14,true);
+  const ai14=d14.order.filter(t=>t!==s14.teamName)[0];
+  const b14a=draftMaxAiBid(s14,ai14,0),b14b=draftMaxAiBid(s14,ai14,0);
+  if(b14a!==b14b)fail('⑭ 同队同签位的出价上限不稳定（'+b14a+' vs '+b14b+'）');
+  else log('⑭ AI 预算稳定：同签位两次评估均为 '+b14a+'万');
+
+  // ⑬ 池空的点名阶段不能卡死：渲染时必须能自愈（要么给放弃按钮，要么直接收官）
+  const s13=mkS(0);const d13=initDraft(s13,true);
+  let g13=0;while(d13.phase==='auction'&&g13++<25)draftBidRaise(s13);
+  if(d13.phase==='pick'){
+    d13.pool=[];
+    let h13='';
+    try{goPage('market');h13=document.querySelector('#page-market').innerHTML;}catch(e){fail('⑬ 池空渲染异常 '+e.message);}
+    if(d13.phase==='pick'&&!d13.done&&h13.indexOf('放弃点名')<0)fail('⑬ 池空时既没放弃按钮也没收官 → 玩家卡死在点名阶段');
+    else if(d13.done)log('⑬ 池空兜底：渲染期 draftRepair 直接收官（不再死等点名）');
+    else{draftSkip(s13);if(d13.phase==='pick')fail('⑬ 点放弃后仍卡在点名');else log('⑬ 池空兜底：放弃按钮仍在，一点即继续');}
+  }else log('⑬ 未进入点名阶段，跳过');
+  // ⑬b 坏档（phase=pick 但池空）归一化为收官，而不是永远等待
+  const s13b=mkS(0);const d13b=initDraft(s13b,true);
+  d13b.phase='pick';d13b.pool=[];
+  draftRepair(s13b,d13b);
+  if(d13b.phase!=='done'||!d13b.done)fail('⑬b pick+空池 的坏档未归一化（phase='+d13b.phase+'）');
+  else log('⑬b 坏档归一化：pick+空池 → 收官');
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()
 `, dom);
-
 console.log(out);
