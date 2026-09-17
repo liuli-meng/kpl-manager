@@ -72,8 +72,9 @@ const out = vm.runInContext(`
     if(me.attrs.lane<=lane0)fail('proj 火热加练未涨');
     else if(me.attrs.lane-lane0<2)fail('proj 火热保底应 +2，实际 +'+(me.attrs.lane-lane0));
     else{
-      // 顶到天花板后再练 → 0
+      // 顶到天花板后再练 → 0（form 压到 <90：避开「突破个人天花板」8% 分支，保证确定性）
       me.attrs.lane=pk.lane;
+      me.val=115; // form≈86：仍属火热档，但不触发突破
       S.trained=false;me.energy=100;
       const at=pk.lane;
       const r0=trainOutcome('proj',me,'lane');
