@@ -1,0 +1,204 @@
+// 回归测试：历史上修过的所有 bug 用例，防止复发
+// 运行：node tests/verify-regression.js
+const { makeDom, makeTester } = require('./harness');
+
+const { dom } = makeDom();
+// 每个 snippet 以 return 结尾，返回值直接暴露给 Node 侧断言
+const run = snippet => require('vm').runInContext('(function(){\n' + snippet + '\n})()', dom);
+const T = makeTester('回归测试');
+
+// ① 替补身价 NaN（newSeason 对未上场选手）
+const r1 = run(`
+S=newState('T1','⚔️');
+fillRoster(S,'mid');
+const bench=genPlayer(genFreeAgentDef('jg','mid',new Set()));
+S.players.push(bench);S.lineup=S.players.slice(0,5).map(p=>p.id);
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+S.phase='champion';newSeason(S);
+return S.players.find(p=>p.id===bench.id).val;
+`);
+T.check(!isNaN(r1) && r1>=70 && r1<=150, '替补身价 NaN: r1=' + r1);
+
+// ② 总决赛亚军分润只发一次
+const r2 = run(`
+S=newState('T2','⚔️');
+fillRoster(S,'mid');
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+const ais=AI_TEAMS.filter(t=>t.name!==S.teamName);
+const X=ais[0].name,Y=ais[1].name,A2=ais[2].name,A3=ais[3].name,A4=ais[4].name,A5=ais[5].name,A6=ais[6].name;
+S.playoff={wb:[{a:S.teamName,b:A2,r:S.teamName},{a:X,b:A3,r:X}],lb:[{a:A4,b:A5,r:A4},{a:A6,b:Y,r:Y}],
+  lb2:[{a:X,b:A4,r:X},{a:Y,b:A6,r:Y}],lb3:[{a:A2,b:X,r:X},{b:Y,a:A3,r:Y}],
+  wf:{a:S.teamName,b:X,r:S.teamName},lb4:{a:X,b:Y,r:Y},lbf:{a:X,b:Y,r:Y},final:{a:S.teamName,b:Y,r:null},champ:null};
+S.phase='playoff';S.fund=0;
+S.series={stage:'po',poSlot:'总决赛',poMatch:S.playoff.final,mw:2,ow:4,logs:[],opName:Y,myName:S.teamName,max:7};
+finishSeries(false);
+return S.eventLog.filter(e=>e.txt.includes('联盟分润（亚军）')).length;
+`);
+T.check(r2 === 1, '总决赛亚军分润发了 ' + r2 + ' 次（应 1 次）');
+
+// ③ 联盟页季后赛对阵含败者组决赛
+const r3 = run(`
+S=newState('T3','⚔️');
+fillRoster(S,'mid');
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+S.phase='playoff';
+S.playoff={wb:[{a:'A',b:'B',r:'A'}],lb:[{a:'C',b:'D',r:'C'}],lb2:[{a:'E',b:'C',r:'C'}],lb3:[{a:'B',b:'C',r:'C'}],
+  wf:{a:'A',b:'B',r:'A'},lb4:{a:'B',b:'C',r:'C'},lbf:{a:'A',b:'C',r:'C'},final:{a:'A',b:'C',r:null},champ:null};
+renderLeague();
+return document.querySelector('#page-league').innerHTML;
+`);
+T.check(/败者组半决赛/.test(r3) && /败者组决赛/.test(r3), '联盟页对阵缺败者组决赛/半决赛标签');
+
+// ④ 事件属性/士气封顶
+const r4 = run(`
+S=newState('T4','⚔️');
+const p=genPlayer(genFreeAgentDef('top','star',new Set()));
+p.attrs.lane=98;p.attrs.team=98;p.morale=98;
+S.players.push(p);S.lineup=[p.id];S.coach=null;
+const jia=EVENTS.find(e=>e.t==='选手加练'),zhuan=EVENTS.find(e=>e.t==='战术研讨'),lao=EVENTS.find(e=>e.t==='老将觉醒');
+for(let i=0;i<30;i++){jia.fn(S,p);zhuan.fn(S,p);lao.fn(S,p);}
+return JSON.stringify([p.attrs.lane,p.attrs.team,p.morale]);
+`);
+T.check(r4 === '[99,99,100]', '事件封顶异常: ' + r4);
+
+// ⑤ 招牌英雄无错位
+const r5 = run(`return PLAYER_POOL.concat(FA_2026).filter(d=>{const h=heroOf(d.sig);return !h||!h.pos.includes(d.pos);}).map(d=>d.name);`);
+T.check(r5.length === 0, '招牌错位: ' + r5.join(','));
+
+// ⑥ AI 补强：无幽灵签约 + 缺位必补
+const r6 = run(`
+S=newState('T6','⚔️');
+fillRoster(S,'mid');
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+const yn=genPlayer(PLAYER_POOL.find(d=>d.id==='ad1'));
+S.players.push(yn);aiDetachDef(S,'ad1');
+for(let k=0;k<2;k++)newSeason(S);
+const map=aiRosterDefMap(S);
+const ghost=Object.keys(map).filter(tn=>map[tn].includes('ad1'));
+const bad=[];
+Object.keys(map).forEach(tn=>{
+  if(tn===S.teamName)return;
+  if(map[tn].length!==5)bad.push(tn+':'+map[tn].length);
+  const poss=map[tn].map(id=>{const d=defOf(S,id);return d?d.pos:'?';});
+  if(poss.includes('?'))bad.push(tn+':未知def');
+});
+return JSON.stringify({ghost, bad});
+`);
+T.check(r6 === '{"ghost":[],"bad":[]}', 'AI补强异常: ' + r6);
+
+// ⑦ 租借全流程
+const r7 = run(`
+S=newState('T7','⚔️');
+fillRoster(S,'mid');
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+S.transferWindow=0;S.fund=5000;
+const t7=loanCandidates(S)[0];
+const fund0=S.fund;
+loanPlayer(S,t7.from,t7.p.id);
+const lp7=S.players.find(p=>p.id===t7.p.id);
+const rent=fund0-S.fund;
+const cleared=!Object.values(S.aiRosters).some(r=>r.some(x=>x.id===t7.p.id));
+for(let i=0;i<21;i++)nextDay(S);
+return JSON.stringify({rent, loaned:!!lp7.loan, cleared, returned:!S.players.some(p=>p.loan)});
+`);
+{
+  const r = JSON.parse(r7);
+  T.check(r.rent > 0 && r.loaned && r.cleared, '租借流程异常: ' + r7);
+  T.check(r.returned, '租借 21 天后未归队');
+}
+
+// ⑦b 应急租借：转会期可租 + 伤停缺人时名额 +1 + 缺位优先排序
+const r7b = run(`
+ S=newState('T7b','⚔️');
+ fillRoster(S,'mid');
+ S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+ S.transferWindow=5; // 转会期也允许租借
+ S.fund=5000;
+ const cap0=loanCap(S);
+ const t=loanCandidates(S)[0];
+ loanPlayer(S,t.from,t.p.id);
+ const loanedDuringWindow=!!(S.players.find(p=>p.id===t.p.id)||{}).loan;
+ // 把某位置所有人打成伤停/外租，制造缺位 → 名额 +1 且候选优先推该位置
+ const pos='top';
+ S.players.forEach(p=>{if(p.pos===pos){p.injury=5;}});
+ const gaps=injuryGapPositions(S);
+ const cap1=loanCap(S);
+ const cands=loanCandidates(S).slice(0,5);
+ const topPriority=gaps.includes(pos)&&cands.length&&cands[0].p.pos===pos;
+ return JSON.stringify({cap0,loanedDuringWindow,gaps,cap1,topPriority,base:LOAN_CAP_BASE,max:LOAN_CAP_MAX});
+`);
+{
+ const r=JSON.parse(r7b);
+ T.check(r.loanedDuringWindow, '转会期内未能租借: '+r7b);
+ T.check(r.cap0===r.base && r.cap1===r.max && r.gaps.includes('top'), '应急名额未生效: '+r7b);
+ T.check(r.topPriority, '缺位位置未优先推荐: '+r7b);
+}
+
+// ⑧ 跨队零重名（多赛季极端压力）
+const r8 = run(`
+S=newState('T8','⚔️');
+fillRoster(S,'mid');
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+S.retiredDefs=PLAYER_POOL.map(d=>d.id);
+newSeason(S);
+const names=[];
+(S.leagueTeams||[]).forEach(n=>{
+  if(n===S.teamName)return;
+  (ensureAiRosters(S,n)||[]).forEach(p=>names.push(p.name));
+});
+S.players.forEach(p=>names.push(p.name));
+return names.filter((n,i)=>names.indexOf(n)!==i);
+`);
+T.check(r8.length === 0, '跨队重名: ' + r8.slice(0,6).join(','));
+
+// ⑨ 伤停暂停可恢复
+const r9 = run(`
+S=newState('T9','⚔️');
+fillRoster(S,'mid');
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+S.preseason=false;S.transferWindow=0;
+S.players.forEach(p=>{p.injury=4;});
+startMatch();autoPlayNext();
+const paused=!!S.series;
+let d=0;while(d<8&&rosterLineup(S).some(p=>p.injury>0)){nextDay(S);d++;}
+if(S.series){let g=0;while(S.series&&g++<12)autoPlayNext();}
+return JSON.stringify({paused, done:S.series===null, progressed:S.matchIdx>0});
+`);
+T.check(r9 === '{"paused":true,"done":true,"progressed":true}', '伤停暂停/恢复异常: ' + r9);
+
+// ⑩ 合同续约系统
+const r10 = run(`
+S=newState('T10','⚔️');
+fillRoster(S,'mid');
+S.coach={...COACH_POOL.find(c=>c.id==='co12')};S.seedPower=400;initGroups(S);
+S.transferWindow=3;S.fund=5000;
+// 造一名到期主力
+const p0=S.players[0];
+p0.contract=0;p0.val=120;
+const fund0=S.fund;
+renewPlayer(S,p0.id);
+const renewed=p0.contract===RENEW_YEARS&&S.fund<fund0&&S.expiring.every(x=>x!==p0.id);
+// 造一名到期替补 → 不续约放走
+const p1=S.players[1];
+p1.contract=0;
+releasePlayer(S,p1.id);
+const released=!S.players.some(x=>x.id===p1.id)&&S.freeAgents.some(x=>x.id===p1.id)&&S.freeAgents.some(x=>x.id===p1.id&&x.freeAgent);
+// 未处理 → 转会窗结束自动续约 1 年
+const p2=S.players[2];
+p2.contract=0;
+S.expiring.push(p2.id);
+endTransferWindow(S);
+const autoRenewed=p2.contract===1&&!S.expiring.length;
+// 新赛季：合同递减 + 到期收集（一致性：expiring 必须与合同<=0 的选手吻合）
+S.phase='champion';
+newSeason(S);
+const p3=S.players.find(p=>p.id===p0.id);
+const decremented=p3&&p3.contract===RENEW_YEARS-1;
+const expectExp=S.players.filter(p=>!p.loan&&(p.contract||0)<=0).map(p=>p.id);
+const expiringConsistent=expectExp.length===S.expiring.length&&expectExp.every(id=>S.expiring.includes(id));
+const renewedNotExpiring=!S.expiring.includes(p0.id);
+return JSON.stringify({renewed, released, autoRenewed, decremented, expiringConsistent, renewedNotExpiring});
+`);
+T.check(r10 === '{"renewed":true,"released":true,"autoRenewed":true,"decremented":true,"expiringConsistent":true,"renewedNotExpiring":true}', '合同续约异常: ' + r10);
+
+T.report();

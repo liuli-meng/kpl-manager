@@ -1,0 +1,1008 @@
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmt=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n));
+/* 金额专用：≤9999万 带万单位，≥1亿 换算为亿（调用点不要再手动拼「万」） */
+const fmtWan=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n))+"万";
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2200);}
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+
+const POS={top:['对抗路','对'],jg:['打野','野'],mid:['中路','中'],ad:['发育路','发'],sup:['游走','游']};
+const POS_ORDER=['top','jg','mid','ad','sup'];
+/* ================= 队徽系统 v5：KPL 真实战队品牌 =================
+ 18 支真实队伍各配一套品牌：徽章外形 + 主色/副色/描边色 + 队徽缩写文字（拉丁简称）。
+ 自建战队走同一套生成器（开局/改队徽可自选外形+配色+缩写），质感同真实战队；
+ 无品牌登记的队（K甲/挑战者/虚拟队）由队名哈希取一套配色与外形，同队永远同款。 */
+const CREST_SHAPES={
+ shield:'M20 2 37 8.5V24c0 9.2-7.3 15.6-17 18.2C10.3 39.6 3 33.2 3 24V8.5Z',
+ hex:'M20 2 35.5 10.8v22.4L20 42 4.5 33.2V10.8Z',
+ round:'M20 6C28.84 6 36 13.16 36 22s-7.16 16-16 16S4 30.84 4 22 11.16 6 20 6Z',
+ square:'M5 4h30a4 4 0 0 1 4 4v28a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4Z',
+ diamond:'M20 2 38 22 20 42 2 22Z',
+ banner:'M4 5h32v21c0 9-7.3 15.3-16 17.9C11.3 41.3 4 35 4 26Z',
+};
+const CREST_SHAPE_LIST=Object.keys(CREST_SHAPES);
+const TEAM_BRAND={
+ '成都AG超玩会':{sh:'shield',c1:'#DF2A2A',c2:'#7A0C0C',c3:'#F6C445',txt:'AG'},
+ '重庆狼队':{sh:'hex',c1:'#15171B',c2:'#F2C41B',c3:'#F2C41B',txt:'WOLF'},
+ '武汉eStarPro':{sh:'round',c1:'#101F3E',c2:'#F0A81C',c3:'#F0A81C',txt:'eStar'},
+ '北京WB':{sh:'banner',c1:'#6A2FA0',c2:'#2F1150',c3:'#E8C766',txt:'WB'},
+ '济南RW侠':{sh:'diamond',c1:'#D8232A',c2:'#16181C',c3:'#FFFFFF',txt:'RW'},
+ '广州TTG':{sh:'round',c1:'#0E9CE8',c2:'#074A77',c3:'#FFFFFF',txt:'TTG'},
+ '杭州LGD.NBW':{sh:'square',c1:'#E02B3C',c2:'#4A050E',c3:'#FFFFFF',txt:'LGD'},
+ '苏州KSG':{sh:'shield',c1:'#F2581F',c2:'#57150B',c3:'#FFD24A',txt:'KSG'},
+ '佛山DRG':{sh:'shield',c1:'#16346E',c2:'#081226',c3:'#E0A93B',txt:'DRG'},
+ '南京Hero久竞':{sh:'shield',c1:'#5B2A8C',c2:'#241040',c3:'#F0C24B',txt:'HERO'},
+ '上海EDG.M':{sh:'square',c1:'#1B3F8F',c2:'#0A1633',c3:'#CFE0FF',txt:'EDG'},
+ '深圳DYG':{sh:'hex',c1:'#FF7A00',c2:'#241100',c3:'#FFFFFF',txt:'DYG'},
+ '北京JDG':{sh:'banner',c1:'#E1251B',c2:'#6E0F0C',c3:'#FFFFFF',txt:'JDG'},
+ '长沙TES.A':{sh:'square',c1:'#C8102E',c2:'#0E0E10',c3:'#FFFFFF',txt:'TES'},
+ '上海RNG.M':{sh:'round',c1:'#F5B335',c2:'#241500',c3:'#FFFFFF',txt:'RNG'},
+ '西安WE':{sh:'shield',c1:'#1D4F9C',c2:'#0A1D3F',c3:'#FFFFFF',txt:'WE'},
+ '桐乡情久':{sh:'shield',c1:'#8E1B33',c2:'#2A0A14',c3:'#E6C789',txt:'QJ'},
+ '常山UUG':{sh:'hex',c1:'#0E8A6A',c2:'#05332A',c3:'#BFE8D8',txt:'UUG'},
+};
+/* 历史沿革队名（历代联盟史册用）：同一俱乐部跨时代沿用其传承配色，史册页同队同色观感 */
+Object.assign(TEAM_BRAND,{
+ 'AG超玩会':{sh:'shield',c1:'#DF2A2A',c2:'#7A0C0C',c3:'#F6C445',txt:'AG'},
+ 'QGhappy':{sh:'hex',c1:'#15171B',c2:'#F2C41B',c3:'#F2C41B',txt:'QG'},
+ '重庆QGhappy':{sh:'hex',c1:'#15171B',c2:'#F2C41B',c3:'#F2C41B',txt:'QG'},
+ 'Hero久竞':{sh:'shield',c1:'#5B2A8C',c2:'#241040',c3:'#F0C24B',txt:'HERO'},
+ 'RNG.M':{sh:'round',c1:'#F5B335',c2:'#241500',c3:'#FFFFFF',txt:'RNG'},
+ 'EDG.M':{sh:'square',c1:'#1B3F8F',c2:'#0A1633',c3:'#CFE0FF',txt:'EDG'},
+ 'XQ':{sh:'round',c1:'#0E9CE8',c2:'#074A77',c3:'#FFFFFF',txt:'XQ'},
+ 'JC':{sh:'hex',c1:'#FF7A00',c2:'#241100',c3:'#FFFFFF',txt:'JC'},
+ 'DYG.JC':{sh:'hex',c1:'#FF7A00',c2:'#241100',c3:'#FFFFFF',txt:'JC'},
+ 'TS':{sh:'banner',c1:'#6A2FA0',c2:'#2F1150',c3:'#E8C766',txt:'TS'},
+ 'GK':{sh:'shield',c1:'#16346E',c2:'#081226',c3:'#E0A93B',txt:'GK'},
+ '佛山GK':{sh:'shield',c1:'#16346E',c2:'#081226',c3:'#E0A93B',txt:'GK'},
+ '佛山DRG.GK':{sh:'shield',c1:'#16346E',c2:'#081226',c3:'#E0A93B',txt:'DRG'},
+ '杭州LGD大鹅':{sh:'square',c1:'#E02B3C',c2:'#4A050E',c3:'#FFFFFF',txt:'LGD'},
+ 'LGD大鹅':{sh:'square',c1:'#E02B3C',c2:'#4A050E',c3:'#FFFFFF',txt:'LGD'},
+ 'AS仙阁':{sh:'banner',c1:'#2C6E63',c2:'#0E2E29',c3:'#D8EFE8',txt:'仙阁'},
+ 'BA黑凤梨':{sh:'round',c1:'#2B2B2E',c2:'#151517',c3:'#F2C41B',txt:'BA'},
+});
+/* 自建战队可选主色盘（每项=主/副/描边 三件套），副色与描边自动配套 */
+const CREST_SWATCHES=[
+ ['#DF2A2A','#7A0C0C','#F6C445'],['#F2581F','#57150B','#FFD24A'],['#F2C41B','#4A3800','#15171B'],
+ ['#3FAE4E','#0F3D1C','#D9F2DC'],['#0E9CE8','#074A77','#FFFFFF'],['#1B3F8F','#0A1633','#CFE0FF'],
+ ['#6A2FA0','#2F1150','#E8C766'],['#E02B3C','#4A050E','#FFFFFF'],['#8E1B33','#2A0A14','#E6C789'],
+ ['#0E8A6A','#05332A','#BFE8D8'],['#FF7A00','#241100','#FFFFFF'],['#16346E','#081226','#E0A93B'],
+];
+const _escTxt=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const _lum=hex=>{ // 0..1 近似亮度，决定纹章文字用白还是深墨
+ const n=parseInt(hex.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;
+ return 0.2126*r+0.7152*g+0.0722*b;
+};
+/* 队徽缩写：优先队名里已含的拉丁缩写（AG/eStarPro 取末段字母），否则取中文名主体 1-2 字 */
+function shortMark(name,icon){
+ const s=String(name||'');
+ const lat=(s.match(/[A-Za-z0-9]+/g)||[]).filter(x=>x.length>=2);
+ if(lat.length)return lat[lat.length-1].slice(0,4);
+ const cn=s.split(/[·|｜\-—]/).pop().replace(/[^一-鿿A-Za-z0-9]/g,'');
+ if(cn)return cn.slice(0,2);
+ return String(icon||'KPL').slice(0,2);
+}
+function autoBrand(name,icon){
+ let h=5381;const s=String(name||icon||'KPL');
+ for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;
+ const c=CREST_SWATCHES[h%CREST_SWATCHES.length];
+ return {sh:CREST_SHAPE_LIST[h%CREST_SHAPE_LIST.length],c1:c[0],c2:c[1],c3:c[2],txt:shortMark(name,icon)};
+}
+function crestBrand(name,icon){
+ // 自己队优先用自定义队徽（即使队名撞了真实俱乐部名）
+ if(typeof S!=='undefined'&&S&&S.teamName&&name===S.teamName&&S.crest)return S.crest;
+ if(name&&TEAM_BRAND[name])return TEAM_BRAND[name];
+ return autoBrand(name,icon);
+}
+function teamColor(name){const b=crestBrand(name,'队');return b.c1;}
+let _crUid=0;
+function crestOf(b,s){ // 核心渲染：直接给品牌对象（生成器预览 / 正式队徽共用）
+ const z=s||22,w=Math.round(z),h=Math.round(z*44/40);
+ const body=CREST_SHAPES[b.sh]||CREST_SHAPES.shield,uid='cr'+(++_crUid);
+ const ink=_lum(b.c1)>0.6?'#15171B':'#FFFFFF';
+ let txt=_escTxt(b.txt||'KPL');
+ let fs=txt.length<=2?16.5:txt.length===3?14:txt.length===4?12.5:10.5;
+ if(z<=20)fs*=1.18; // 小尺寸（积分表）文字加大，靠色块认队
+ const yy=z<=20?25.5:24;
+ return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 40 44" style="vertical-align:middle;flex:none" aria-hidden="true">'
+ +'<clipPath id="'+uid+'"><path d="'+body+'"/></clipPath>'
+ +'<path d="'+body+'" fill="'+b.c1+'"/>'
+ +'<g clip-path="url(#'+uid+')">'
+ +'<path d="M-2 27.5L42 22v4L-2 31.5Z" fill="'+b.c3+'" opacity=".9"/>'
+ +'<path d="M-2 31.5L42 26v20H-2Z" fill="'+b.c2+'"/>'
+ +'</g>'
+ +'<path d="'+body+'" fill="none" stroke="'+b.c3+'" stroke-width="2" stroke-opacity=".95"/>'
+ +'<text x="20" y="'+yy+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="'+fs+'" font-weight="800" letter-spacing="-0.5" fill="'+ink+'">'+txt+'</text>'
+ +'</svg>';
+}
+function crest(icon,team,size){return crestOf(crestBrand(team,icon),size||22);}
+/* ================= 程序化头像 / 英雄图标 / 雷达图（2026-09 质感升级） =================
+ 无外部素材约束下给游戏补「脸」：选手=电竞 ID 卡（姓名哈希配色 + 几何纹样 + 大字 monogram +
+ 位置色角标），英雄=六边形 monogram + 位置色系（hot 金圈），雷达图=四维多边形。
+ 与 crest 同一套确定性哈希思路：同一选手/英雄永远同一张图，纯内联 SVG 零资源文件。 */
+const AVATAR_HUES=[['#2E5BFF','#7A9CFF'],['#8A3FFC','#C09AFF'],['#00A3A3','#6FD8D8'],['#C93A6B','#F08CB4'],['#C98A1B','#F2C866'],['#2FA25B','#8CD9AC'],['#C9442E','#F0927D'],['#3A6BC9','#8FB3F0'],['#8A6BC9','#C0AEF0'],['#1F8FA5','#7FC9D9']];
+const POS_HUE={top:'#E8863A',jg:'#9A6BE0',mid:'#38B6E8',ad:'#4CBF6B',sup:'#D9A93B'};
+function _hashSeed(str){let h=5381;const s=String(str||'x');for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h;}
+function avatar(p,size){
+ const z=size||34;
+ const hue=AVATAR_HUES[_hashSeed((p&&p.id)||(p&&p.name))%AVATAR_HUES.length];
+ const variant=_hashSeed(p&&p.name)%3;
+ const monogram=_escTxt(((p&&p.name)||'？').slice(0,1));
+ const posTxt=(p&&p.pos&&POS[p.pos])?POS[p.pos][1]:'';
+ const posCol=POS_HUE[p&&p.pos]||'#3A4048';
+ let pat='';
+ if(variant===0)pat='<path d="M0 44L44 0v13L13 44Z" fill="'+hue[1]+'" opacity=".2"/><path d="M0 33L33 0h9L0 42Z" fill="'+hue[0]+'" opacity=".35"/>';
+ else if(variant===1)pat='<circle cx="37" cy="7" r="15" fill="'+hue[0]+'" opacity=".32"/><circle cx="5" cy="41" r="11" fill="'+hue[1]+'" opacity=".26"/>';
+ else pat='<path d="M0 0h20L0 20Z" fill="'+hue[0]+'" opacity=".32"/><path d="M44 44H23l21-21Z" fill="'+hue[1]+'" opacity=".3"/>';
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 44 44" style="flex:none;border-radius:9px;vertical-align:middle" aria-hidden="true">'
+ +'<rect width="44" height="44" rx="9" fill="#191C22"/>'+pat
+ +'<text x="22" y="30" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="21" font-weight="800" fill="'+hue[1]+'">'+monogram+'</text>'
+ +'<path d="M0 44v-8h44v8Z" fill="'+posCol+'" opacity=".95"/>'
+ +'<text x="22" y="42.6" text-anchor="middle" font-family="Arial,sans-serif" font-size="6.2" font-weight="800" fill="#101216">'+_escTxt(posTxt)+'</text>'
+ +'<rect x=".5" y=".5" width="43" height="43" rx="8.5" fill="none" stroke="rgba(255,255,255,.15)"/>'
+ +'</svg>';
+}
+function heroIcon(name,size){
+ const z=size||20;
+ const h=(typeof HERO_BY_NAME!=='undefined'&&HERO_BY_NAME.get)?HERO_BY_NAME.get(name):null;
+ const col=POS_HUE[h&&h.pos&&h.pos[0]]||'#5A6472';
+ const hot=h&&h.hot;
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 40 40" style="flex:none;vertical-align:-3px" aria-hidden="true">'
+ +'<path d="M20 2L36 11v18L20 38 4 29V11Z" fill="#1D2129" stroke="'+(hot?'#F2C41B':col)+'" stroke-width="2"/>'
+ +'<path d="M20 2L36 11v5L4 16v-5Z" fill="'+col+'" opacity=".3"/>'
+ +'<text x="20" y="26.5" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="14" font-weight="800" fill="#E8ECF4">'+_escTxt((name||'？').slice(0,1))+'</text>'
+ +(hot?'<circle cx="33" cy="7" r="3" fill="#F2C41B"/>':'')
+ +'</svg>';
+}
+function radarSvg(p,size){ // 四维雷达（对线/运营/团战/心态，刻度 0-99）
+ const z=size||76,cx=z/2,cy=z/2,r=z/2-13;
+ const keys=['lane','farm','team','mind'],labels=['线','运','团','心'];
+ const pt=(i,v)=>{const ang=-Math.PI/2+i*Math.PI/2;return [cx+Math.cos(ang)*r*v/99,cy+Math.sin(ang)*r*v/99];};
+ let rings='';
+ [33,66,99].forEach(v=>{const ps=[0,1,2,3].map(i=>pt(i,v).map(n=>n.toFixed(1)).join(','));rings+='<polygon points="'+ps.join(' ')+'" fill="none" stroke="rgba(255,255,255,.08)"/>';});
+ const vs=keys.map(k=>clamp(p.attrs[k],0,99));
+ const poly='<polygon points="'+vs.map((v,i)=>pt(i,v).map(n=>n.toFixed(1)).join(',')).join(' ')+'" fill="rgba(92,138,245,.25)" stroke="#5c8af5" stroke-width="1.5"/>';
+ let dots='';vs.forEach((v,i)=>{const xy=pt(i,v);dots+='<circle cx="'+xy[0].toFixed(1)+'" cy="'+xy[1].toFixed(1)+'" r="2" fill="#8FB3F0"/>';});
+ let labs='';labels.forEach((l,i)=>{const xy=pt(i,116);labs+='<text x="'+xy[0].toFixed(1)+'" y="'+(xy[1]+3).toFixed(1)+'" text-anchor="middle" font-size="8" fill="#8A93A3">'+l+'</text>';});
+ return '<svg width="'+z+'" height="'+z+'" viewBox="0 0 '+z+' '+z+'" aria-hidden="true">'+rings+poly+dots+labs+'</svg>';
+}
+/* ================= 总值体系（FC26 式 OVR） =================
+ 选手唯一评价=总值（0-99）：按位置加权四维实时计算，训练/年龄/表现即时反映在数字上。
+ 身价、周薪、签约费、市场档位全部由总值曲线出；卡面色阶：90+ 金 / 80+ 蓝 / 其余灰蓝。 */
+const POS_W={top:{lane:.35,farm:.2,team:.25,mind:.2},jg:{lane:.15,farm:.4,team:.3,mind:.15},
+ mid:{lane:.3,farm:.2,team:.3,mind:.2},ad:{lane:.3,farm:.35,team:.2,mind:.15},
+ sup:{lane:.15,farm:.2,team:.3,mind:.35}};
+function overall(p){
+ const w=POS_W[(p&&p.pos)]||{lane:.25,farm:.25,team:.3,mind:.2};
+ const a=(p&&p.attrs)||{lane:70,farm:70,team:70,mind:70};
+ return clamp(Math.round((a.lane||70)*w.lane+(a.farm||70)*w.farm+(a.team||70)*w.team+(a.mind||70)*w.mind),1,99);
+}
+function ovrColor(o){return o>=90?'#ffb84d':o>=80?'#5aa7ff':'#7d93b8';}
+function ovrCls(o){return o>=90?'ssr':o>=80?'sr':'r';} // 复用旧卡面色阶样式
+const _curve=(pts,o)=>{
+ if(o<=pts[0][0])return pts[0][1];
+ for(let i=1;i<pts.length;i++)if(o<=pts[i][0]){
+ const A=pts[i-1],B=pts[i];return Math.round(A[1]+(B[1]-A[1])*(o-A[0])/(B[0]-A[0]));
+ }
+ return pts[pts.length-1][1];
+};
+/* 总值→签约身价（万）：2026-09 真实经济对齐（KPL 转会封顶 1500 万 ⇒ 顶星身价曲线顶格 ≈670，
+ 配合意愿/强挖倍率后顶星摸到 1500 天花板；原千万级刻度 ÷6） */
+const VALUE_PTS=[[40,10],[50,25],[60,50],[66,75],[72,110],[76,165],[80,235],[84,310],[88,400],[92,475],[96,560],[99,670]];
+const valueOf=o=>_curve(VALUE_PTS,o);
+/* 总值→周薪曲线（万）：同步 ÷6（个人顶薪封顶 70，见 transfer.js PLAYER_WAGE_MAX） */
+const WAGE_PTS=[[40,2],[50,3],[60,6],[66,8],[72,12],[76,17],[80,23],[85,35],[90,47],[96,58],[99,67]];
+const wageOf=o=>_curve(WAGE_PTS,o);
+const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
+ {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
+/* 赞助商：升级同时需要资金与粉丝（fans，单位万）——把"成绩 → 粉丝 → 商业"接成一条链 */
+const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:15,cost:0,fans:0},
+ {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:40,cost:250,fans:20},
+ {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:90,cost:650,fans:80},
+ {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:180,cost:1650,fans:200}];
+const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
+
+/* ================= 英雄池（KPL 常用英雄 · 含摇摆位） =================
+ n:英雄名 pos:可打位置[主位,...摇摆位] t:倾向(对线lane/运营farm/团战team/心态mind) hot:版本热门 */
+const HEROES=[
+ // ===== 对抗路 =====
+ {n:'姬小满',pos:['top'],t:'lane',hot:1},{n:'花木兰',pos:['top'],t:'lane'},
+ {n:'关羽',pos:['top'],t:'lane',hot:1},{n:'马超',pos:['top'],t:'lane'},
+ {n:'吕布',pos:['top'],t:'team'},{n:'狂铁',pos:['top'],t:'lane'},
+ {n:'廉颇',pos:['top','sup'],t:'team'},{n:'猪八戒',pos:['top','sup'],t:'farm',hot:1},
+ {n:'孙策',pos:['top'],t:'team'},{n:'白起',pos:['top','sup'],t:'team'},
+ {n:'蒙恬',pos:['top'],t:'team'},{n:'达摩',pos:['top'],t:'lane'},
+ {n:'夏洛特',pos:['top'],t:'lane'},{n:'老夫子',pos:['top'],t:'lane'},
+ {n:'夏侯惇',pos:['top','jg','sup'],t:'farm',hot:1},{n:'司空震',pos:['top','jg'],t:'team'},
+ {n:'亚连',pos:['top'],t:'team',hot:1},{n:'刘邦',pos:['top','sup'],t:'farm'},
+ {n:'杨戬',pos:['top','jg'],t:'lane',hot:1},{n:'大司命',pos:['jg','top'],t:'farm',hot:1},
+ // ===== 打野 =====
+ {n:'镜',pos:['jg'],t:'team',hot:1},{n:'澜',pos:['jg'],t:'team'},
+ {n:'娜可露露',pos:['jg'],t:'team'},{n:'兰陵王',pos:['jg','sup'],t:'farm',hot:1},
+ {n:'裴擒虎',pos:['jg'],t:'farm'},{n:'露娜',pos:['jg'],t:'lane'},
+ {n:'李白',pos:['jg'],t:'team'},{n:'韩信',pos:['jg'],t:'lane'},
+ {n:'云缨',pos:['jg'],t:'team'},{n:'梦奇',pos:['top','jg'],t:'team'},
+ {n:'曜',pos:['jg','top'],t:'lane'},{n:'阿古朵',pos:['jg'],t:'farm'},
+ {n:'铠',pos:['jg','top'],t:'team'},{n:'宫本武藏',pos:['jg'],t:'team'},
+ {n:'盘古',pos:['jg'],t:'farm'},{n:'嫦娥',pos:['jg','mid'],t:'farm'},
+ // ===== 中路 =====
+ {n:'西施',pos:['mid','sup'],t:'team'},{n:'干将莫邪',pos:['mid'],t:'lane'},
+ {n:'不知火舞',pos:['mid'],t:'team'},{n:'沈梦溪',pos:['mid'],t:'farm'},
+ {n:'王昭君',pos:['mid','sup'],t:'mind'},{n:'安琪拉',pos:['mid'],t:'team'},
+ {n:'姜子牙',pos:['mid','sup'],t:'farm'},{n:'弈星',pos:['mid'],t:'farm'},
+ {n:'张良',pos:['mid','sup'],t:'mind'},{n:'女娲',pos:['mid'],t:'farm'},
+ {n:'貂蝉',pos:['mid'],t:'lane'},{n:'上官婉儿',pos:['mid'],t:'lane'},
+ {n:'百里守约',pos:['ad','mid'],t:'lane',hot:1},{n:'海月',pos:['mid'],t:'farm',hot:1},
+ {n:'金蝉',pos:['mid','sup'],t:'mind'},{n:'周瑜',pos:['mid'],t:'farm'},
+ {n:'嬴政',pos:['mid'],t:'farm'},
+ // ===== 发育路 =====
+ {n:'公孙离',pos:['ad'],t:'team',hot:1},{n:'孙尚香',pos:['ad'],t:'lane'},
+ {n:'马可波罗',pos:['ad'],t:'team'},{n:'虞姬',pos:['ad'],t:'lane'},
+ {n:'鲁班七号',pos:['ad'],t:'farm'},{n:'伽罗',pos:['ad'],t:'farm'},
+ {n:'后羿',pos:['ad'],t:'farm'},{n:'狄仁杰',pos:['ad'],t:'lane'},
+ {n:'李元芳',pos:['ad','jg'],t:'farm'},{n:'艾琳',pos:['ad'],t:'lane'},
+ {n:'黄忠',pos:['ad'],t:'team'},{n:'莱西奥',pos:['ad'],t:'team'},
+ {n:'戈娅',pos:['ad'],t:'farm',hot:1},{n:'蒙犽',pos:['ad'],t:'lane'},
+ // ===== 游走 =====
+ {n:'鬼谷子',pos:['sup'],t:'team'},{n:'张飞',pos:['sup'],t:'team',hot:1},
+ {n:'大乔',pos:['sup','mid'],t:'farm'},{n:'盾山',pos:['sup'],t:'lane'},
+ {n:'太乙真人',pos:['sup'],t:'farm'},{n:'牛魔',pos:['sup'],t:'team'},
+ {n:'苏烈',pos:['sup','top'],t:'team'},{n:'明世隐',pos:['sup'],t:'farm'},
+ {n:'孙膑',pos:['sup','mid'],t:'farm'},{n:'鲁班大师',pos:['sup'],t:'team'},
+ {n:'桑启',pos:['sup'],t:'team'},{n:'墨子',pos:['sup','mid'],t:'farm'},
+ {n:'东皇太一',pos:['sup'],t:'team'},{n:'庄周',pos:['sup'],t:'mind'},
+ {n:'刘禅',pos:['sup'],t:'team'},
+];
+const TYPE_NAME={lane:'对线型',farm:'运营型',team:'团战型',mind:'心态型'};
+/* 英雄按名索引：heroOf 是最热查询（战力结算/BP/渲染每步都查），静态表建 Map 一次 */
+const HERO_BY_NAME={};
+HEROES.forEach(h=>{HERO_BY_NAME[h.n]=h;});
+
+/* ================= 选手池（KPL 真实选手 + 主播 + K甲新秀） =================
+ name: 选手ID, team: 所属战队（羁绊依据）, tags: 主播 / K甲新秀
+ base: 四维基准=选手真实评级，直接决定总值（如清融[94,90,92,91]→总值92） */
+const PLAYER_POOL=[
+ // ===== 对抗路 =====
+ {id:'top1',name:'fly',pos:'top',team:'传奇',tags:[],base:[93,89,90,94],skill:{n:'花木兰绝活',t:'lane',d:'对线属性额外+12%'},sig:'花木兰',career:'2017年出道于QGhappy，6次总冠军+5次FMVP，KPL历史第一对抗路，花木兰绝活哥。'},
+ {id:'top2',name:'清清',pos:'top',team:'WB',tags:[],base:[91,86,89,88],skill:{n:'马超神威',t:'lane',d:'对线+12%，切C无情'},sig:'马超',career:'2019年出道于DYG.JC，2021年随广州TTG夺冠，巅峰期被称为"第一边路"，马超/关羽绝活。'},
+ {id:'top3',name:'坦然',pos:'top',team:'eStar',tags:[],base:[89,87,93,90],skill:{n:'吕布战神',t:'team',d:'团战属性额外+12%'},sig:'吕布',career:'eStarPro三冠主力对抗路，2021年世冠FMVP，吕布战神，坦然自若。'},
+ {id:'top4',name:'轩染',pos:'top',team:'AG',tags:[],base:[88,86,92,89],skill:{n:'姬小满绝活',t:'team',d:'团战+12%'},sig:'姬小满',career:'成都AG超玩会新生代对抗路，2025年随AG拿下春季赛+夏季赛+年度总冠军。'},
+ {id:'top5',name:'梓墨',pos:'top',team:'WB',tags:[],base:[90,88,88,87],skill:{n:'关羽一刀',t:'farm',d:'运营+12%，团战绕后'},sig:'关羽',career:'eStar青训出身，2022年转会北京WB成为对抗路核心，关羽一刀斩。'},
+ {id:'top6',name:'归期',pos:'top',team:'狼队',tags:[],base:[82,78,80,81],skill:{n:'狂铁抗压',t:'lane',d:'对线+10%'},sig:'狂铁',career:'重庆狼队对抗路，2023年KPL春季赛冠军成员，姬小满/狂铁绝活。'},
+ {id:'top7',name:'百兽',pos:'top',team:'DRG',tags:[],base:[80,77,83,79],skill:{n:'猪八戒摇摆',t:'team',d:'团战+10%'},sig:'猪八戒',career:'佛山DRG对抗路，KPL老牌边路，猪八戒摇摆出名。'},
+ {id:'top8',name:'苏沫',pos:'top',team:'TES.A',tags:[],base:[79,76,78,80],skill:{n:'蒙恬无双',t:'lane',d:'对线+10%'},sig:'蒙恬',career:'长沙TES.A对抗路，蒙恬绝活，大赛型选手。'},
+ {id:'top9',name:'无痕',pos:'top',team:'传奇',tags:[],base:[81,75,80,83],skill:{n:'梦奇捣蛋',t:'mind',d:'心态+10%，老将风采'},sig:'梦奇',career:'eStarPro传奇对抗路，2019年冠军，梦奇绝活，"无痕=梦奇"。'},
+ {id:'top10',name:'酷偕',pos:'top',team:'XYG',tags:['青训'],base:[68,66,67,65],skill:{n:'廉颇开团',t:'team',d:'团战+8%'},sig:'廉颇',career:'XYG对抗路，从全国大赛一路打进KPL，K甲励志代表。'},
+ // ===== 打野 =====
+ {id:'jg1',name:'梦泪',pos:'jg',team:'主播',tags:['主播'],base:[92,90,88,93],skill:{n:'韩信偷家',t:'farm',d:'运营属性额外+12%，经典名场面'},sig:'韩信',career:'AG超玩会传奇打野，2016年出道，韩信偷家名场面缔造者，现为顶流主播。'},
+ {id:'jg2',name:'暖阳',pos:'jg',team:'WB',tags:[],base:[88,95,92,90],skill:{n:'镜之舞',t:'farm',d:'运营属性额外+12%'},sig:'镜',career:'北京WB（原TS）打野，2020年双冠+双FMVP，镜/兰陵王绝活。'},
+ {id:'jg3',name:'花海',pos:'jg',team:'eStar',tags:[],base:[87,93,94,89],skill:{n:'娜可露露收割',t:'team',d:'团战属性额外+12%'},sig:'娜可露露',career:'eStarPro打野，2021-2022年四冠+FMVP，娜可露露/镜绝活，KPL顶级野核。'},
+ {id:'jg4',name:'钟意',pos:'jg',team:'AG',tags:[],base:[89,93,91,88],skill:{n:'镜澜双修',t:'farm',d:'运营+12%'},sig:'澜',career:'AG超玩会打野，2024年KPL夏季赛冠军+FMVP，镜/澜双修。'},
+ {id:'jg5',name:'小胖',pos:'jg',team:'狼队',tags:[],base:[90,94,90,87],skill:{n:'胖皇野核',t:'farm',d:'运营+12%，野区统治'},sig:'裴擒虎',career:'重庆狼队打野，2021年世冠冠军，裴擒虎/八戒野核，操作天花板之一。'},
+ {id:'jg6',name:'无畏',pos:'jg',team:'Hero',tags:[],base:[87,92,90,91],skill:{n:'兰陵王节奏',t:'farm',d:'运营+12%'},sig:'兰陵王',career:'南京Hero久竞打野，2020年双冠，兰陵王绝活，人气与实力兼备。'},
+ {id:'jg7',name:'今屿',pos:'jg',team:'KSG',tags:[],base:[80,82,78,76],skill:{n:'阿古朵节奏',t:'farm',d:'运营+10%'},sig:'阿古朵',career:'苏州KSG打野，KPL中坚打野，裴擒虎/阿古朵节奏型。'},
+ {id:'jg8',name:'鹏鹏',pos:'jg',team:'DRG',tags:[],base:[78,80,81,77],skill:{n:'云缨控图',t:'farm',d:'运营+10%'},sig:'云缨',career:'佛山DRG打野，老牌野核，云缨/阿古朵绝活。'},
+ {id:'jg9',name:'九月',pos:'jg',team:'XYG',tags:['青训'],base:[76,78,79,75],skill:{n:'梦奇开团',t:'team',d:'团战+10%'},sig:'梦奇',career:'XYG打野，从K甲打上KPL，澜/梦奇绝活。'},
+ {id:'jg10',name:'孤影',pos:'jg',team:'主播',tags:['主播'],base:[79,77,75,78],skill:{n:'露娜无限连',t:'lane',d:'对线+10%'},sig:'露娜',career:'虎牙人气主播，露娜月下无限连的缔造者之一，直播教学顶流。'},
+ {id:'jg11',name:'剑仙',pos:'jg',team:'主播',tags:['主播'],base:[77,76,82,74],skill:{n:'李白十步一杀',t:'team',d:'团战+10%'},sig:'李白',career:'虎牙主播，李白绝活哥，"十步杀一人"的李白代言人。'},
+ // ===== 中路 =====
+ {id:'mid1',name:'清融',pos:'mid',team:'eStar',tags:[],base:[94,90,92,91],skill:{n:'西施王',t:'team',d:'团战属性额外+12%'},sig:'西施',career:'Hero/eStar双队传奇中单，2021年三冠+双FMVP，西施王，KPL历史第一中单。'},
+ {id:'mid2',name:'九尾',pos:'mid',team:'TTG',tags:[],base:[93,88,91,89],skill:{n:'不知火舞法刺',t:'team',d:'团战+12%'},sig:'不知火舞',career:'广州TTG中单，法刺代言人，不知火舞绝活，2021年亚军。'},
+ {id:'mid3',name:'长生',pos:'mid',team:'AG',tags:[],base:[92,89,90,88],skill:{n:'沈梦溪节奏',t:'lane',d:'对线+12%'},sig:'沈梦溪',career:'AG超玩会中单，2024-2025年连续夺冠，沈梦溪/海月绝活。'},
+ {id:'mid4',name:'向鱼',pos:'mid',team:'狼队',tags:[],base:[90,91,89,92],skill:{n:'工具人王昭君',t:'mind',d:'心态+12%，无私奉献'},sig:'王昭君',career:'重庆狼队中单，2023年冠军，王昭君工具人典范。'},
+ {id:'mid5',name:'久诚',pos:'mid',team:'传奇',tags:[],base:[93,87,89,90],skill:{n:'干将莫邪百发百中',t:'lane',d:'对线属性额外+12%'},sig:'干将莫邪',career:'Hero三冠中单，2020年世冠FMVP，干将莫邪百发百中的"狙神"。'},
+ {id:'mid6',name:'花卷',pos:'mid',team:'WB',tags:[],base:[81,80,79,78],skill:{n:'安琪拉爆发',t:'team',d:'团战+10%'},sig:'安琪拉',career:'北京WB中单，安琪拉绝活，2020年TS双冠成员。'},
+ {id:'mid7',name:'萧玦',pos:'mid',team:'DYG',tags:[],base:[80,77,76,81],skill:{n:'守约狙神',t:'lane',d:'对线+10%'},sig:'百里守约',career:'深圳DYG中单，2020年KPL秋季赛冠军，百里守约狙神。'},
+ {id:'mid8',name:'青枫',pos:'mid',team:'DRG',tags:[],base:[78,79,77,80],skill:{n:'姜子牙老将',t:'mind',d:'心态+10%'},sig:'姜子牙',career:'佛山DRG中单，KPL常青树老将，姜子牙绝活。'},
+ {id:'mid9',name:'灵梦',pos:'mid',team:'XYG',tags:['青训'],base:[77,76,78,76],skill:{n:'弈星新星',t:'farm',d:'运营+10%'},sig:'弈星',career:'XYG中单，从K甲打上KPL，沈梦溪/弈星绝活。'},
+ {id:'mid10',name:'张大仙',pos:'mid',team:'主播',tags:['主播'],base:[88,85,84,95],skill:{n:'仙术教学',t:'mind',d:'心态属性额外+12%，全队开心'},sig:'女娲',career:'斗鱼一哥，XYG战队老板，女娲/露娜教学，"仙术"流主播。'},
+ {id:'mid11',name:'骚白',pos:'mid',team:'主播',tags:['主播'],base:[80,75,79,82],skill:{n:'中单五杀',t:'team',d:'团战+10%'},sig:'貂蝉',career:'快手头部主播，貂蝉五杀名场面，技术流代表。'},
+ // ===== 发育路 =====
+ {id:'ad1',name:'一诺',pos:'ad',team:'AG',tags:[],base:[95,90,93,90],skill:{n:'公孙离刀尖跳舞',t:'team',d:'团战属性额外+12%'},sig:'公孙离',career:'AG超玩会发育路，2019年KPL秋季赛冠军，2023年世冠FMVP，公孙离绝活，人气顶流。'},
+ {id:'ad2',name:'妖刀',pos:'ad',team:'狼队',tags:[],base:[93,91,90,89],skill:{n:'孙尚香翻滚',t:'lane',d:'对线属性额外+12%'},sig:'孙尚香',career:'重庆狼队发育路，2021年冠军，孙尚香/狄仁杰绝活。'},
+ {id:'ad3',name:'易峥',pos:'ad',team:'eStar',tags:[],base:[90,89,92,88],skill:{n:'马可波罗无畏',t:'team',d:'团战+12%'},sig:'马可波罗',career:'eStarPro发育路，2021-2022年四冠，马可波罗绝活，敢打敢拼。'},
+ {id:'ad4',name:'乔兮',pos:'ad',team:'WB',tags:[],base:[81,80,80,79],skill:{n:'虞姬稳健',t:'lane',d:'对线+10%'},sig:'虞姬',career:'北京WB发育路，虞姬绝活，稳定Carry。'},
+ {id:'ad5',name:'梦岚',pos:'ad',team:'DRG',tags:[],base:[80,78,83,76],skill:{n:'鲁班炮台',t:'team',d:'团战+10%'},sig:'鲁班七号',career:'佛山DRG发育路，鲁班七号绝活，"炮台"代言人。'},
+ {id:'ad6',name:'小义',pos:'ad',team:'DYG',tags:[],base:[79,82,78,77],skill:{n:'野射双修',t:'farm',d:'运营+10%'},sig:'李元芳',career:'深圳DYG发育路，2020年冠军+FMVP，野射双修的全能王。'},
+ {id:'ad7',name:'秀豆',pos:'ad',team:'XYG',tags:['青训'],base:[78,77,76,75],skill:{n:'公孙离秀豆',t:'lane',d:'对线+10%'},sig:'公孙离',career:'XYG发育路，公孙离绝活，从K甲打上KPL。'},
+ {id:'ad8',name:'绝意',pos:'ad',team:'LGD',tags:[],base:[77,76,79,76],skill:{n:'孙尚香滚翻',t:'team',d:'团战+10%'},sig:'孙尚香',career:'杭州LGD.NBW发育路，新生代射手，孙尚香绝活。'},
+ {id:'ad9',name:'小玖',pos:'ad',team:'KSG',tags:[],base:[78,77,77,77],skill:{n:'伽罗长弓',t:'farm',d:'运营+10%'},sig:'伽罗',career:'苏州KSG发育路，伽罗绝活，大后期保证。'},
+ // ===== 游走 =====
+ {id:'sup1',name:'cat',pos:'sup',team:'传奇',tags:[],base:[86,93,91,94],skill:{n:'老猫指挥',t:'farm',d:'运营属性额外+12%，全队大脑'},sig:'鲁班大师',career:'2016年出道，7次总冠军+2次FMVP，2019年转会RNG.M，KPL历史第一辅助/中单双位置传奇。'},
+ {id:'sup2',name:'子阳',pos:'sup',team:'eStar',tags:[],base:[85,92,94,90],skill:{n:'鬼谷子开团',t:'team',d:'团战属性额外+12%'},sig:'鬼谷子',career:'eStarPro游走，2021-2022年三冠+FMVP，鬼谷子/张飞绝活，开团机器。'},
+ {id:'sup3',name:'大帅',pos:'sup',team:'AG',tags:[],base:[86,92,91,89],skill:{n:'大乔体系',t:'farm',d:'运营+12%'},sig:'大乔',career:'AG超玩会游走，2024-2025年冠军主力，大乔体系核心。'},
+ {id:'sup4',name:'帆帆',pos:'sup',team:'狼队',tags:[],base:[87,91,93,88],skill:{n:'张飞怒吼',t:'team',d:'团战+12%'},sig:'张飞',career:'狼队/TTG游走，2021-2023年三冠，张飞怒吼开团，冠军辅助。'},
+ {id:'sup5',name:'星宇',pos:'sup',team:'WB',tags:[],base:[80,81,79,78],skill:{n:'盾山铁壁',t:'lane',d:'对线+10%'},sig:'盾山',career:'北京WB游走，盾山绝活，2020年TS双冠成员。'},
+ {id:'sup6',name:'久酷',pos:'sup',team:'Hero',tags:[],base:[78,80,80,79],skill:{n:'太乙真人',t:'farm',d:'运营+10%'},sig:'太乙真人',career:'南京Hero久竞游走，2020年双冠，太乙真人绝活。'},
+ {id:'sup7',name:'羲和',pos:'sup',team:'XYG',tags:['青训'],base:[76,78,77,75],skill:{n:'牛魔开团',t:'team',d:'团战+10%'},sig:'牛魔',career:'XYG游走，牛魔绝活，从K甲打上KPL。'},
+ {id:'sup8',name:'阿改',pos:'sup',team:'DRG',tags:[],base:[77,79,78,77],skill:{n:'苏烈复活',t:'team',d:'团战+10%'},sig:'苏烈',career:'佛山DRG游走，苏烈绝活，老将辅助。'},
+ {id:'sup9',name:'蓝烟',pos:'sup',team:'主播',tags:['主播'],base:[76,77,75,79],skill:{n:'明世隐牵线',t:'farm',d:'运营+10%'},sig:'明世隐',career:'虎牙主播，明世隐绝活，"明世隐创始人"。'},
+ {id:'top11',name:'凌隐',pos:'top',team:'JDG',tags:[],base:[87,91,91,90],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'达摩',career:'2024年出道，效力JDG，对抗路稳定轮换。'},
+ {id:'jg12',name:'白露',pos:'jg',team:'JDG',tags:[],base:[89,91,88,88],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'曜',career:'辗转多队后加盟JDG，以打野路扎实基本功著称。'},
+ {id:'mid12',name:'玄夜',pos:'mid',team:'JDG',tags:[],base:[91,90,88,89],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'姜子牙',career:'性格沉稳，JDG的中路定海神针。'},
+ {id:'ad10',name:'赤影',pos:'ad',team:'JDG',tags:[],base:[82,83,81,80],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'伽罗',career:'2019年出道，效力JDG，发育路稳定轮换。'},
+ {id:'sup10',name:'青鸾',pos:'sup',team:'JDG',tags:[],base:[79,79,80,78],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'白起',career:'2021年自青训提拔，JDG重点培养的游走路新星。'},
+ {id:'sup11',name:'听雨',pos:'sup',team:'RW侠',tags:[],base:[80,79,81,78],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'姜子牙',career:'性格沉稳，RW侠的游走路定海神针。'},
+ {id:'top12',name:'望舒',pos:'top',team:'TTG',tags:[],base:[83,82,80,79],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'铠',career:'2022年出道，效力TTG，对抗路稳定轮换。'},
+ {id:'jg13',name:'疏影',pos:'jg',team:'TTG',tags:[],base:[83,81,79,79],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'盘古',career:'性格沉稳，TTG的打野路定海神针。'},
+ {id:'mid13',name:'流苏',pos:'mid',team:'KSG',tags:[],base:[83,80,81,80],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'墨子',career:'2022年出道，效力KSG，中路稳定轮换。'},
+ {id:'ad11',name:'拂晓',pos:'ad',team:'TTG',tags:[],base:[83,83,78,83],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'莱西奥',career:'辗转多队后加盟TTG，以发育路扎实基本功著称。'},
+ {id:'sup12',name:'听澜',pos:'sup',team:'KSG',tags:[],base:[78,78,82,82],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'姜子牙',career:'2021年登上KPL舞台，KSG的游走路答案。'},
+ {id:'sup13',name:'折镜',pos:'sup',team:'TTG',tags:[],base:[82,78,78,78],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'庄周',career:'辗转多队后加盟TTG，以游走路扎实基本功著称。'},
+ {id:'top13',name:'孤鸿',pos:'top',team:'DYG',tags:[],base:[75,77,74,75],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'蒙恬',career:'2024年自青训提拔，DYG重点培养的对抗路新星。'},
+ {id:'jg14',name:'寒鸦',pos:'jg',team:'DYG',tags:[],base:[74,78,75,75],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'盘古',career:'性格沉稳，DYG的打野路定海神针。'},
+ {id:'ad12',name:'惊鸿',pos:'ad',team:'Hero',tags:[],base:[80,78,78,76],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'马可波罗',career:'2019年自青训提拔，Hero重点培养的发育路新星。'},
+ {id:'sup14',name:'鹤归',pos:'sup',team:'DYG',tags:[],base:[76,78,79,76],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'张良',career:'2021年登上KPL舞台，DYG的游走路答案。'},
+ {id:'top14',name:'竹隐',pos:'top',team:'KSG',tags:[],base:[80,74,74,75],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'刘邦',career:'2020年登上KPL舞台，苏州KSG的对抗路答案。'},
+ {id:'jg15',name:'松间',pos:'jg',team:'TES.A',tags:[],base:[79,80,75,78],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'裴擒虎',career:'辗转多队后加盟TES.A，以打野路扎实基本功著称。'},
+ {id:'mid14',name:'墨白',pos:'mid',team:'TES.A',tags:[],base:[77,79,78,76],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'姜子牙',career:'性格沉稳，TES.A的中路定海神针。'},
+ {id:'ad13',name:'霜华',pos:'ad',team:'TES.A',tags:[],base:[78,78,76,75],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'蒙犽',career:'性格沉稳，TES.A的发育路定海神针。'},
+ {id:'jg16',name:'云归',pos:'jg',team:'EDG.M',tags:[],base:[74,72,77,71],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'梦奇',career:'性格沉稳，EDG.M的打野路定海神针。'},
+ {id:'mid15',name:'星回',pos:'mid',team:'EDG.M',tags:[],base:[72,77,71,71],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'嬴政',career:'2021年自青训提拔，EDG.M重点培养的中路新星。'},
+ {id:'ad14',name:'夜白',pos:'ad',team:'EDG.M',tags:[],base:[71,77,75,70],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'马可波罗',career:'辗转多队后加盟EDG.M，以发育路扎实基本功著称。'},
+ {id:'sup15',name:'长歌',pos:'sup',team:'EDG.M',tags:[],base:[72,74,78,75],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'姜子牙',career:'2023年自青训提拔，EDG.M重点培养的游走路新星。'},
+ {id:'top15',name:'逐风',pos:'top',team:'LGD',tags:[],base:[74,73,70,72],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'刘邦',career:'性格沉稳，LGD的对抗路定海神针。'},
+ {id:'jg17',name:'踏月',pos:'jg',team:'LGD',tags:[],base:[75,77,75,70],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'铠',career:'辗转多队后加盟LGD，以打野路扎实基本功著称。'},
+ {id:'mid16',name:'掠影',pos:'mid',team:'LGD',tags:[],base:[75,72,73,71],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'海月',career:'2019年出道，效力LGD，中路稳定轮换。'},
+ {id:'sup16',name:'断岳',pos:'sup',team:'LGD',tags:[],base:[78,77,71,70],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'东皇太一',career:'性格沉稳，LGD的游走路定海神针。'},
+ {id:'top16',name:'裂空',pos:'top',team:'RNG.M',tags:[],base:[70,76,77,71],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'老夫子',career:'2019年自青训提拔，RNG.M重点培养的对抗路新星。'},
+ {id:'mid17',name:'潮生',pos:'mid',team:'RNG.M',tags:[],base:[78,76,76,78],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'安琪拉',career:'2022年出道，效力RNG.M，中路稳定轮换。'},
+ {id:'ad15',name:'岚翎',pos:'ad',team:'RNG.M',tags:[],base:[70,77,78,76],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'马可波罗',career:'辗转多队后加盟RNG.M，以发育路扎实基本功著称。'},
+ {id:'top17',name:'青崖',pos:'top',team:'WE',tags:[],base:[70,74,78,75],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'马超',career:'性格沉稳，WE的对抗路定海神针。'},
+ {id:'jg18',name:'渡鸦',pos:'jg',team:'WE',tags:[],base:[74,76,70,72],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'云缨',career:'辗转多队后加盟WE，以打野路扎实基本功著称。'},
+ {id:'ad16',name:'驰野',pos:'ad',team:'WE',tags:[],base:[73,71,74,70],skill:{n:'团战体系',t:'team',d:'团战属性额外+10%'},sig:'蒙犽',career:'2023年自青训提拔，WE重点培养的发育路新星。'},
+ {id:'sup17',name:'拓野',pos:'sup',team:'WE',tags:[],base:[75,77,72,77],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'姜子牙',career:'2021年自青训提拔，WE重点培养的游走路新星。'},
+ {id:'top18',name:'燃秋',pos:'top',team:'情久',tags:[],base:[73,76,78,77],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'狂铁',career:'性格沉稳，情久的对抗路定海神针。'},
+ {id:'jg19',name:'拾光',pos:'jg',team:'情久',tags:[],base:[76,74,75,73],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'娜可露露',career:'辗转多队后加盟情久，以打野路扎实基本功著称。'},
+ {id:'ad17',name:'南屿',pos:'ad',team:'情久',tags:[],base:[73,77,71,76],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'伽罗',career:'性格沉稳，情久的发育路定海神针。'},
+ {id:'sup18',name:'北辰',pos:'sup',team:'情久',tags:[],base:[70,77,74,73],skill:{n:'线霸体系',t:'lane',d:'对线属性额外+10%'},sig:'桑启',career:'2023年自青训提拔，情久重点培养的游走路新星。'},
+ {id:'top19',name:'风眠',pos:'top',team:'UUG',tags:[],base:[75,71,78,75],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'老夫子',career:'2019年出道，效力UUG，对抗路稳定轮换。'},
+ {id:'mid18',name:'亦驰',pos:'mid',team:'UUG',tags:[],base:[76,76,71,77],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'沈梦溪',career:'2024年登上KPL舞台，UUG的中路答案。'},
+ {id:'ad18',name:'九章',pos:'ad',team:'UUG',tags:[],base:[75,75,72,74],skill:{n:'运营体系',t:'farm',d:'运营属性额外+10%'},sig:'莱西奥',career:'2022年登上KPL舞台，UUG的发育路答案。'},
+ {id:'sup19',name:'抱朴',pos:'sup',team:'UUG',tags:[],base:[71,72,70,77],skill:{n:'大心脏体系',t:'mind',d:'心态属性额外+10%'},sig:'白起',career:'2023年自青训提拔，UUG重点培养的游走路新星。'}
+];
+/* 战队羁绊：上场选手中同队人数达到阈值触发（真实电竞经理核心玩法） */
+const TEAM_BONDS={
+ 'AG': {min:3,full:5,bonusMin:5,bonusFull:12,descMin:'AG超玩会羁绊（≥3人）：全队战力+5%',descFull:'AG超玩会全阵容出战！全队战力+12%'},
+ 'eStar': {min:3,full:5,bonusMin:5,bonusFull:12,descMin:'eStarPro羁绊（≥3人）：全队战力+5%',descFull:'eStarPro全阵容出战！全队战力+12%'},
+ '狼队': {min:3,full:5,bonusMin:5,bonusFull:12,descMin:'重庆狼队羁绊（≥3人）：全队战力+5%',descFull:'重庆狼队全阵容出战！全队战力+12%'},
+ 'WB': {min:3,full:5,bonusMin:4,bonusFull:10,descMin:'北京WB羁绊（≥3人）：全队战力+4%',descFull:'北京WB全阵容出战！全队战力+10%'},
+ '传奇': {min:2,full:3,bonusMin:4,bonusFull:10,descMin:'传奇选手并肩（≥2人）：全队战力+4%',descFull:'fly·久诚·cat 三冠传奇合体！全队战力+10%'},
+ '主播': {min:3,full:5,bonusMin:5,bonusFull:12,descMin:'主播天团（≥3人）：全队战力+5%',descFull:'主播天团满编！流量拉满，全队战力+12%'},
+ 'XYG': {min:3,full:5,bonusMin:4,bonusFull:10,descMin:'XYG青训羁绊（≥3人）：全队战力+4%',descFull:'XYG全阵容出战！张大仙狂喜，全队战力+10%'},
+ 'DRG': {min:3,full:5,bonusMin:3,bonusFull:8,descMin:'佛山DRG羁绊（≥3人）：全队战力+3%',descFull:'佛山DRG全阵容出战！全队战力+8%'},
+};
+
+/* ================= 对手战队（2025 KPL 全部 18 队，玩家加入后 17 支 AI） ================= */
+const AI_TEAMS=[
+ // power 与 CLUB_TEMPLATES.seed 对齐（aiTierOf 两表都读；错位会让 JDG/LGD 等队难度档与执教模板矛盾）
+ {name:'常山UUG',icon:'猿',power:390},
+ {name:'桐乡情久',icon:'灯',power:400},
+ {name:'西安WE',icon:'狼',power:410},
+ {name:'长沙TES.A',icon:'拳',power:450},
+ {name:'上海RNG.M',icon:'狮',power:420},
+ {name:'北京JDG',icon:'鹰',power:570},
+ {name:'深圳DYG',icon:'影',power:480},
+ {name:'上海EDG.M',icon:'电',power:440},
+ {name:'南京Hero久竞',icon:'影',power:460},
+ {name:'佛山DRG',icon:'龙',power:500},
+ {name:'苏州KSG',icon:'虎',power:500},
+ {name:'杭州LGD.NBW',icon:'狼',power:430},
+ {name:'广州TTG',icon:'环',power:540},
+ {name:'济南RW侠',icon:'剑',power:560},
+ {name:'北京WB',icon:'熊',power:580},
+ {name:'武汉eStarPro',icon:'★',power:600},
+ {name:'重庆狼队',icon:'狼',power:620},
+ {name:'成都AG超玩会',icon:'焰',power:640},
+];
+/* KPL 2025 官方赛制常量 */
+const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）
+
+/* ================= 教练池（真实 KPL 主教练） =================
+ bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费
+ 经济刻度：与工资帽 150 同步 ÷6——顶帅周薪 ~53（约帽的 1/3），中坚 22~27，助教位 12 */
+const COACH_POOL=[
+ {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
+ {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
+ {id:'co3',name:'久哲',rating:90,style:'lane',bonus:9,styleBonus:6,wage:50,cost:500,skill:{n:'五冠哲神',d:'全队战力+9%，对线属性额外+6%（Hero王朝奠基人）'}},
+ {id:'co4',name:'林',rating:90,style:'team',bonus:8,styleBonus:5,wage:47,cost:467,skill:{n:'赛训总监',d:'全队战力+8%，团战属性额外+5%（男人哥）'}},
+ {id:'co5',name:'老林',rating:80,style:'farm',bonus:5,styleBonus:4,wage:27,cost:250,skill:{n:'赛训大师',d:'全队战力+5%，运营属性额外+4%'}},
+ {id:'co6',name:'月光',rating:80,style:'mind',bonus:5,styleBonus:4,wage:25,cost:233,skill:{n:'月之BP',d:'全队战力+5%，心态属性额外+4%'}},
+ {id:'co7',name:'Gemini',rating:80,style:'mind',bonus:5,styleBonus:4,wage:23,cost:217,skill:{n:'毒奶玄学',d:'全队战力+5%，心态属性额外+4%（比赛毒奶对手）'}},
+ {id:'co8',name:'花楼',rating:80,style:'lane',bonus:4,styleBonus:3,wage:23,cost:200,skill:{n:'稳健BP',d:'全队战力+4%，对线属性额外+3%'}},
+ {id:'co9',name:'张角',rating:80,style:'farm',bonus:4,styleBonus:3,wage:22,cost:192,skill:{n:'战术大师',d:'全队战力+4%，运营属性额外+3%'}},
+ {id:'co10',name:'Awoke',rating:80,style:'team',bonus:4,styleBonus:3,wage:22,cost:192,skill:{n:'冠军赛训',d:'全队战力+4%，团战属性额外+3%'}},
+ {id:'co11',name:'奶茶',rating:70,style:'mind',bonus:2,styleBonus:2,wage:13,cost:92,skill:{n:'鸡汤教练',d:'全队战力+2%，心态属性额外+2%'}},
+ {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:12,cost:83,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
+];
+const COACH_STYLE={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
+
+/* ================= 助教池（教练组第二块拼图，最多聘 2 名，加成与主教练叠加） =================
+ 幅度小于主教练；退役名宿教练也可 6 折转任助教 */
+const ASSISTANT_POOL=[
+ {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
+ {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
+ {id:'as3',name:'对线特训师·秦烈',rating:80,style:'lane',bonus:2,styleBonus:2,wage:8,cost:117,skill:{n:'对线特训',d:'全队战力+2%，对线属性额外+2%'}},
+ {id:'as4',name:'团战教练·顾深',rating:80,style:'team',bonus:2,styleBonus:2,wage:8,cost:117,skill:{n:'团战演练',d:'全队战力+2%，团战属性额外+2%'}},
+ {id:'as5',name:'战术分析师·池晏',rating:75,style:'farm',bonus:1,styleBonus:2,wage:7,cost:92,skill:{n:'战术复盘',d:'全队战力+1%，运营属性额外+2%'}},
+ {id:'as6',name:'青训教头·叶笙',rating:75,style:'team',bonus:1,styleBonus:2,wage:7,cost:92,skill:{n:'梯队建设',d:'全队战力+1%，团战属性额外+2%'}},
+ {id:'as7',name:'康复师·温迟',rating:70,style:'mind',bonus:1,styleBonus:1,wage:5,cost:67,skill:{n:'运动康复',d:'全队战力+1%，心态属性额外+1%'}},
+];
+
+/* ================= 转会市场：AI 战队选手池（u=非卖品） ================= */
+const AI_ROSTERS={
+ '成都AG超玩会':{p:['top4','jg4','mid3','ad1','sup3'],u:['ad1','jg4']},
+ '重庆狼队':{p:['top6','jg5','mid4','ad2','sup4'],u:['ad2']},
+ '武汉eStarPro':{p:['top3','jg3','mid1','ad3','sup2'],u:['mid1']},
+ '北京WB':{p:['top5','jg2','mid6','ad4','sup5'],u:['jg2']},
+ '广州TTG':{p:['top12','jg13','mid2','ad11','sup13'],u:['mid2']},
+ '南京Hero久竞':{p:['top9','jg6','mid5','ad12','sup6'],u:['mid5']},
+ '苏州KSG':{p:['top14','jg7','mid13','ad9','sup12'],u:[]},
+ '佛山DRG':{p:['top7','jg8','mid8','ad5','sup8'],u:[]},
+ '杭州LGD.NBW':{p:['top15','jg17','mid16','ad8','sup16'],u:[]},
+ '济南RW侠':{p:['top1','jg1','mid10','ad7','sup11'],u:['top1']},
+ '深圳DYG':{p:['top13','jg14','mid7','ad6','sup14'],u:[]},
+ '上海EDG.M':{p:['top10','jg16','mid15','ad14','sup15'],u:[]},
+ '长沙TES.A':{p:['top8','jg15','mid14','ad13','sup9'],u:[]},
+ '上海RNG.M':{p:['top16','jg11','mid17','ad15','sup7'],u:[]},
+ '北京JDG':{p:['top11','jg12','mid12','ad10','sup10'],u:[]},
+ '西安WE':{p:['top17','jg18','mid9','ad16','sup17'],u:[]},
+ '桐乡情久':{p:['top18','jg19','mid11','ad17','sup18'],u:[]},
+ '常山UUG':{p:['top19','jg10','mid18','ad18','sup19'],u:[]}
+};
+/* ================= 原版俱乐部模板（豪门/中坚/草根预算差异化） =================
+ budget: 初始资金 cap: 工资帽 coach: 教练 players: 首发 seed: 战力种子(开局分组用) */
+const CLUB_TEMPLATES=[
+ {name:'成都AG超玩会',icon:'焰',budget:2500,cap:250,coach:'co1',seed:640,players:['top4','jg4','mid3','ad1','sup3'],desc:'银河战舰 · 2025三冠王朝 · 预算拉满'},
+ {name:'重庆狼队',icon:'狼',budget:2333,cap:242,coach:'co2',seed:620,players:['top6','jg5','mid4','ad2','sup4'],desc:'六冠豪门 · 野核体系 · 顶级预算'},
+ {name:'武汉eStarPro',icon:'★',budget:2167,cap:233,coach:'co3',seed:600,players:['top3','jg3','mid1','ad3','sup2'],desc:'eStar王朝 · 三冠主力全保留'},
+ {name:'北京WB',icon:'熊',budget:1667,cap:208,coach:'co5',seed:580,players:['top5','jg2','mid6','ad4','sup5'],desc:'追光者 · 暖阳领衔 · 中坚预算'},
+ {name:'广州TTG',icon:'环',budget:1500,cap:197,coach:'co8',seed:540,players:['top12','jg13','mid2','ad11','sup13'],desc:'九尾带队 · 法刺体系'},
+ {name:'南京Hero久竞',icon:'影',budget:1583,cap:200,coach:'co10',seed:460,players:['top9','jg6','mid5','ad12','sup6'],desc:'久竞传奇 · 久诚回归 · 中游预算'},
+ {name:'苏州KSG',icon:'虎',budget:1417,cap:187,coach:'co9',seed:500,players:['top14','jg7','mid13','ad9','sup12'],desc:'新锐崛起 · 稳扎稳打'},
+ {name:'上海EDG.M',icon:'电',budget:1000,cap:167,coach:'co11',seed:440,players:['top10','jg16','mid15','ad14','sup15'],desc:'平民战队 · 挑战者之路 · 低预算高目标'},
+ {name:'北京JDG',icon:'豹',budget:1583,cap:200,coach:'co4',seed:570,players:['top11','jg12','mid12','ad10','sup10'],desc:'劲旅 · 轩染领衔 · 顶配中坚'},
+ {name:'济南RW侠',icon:'',budget:1500,cap:197,coach:'co6',seed:560,players:['top1','jg1','mid10','ad7','sup11'],desc:'传奇飞牛坐镇 · 老牌侠客'},
+ {name:'佛山DRG',icon:'龙',budget:1417,cap:187,coach:'co7',seed:500,players:['top7','jg8','mid8','ad5','sup8'],desc:'龙魂新锐 · 百兽野心'},
+ {name:'深圳DYG',icon:'鹰',budget:1333,cap:175,coach:'co4',seed:480,players:['top13','jg14','mid7','ad6','sup14'],desc:'小义引擎 · 重塑荣光'},
+ {name:'长沙TES.A',icon:'',budget:1167,cap:175,coach:'co6',seed:450,players:['top8','jg15','mid14','ad13','sup9'],desc:'滔搏青春风暴 · 稳中求进'},
+ {name:'杭州LGD.NBW',budget:1083,cap:167,coach:'co7',seed:430,icon:'鹅',players:['top15','jg17','mid16','ad8','sup16'],desc:'大鹅新军 · 敢打敢拼'},
+ {name:'上海RNG.M',icon:'冠',budget:1000,cap:167,coach:'co4',seed:420,players:['top16','jg11','mid17','ad15','sup7'],desc:'皇族余晖 · 重建之路'},
+ {name:'西安WE',icon:'蝎',budget:917,cap:158,coach:'co6',seed:410,players:['top17','jg18','mid9','ad16','sup17'],desc:'蓝色风暴 · 草根逆袭'},
+ {name:'桐乡情久',icon:'红',budget:867,cap:158,coach:'co7',seed:400,players:['top18','jg19','mid11','ad17','sup18'],desc:'新军冲击 · 从零开始'},
+ {name:'常山UUG',icon:'牛',budget:833,cap:153,coach:'co4',seed:390,players:['top19','jg10','mid18','ad18','sup19'],desc:'升班马 · 一切从零'},
+];
+
+/* ================= 2026 自由市场（真实 KPL 选手 · 合同到期/转会流拍） =================
+ 每个转会窗轮换上架 3 名，签一人少一人；传奇老将为"最后一舞"年龄 */
+const FA_2026=[
+ {id:'fa26_1',name:'老帅',pos:'mid',rarity:'SSR',team:'传奇',tags:[],base:[90,84,88,93],skill:{n:'中单教科书',t:'lane',d:'对线属性额外+12%'},sig:'貂蝉',career:'AG超玩会 2017 年首冠中单，KPL 初代传奇，露娜/貂蝉双绝，意识至今顶级。'},
+ {id:'fa26_2',name:'Alan',pos:'mid',rarity:'SSR',team:'传奇',tags:[],base:[89,86,92,90],skill:{n:'决胜貂蝉',t:'team',d:'团战属性额外+12%'},sig:'貂蝉',career:'武汉eStarPro 2019 年世界冠军中单，决胜局貂蝉名场面载入史册。'},
+ {id:'fa26_3',name:'虔诚',pos:'ad',rarity:'SSR',team:'传奇',tags:[],base:[90,88,86,89],skill:{n:'位移大师',t:'lane',d:'运营属性额外+12%'},sig:'马可波罗',career:'传奇射手，RNG.M 时期名震联盟，马可波罗教科书般的走位。'},
+ {id:'fa26_4',name:'阿泰',pos:'sup',rarity:'SR',team:'传奇',tags:[],base:[82,88,84,90],skill:{n:'开团指挥',t:'team',d:'团战属性额外+10%'},sig:'太乙真人',career:'AG超玩会 2017 年冠军辅助，开团时机拿捏堪称教科书。'},
+ {id:'fa26_5',name:'湘军',pos:'jg',rarity:'SR',team:'TTG',tags:[],base:[83,80,82,81],skill:{n:'野区节奏',t:'farm',d:'运营属性额外+10%'},sig:'澜',career:'广州TTG 打野，节奏型野核，26 年合同到期进入自由市场。'},
+ {id:'fa26_6',name:'风箫',pos:'ad',rarity:'SR',team:'TTG',tags:[],base:[82,79,81,83],skill:{n:'稳定输出',t:'team',d:'团战属性额外+10%'},sig:'公孙离',career:'广州TTG 发育路，新生代射手里最稳的输出点之一。'},
+ {id:'fa26_7',name:'释怀',pos:'mid',rarity:'SR',team:'DRG',tags:[],base:[81,80,83,80],skill:{n:'法核carry',t:'lane',d:'对线属性额外+10%'},sig:'上官婉儿',career:'佛山DRG 中路，carry 型法核，26 年合同到期寻求新挑战。'},
+];
+
+/* ================= 历代联盟（KPL 联盟史册 · 据公开赛事报道整理） =================
+   seasons=历届联赛（银龙杯） finals=年度总决赛（圣龙杯） cups=历届杯赛（冠军杯/世冠/冬冠/挑战者杯）
+   eras=联盟版图时代 clubs=名队沿革 dynasties=王朝时代
+   行字段：y=年份 champ=冠军 ru=亚军 score=决赛比分 fmvp=总决赛MVP note=注 */
+const KPL_HISTORY={
+ seasons:[
+  {y:'2016秋',champ:'AS仙阁',ru:'AG超玩会',score:'3:2',fmvp:'辰鬼',note:'首届联赛 · 黑八奇迹'},
+  {y:'2017春',champ:'QGhappy',ru:'AG超玩会',score:'4:0',fmvp:'Fly',note:'QG王朝开启'},
+  {y:'2017秋',champ:'QGhappy',ru:'XQ',score:'4:2',fmvp:'Fly',note:'单年双冠'},
+  {y:'2018春',champ:'Hero久竞',ru:'EDG.M',score:'4:1',fmvp:'久诚',note:'Hero首冠'},
+  {y:'2018秋',champ:'Hero久竞',ru:'BA黑凤梨',score:'4:3',fmvp:'久诚',note:'单年双冠'},
+  {y:'2019春',champ:'武汉eStarPro',ru:'RNG.M',score:'4:2',fmvp:'cat',note:'eStar首冠'},
+  {y:'2019秋',champ:'AG超玩会',ru:'QGhappy',score:'4:1',fmvp:'老帅',note:'AG重返KPL当年登顶'},
+  {y:'2020春',champ:'TS',ru:'成都AG超玩会',score:'4:3',fmvp:'暖阳',note:'TS败者组一穿五'},
+  {y:'2020秋',champ:'深圳DYG',ru:'成都AG超玩会',score:'4:0',fmvp:'小义',note:'总决赛史上首次零封'},
+  {y:'2021春',champ:'南京Hero久竞',ru:'广州TTG',score:'',fmvp:'清融',note:'Hero再封王'},
+  {y:'2021秋',champ:'武汉eStarPro',ru:'广州TTG',score:'4:1',fmvp:'花海',note:'eStar王朝序章'},
+  {y:'2022春',champ:'武汉eStarPro',ru:'重庆狼队',score:'4:0',fmvp:'坦然',note:'跨赛事三连冠收官'},
+  {y:'2022夏',champ:'重庆狼队',ru:'武汉eStarPro',score:'4:2',fmvp:'Fly',note:'狼队重夺银龙杯'},
+  {y:'2023春',champ:'重庆狼队',ru:'北京WB',score:'4:1',fmvp:'Fly',note:''},
+  {y:'2023夏',champ:'广州TTG',ru:'重庆狼队',score:'4:2',fmvp:'不然',note:'TTG队史首冠'},
+  {y:'2024春',champ:'重庆狼队',ru:'成都AG超玩会',score:'4:3',fmvp:'小胖',note:'狼队加冕十冠王'},
+  {y:'2024夏',champ:'成都AG超玩会',ru:'苏州KSG',score:'4:1',fmvp:'钟意',note:'AG时隔近五年再捧银龙杯'},
+  {y:'2025春',champ:'成都AG超玩会',ru:'佛山DRG',score:'4:1',fmvp:'钟意',note:'14连胜夺冠'},
+  {y:'2025夏',champ:'成都AG超玩会',ru:'北京WB',score:'4:1',fmvp:'大帅',note:'KPL第二位辅助位FMVP'},
+  {y:'2026春',champ:'苏州KSG',ru:'重庆狼队',score:'4:0',fmvp:'流浪',note:'KSG队史首冠'},
+ ],
+ finals:[
+  {y:'2024',champ:'成都AG超玩会',ru:'重庆狼队',score:'4:2',fmvp:'一诺',note:'北京工人体育馆 · 首座圣龙杯'},
+  {y:'2025',champ:'成都AG超玩会',ru:'重庆狼队',score:'4:2',fmvp:'一诺',note:'国家体育场（鸟巢）'},
+ ],
+ cups:[
+  {y:'2017',ev:'冠军杯',champ:'QGhappy',ru:'',score:'',fmvp:'Fly',note:''},
+  {y:'2018',ev:'冠军杯·国际邀请赛',champ:'QGhappy',ru:'武汉eStarPro',score:'4:2',fmvp:'Fly',note:'QG卫冕 · 首个国际邀请赛'},
+  {y:'2018',ev:'冬季冠军杯',champ:'Hero久竞',ru:'QGhappy',score:'4:2',fmvp:'久诚',note:'Hero单年三冠收官'},
+  {y:'2019',ev:'世界冠军杯',champ:'武汉eStarPro',ru:'济南RW侠',score:'4:2',fmvp:'cat',note:''},
+  {y:'2020',ev:'世界冠军杯',champ:'TS',ru:'深圳DYG',score:'4:3',fmvp:'暖阳',note:'0:3落后让三追四'},
+  {y:'2020',ev:'冬季冠军杯',champ:'南京Hero久竞',ru:'',score:'',fmvp:'清融',note:''},
+  {y:'2021',ev:'世界冠军杯',champ:'重庆QGhappy',ru:'佛山GK',score:'4:2',fmvp:'Fly',note:''},
+  {y:'2021',ev:'挑战者杯',champ:'武汉eStarPro',ru:'广州TTG',score:'4:1',fmvp:'坦然',note:'首届挑战者杯'},
+  {y:'2022',ev:'世界冠军杯 KIC',champ:'武汉eStarPro',ru:'佛山DRG.GK',score:'4:2',fmvp:'花海',note:''},
+  {y:'2022',ev:'挑战者杯',champ:'武汉eStarPro',ru:'北京WB',score:'4:3',fmvp:'子阳',note:'抢七局险胜'},
+  {y:'2023',ev:'世界冠军杯 KIC',champ:'成都AG超玩会',ru:'北京WB',score:'4:2',fmvp:'一诺',note:'AG首捧凤凰杯'},
+  {y:'2023',ev:'挑战者杯',champ:'重庆狼队',ru:'成都AG超玩会',score:'4:2',fmvp:'小胖',note:''},
+  {y:'2024',ev:'挑战者杯',champ:'成都AG超玩会',ru:'重庆狼队',score:'5:3',fmvp:'钟意',note:'决赛首用BO9 · 2025年1月南京'},
+  {y:'2025',ev:'挑战者杯',champ:'北京WB',ru:'济南RW侠',score:'5:0',fmvp:'暖阳',note:'BO9零封 · 2026年1月三亚'},
+  {y:'2026',ev:'挑战者杯',champ:'重庆狼队',ru:'成都AG超玩会',score:'5:3',fmvp:'信',note:'1:3落后逆转 · 2026年5月上海'},
+ ],
+ eras:[
+  {t:'创世纪元',y:'2016',d:'KPL 秋季赛元年，12 支队伍在上海开启王者荣耀职业联赛：eStar、XQ、AG超玩会、AS仙阁、sViper、WF.D、SC、MU、LK、DL火箭、BWS、VgHow。总决赛 AS仙阁 3:2 掀翻 AG超玩会，上演「黑八奇迹」。'},
+  {t:'扩军与王朝',y:'2017-2019',d:'QGhappy、JC、GK、RNG.M、EDG.M、BA黑凤梨相继入盟，Hero久竞 2018 年登场即两连冠；AG超玩会 2019 年秋季赛重返 KPL 当年登顶。创始 12 队中的多数在 2017-2018 年间陆续离开联盟。'},
+  {t:'主场化与更名潮',y:'2020-2022',d:'LGD大鹅、KSG、XYG、MTG 先后加入；联盟进入城市主场时代，JC→深圳DYG、TS→北京WB、重庆QGhappy→重庆狼队、GK→佛山DRG，沿用至今的队名相继定型。'},
+  {t:'双雄与新王',y:'2023-2026',d:'北京JDG 2024 年加入，桐乡情久、常山UUG 2025 年加入，联盟扩至 18 队。AG 与狼队双雄争霸，广州TTG、苏州KSG 先后打破垄断，2026 春 KSG 零封狼队圆梦首冠。'},
+ ],
+ clubs:[
+  {n:'成都AG超玩会',era:'2016 · 至今',d:'创始元老。2018 年降入次级联赛，2019 年重返 KPL 当年夺冠；2024 夏至 2025 年总跨赛事六连冠，首支在鸟巢捧杯的电竞战队。'},
+  {n:'重庆狼队',era:'2017 · 至今',d:'前身 QGhappy。2017 年联赛双冠+冠军杯、2018 年冠军杯卫冕；2022 年更名。职业赛事夺冠次数联盟第一，2026 年挑战者杯逆转摘得第十一冠。'},
+  {n:'武汉eStarPro',era:'2016 · 至今',d:'创始元老 eStar。2019 年春冠+世冠双冠；2021 秋-2022 春跨赛事三连冠王朝。'},
+  {n:'广州TTG',era:'2016 · 至今',d:'前身 XQ。蛰伏七个赛季后于 2023 年夏登顶，队史首冠。'},
+  {n:'北京WB',era:'2019 · 至今',d:'前身 TS。2020 年春冠+世冠双冠（世冠让三追四）；更名后 2026 年初 5:0 零封 RW侠 首夺挑战者杯。'},
+  {n:'深圳DYG',era:'2017 · 至今',d:'前身 JC→DYG.JC。2020 年秋总决赛史上首次零封夺冠。'},
+  {n:'南京Hero久竞',era:'2018 · 至今',d:'2018 年包揽春夏联赛与冬季冠军杯单年三冠；2021 年春再度封王。'},
+  {n:'佛山DRG',era:'2017 · 至今',d:'前身 GK→佛山DRG.GK。2021/2022 世冠与 2025 春三进总决赛的悲情强旅。'},
+  {n:'苏州KSG',era:'2020 · 至今',d:'2024 夏屈居亚军，2026 春总决赛 4:0 横扫狼队，队史首冠。'},
+  {n:'济南RW侠',era:'2018 · 至今',d:'2019 年世冠亚军；2026 年初挑战者杯再获亚军。'},
+  {n:'上海EDG.M',era:'2017 · 至今',d:'2018 春总决赛负于 Hero，队史最佳战绩。'},
+  {n:'上海RNG.M',era:'2017 · 至今',d:'2019 春总决赛负于 eStar，老牌豪门。'},
+  {n:'杭州LGD.NBW',era:'2020 · 至今',d:'前身杭州LGD大鹅，2020 年入盟，后更名 NBW。'},
+  {n:'西安WE',era:'2019 · 至今',d:'蓝色风暴，联盟中游常客。'},
+  {n:'XYG',era:'2021 · 至今',d:'主播张大仙的战队，从次级联赛一路打进 KPL。'},
+  {n:'北京JDG',era:'2024 · 至今',d:'豪门俱乐部跨项目入场；2026 年挑战者杯闯入四强。'},
+  {n:'桐乡情久',era:'2025 · 至今',d:'2025 年加入联盟的新军。'},
+  {n:'常山UUG',era:'2025 · 至今',d:'2025 年加入联盟的新军。'},
+  {n:'AS仙阁',era:'2016 · 已离开',d:'首届「黑八奇迹」总冠军，此后数年淡出联盟。'},
+  {n:'BA黑凤梨',era:'2017 · 已离开',d:'2018 秋总决赛与 Hero 鏖战七局憾负，其后离开联盟。'},
+  {n:'厦门VG',era:'2019 · 已离开',d:'征战多个赛季后让出联盟席位。'},
+  {n:'MTG',era:'2021 · 已离开',d:'以世冠黑马之姿入盟，两季后离开。'},
+ ],
+ dynasties:[
+  {n:'黑八神话',t:'AS仙阁',y:'2016',d:'首届 KPL，季后赛一路逆袭，总决赛 3:2 掀翻常规赛 9 胜 1 负的 AG超玩会——联盟史上最著名的「黑八奇迹」。'},
+  {n:'QG王朝',t:'QGhappy',y:'2017-2018',d:'2017 年联赛双冠+冠军杯加冕三冠王，2018 年冠军杯卫冕；Fly 六夺总决赛 FMVP，至今无人企及。'},
+  {n:'Hero王朝',t:'Hero久竞',y:'2018',d:'2018 年包揽春季赛、秋季赛与冬季冠军杯，单年三冠；久诚一年之内三夺 FMVP。'},
+  {n:'大魔王时代',t:'武汉eStarPro',y:'2019 · 2021-2022',d:'2019 年春冠+世冠双冠；2021 秋-2022 春跨赛事三连冠，清融、花海、坦然、子阳的冠军班底。'},
+  {n:'TS奇迹',t:'TS',y:'2020',d:'春季赛败者组一穿五登顶，世冠决赛 0:3 落后连扳四局——暖阳单年双 FMVP，联盟史上最疯狂的逆转之年。'},
+  {n:'狼队复兴',t:'重庆狼队',y:'2022-2026',d:'2022 夏重夺联赛冠军，2023 双冠，2024 春加冕十冠王；2026 挑战者杯 1:3 落后逆转，第十一冠一骑绝尘。'},
+  {n:'信仰归来',t:'成都AG超玩会',y:'2019 · 2024-2025',d:'2019 年回归当年夺冠；2024 夏-2025 年总跨赛事六连冠，鸟巢之夜蝉联年总 FMVP 的一诺加冕时代旗帜。'},
+ ],
+};
+
+/* ================= 随机事件（含 KPL 真实事件） ================= */
+const mAmt=(p,v)=>{p.morale=clamp(p.morale+v,20,100);}; // 士气统一封顶 20~100（个别事件直接加减会溢出到 100+）
+const EVENTS=[
+ // —— 日常随机 ——（fn 的第二参 p 由 nextDay 传入，保证公告文案与实际生效的是同一名选手）
+ {t:'选手加练',desc:'{p} 深夜独自加练，手感火热。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','farm','team']);p.attrs[k]=clamp(p.attrs[k]+2,40,99);mAmt(p,5);}},
+ {t:'媒体专访',desc:'俱乐部接受专访，曝光度大增，收到一笔采访费。',good:true,fn:s=>s.fund+=20},
+ {t:'粉丝应援',desc:'粉丝团自发应援，主场氛围拉满。',good:true,fn:s=>{s.fund+=25;moraleAll(s,3);}},
+ {t:'商业活动',desc:'俱乐部参加官方商业活动，获得活动分成。',good:true,fn:s=>s.fund+=13},
+ {t:'状态起伏',desc:'{p} 近期作息混乱，状态下滑。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-12);}},
+ {t:'舆论风波',desc:'社交媒体出现不利言论，队员心态受挫。',good:false,fn:s=>moraleAll(s,-6)},
+ {t:'身体不适',desc:'{p} 感冒发烧，需要休息两天。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.energy=Math.min(p.energy,30);mAmt(p,-8);}},
+ {t:'赞助商洽谈',desc:'新赞助商对战队战绩满意，追加了赞助费！',good:true,fn:s=>s.fund+=33},
+ {t:'战术研讨',desc:'教练组闭门研究新战术，团战配合更好了。',good:true,fn:s=>{const p=pick(rosterAll(s));p.attrs.team=clamp(p.attrs.team+2,40,99);}},
+ {t:'转会流言',desc:'{p} 被传出转会流言，本人表示不受影响。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,-6);}},
+ {t:'青训惊喜',desc:'青训队出了一个好苗子，俱乐部收到培养奖金。',good:true,fn:s=>s.fund+=13},
+ {t:'老将觉醒',desc:'{p} 接受采访时表示要带新人拿冠军，士气大涨！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,12);}},
+ // —— KPL 真实事件 ——
+ {t:'亚运征召',desc:'{p} 入选亚运会电竞国家队，为国争光！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.morale=100;p.attrs.mind=Math.min(99,p.attrs.mind+3);}},
+ {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));s.fund+=42;mAmt(p,10);}},
+ {t:'版本更新·削弱',desc:'新版本上线，{p} 擅长的英雄被削弱，需要时间适应。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);mAmt(p,-8);p.attrs[k]=Math.max(55,p.attrs[k]-2);}},
+ {t:'版本更新·加强',desc:'新版本上线，{p} 的招牌英雄迎来版本红利，手感火热！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);p.attrs[k]=Math.min(99,p.attrs[k]+2);mAmt(p,6);}},
+ {t:'全明星周末',desc:'参加 KPL 全明星周末，选手们放松了心情。',good:true,fn:s=>moraleAll(s,8)},
+ {t:'假赛风波',desc:'联盟严查假赛，俱乐部被要求配合调查，舆论压力巨大。',good:false,fn:s=>moraleAll(s,-10)},
+ {t:'解说毒奶',desc:'著名解说公开"看好"你下一场的对手……',good:true,fn:s=>moraleAll(s,5)},
+ {t:'对手换帅',desc:'下个对手官宣换帅，新阵容磨合期战斗力存疑。',good:true,fn:s=>moraleAll(s,4)},
+ {t:'巅峰对决名场面',desc:'训练赛复刻当年巅峰对决的名场面，全队沸腾！',good:true,fn:s=>{moraleAll(s,6);s.fund+=8;}},
+ {t:'主场扩容',desc:'俱乐部主场升级完成，门票收入大涨。',good:true,fn:s=>s.fund+=33},
+ {t:'降薪传闻',desc:'俱乐部降薪传闻流出，队员人心浮动。',good:false,fn:s=>moraleAll(s,-8)},
+ {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,fn:s=>{s.fund+=42;}},
+ {t:'青训挂牌',desc:'青训队新秀在转会市场被争抢，俱乐部收到问价。',good:true,fn:s=>s.fund+=17},
+ {t:'转会传闻',desc:'媒体爆料 {p} 收到豪门高额报价，人心浮动。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.max(5,(p.willingness||50)-8);p.morale=clamp(p.morale-5,20,100);}},
+ {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
+];
+
+/* ================= 比赛模拟（Elo 胜率） =================
+ 分母 220：削弱纯战力碾压（BP/选人/版本强势才能真正左右胜负，弱队靠 BP 有翻盘空间） */
+function winChance(my,opp){return 1/(1+Math.pow(10,(opp-my)/220));}
+const CASTER=['一拉三！','极限操作！','名场面预定！','这波运营拉满！','经典绕后，丝血反杀！','水晶不倒，战斗不止！','教科书级团战！','来了！又是他！','反手就是一记大招！','这波决策太顶了！'];
+
+/* ================= 成就系统（生涯里程碑） =================
+ 巡检挂在 save() 上：每次状态落盘时统一评估，条件全部由当前状态可推导
+ （冠军史 titleHistory / 荣誉室 honors / FMVP 名人堂 / 名册 / 资金 / 连胜），
+ 解锁一次永久入册 s.achieved（id→解锁年份）。测试/旧档免迁移：缺字段懒补。 */
+/* ================= 战术板（系列赛倾向） =================
+ 选战术 = 改变四维在战力里的权重（总和恒为 1）：把自己阵容的强项放大、弱项缩小，
+ 因此没有"最优战术"，只有"最适合你阵容的战术"。克制关系 ±3% 只在比赛模拟里生效。
+ S.tacticW 只在玩家设置了战术时存在——平衡门禁的模拟不设置，故门禁数值不受影响。 */
+const BASE_W={lane:0.25,farm:0.25,team:0.3,mind:0.2};
+const TACTICS=[
+ {id:'balanced',name:'均衡运营',desc:'标准权重：不偏科，适合阵容全面的队伍',w:BASE_W,beats:null},
+ {id:'farm',name:'运营拉扯',desc:'侧重运营与资源（farm .40）：拖后期打团，吃线优',w:{lane:0.2,farm:0.4,team:0.25,mind:0.15},beats:'mind'},
+ {id:'team',name:'团战致胜',desc:'侧重团战配合（team .45）：抱团推进，一波定胜负',w:{lane:0.2,farm:0.2,team:0.45,mind:0.15},beats:'farm'},
+ {id:'lane',name:'线优压制',desc:'侧重对线强度（lane .42）：三线全优滚雪球',w:{lane:0.42,farm:0.18,team:0.25,mind:0.15},beats:'team'},
+ {id:'mind',name:'心理博弈',desc:'侧重心态稳定（mind .38）：逆风不崩，抓对手失误',w:{lane:0.22,farm:0.15,team:0.25,mind:0.38},beats:'lane'},
+];
+function tacticById(id){return TACTICS.find(t=>t.id===id)||TACTICS[0];}
+
+/* ================= 开局剧本（难度档） =================
+ 给"从头开始"加变量：同一套规则下初始条件不同，董事会达标难度也随之变化。
+ 剧本只改开局初始值，不动物价/赛制/战力公式——平衡门禁跑的是固定档位阵容，不受影响。 */
+const SCENARIOS=[
+ {id:'normal',name:'常规开档',hard:false,desc:'初始资金 1300万 · 工资帽 150万/周 · 标准挑战',
+  apply:s=>{}},
+ {id:'debt',name:'财政危机',hard:true,desc:'负债累累接手：初始资金 330万 · 工资帽 120万，只能靠成绩翻身',
+  apply:s=>{s.fund=330;s.wageCap=120;}},
+ {id:'exodus',name:'核心出走',hard:true,desc:'队内王牌季前被挖走，开局即空一个位置，必须去市场补人',
+  apply:s=>dropBestPlayer(s)},
+ {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 90万/周，豪华阵容养不起，只能靠青训与规划',
+  apply:s=>{s.wageCap=90;}},
+ {id:'cursed',name:'无冠魔咒',hard:true,desc:'常年无冠、士气低落：全队属性 -4 · 初始士气 50，等你破咒',
+  apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));p.morale=50;});}},
+];
+function scenarioById(id){return SCENARIOS.find(s=>s.id===id)||SCENARIOS[0];}
+/* 核心出走：队内战力最高者被挖走（人已离队，不返还资金） */
+function dropBestPlayer(s){
+ if(!(s.players||[]).length)return null;
+ const best=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
+ s.players=s.players.filter(p=>p!==best);
+ s.lineup=(s.lineup||[]).filter(id=>id!==best.id);
+ if(s.pick)delete s.pick[best.pos];
+ return best;
+}
+
+const ACHIEVEMENTS=[
+ // —— 俱乐部 ——
+ {id:'found',icon:'创',name:'白手起家',desc:'以自建俱乐部开启征程',test:s=>!!s.selfBuilt},
+ {id:'coach',icon:'教',name:'良师入帐',desc:'签下第一名主教练',test:s=>!!s.coach&&(s.mode||'manager')==='manager'},
+ // —— 比赛 ——
+ {id:'first_win',icon:'胜',name:'旗开得胜',desc:'拿下队史首场系列赛胜利',test:s=>(s.history||[]).some(h=>h.win)},
+ {id:'upset',icon:'冷',name:'以下克上',desc:'击败纸面战力高出 15% 的对手',test:s=>(s.upsetCount||0)>=1},
+ {id:'streak10',icon:'焰',name:'势如破竹',desc:'单赛季取得 10 连胜',test:s=>(s.streak||0)>=10},
+ // —— 冠军 ——
+ {id:'first_title',icon:'冠',name:'首冠时刻',desc:'夺得队史第一个冠军',test:s=>(s.honors||[]).some(h=>h.champion)},
+ {id:'t_spring',icon:'春',name:'银龙加冕',desc:'夺得春季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='春季赛'&&t.champ===s.teamName)},
+ {id:'t_summer',icon:'夏',name:'夏季赛登顶',desc:'夺得夏季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='夏季赛'&&t.champ===s.teamName)},
+ {id:'t_chall',icon:'挑',name:'挑战者之证',desc:'夺得挑战者杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='挑战者杯'&&t.champ===s.teamName)},
+ {id:'t_ewc',icon:'世',name:'世界之巅',desc:'夺得 EWC 电竞世界杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='EWC'&&t.champ===s.teamName)},
+ {id:'t_annual',icon:'龙',name:'圣龙王朝',desc:'捧起 KPL 年度总决赛圣龙杯',test:s=>(s.titleHistory||[]).some(t=>t.event==='年总'&&t.champ===s.teamName)},
+ {id:'defend',icon:'卫',name:'卫冕成功',desc:'连续两次夺冠（联盟已开始研究你）',test:s=>typeof dynastyStreak==='function'&&dynastyStreak(s,s.teamName)>=2},
+ {id:'triple_year',icon:'三',name:'一年三冠',desc:'同一自然年包揽三项冠军',test:s=>(s.titleHistory||[]).filter(t=>t.champ===s.teamName&&t.season===s.season).length>=3},
+ {id:'asiad_gold',icon:'金',name:'亚洲之巅',desc:'亚运会中国代表队夺得金牌',test:s=>(s.titleHistory||[]).some(t=>t.event==='亚运会'&&t.champ==='中国代表队')},
+ // —— 青训 ——
+ {id:'youth_first',icon:'训',name:'青训出道',desc:'首名青训生晋升一线队',test:s=>(s.players||[]).some(p=>p.academyGrad)},
+ {id:'youth_champ',icon:'承',name:'自家血统',desc:'青训生随队夺得冠军',test:s=>(s.honors||[]).some(h=>h.champion&&h.roster&&(s.players||[]).some(p=>p.academyGrad&&h.roster.includes(p.name)))},
+ {id:'youth_fmvp',icon:'面',name:'青训门面',desc:'青训生当选赛事 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName&&(s.players||[]).some(p=>p.academyGrad&&p.name===f.name))},
+ // —— 经营 ——
+ {id:'star90',icon:'星',name:'手握巨星',desc:'阵中拥有总值 ≥90 的选手',test:s=>(s.players||[]).some(p=>overall(p)>=90)},
+ {id:'big_sale',icon:'售',name:'天价交易',desc:'单笔出售选手回收 ≥1200万',test:s=>(s.maxSale||0)>=1200},
+ {id:'rich',icon:'财',name:'亿万豪门',desc:'俱乐部资金突破 2 亿',test:s=>(s.fund||0)>=20000},
+ {id:'five_year',icon:'恒',name:'长情经营',desc:'迎来第五个赛季',test:s=>gameYear(s)>=2030},
+ // —— 董事会 ——
+ {id:'board_fav',icon:'董',name:'董事会宠儿',desc:'把董事会信任度做到 90 以上',test:s=>!!s.board&&s.board.trust>=90},
+ {id:'board_survive',icon:'存',name:'力挽狂澜',desc:'信任度跌到 25 以下后重新回到 60（危机自救）',test:s=>!!s.board&&s.board.warn===0&&(s.board.trust||0)>=60&&(s.board.log||[]).some(l=>l.trust<=25)},
+ // —— 开局剧本（难度档）：在指定剧本下夺冠 ——
+ {id:'sc_debt',icon:'债',name:'负债逆袭',desc:'「财政危机」开局下夺得任意冠军',test:s=>s.scenario==='debt'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'sc_exodus',icon:'残',name:'残阵夺冠',desc:'「核心出走」开局下夺得任意冠军',test:s=>s.scenario==='exodus'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'sc_cap',icon:'紧',name:'紧缩夺冠',desc:'「工资帽紧缩」开局下夺得任意冠军',test:s=>s.scenario==='cap'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'sc_cursed',icon:'咒',name:'破除魔咒',desc:'「无冠魔咒」开局下夺得任意冠军',test:s=>s.scenario==='cursed'&&(s.honors||[]).some(h=>h.champion)},
+ // —— 更衣室 ——
+ {id:'cap_title',icon:'袖',name:'袖标荣耀',desc:'任命队长并在其任内夺得冠军',test:s=>!!s.captain&&(s.players||[]).some(p=>p.id===s.captain)&&(s.honors||[]).some(h=>h.champion)},
+ {id:'squad_happy',icon:'和',name:'更衣室和睦',desc:'全队士气 ≥85 且无人要求离队（至少 8 名选手）',test:s=>(s.players||[]).length>=8&&(s.players||[]).every(p=>(p.morale||0)>=85&&!p.transferRequest)},
+ // —— 战术与练级 ——
+ {id:'tactic_title',icon:'谋',name:'战术大师',desc:'以非均衡战术夺得冠军',test:s=>s.tactic&&s.tactic!=='balanced'&&(s.honors||[]).some(h=>h.champion)},
+ {id:'kjia_grad',icon:'炼',name:'练级成功',desc:'下放 K甲的选手归队后累计成长 ≥5 点',test:s=>(s.players||[]).some(p=>(p.kjiaGain||0)>=5)},
+ // —— 选手个人 ——
+ {id:'own_fmvp',icon:'M',name:'本队 FMVP',desc:'本队选手当选决赛 FMVP',test:s=>(s.fmvpHonor||[]).some(f=>f.team===s.teamName)},
+ {id:'mvp10',icon:'杀',name:'MVP 收割机',desc:'队内选手生涯 MVP ≥10 次',test:s=>(s.players||[]).some(p=>(p.mvp||0)>=10)},
+ {id:'nat_call',icon:'征',name:'国家征召',desc:'有选手入选亚运中国代表队',test:s=>(s.natSquad||[]).some(x=>x.mine)},
+ {id:'hot_form',icon:'火',name:'状态火热',desc:'有选手表现系数达到 140%+',test:s=>(s.players||[]).some(p=>(p.val||100)>=140)},
+];
+function checkAchievements(s){
+ if(!s)return;
+ s.achieved=s.achieved||{};
+ const unlock=s.achieved;
+ // 全解锁：后续扫描无事可做
+ if(Object.keys(unlock).length>=ACHIEVEMENTS.length)return;
+ ACHIEVEMENTS.forEach(a=>{
+ if(unlock[a.id])return;
+ let ok=false;
+ try{ok=a.test(s);}catch(e){ok=false;}
+ if(!ok)return;
+ unlock[a.id]=gameYear(s);
+ try{toast(' 成就解锁：'+a.name+'（'+a.desc+'）');logEvent(s,' 成就解锁「'+a.name+'」——'+a.desc);}catch(e){}
+ });
+}
+
+/* ================= 历代联盟（2K 经典球队式：选一个时代开档扮演） =================
+   KPL_ERAS：每个时代=一套完整联盟（18 队 + 阵容 + 教练 + 羁绊 + 执教模板）。
+   真实明星选手按史实收录（阵容经公开赛事报道核实）；年代久远、阵容无从考证的席位
+   由 genEraDef 生成「时代轮换选手」（游戏化演绎，career 注明）。installEra 在开局/读档时
+   把默认联盟整体替换为该时代联盟，引擎赛制沿用现行年度赛历（游戏化演绎）。 */
+/* ================= 名字池与组合命名（供自由球员 / 青训 / 时代轮换选手共用） =================
+   池是有限的：ACADEMY_NAMES 36 个 + ERA_GEN_NAMES 48 个，囤人 30+ 或未来时代空位变多就会耗尽。
+   旧版耗尽后兜底成「新人47」「新援12」这种占位名，故统一走 combName()：
+   两字组合（20×20=400）→ 三字组合（8000），且**按固定顺序扫描、不引入随机**，
+   保证 genEraDef 这类要求"重复安装产出完全相同 def"的路径仍然确定性。 */
+const ROOKIE_NAMES=['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见','慕白','亦辰'];
+/* 电竞 ID 风格组名：字库两两组合（如 洛野/白柒/江辞），避免「清扬_2」式自增后缀 */
+const RK_A=['阿','小','白','苏','陆','沈','顾','洛','叶','凌','夜','莫','江','温','秦','池','祁','许','林','常'];
+const RK_B=['川','野','辞','屿','柒','晏','深','迟','昭','眠','遥','笙','秋','策','尘','澜','溪','澈','泠','桉'];
+function combName(used){
+ for(const a of RK_A)for(const b of RK_B){const n=a+b;if(!used||!used.has(n))return n;}
+ for(const a of RK_A)for(const b of RK_B)for(const c of RK_B){const n=a+b+c;if(!used||!used.has(n))return n;}
+ return '选手'+(used?used.size:0); // 理论不可达（8400 个组合）；真到了也不能生成 undefined
+}
+/* 取偏好池中第一个未被占用的名字，池尽回退 combName。
+   固定顺序扫描（find）不引入随机——开档名单的多样性由调用方 shuffle 名字池决定 */
+function poolName(pool,used){
+ if(!used)return pick(pool);
+ const hit=pool.find(n=>!used.has(n));
+ return hit||combName(used);
+}
+
+const ERA_GEN_NAMES=['临渊','栖梧','暮雪','孤舟','野渡','春潮','夏蝉','秋鸿','冬凌','朝雾','晚风','晨曦','夜阑','子规','青竹','翠微','苍梧','白鹭','闻笛','枕星','及锋','问渠','观棋','烂柯','折柳','吹角','连营','点兵','扬鞭','踏歌','放鹤','归鸿','拂衣','枕戈','听潮','望北','溯洄','宛在','水湄','蒹葭','既白','饮冰','怀瑾','佩瑜','其琛','维桢','令仪','令德'];
+/* 时代轮换选手生成：确定性 id（g<时代>_<队>_<位置>）+ 确定性属性（id 哈希播种）
+   ——重复安装/读档重装必须产出完全相同的 def，否则存档重载后 AI 战力会漂移 */
+function genEraDef(eraId,team,pos,used){
+ const key='g'+eraId+'_'+team.replace(/\./g,'')+'_'+pos; // 队名去点号（RNG.M→RNGM），保证 id 稳定可引用
+ const exist=PLAYER_POOL.find(d=>d.id===key);
+ if(exist)return exist;
+ let name=poolName(ERA_GEN_NAMES.concat(ACADEMY_NAMES),used); // 池尽回退 combName（原为「新援N」）
+ used.add(name);
+ let h=5381;for(let i=0;i<key.length;i++)h=((h*33)^key.charCodeAt(i))>>>0;
+ const rv=()=>{h=((h*1103515245)+12345)>>>0;return (h>>>16)%1000/1000;};
+ const band=70+Math.floor(rv()*10); // 时代轮换/草根基准 70-79
+ const base=[0,1,2,3].map(()=>clamp(band+Math.floor(rv()*9)-4,40,99));
+ const skK=['lane','farm','team','mind'][Math.floor(rv()*4)];
+ const sk={lane:['线霸体系','对线属性额外+8%'],farm:['运营体系','运营属性额外+8%'],team:['团战体系','团战属性额外+8%'],mind:['大心脏体系','心态属性额外+8%']}[skK];
+ const cands=HEROES.filter(x=>x.pos[0]===pos);
+ const def={id:key,name,pos,team,tags:[],base,skill:{n:sk[0],t:skK,d:sk[1]},
+  sig:cands[Math.floor(rv()*cands.length)].n,
+  career:eraId+'年效力于'+team+'的轮换选手（阵容演绎）。'};
+ PLAYER_POOL.push(def); // 注册进选手池：defOf/defIndex 才能解析该 id
+ return def;
+}
+const KPL_ERAS={
+ '2017':{
+  name:'2017 · QG王朝',year:'2017',
+  desc:'QGhappy 大满贯元年：Fly、cat、Hurt、Alan、老杨的五虎王朝正面硬刚梦泪老帅的 AG 三亚阵容。12 支史实球队 + 6 支创始老牌（SC/MU/LK/DL火箭/BWS/VgHow，历史原型 · 阵容演绎）。',
+  teams:[
+   {name:'QGhappy',icon:'翼',power:640},{name:'AG超玩会',icon:'焰',power:600},
+   {name:'eStarPro',icon:'★',power:560},{name:'XQ',icon:'戒',power:555},
+   {name:'AS仙阁',icon:'仙',power:520},{name:'JC',icon:'竞',power:505},
+   {name:'RNG.M',icon:'冠',power:500},{name:'GK',icon:'山',power:480},
+   {name:'EDG.M',icon:'电',power:460},{name:'BA黑凤梨',icon:'梨',power:440},
+   {name:'YTG',icon:'拓',power:420},{name:'WF.D',icon:'海',power:400},
+   {name:'SC',icon:'锋',power:390},{name:'MU',icon:'兽',power:385},
+   {name:'LK',icon:'鳞',power:380},{name:'DL火箭',icon:'箭',power:375},
+   {name:'BWS',icon:'盾',power:370},{name:'VgHow',icon:'遥',power:365},
+  ],
+  defs:[
+   // —— QGhappy 五虎（2017 大满贯核实阵容）——
+   {id:'a17_fly',name:'Fly',pos:'top',team:'QG',tags:[],base:[93,89,91,93],skill:{n:'初代边路之神',t:'lane',d:'对线属性额外+12%'},sig:'关羽',career:'QGhappy 初代王朝对抗路，2017 年大满贯核心，KPL 历史第一边路。'},
+   {id:'a17_alan',name:'Alan',pos:'jg',team:'QG',tags:[],base:[88,90,90,88],skill:{n:'野区统帅',t:'team',d:'团战属性额外+12%'},sig:'露娜',career:'QG 五虎打野王添龙，2017 年三冠王主力，野区节奏机器。'},
+   {id:'a17_cat17',name:'cat',pos:'mid',team:'QG',tags:[],base:[90,88,92,92],skill:{n:'初代猫神',t:'team',d:'团战属性额外+12%'},sig:'不知火舞',career:'初代 QG 中单猫神陈正正，2017 年三冠指挥核心，后成中辅双位置传奇。'},
+   {id:'a17_hurt',name:'Hurt',pos:'ad',team:'QG',tags:[],base:[89,86,88,85],skill:{n:'大心脏射手',t:'lane',d:'对线属性额外+12%'},sig:'后羿',career:'QG 五虎发育路夏圣钦，2017 年大满贯主力射手。'},
+   {id:'a17_yang',name:'老杨',pos:'sup',team:'QG',tags:[],base:[80,86,88,88],skill:{n:'王朝大脑',t:'farm',d:'运营属性额外+12%'},sig:'张飞',career:'YANG 老杨，QG 五虎游走，三冠王的指挥大脑。'},
+   // —— AG超玩会 三亚班底 ——
+   {id:'a17_vv',name:'Vv',pos:'top',team:'AG',tags:[],base:[87,84,85,86],skill:{n:'铁闸边路',t:'team',d:'团战属性额外+10%'},sig:'吕布',career:'AG超玩会初代对抗路彭文，2016-2017 连续闯进总决赛。'},
+   {id:'a17_meng',name:'梦泪',pos:'jg',team:'AG',tags:[],base:[92,90,88,92],skill:{n:'韩信偷家',t:'farm',d:'运营属性额外+12%，经典名场面'},sig:'韩信',career:'KPL 人气图腾，韩信偷家名场面缔造者，2017 年率 AG 再进总决赛。'},
+   {id:'a17_laoshuai',name:'老帅',pos:'mid',team:'AG',tags:[],base:[90,85,88,92],skill:{n:'中单教科书',t:'lane',d:'对线属性额外+12%'},sig:'貂蝉',career:'AG超玩会队长老帅张宇辰，初代第一中单，三亚魔咒的见证者。'},
+   {id:'a17_liusu',name:'流苏',pos:'ad',team:'AG',tags:[],base:[82,80,82,80],skill:{n:'稳健输出',t:'team',d:'团战属性额外+10%'},sig:'马可波罗',career:'2017 春季赛总决赛 AG 首发发育路。'},
+   {id:'a17_lanxi',name:'兰息',pos:'sup',team:'AG',tags:[],base:[79,82,84,86],skill:{n:'护野先锋',t:'farm',d:'运营属性额外+10%'},sig:'太乙真人',career:'AG超玩会初代辅助，梦泪身后的男人。'},
+   // —— eStarPro（2017 秋季赛引援阵容）——
+   {id:'a17_dake',name:'达克',pos:'top',team:'eStar',tags:[],base:[82,80,84,80],skill:{n:'外援铁边',t:'team',d:'团战属性额外+10%'},sig:'夏侯惇',career:'韩国外援达克，2017 秋季赛 eStar 边路引援。'},
+   {id:'a17_nuoyan',name:'诺言',pos:'jg',team:'eStar',tags:[],base:[86,85,84,87],skill:{n:'队长气质',t:'mind',d:'心态属性额外+10%'},sig:'李白',career:'eStar 队长诺言，2017 年随队斩获联赛季军，联盟活化石。'},
+   {id:'a17_weizhuang',name:'伪装',pos:'mid',team:'eStar',tags:[],base:[84,82,85,85],skill:{n:'九朝元老',t:'lane',d:'对线属性额外+10%'},sig:'上官婉儿',career:'「九朝元老」伪装，2017 年转型中路，一手诸葛亮名震 KPL。'},
+   {id:'a17_xingchen',name:'星辰',pos:'ad',team:'eStar',tags:[],base:[80,79,81,79],skill:{n:'稳定炮台',t:'team',d:'团战属性额外+10%'},sig:'虞姬',career:'星辰，2017 秋季赛 eStar 发育路引援。'},
+   {id:'a17_tiger',name:'TiGer',pos:'sup',team:'eStar',tags:[],base:[79,81,82,82],skill:{n:'开团先锋',t:'team',d:'团战属性额外+10%'},sig:'牛魔',career:'TiGer，2017 秋季赛 eStar 游走引援。'},
+   // —— XQ 阿泰军团 / AS仙阁 黑八班底 ——
+   {id:'a17_ata',name:'阿泰',pos:'mid',team:'XQ',tags:[],base:[88,85,87,90],skill:{n:'国服第一中单',t:'team',d:'团战属性额外+12%'},sig:'貂蝉',career:'「荣耀美男子」阿泰陈顺吉，XQ 队长兼指挥，2017 秋季赛亚军。'},
+   {id:'a17_wuhen',name:'无痕',pos:'top',team:'仙阁',tags:[],base:[85,80,83,86],skill:{n:'黑八铁边',t:'team',d:'团战属性额外+10%'},sig:'吕布',career:'无痕，AS仙阁黑八奇迹功勋对抗路，后随 eStar 再夺 2019 年冠军。'},
+   {id:'a17_xiaoyu',name:'小羽',pos:'jg',team:'仙阁',tags:[],base:[79,80,80,78],skill:{n:'节奏打野',t:'farm',d:'运营属性额外+10%'},sig:'澜',career:'小羽，仙阁黑八奇迹打野。'},
+   {id:'a17_chengui',name:'辰鬼',pos:'mid',team:'仙阁',tags:[],base:[81,79,83,86],skill:{n:'黑八大脑',t:'mind',d:'心态属性额外+10%'},sig:'女娲',career:'辰鬼，AS仙阁首冠指挥，黑八奇迹的中路大脑。'},
+   {id:'a17_togo',name:'ToGo',pos:'ad',team:'仙阁',tags:[],base:[78,77,79,77],skill:{n:'奇兵射手',t:'lane',d:'对线属性额外+10%'},sig:'狄仁杰',career:'To Go，仙阁黑八奇迹发育路。'},
+   {id:'a17_yuqiu',name:'屿秋',pos:'sup',team:'仙阁',tags:[],base:[78,80,81,82],skill:{n:'守护游走',t:'team',d:'团战属性额外+10%'},sig:'张飞',career:'屿秋，仙阁黑八奇迹游走。'},
+   // —— JC 常青树起点 ——
+   {id:'a17_qingfeng',name:'青枫',pos:'mid',team:'JC',tags:[],base:[76,77,77,78],skill:{n:'老将底蕴',t:'mind',d:'心态属性额外+10%'},sig:'姜子牙',career:'JC 中路青枫，此后辗转 DYG/DRG 的联盟常青树。'},
+   // —— RNG.M（原 WJY 班底）——
+   {id:'a17_zero',name:'Zero',pos:'sup',team:'RNG',tags:[],base:[80,82,84,84],skill:{n:'指挥游走',t:'team',d:'团战属性额外+10%'},sig:'鬼谷子',career:'Zero，RNG.M 初代游走指挥（原 WJY 班底）。'},
+  ],
+  fa:[
+   {id:'a17_jiese',name:'杰斯',pos:'top',team:'AG',tags:[],base:[83,80,82,81],skill:{n:'经验边路',t:'lane',d:'对线属性额外+10%'},sig:'达摩',career:'AG超玩会边路轮换，2016-2017 年主力成员，等待新的机会。'},
+   {id:'a17_ran',name:'燃',pos:'jg',team:'eStar',tags:[],base:[82,80,83,80],skill:{n:'凶悍入侵',t:'farm',d:'运营属性额外+10%'},sig:'娜可露露',career:'eStar 初代打野「燃」，2017 春季赛季军主力。'},
+   {id:'a17_hhh',name:'火火火',pos:'mid',team:'eStar',tags:[],base:[80,78,80,79],skill:{n:'爆发中单',t:'team',d:'团战属性额外+10%'},sig:'安琪拉',career:'火火火，2017 秋季赛 eStar 中路引援。'},
+  ],
+  coaches:[
+   {id:'coe2',name:'寒夜',rating:82,style:'mind',bonus:5,styleBonus:4,wage:150,cost:1400,skill:{n:'黑八教父',d:'全队战力+5%，心态属性额外+4%（2016 年率仙阁上演黑八奇迹）'}},
+   {id:'coe3',name:'胡啸',rating:76,style:'lane',bonus:4,styleBonus:3,wage:110,cost:900,skill:{n:'稳健教头',d:'全队战力+4%，对线属性额外+3%（2017 年 AG超玩会主教练）'}},
+  ],
+  bonds:{
+   'QG':{min:3,full:5,bonusMin:4,bonusFull:10,descMin:'QG王朝羁绊（≥3人）：全队战力+4%',descFull:'QG五虎聚首！全队战力+10%'},
+   'XQ':{min:3,full:5,bonusMin:4,bonusFull:10,descMin:'XQ羁绊（≥3人）：全队战力+4%',descFull:'阿泰军团满编！全队战力+10%'},
+   '仙阁':{min:3,full:5,bonusMin:4,bonusFull:10,descMin:'仙阁羁绊（≥3人）：全队战力+4%',descFull:'黑八奇迹班底！全队战力+10%'},
+  },
+  rosters:{
+   'QGhappy':{p:['a17_fly','a17_alan','a17_cat17','a17_hurt','a17_yang'],u:[0]},
+   'AG超玩会':{p:['a17_vv','a17_meng','a17_laoshuai','a17_liusu','a17_lanxi'],u:[1]},
+   'eStarPro':{p:['a17_dake','a17_nuoyan','a17_weizhuang','a17_xingchen','a17_tiger'],u:[2]},
+   'XQ':{p:[null,null,'a17_ata',null,null],u:[2]},
+   'AS仙阁':{p:['a17_wuhen','a17_xiaoyu','a17_chengui','a17_togo','a17_yuqiu'],u:[2]},
+   'JC':{p:[null,null,'a17_qingfeng',null,null],u:[]},
+   'GK':{p:[null,null,null,null,null],u:[]},
+   'RNG.M':{p:[null,null,null,null,'a17_zero'],u:[]},
+   'EDG.M':{p:[null,null,null,null,null],u:[]},
+   'BA黑凤梨':{p:[null,null,null,null,null],u:[]},
+   'YTG':{p:[null,null,null,null,null],u:[]},
+   'WF.D':{p:[null,null,null,null,null],u:[]},
+   'SC':{p:[null,null,null,null,null],u:[]},
+   'MU':{p:[null,null,null,null,null],u:[]},
+   'LK':{p:[null,null,null,null,null],u:[]},
+   'DL火箭':{p:[null,null,null,null,null],u:[]},
+   'BWS':{p:[null,null,null,null,null],u:[]},
+   'VgHow':{p:[null,null,null,null,null],u:[]},
+  },
+  clubs:[
+   {name:'QGhappy',icon:'翼',budget:2333,cap:242,coach:'co7',seed:640,players:['a17_fly','a17_alan','a17_cat17','a17_hurt','a17_yang'],desc:'卫冕王朝 · QG五虎全盛 · 大满贯之师'},
+   {name:'AG超玩会',icon:'焰',budget:2167,cap:233,coach:'coe3',seed:600,players:['a17_vv','a17_meng','a17_laoshuai','a17_liusu','a17_lanxi'],desc:'三年三亚 · 梦泪老帅率领的信仰之师'},
+   {name:'eStarPro',icon:'★',budget:1833,cap:217,coach:'co4',seed:560,players:['a17_dake','a17_nuoyan','a17_weizhuang','a17_xingchen','a17_tiger'],desc:'老牌豪门 · 诺言伪装领衔 · 秋季大引援'},
+   {name:'XQ',icon:'戒',budget:1750,cap:213,coach:'co11',seed:555,players:['g2017_XQ_top','g2017_XQ_jg','a17_ata','g2017_XQ_ad','g2017_XQ_sup'],desc:'阿泰军团 · 国服第一中单 · 秋亚余威'},
+   {name:'AS仙阁',icon:'仙',budget:1500,cap:197,coach:'coe2',seed:520,players:['a17_wuhen','a17_xiaoyu','a17_chengui','a17_togo','a17_yuqiu'],desc:'卫冕冠军 · 黑八奇迹班底'},
+   {name:'JC',icon:'竞',budget:1417,cap:187,coach:'co8',seed:505,players:['g2017_JC_top','g2017_JC_jg','a17_qingfeng','g2017_JC_ad','g2017_JC_sup'],desc:'新锐劲旅 · 竞技之都'},
+   {name:'RNG.M',icon:'冠',budget:1467,cap:192,coach:'co5',seed:500,players:['g2017_RNGM_top','g2017_RNGM_jg','g2017_RNGM_mid','g2017_RNGM_ad','a17_zero'],desc:'皇族新军 · 初生牛犊不怕虎'},
+   {name:'GK',icon:'山',budget:1333,cap:180,coach:'co9',seed:480,players:['g2017_GK_top','g2017_GK_jg','g2017_GK_mid','g2017_GK_ad','g2017_GK_sup'],desc:'升班黑马 · 山城新锐'},
+   {name:'EDG.M',icon:'电',budget:1250,cap:175,coach:'co10',seed:460,players:['g2017_EDGM_top','g2017_EDGM_jg','g2017_EDGM_mid','g2017_EDGM_ad','g2017_EDGM_sup'],desc:'超电新军 · 潜力股'},
+   {name:'BA黑凤梨',icon:'梨',budget:1300,cap:177,coach:'co12',seed:440,players:['g2017_BA黑凤梨_top','g2017_BA黑凤梨_jg','g2017_BA黑凤梨_mid','g2017_BA黑凤梨_ad','g2017_BA黑凤梨_sup'],desc:'黑凤梨起航 · 未来可期'},
+   {name:'YTG',icon:'拓',budget:1083,cap:163,coach:'co11',seed:420,players:['g2017_YTG_top','g2017_YTG_jg','g2017_YTG_mid','g2017_YTG_ad','g2017_YTG_sup'],desc:'草根之师 · 敢打敢拼'},
+   {name:'WF.D',icon:'海',budget:1033,cap:158,coach:'co12',seed:400,players:['g2017_WFD_top','g2017_WFD_jg','g2017_WFD_mid','g2017_WFD_ad','g2017_WFD_sup'],desc:'WeFun · 青春风暴'},
+  ],
+ },
+ '2019':{
+  name:'2019 · 双冠与信仰',year:'2019',
+  desc:'eStar 春冠+世冠双冠的「大魔王」元年，AG超玩会收购 BA 席位信仰回归即夺冠（2019 秋季赛版图）。14 支史实球队 + ROX/MTG/GOG/启明等新势力（阵容部分演绎）。',
+  teams:[
+   {name:'武汉eStarPro',icon:'★',power:640},{name:'成都AG超玩会',icon:'焰',power:620},
+   {name:'重庆QGhappy',icon:'翼',power:600},{name:'上海RNG.M',icon:'冠',power:580},
+   {name:'济南RW侠',icon:'剑',power:560},{name:'南京Hero久竞',icon:'影',power:540},
+   {name:'DYG.JC',icon:'竞',power:520},{name:'TS',icon:'潮',power:500},
+   {name:'广州XQ',icon:'戒',power:485},{name:'佛山GK',icon:'山',power:480},
+   {name:'厦门VG',icon:'紫',power:460},{name:'ROX',icon:'星',power:450},
+   {name:'上海EDG.M',icon:'电',power:440},{name:'西安WE',icon:'狼',power:430},
+   {name:'YTG',icon:'拓',power:410},{name:'MTG',icon:'拳',power:400},
+   {name:'GOG',icon:'启',power:395},{name:'启明电竞',icon:'明',power:390},
+  ],
+  defs:[
+   // —— 武汉eStarPro 双冠班底 ——
+   {id:'a19_nuoyan',name:'诺言',pos:'top',team:'eStar',tags:[],base:[88,86,88,89],skill:{n:'队长铁边',t:'team',d:'团战属性额外+12%'},sig:'关羽',career:'eStar 队长诺言，2019 年春冠+世冠双冠对抗路。'},
+   {id:'a19_huahai',name:'花海',pos:'jg',team:'eStar',tags:[],base:[88,94,90,88],skill:{n:'出道即巅峰',t:'farm',d:'运营属性额外+12%'},sig:'娜可露露',career:'花海罗思源，2019 年 3 月 KPL 首秀即以公孙离拿下沉睡五杀，双冠打野。'},
+   {id:'a19_cat19',name:'cat',pos:'mid',team:'eStar',tags:[],base:[92,88,92,94],skill:{n:'大魔王指挥',t:'team',d:'团战属性额外+12%'},sig:'不知火舞',career:'猫神 cat，2019 年春季赛 FMVP，双冠王朝的指挥核心。'},
+   {id:'a19_weizhuang',name:'伪装',pos:'ad',team:'eStar',tags:[],base:[83,81,84,84],skill:{n:'元老转型',t:'lane',d:'对线属性额外+10%'},sig:'百里守约',career:'「九朝元老」伪装，2019 年转型发育路随队双冠。'},
+   {id:'a19_wuming',name:'无铭',pos:'sup',team:'eStar',tags:[],base:[83,90,90,88],skill:{n:'开团机器',t:'team',d:'团战属性额外+12%'},sig:'鬼谷子',career:'无铭，eStar 双冠游走。'},
+   // —— 成都AG超玩会 信仰回归（2019 秋季赛夺冠大名单）——
+   {id:'a19_ldl',name:'六点六',pos:'top',team:'AG',tags:[],base:[86,84,87,87],skill:{n:'关键先生',t:'team',d:'团战属性额外+12%'},sig:'吕布',career:'六点六，原 BA 黑凤梨核心边路，2019 秋随 AG 回归即夺冠。'},
+   {id:'a19_menglei',name:'梦泪',pos:'jg',team:'AG',tags:[],base:[85,84,82,86],skill:{n:'信仰归来',t:'farm',d:'运营属性额外+10%'},sig:'韩信',career:'梦泪，2019 年秋季赛回归赛场，随 AG 圆梦银龙杯。'},
+   {id:'a19_laoshuai19',name:'老帅',pos:'mid',team:'AG',tags:[],base:[87,84,86,92],skill:{n:'三年一梦',t:'lane',d:'对线属性额外+12%'},sig:'貂蝉',career:'「七朝选手，三年一梦」——2019 秋季赛总决赛 FMVP。'},
+   {id:'a19_yinuo',name:'一诺',pos:'ad',team:'AG',tags:[],base:[92,88,91,90],skill:{n:'刀尖跳舞',t:'team',d:'团战属性额外+12%'},sig:'公孙离',career:'一诺，AG 双子星，回归元年即夺联赛冠军的人气王牌。'},
+   {id:'a19_aisi',name:'爱思',pos:'sup',team:'AG',tags:[],base:[82,88,89,88],skill:{n:'体系游走',t:'farm',d:'运营属性额外+12%'},sig:'太乙真人',career:'爱思，AG超玩会冠军游走。'},
+   // —— 重庆QGhappy 王朝余晖 ——
+   {id:'a19_fly',name:'Fly',pos:'top',team:'QG',tags:[],base:[90,86,89,92],skill:{n:'四冠FMVP',t:'lane',d:'对线属性额外+12%'},sig:'花木兰',career:'Fly 彭云飞，QG 王朝旗手，KPL 历史 FMVP 之王。'},
+   {id:'a19_hurt',name:'Hurt',pos:'ad',team:'QG',tags:[],base:[88,85,87,86],skill:{n:'王朝射手',t:'lane',d:'对线属性额外+12%'},sig:'孙尚香',career:'Hurt 夏圣钦，QG 五虎发育路，王朝余晖里的稳定输出点。'},
+   // —— 上海RNG.M 春亚班底 ——
+   {id:'a19_bfr',name:'暴风锐',pos:'top',team:'RNG',tags:[],base:[82,80,82,83],skill:{n:'刚猛边路',t:'lane',d:'对线属性额外+10%'},sig:'关羽',career:'暴风锐，RNG.M 边路核心，2019 春随队闯进总决赛。'},
+   {id:'a19_qcz',name:'虔诚',pos:'ad',team:'RNG',tags:[],base:[90,86,88,88],skill:{n:'位移大师',t:'team',d:'团战属性额外+12%'},sig:'马可波罗',career:'虔诚，RNG.M 头牌射手，2019 春总决赛核心。'},
+   {id:'a19_zero19',name:'Zero',pos:'sup',team:'RNG',tags:[],base:[82,84,86,86],skill:{n:'指挥游走',t:'team',d:'团战属性额外+10%'},sig:'张飞',career:'Zero，RNG.M 游走指挥，2019 春总决赛首发。'},
+   // —— 南京Hero久竞 王朝原班 ——
+   {id:'a19_jiucheng',name:'久诚',pos:'mid',team:'Hero',tags:[],base:[92,86,89,90],skill:{n:'狙神',t:'lane',d:'对线属性额外+12%'},sig:'干将莫邪',career:'久诚，Hero 王朝核心，2018 年三冠+三 FMVP 的百发百中狙神。'},
+   {id:'a19_wuwei',name:'无畏',pos:'jg',team:'Hero',tags:[],base:[87,91,88,88],skill:{n:'节奏野核',t:'farm',d:'运营属性额外+12%'},sig:'裴擒虎',career:'无畏，Hero 王朝打野，2018 年双冠主力。'},
+   {id:'a19_zuichu',name:'最初',pos:'top',team:'Hero',tags:[],base:[82,80,83,82],skill:{n:'开路先锋',t:'team',d:'团战属性额外+10%'},sig:'白起',career:'最初，Hero 王朝对抗路，2018 年双冠主力。'},
+   {id:'a19_qinian',name:'七年',pos:'ad',team:'Hero',tags:[],base:[82,80,82,81],skill:{n:'稳健发育',t:'lane',d:'对线属性额外+10%'},sig:'虞姬',career:'七年，Hero 王朝发育路，2018 年双冠主力。'},
+   {id:'a19_fanfan',name:'帆帆',pos:'sup',team:'Hero',tags:[],base:[84,88,90,86],skill:{n:'冠军游走',t:'team',d:'团战属性额外+12%'},sig:'张飞',career:'帆帆，Hero 王朝游走，此后辗转三队皆登顶的福将。'},
+   // —— DYG.JC / TS / XQ / GK ——
+   {id:'a19_qq',name:'清清',pos:'top',team:'DYGJC',tags:[],base:[83,81,85,82],skill:{n:'马超神威',t:'lane',d:'对线属性额外+12%'},sig:'马超',career:'清清，2019 年出道于 DYG.JC，此后登顶广州 TTG 的顶级边路。'},
+   {id:'a19_qf19',name:'青枫',pos:'mid',team:'DYGJC',tags:[],base:[77,78,77,79],skill:{n:'常青树',t:'mind',d:'心态属性额外+10%'},sig:'姜子牙',career:'青枫，JC/DYG 系常青树中单。'},
+   {id:'a19_ny',name:'暖阳',pos:'jg',team:'TS',tags:[],base:[87,92,89,88],skill:{n:'野核之舞',t:'farm',d:'运营属性额外+12%'},sig:'兰陵王',career:'暖阳，TS 野核，次年双冠双 FMVP 的绝对核心。'},
+   {id:'a19_jw',name:'九尾',pos:'mid',team:'XQ',tags:[],base:[88,85,89,88],skill:{n:'法刺代言人',t:'team',d:'团战属性额外+12%'},sig:'不知火舞',career:'九尾，XQ/TTG 系法刺代言人。'},
+   {id:'a19_pp',name:'鹏鹏',pos:'jg',team:'GK',tags:[],base:[80,82,81,79],skill:{n:'老牌野核',t:'farm',d:'运营属性额外+10%'},sig:'露娜',career:'鹏鹏，GK 老牌野核，云缨/露娜绝活。'},
+  ],
+  fa:[
+   {id:'a19_xy',name:'笑影',pos:'mid',team:'AG',tags:[],base:[80,79,81,80],skill:{n:'新人中单',t:'farm',d:'运营属性额外+10%'},sig:'沈梦溪',career:'笑影，2019 年选秀直签的新人中单，AG 夺冠班底轮换。'},
+   {id:'a19_ly',name:'麟羽',pos:'jg',team:'AG',tags:[],base:[80,81,79,79],skill:{n:'凶悍节奏',t:'farm',d:'运营属性额外+10%'},sig:'盘古',career:'麟羽，原 BA 黑凤梨打野，2019 秋 AG 轮换。'},
+   {id:'a19_xj',name:'小剑',pos:'top',team:'AG',tags:[],base:[78,77,79,78],skill:{n:'团战边路',t:'team',d:'团战属性额外+10%'},sig:'猪八戒',career:'小剑，原 BA 黑凤梨边路，2019 秋 AG 轮换。'},
+  ],
+  coaches:[],
+  bonds:{
+   'QG':{min:3,full:5,bonusMin:4,bonusFull:10,descMin:'QG王朝羁绊（≥3人）：全队战力+4%',descFull:'QG 班底聚首！全队战力+10%'},
+   'RNG':{min:3,full:5,bonusMin:4,bonusFull:8,descMin:'RNG.M羁绊（≥3人）：全队战力+4%',descFull:'皇族班底满编！全队战力+8%'},
+   'Hero':{min:3,full:5,bonusMin:4,bonusFull:10,descMin:'Hero王朝羁绊（≥3人）：全队战力+4%',descFull:'Hero王朝原班人马！全队战力+10%'},
+   'TS':{min:3,full:5,bonusMin:4,bonusFull:8,descMin:'TS羁绊（≥3人）：全队战力+4%',descFull:'未来双冠的雏形！全队战力+8%'},
+  },
+  rosters:{
+   '武汉eStarPro':{p:['a19_nuoyan','a19_huahai','a19_cat19','a19_weizhuang','a19_wuming'],u:[1,2]},
+   '成都AG超玩会':{p:['a19_ldl','a19_menglei','a19_laoshuai19','a19_yinuo','a19_aisi'],u:[3]},
+   '重庆QGhappy':{p:['a19_fly',null,null,'a19_hurt',null],u:[0]},
+   '上海RNG.M':{p:['a19_bfr',null,null,'a19_qcz','a19_zero19'],u:[3]},
+   '济南RW侠':{p:[null,null,null,null,null],u:[]},
+   '南京Hero久竞':{p:['a19_zuichu','a19_wuwei','a19_jiucheng','a19_qinian','a19_fanfan'],u:[2]},
+   'DYG.JC':{p:['a19_qq',null,'a19_qf19',null,null],u:[0]},
+   'TS':{p:[null,'a19_ny',null,null,null],u:[1]},
+   '广州XQ':{p:[null,null,'a19_jw',null,null],u:[2]},
+   '佛山GK':{p:[null,'a19_pp',null,null,null],u:[]},
+   '厦门VG':{p:[null,null,null,null,null],u:[]},
+   'ROX':{p:[null,null,null,null,null],u:[]},
+   '上海EDG.M':{p:[null,null,null,null,null],u:[]},
+   '西安WE':{p:[null,null,null,null,null],u:[]},
+   'YTG':{p:[null,null,null,null,null],u:[]},
+   'MTG':{p:[null,null,null,null,null],u:[]},
+   'GOG':{p:[null,null,null,null,null],u:[]},
+   '启明电竞':{p:[null,null,null,null,null],u:[]},
+  },
+  clubs:[
+   {name:'武汉eStarPro',icon:'★',budget:2333,cap:242,coach:'co4',seed:640,players:['a19_nuoyan','a19_huahai','a19_cat19','a19_weizhuang','a19_wuming'],desc:'大魔王元年 · cat指挥 · 春冠+世冠双冠'},
+   {name:'成都AG超玩会',icon:'焰',budget:2167,cap:233,coach:'co6',seed:620,players:['a19_ldl','a19_menglei','a19_laoshuai19','a19_yinuo','a19_aisi'],desc:'信仰回归 · 梦泪一诺老帅 · 主教练月光'},
+   {name:'重庆QGhappy',icon:'翼',budget:2083,cap:230,coach:'co2',seed:600,players:['a19_fly','g2019_重庆QGhappy_jg','g2019_重庆QGhappy_mid','a19_hurt','g2019_重庆QGhappy_sup'],desc:'四冠王朝 · Fly/Hurt 老而弥坚'},
+   {name:'上海RNG.M',icon:'冠',budget:1750,cap:208,coach:'co5',seed:580,players:['a19_bfr','g2019_上海RNGM_jg','g2019_上海RNGM_mid','a19_qcz','a19_zero19'],desc:'春赛亚军 · 虔诚领衔 · 皇族再冲'},
+   {name:'济南RW侠',icon:'剑',budget:1583,cap:200,coach:'co8',seed:560,players:['g2019_济南RW侠_top','g2019_济南RW侠_jg','g2019_济南RW侠_mid','g2019_济南RW侠_ad','g2019_济南RW侠_sup'],desc:'世冠亚军 · 老牌侠客重建'},
+   {name:'南京Hero久竞',icon:'影',budget:1667,cap:203,coach:'co3',seed:540,players:['a19_zuichu','a19_wuwei','a19_jiucheng','a19_qinian','a19_fanfan'],desc:'王朝原班 · 久诚狙神 · 久哲执教'},
+   {name:'DYG.JC',icon:'竞',budget:1500,cap:197,coach:'co9',seed:520,players:['a19_qq','g2019_DYGJC_jg','a19_qf19','g2019_DYGJC_ad','g2019_DYGJC_sup'],desc:'清清青枫 · 新贵崛起'},
+   {name:'TS',icon:'潮',budget:1417,cap:187,coach:'co10',seed:500,players:['g2019_TS_top','a19_ny','g2019_TS_mid','g2019_TS_ad','g2019_TS_sup'],desc:'暖阳野核 · 未来双冠的雏形'},
+   {name:'广州XQ',icon:'戒',budget:1333,cap:180,coach:'co11',seed:485,players:['g2019_广州XQ_top','g2019_广州XQ_jg','a19_jw','g2019_广州XQ_ad','g2019_广州XQ_sup'],desc:'九尾法刺 · 阿泰出走后重建'},
+   {name:'佛山GK',icon:'山',budget:1333,cap:180,coach:'co7',seed:480,players:['g2019_佛山GK_top','a19_pp','g2019_佛山GK_mid','g2019_佛山GK_ad','g2019_佛山GK_sup'],desc:'鹏鹏野核 · 山城劲旅'},
+   {name:'厦门VG',icon:'紫',budget:1167,cap:170,coach:'co9',seed:460,players:['g2019_厦门VG_top','g2019_厦门VG_jg','g2019_厦门VG_mid','g2019_厦门VG_ad','g2019_厦门VG_sup'],desc:'紫金军团 · 中游挑战者'},
+   {name:'ROX',icon:'星',budget:1200,cap:173,coach:'co5',seed:450,players:['g2019_ROX_top','g2019_ROX_jg','g2019_ROX_mid','g2019_ROX_ad','g2019_ROX_sup'],desc:'韩国外援军 · 联盟海外新势力'},
+   {name:'上海EDG.M',icon:'电',budget:1167,cap:170,coach:'co10',seed:440,players:['g2019_上海EDGM_top','g2019_上海EDGM_jg','g2019_上海EDGM_mid','g2019_上海EDGM_ad','g2019_上海EDGM_sup'],desc:'超电重建 · 等待翻身'},
+   {name:'西安WE',icon:'狼',budget:1083,cap:163,coach:'co6',seed:430,players:['g2019_西安WE_top','g2019_西安WE_jg','g2019_西安WE_mid','g2019_西安WE_ad','g2019_西安WE_sup'],desc:'蓝色风暴 · 草根逆袭'},
+   {name:'YTG',icon:'拓',budget:1000,cap:158,coach:'co11',seed:410,players:['g2019_YTG_top','g2019_YTG_jg','g2019_YTG_mid','g2019_YTG_ad','g2019_YTG_sup'],desc:'草根之师 · 最后的荣光'},
+  ],
+ },
+};
+/* ================= 时代安装：把默认联盟整体替换为所选时代（开局/读档时调用） =================
+   installEra(null) 还原默认（2026 现役）联盟。数据表整体替换，引擎零改动：
+   赛制沿用现行年度赛历（年代赛历差异属游戏化演绎）。 */
+let _eraActive=null;
+const _ERA_BASE={pool:PLAYER_POOL.slice(),teams:AI_TEAMS.slice(),rosters:JSON.parse(JSON.stringify(AI_ROSTERS)),
+ tpl:CLUB_TEMPLATES.slice(),fa:FA_2026.slice(),bonds:JSON.parse(JSON.stringify(TEAM_BONDS)),coach:COACH_POOL.slice()};
+function installEra(id){
+ if(typeof _defIdx!=='undefined')_defIdx=null; // def 索引缓存失效：还原与安装两条路径都必须重建（early-return 也要走）
+ // 先还原默认联盟（幂等基准）；教练池必须还原——否则时代教练永久泄漏进现役市场
+ PLAYER_POOL.length=0;_ERA_BASE.pool.forEach(d=>PLAYER_POOL.push(d));
+ AI_TEAMS.length=0;_ERA_BASE.teams.forEach(t=>AI_TEAMS.push(t));
+ Object.keys(AI_ROSTERS).forEach(k=>delete AI_ROSTERS[k]);
+ Object.assign(AI_ROSTERS,JSON.parse(JSON.stringify(_ERA_BASE.rosters)));
+ CLUB_TEMPLATES.length=0;_ERA_BASE.tpl.forEach(t=>CLUB_TEMPLATES.push(t));
+ FA_2026.length=0;_ERA_BASE.fa.forEach(d=>FA_2026.push(d));
+ COACH_POOL.length=0;_ERA_BASE.coach.forEach(c=>COACH_POOL.push(c));
+ Object.keys(TEAM_BONDS).forEach(k=>delete TEAM_BONDS[k]);
+ Object.assign(TEAM_BONDS,JSON.parse(JSON.stringify(_ERA_BASE.bonds)));
+ _eraActive=null;
+ const era=id&&KPL_ERAS[id];
+ if(!era)return;
+ // ① 选手池整体替换为时代选手（现代传奇不同框，避免重名；现代池由 installEra(null) 还原）
+ PLAYER_POOL.length=0;era.defs.forEach(d=>PLAYER_POOL.push(d));
+ FA_2026.length=0;(era.fa||[]).forEach(d=>FA_2026.push(d));
+ // ② 时代教练入池
+ (era.coaches||[]).forEach(c=>{if(!COACH_POOL.some(x=>x.id===c.id))COACH_POOL.push(c);});
+ // ③ 羁绊
+ Object.assign(TEAM_BONDS,era.bonds||{});
+ // ④ 阵容：显式 id + 空位生成时代轮换选手（名字与全联盟查重）
+ const used=new Set(PLAYER_POOL.map(d=>d.name));
+ const rosters={};
+ for(const tn in era.rosters){
+  const src=era.rosters[tn];
+  const p=src.p.map((pid,i)=>pid||genEraDef(id,tn,POS_ORDER[i],used).id);
+  rosters[tn]={p,u:(src.u||[]).map(i=>p[i]).filter(Boolean)};
+ }
+ // ⑤ 联盟队伍 + 执教模板整体替换
+ AI_TEAMS.length=0;era.teams.forEach(t=>AI_TEAMS.push(Object.assign({},t)));
+ Object.keys(AI_ROSTERS).forEach(k=>delete AI_ROSTERS[k]);
+ Object.assign(AI_ROSTERS,rosters);
+ CLUB_TEMPLATES.length=0;era.clubs.forEach(c=>CLUB_TEMPLATES.push(c));
+ _eraActive=id;
+}

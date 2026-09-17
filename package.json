@@ -1,0 +1,19 @@
+{
+  "name": "kpl-esports-manager",
+  "version": "3.0.0",
+  "description": "王者电竞经理 · KPL 篇 —— LOL 电竞经理式的 KPL 俱乐部经营同人游戏（粉丝自制，非商用）",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "test": "node tests/run.js",
+    "test:fast": "node tests/run.js --skip=sim-quick,sim-yearend",
+    "fuzz": "node tests/fuzz.js",
+    "sim": "node sim.js",
+    "sim:quick": "node tests/sim-quick.js",
+    "sim:player": "node tests/sim-player.js",
+    "sim:yearend": "node tests/sim-yearend.js",
+    "test:built": "node tests/verify-built.js"
+  },
+  "keywords": ["kpl", "esports", "manager", "王者荣耀", "同人游戏"],
+  "license": "MIT"
+}
