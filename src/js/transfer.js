@@ -141,10 +141,18 @@ function defIndex(){
  return _defIdx;
 }
 function defOf(s,pid){return defIndex()[pid]||(s.extraDefs||[]).find(d=>d.id===pid)||null;}
-function aiDetachDef(s,pid){ // def 被玩家签走：从所有 AI 队除名，原队转会期自动补强
+function aiDetachDef(s,pid){ // def 被玩家签走/转会：从所有 AI 队与青训营除名，避免同一人挂两队
  if(!defOf(s,pid))return;
  const map=aiRosterDefMap(s);
  for(const tn in map)map[tn]=map[tn].filter(id=>id!==pid);
+ // 青训营残留是跨队重名/幽灵双挂的源头：晋升后未摘营，转会走后再被「晋升」回原队
+ if(s.aiAcademy){
+ for(const tn in s.aiAcademy){
+  if(Array.isArray(s.aiAcademy[tn]))s.aiAcademy[tn]=s.aiAcademy[tn].filter(id=>id!==pid);
+ }
+ }
+ s.aiRosters=s.aiRosters||{};
+ for(const tn in s.aiRosters){if(Array.isArray(s.aiRosters[tn]))s.aiRosters[tn]=s.aiRosters[tn].filter(p=>p&&p.id!==pid);}
 }
 function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额合法才接收）；返回是否入册
  const def=defOf(s,pid);
@@ -295,6 +303,7 @@ function aiTransferWindow(s){
  s.extraDefs.push(def);
  logEvent(s,' 补强：'+tn+' 引进 '+def.name+'（'+POS[def.pos][0]+' · 次级联赛引援）');
  }
+ aiDetachDef(s,def.id); // 全局除名后再入册，杜绝同一 def 双挂
  map[tn].push(def.id);
  }
  });
@@ -440,6 +449,7 @@ function aiTransferWindow(s){
  // 豪门每季练 2 人，其余 1 人
  const trains=tier==='elite'?2:1;
  for(let t=0;t<trains;t++){
+ if(!s.aiAcademy[tn]||!s.aiAcademy[tn].length)break;
  const id=s.aiAcademy[tn][rnd(0,s.aiAcademy[tn].length-1)];
  const r=defOf(s,id);
  if(!r)break;
@@ -453,10 +463,17 @@ function aiTransferWindow(s){
  if(rSum>=300){
  const rOvr=overall(genSeasonPlayer(s,r));
  const oldIdx=map[tn].findIndex(pid=>{const d=defOf(s,pid);return d&&d.pos===r.pos;});
+ // 已在其他队注册的青训（曾晋升后被挖走/挂牌成交）：不得再写回本队，否则同一 def 双挂
+ const already=Object.keys(map).find(x=>x!==tn&&(map[x]||[]).includes(r.id));
+ if(already){
+ s.aiAcademy[tn]=(s.aiAcademy[tn]||[]).filter(id=>id!==r.id);
+ continue;
+ }
  if(oldIdx>=0){
  const oldDef=defOf(s,map[tn][oldIdx]);
  if(oldDef&&overall(genSeasonPlayer(s,oldDef))<rOvr){
  map[tn][oldIdx]=r.id;
+ s.aiAcademy[tn]=(s.aiAcademy[tn]||[]).filter(id=>id!==r.id); // 晋升后摘营，防转会后二次写回
  freePool.push(oldDef); // 被顶替的老将进自由池，别从联盟蒸发
  rookMoved=true;
  logEvent(s,' '+tn+' 新秀 '+r.name+'（'+rOvr+'总值）晋升一线队，'+oldDef.name+' 离队寻找下家');
@@ -464,6 +481,7 @@ function aiTransferWindow(s){
  }
  }else if(map[tn].length<5){
  map[tn].push(r.id);
+ s.aiAcademy[tn]=(s.aiAcademy[tn]||[]).filter(id=>id!==r.id);
  rookMoved=true;
  logEvent(s,' '+tn+' 新秀 '+r.name+'（'+rOvr+'总值）晋升一线队（'+POS[r.pos][0]+'）');
  break;
@@ -472,6 +490,17 @@ function aiTransferWindow(s){
  }
  });
  if(rookMoved)s.aiRosters={}; // 名册缓存失效
+ // 收尾排重：同一 def 理论上只应出现在一队（历史路径/极端序列仍可能双挂，这里强制收敛）
+ {
+ const home={};
+ teams.forEach(tn=>{
+ (map[tn]||[]).forEach(id=>{
+ if(home[id]&&home[id]!==tn){
+  map[tn]=map[tn].filter(x=>x!==id); // 后写的队让位，保留先注册的队
+ }else home[id]=tn;
+ });
+ });
+ }
 }
 /* AI 青训新秀 def（四维底子 60-70 起，培养 2-4 次可达 300 晋升线；名字全局查重） */
 function genAiRookieDef(s,teamName){
