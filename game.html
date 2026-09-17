@@ -216,8 +216,9 @@ const POS_W={top:{lane:.35,farm:.2,team:.25,mind:.2},jg:{lane:.15,farm:.4,team:.
  mid:{lane:.3,farm:.2,team:.3,mind:.2},ad:{lane:.3,farm:.35,team:.2,mind:.15},
  sup:{lane:.15,farm:.2,team:.3,mind:.35}};
 function overall(p){
- const w=POS_W[p.pos]||{lane:.25,farm:.25,team:.3,mind:.2},a=p.attrs;
- return clamp(Math.round(a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind),1,99);
+ const w=POS_W[(p&&p.pos)]||{lane:.25,farm:.25,team:.3,mind:.2};
+ const a=(p&&p.attrs)||{lane:70,farm:70,team:70,mind:70};
+ return clamp(Math.round((a.lane||70)*w.lane+(a.farm||70)*w.farm+(a.team||70)*w.team+(a.mind||70)*w.mind),1,99);
 }
 function ovrColor(o){return o>=90?'#ffb84d':o>=80?'#5aa7ff':'#7d93b8';}
 function ovrCls(o){return o>=90?'ssr':o>=80?'sr':'r';} // 复用旧卡面色阶样式
@@ -1814,12 +1815,18 @@ function migrateSeasonShape(s){
  }
 }
 function migratePlayerFields(s){
- (s.players||[]).forEach(p=>{
+ (s.players||[]).concat(s.market||[],s.transferList||[],s.freeAgents||[],s.academy||[]).forEach(p=>{
+ if(!p)return;
+
+ if(!p.attrs||typeof p.attrs!=='object')p.attrs={lane:70,farm:70,team:70,mind:70};
+ else['lane','farm','team','mind'].forEach(k=>{if(typeof p.attrs[k]!=='number')p.attrs[k]=70;});
+ if(!p.skill||typeof p.skill!=='object')p.skill={n:'—',d:'—',t:'team'};
  if(p.injury==null)p.injury=0;
  if(p.mvp==null)p.mvp=0;
  if(p.contract==null)p.contract=2;
  if(p.retiring==null)p.retiring=false;
  if(p.age==null)p.age=ageByPos(p.pos,false);
+ if(!POS[p.pos])p.pos='mid';
  if(!p.sig)p.sig=(HEROES.find(h=>h.pos[0]===p.pos)||{}).n||null;
  if(!p.career){const def=PLAYER_POOL.find(d=>d.id===p.id);if(def)p.career=def.career||'';}
  try{if(typeof ensurePlayerPeak==='function'&&!p.peak)ensurePlayerPeak(p);}catch(e){}
@@ -7020,6 +7027,7 @@ function tourFinish(){_tourEnd('上手！前 3 天按顶部任务条走，目标
 <script>
 function groupOfTeam(s,n){
 
+ if(!s||!s.groups)return 'G3';
  for(const g of ['S','A','B','G1','G2','G3']){if(s.groups[g]&&s.groups[g].includes(n))return g;}
  return 'G3';
 }
@@ -8093,6 +8101,7 @@ function queueMatchAdvance(s,fn){
 }
 function finishSeries(finalWin){
  const sr=S.series;
+ if(!sr)return; // 重复点击/异常重入：系列赛已清，直接忽略，避免二次结算毁档
  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
 
  rosterLineup(S).forEach(p=>{p.apps=(p.apps||0)+1;});
@@ -8116,9 +8125,9 @@ function finishSeries(finalWin){
  if(sr.stage==='regular'){
  const g=myGroup(S);
  const t=(g&&S.tables[g])?S.tables[g][S.teamName]:null;
- const m=S.schedule[S.matchIdx];
- const ot=(g&&S.tables[g])?S.tables[g][m.opp]:null;
- m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;
+ const m=(S.schedule||[])[S.matchIdx];
+ const ot=(g&&m&&S.tables[g])?S.tables[g][m.opp]:null;
+ if(m){m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;}
  if(t){
  if(finalWin){t.w++;t.pts++;}else{t.l++;}
  t.pw+=sr.mw;
@@ -8134,7 +8143,7 @@ function finishSeries(finalWin){
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
- simulateAiRound(S,m.round); // 本轮打完，联盟其他场次同步开打并更新积分
+ simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
  if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
@@ -8325,6 +8334,11 @@ async function aiFillReport(r){
 </script>
 <script>
 function pcard(p,extra){
+ if(!p)return '<div class="pcard r"><div class="p-name">选手数据缺失</div></div>';
+
+ if(!p.attrs)p.attrs={lane:70,farm:70,team:70,mind:70};
+ if(!p.skill)p.skill={n:'—',d:'—',t:'team'};
+ if(!POS[p.pos])p.pos='mid';
  const o=overall(p),oc=ovrColor(o); // 总值实时计算，训练/年龄/表现即时反映
  const hpCls=p.injury>0?`<div class="p-hp">伤停 ${p.injury}天</div>`:(p.morale<40?'<div class="p-hp">状态差</div>':'');
  const tags=(p.tags||[]).map(t=>`<span class="p-tag">${t}</span>`).join('');
@@ -8489,7 +8503,8 @@ function energyBar(p){
 }
 
 function renderHeader(){
- const sp=SPONSORS[S.sponsorLv];
+ const spLv=clamp((S&&S.sponsorLv)||0,0,Math.max(0,SPONSORS.length-1));
+ const sp=SPONSORS[spLv]||SPONSORS[0];
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,32)}</div>
@@ -8981,7 +8996,8 @@ function renderClub(){
 }
 
 function renderBiz(){
- const sp=SPONSORS[S.sponsorLv],next=SPONSORS[S.sponsorLv+1];
+ const lv=clamp(S.sponsorLv||0,0,SPONSORS.length-1); // 残档越界只影响展示，不回写 S
+ const sp=SPONSORS[lv],next=SPONSORS[lv+1];
  let html=pageHint('biz')+`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
  const fansNow=Math.round(S.fans||0);
  const effIncome=Math.round(sp.income*fanMul(S,500));
@@ -9718,7 +9734,7 @@ function renderMarket(){
  coachHtml+=`<div class="sponsor" style="border-color:var(--gold)">
  <span class="s-icon">教</span>
  <div><div class="s-name">${c.name} <span class="gold">(现任主教练)</span></div>
- <div class="s-desc">${c.rating||80}评分 · ${COACH_STYLE[c.style]}型 · ${c.skill.n}：${c.skill.d} · 周薪 ${c.wage}万</div></div>
+ <div class="s-desc">${c.rating||80}评分 · ${COACH_STYLE[c.style]||'—'}型 · ${(c.skill&&c.skill.n)||'—'}：${(c.skill&&c.skill.d)||'—'} · 周薪 ${c.wage||0}万</div></div>
  <button class="btn sm danger" onclick="fireCoach(S)">解雇</button>
  </div>`;
  }else{
@@ -9729,7 +9745,7 @@ function renderMarket(){
  coachHtml+=`<div style="margin:12px 0 6px;font-weight:800;font-size:12px">助教席 <span class="tag">${asCnt}/2 · 与主教练叠加</span></div>`;
  coachHtml+=asCnt?`<div class="g2">${S.assistants.map(a=>`
  <div class="sponsor"><span class="s-icon">助</span>
- <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]}型 · ${a.skill.d} · 周薪 ${a.wage}万</div></div>
+ <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]||'—'}型 · ${(a.skill&&a.skill.d)||'—'} · 周薪 ${a.wage||0}万</div></div>
  <button class="btn sm danger" onclick="fireAssistant(S,'${a.id}')">解约</button>
  </div>`).join('')}</div>`
  :`<div class="hint" style="margin-bottom:8px">未聘助教——每名助教提供小额全队加成，与主教练叠加（买替补工资帽之外的第二处长期开销）</div>`;
@@ -9738,8 +9754,8 @@ function renderMarket(){
  return `<div class="pcard ${ovrCls(a.rating||75)}" style="text-align:center">
  <div style="margin:6px 0;color:var(--faint)"></div>
  <div class="p-name" style="font-weight:800">${a.name}</div>
- <div class="p-rarity" style="color:${oc};letter-spacing:0">${a.rating}评分 · ${COACH_STYLE[a.style]}型</div>
- <div class="p-skill"> ${a.skill.d}</div>
+ <div class="p-rarity" style="color:${oc};letter-spacing:0">${a.rating}评分 · ${COACH_STYLE[a.style]||'—'}型</div>
+ <div class="p-skill"> ${(a.skill&&a.skill.d)||'—'}</div>
  <div class="p-foot"><span>签约费 <b>${a.cost}万</b></span><span>周薪 <b>${a.wage}万</b></span></div>
  <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
  </div>`;
@@ -9750,11 +9766,11 @@ function renderMarket(){
  return `<div class="pcard ${ovrCls(c.rating||80)}" style="text-align:center">
  <div style="margin:6px 0;color:var(--faint)"></div>
  <div class="p-name" style="font-weight:800">${c.name}</div>
- <div class="p-rarity" style="color:${oc};letter-spacing:0">${c.rating||80}评分 · ${COACH_STYLE[c.style]}型</div>
- <div class="p-skill"> ${c.skill.n}<br><b style="font-size:10px">${c.skill.d}</b></div>
+ <div class="p-rarity" style="color:${oc};letter-spacing:0">${c.rating||80}评分 · ${COACH_STYLE[c.style]||'—'}型</div>
+ <div class="p-skill"> ${(c.skill&&c.skill.n)||'—'}<br><b style="font-size:10px">${(c.skill&&c.skill.d)||'—'}</b></div>
  <div class="attr" style="grid-template-columns:1fr;text-align:center;font-size:11px">
- <span>全队战力 <i style="color:var(--gold)">+${c.bonus}%</i></span>
- <span>${COACH_STYLE[c.style]}属性 <i style="color:var(--gold)">+${c.styleBonus}%</i></span>
+ <span>全队战力 <i style="color:var(--gold)">+${c.bonus||0}%</i></span>
+ <span>${COACH_STYLE[c.style]||'—'}属性 <i style="color:var(--gold)">+${c.styleBonus||0}%</i></span>
  </div>
  <div class="p-foot"><span>签约费 <b>${c.cost}万</b></span><span>周薪 <b>${c.wage}万</b></span></div>
  <button class="btn sm primary" onclick="signCoach(S,S.coachMarket.find(x=>x.id==='${c.id}'))">${S.coach&&S.coach.id===c.id?'现任':'签约执教'}</button>
@@ -9768,7 +9784,7 @@ function renderMarket(){
  if(S.transferWindow>0){
 
  const renewRow=(p,tag)=>`<div class="match" style="margin-bottom:6px;padding:8px 10px;${p.contract<=0?'border-color:rgba(217,164,65,.45)':''}">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁)</span></span>
+ <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${(POS[p.pos]||['?','?'])[0]} · 总值${overall(p)} · ${p.age||'?'}岁)</span></span>
  <div class="power" style="font-size:10px">${tag} · 周薪 ${p.wage}万 · 心理价位 ≈${renewAskWage(p,2)}万</div></div>
  <div style="display:flex;gap:4px">
  <button class="btn sm gold" style="margin:0" onclick="openRenewNego(S,'${p.id}')">续约谈判</button>
@@ -10044,7 +10060,7 @@ function playerRest(){
 <script>
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 
-const KM_BUILD='2026-09-17a';
+const KM_BUILD='2026-09-17b';
 
 const _foldCache=new Map();
 function foldCls(key,def){

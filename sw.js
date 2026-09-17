@@ -1,7 +1,7 @@
 /* KPL 电竞经理离线缓存（PWA）——借鉴开源浏览器游戏 Goooool.net 的离线可玩模式。
  策略：导航请求 network-first（在线永远拿到最新版），失败回退缓存（断网可玩）；
  静态资源命中缓存优先。改版本号 CACHE 即可全量刷新。 */
-const CACHE = 'kpl-mgr-v2-20260917';
+const CACHE = 'kpl-mgr-v2-20260917b';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {

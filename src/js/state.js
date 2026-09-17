@@ -869,12 +869,18 @@ function migrateSeasonShape(s){
  }
 }
 function migratePlayerFields(s){
- (s.players||[]).forEach(p=>{
+ (s.players||[]).concat(s.market||[],s.transferList||[],s.freeAgents||[],s.academy||[]).forEach(p=>{
+ if(!p)return;
+ // 残档：attrs/skill 被裁掉会让 pcard/overall/训练整页炸——读档时补齐默认值
+ if(!p.attrs||typeof p.attrs!=='object')p.attrs={lane:70,farm:70,team:70,mind:70};
+ else['lane','farm','team','mind'].forEach(k=>{if(typeof p.attrs[k]!=='number')p.attrs[k]=70;});
+ if(!p.skill||typeof p.skill!=='object')p.skill={n:'—',d:'—',t:'team'};
  if(p.injury==null)p.injury=0;
  if(p.mvp==null)p.mvp=0;
  if(p.contract==null)p.contract=2;
  if(p.retiring==null)p.retiring=false;
  if(p.age==null)p.age=ageByPos(p.pos,false);
+ if(!POS[p.pos])p.pos='mid';
  if(!p.sig)p.sig=(HEROES.find(h=>h.pos[0]===p.pos)||{}).n||null;
  if(!p.career){const def=PLAYER_POOL.find(d=>d.id===p.id);if(def)p.career=def.career||'';}
  try{if(typeof ensurePlayerPeak==='function'&&!p.peak)ensurePlayerPeak(p);}catch(e){}

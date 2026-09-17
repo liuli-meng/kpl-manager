@@ -174,8 +174,9 @@ const POS_W={top:{lane:.35,farm:.2,team:.25,mind:.2},jg:{lane:.15,farm:.4,team:.
  mid:{lane:.3,farm:.2,team:.3,mind:.2},ad:{lane:.3,farm:.35,team:.2,mind:.15},
  sup:{lane:.15,farm:.2,team:.3,mind:.35}};
 function overall(p){
- const w=POS_W[p.pos]||{lane:.25,farm:.25,team:.3,mind:.2},a=p.attrs;
- return clamp(Math.round(a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind),1,99);
+ const w=POS_W[(p&&p.pos)]||{lane:.25,farm:.25,team:.3,mind:.2};
+ const a=(p&&p.attrs)||{lane:70,farm:70,team:70,mind:70};
+ return clamp(Math.round((a.lane||70)*w.lane+(a.farm||70)*w.farm+(a.team||70)*w.team+(a.mind||70)*w.mind),1,99);
 }
 function ovrColor(o){return o>=90?'#ffb84d':o>=80?'#5aa7ff':'#7d93b8';}
 function ovrCls(o){return o>=90?'ssr':o>=80?'sr':'r';} // 复用旧卡面色阶样式

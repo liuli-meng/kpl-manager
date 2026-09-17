@@ -5,6 +5,7 @@
  蓝方=先ban先选一抢；红方=counter位后手克制（本局战力+2%） */
 function groupOfTeam(s,n){
  // 检查所有可能的组（含季后赛阶段，phaseGroups 在 playoff 时为空）
+ if(!s||!s.groups)return 'G3';
  for(const g of ['S','A','B','G1','G2','G3']){if(s.groups[g]&&s.groups[g].includes(n))return g;}
  return 'G3';
 }

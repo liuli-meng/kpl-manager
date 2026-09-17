@@ -4,6 +4,11 @@
 
 /* ================= 卡牌渲染 ================= */
 function pcard(p,extra){
+ if(!p)return '<div class="pcard r"><div class="p-name">选手数据缺失</div></div>';
+ // 残缺档兜底：attrs/skill/pos 任一缺失都不能把阵容/转会整页打崩
+ if(!p.attrs)p.attrs={lane:70,farm:70,team:70,mind:70};
+ if(!p.skill)p.skill={n:'—',d:'—',t:'team'};
+ if(!POS[p.pos])p.pos='mid';
  const o=overall(p),oc=ovrColor(o); // 总值实时计算，训练/年龄/表现即时反映
  const hpCls=p.injury>0?`<div class="p-hp">伤停 ${p.injury}天</div>`:(p.morale<40?'<div class="p-hp">状态差</div>':'');
  const tags=(p.tags||[]).map(t=>`<span class="p-tag">${t}</span>`).join('');
@@ -173,7 +178,8 @@ function energyBar(p){
 
 /* ================= 页面渲染 ================= */
 function renderHeader(){
- const sp=SPONSORS[S.sponsorLv];
+ const spLv=clamp((S&&S.sponsorLv)||0,0,Math.max(0,SPONSORS.length-1));
+ const sp=SPONSORS[spLv]||SPONSORS[0];
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,32)}</div>
@@ -669,7 +675,8 @@ function renderClub(){
 }
 /* ================= 经营页（赞助商 / 工资帽 / 荣誉室 / 比赛复盘） ================= */
 function renderBiz(){
- const sp=SPONSORS[S.sponsorLv],next=SPONSORS[S.sponsorLv+1];
+ const lv=clamp(S.sponsorLv||0,0,SPONSORS.length-1); // 残档越界只影响展示，不回写 S
+ const sp=SPONSORS[lv],next=SPONSORS[lv+1];
  let html=pageHint('biz')+`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
  const fansNow=Math.round(S.fans||0);
  const effIncome=Math.round(sp.income*fanMul(S,500));

@@ -493,6 +493,7 @@ function queueMatchAdvance(s,fn){
 }
 function finishSeries(finalWin){
  const sr=S.series;
+ if(!sr)return; // 重复点击/异常重入：系列赛已清，直接忽略，避免二次结算毁档
  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
  // 出场统计（更衣室系统用）：本系列赛首发的选手各记一次出场——替补的不满按"出场差距"累积
  rosterLineup(S).forEach(p=>{p.apps=(p.apps||0)+1;});
@@ -517,9 +518,9 @@ function finishSeries(finalWin){
  if(sr.stage==='regular'){
  const g=myGroup(S);
  const t=(g&&S.tables[g])?S.tables[g][S.teamName]:null;
- const m=S.schedule[S.matchIdx];
- const ot=(g&&S.tables[g])?S.tables[g][m.opp]:null;
- m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;
+ const m=(S.schedule||[])[S.matchIdx];
+ const ot=(g&&m&&S.tables[g])?S.tables[g][m.opp]:null;
+ if(m){m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;}
  if(t){
  if(finalWin){t.w++;t.pts++;}else{t.l++;}
  t.pw+=sr.mw;
@@ -536,7 +537,7 @@ function finishSeries(finalWin){
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
- simulateAiRound(S,m.round); // 本轮打完，联盟其他场次同步开打并更新积分
+ simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
  if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
