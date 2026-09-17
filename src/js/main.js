@@ -790,10 +790,13 @@ function applyClub(){
  S.seedPower=teamPower(S)||tmpl.seed; // 种子=执教班底真实战力（决定分组落位）
  initGroups(S);
  // 赛前转会期：先组队再开赛
- S.preseason=true;S.transferWindow=7;
+ S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S);
+ try{if(typeof initTempSeats==='function')initTempSeats(S);}catch(e){}
+ try{if(typeof youthDirectEntry==='function')youthDirectEntry(S);}catch(e){}
+ try{if(typeof initDraft==='function')initDraft(S);}catch(e){} // 首赛季选秀大会
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
  logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${S.lineup.map(id=>(S.players.find(p=>p.id===id)||{name:'?'}).name).join(' / ')}`);
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税，转会期可卖人减负');

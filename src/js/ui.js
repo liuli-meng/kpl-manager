@@ -1,4 +1,5 @@
 
+
 /* ============ PART3 ============ */
 
 /* ================= 卡牌渲染 ================= */
@@ -22,7 +23,8 @@ function pcard(p,extra){
  // 出场统计 + 更衣室/K甲状态（apps 由 finishSeries 累计；transferRequest 由更衣室年检标记）
  // K甲表现：下放期间的出场与场均 KDA（kjiaStats 由二队每场结算累计）
  const kjStat=(p.kjiaStats&&p.kjiaStats.apps)?` · K甲${p.kjiaStats.apps}场 场均${Math.round(p.kjiaStats.k/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.d/p.kjiaStats.apps*10)/10}/${Math.round(p.kjiaStats.a/p.kjiaStats.apps*10)/10}`:'';
- const appsHtml=(p.apps||p.transferRequest||p.kjia>0||p.loanOut)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${p.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${p.kjia>0?` <span style="color:var(--cyan)">· K甲锻炼剩 ${p.kjia} 天${kjStat}</span>`:''}${p.loanOut?` <span style="color:var(--cyan)">· 租借 ${p.loanOut.team} 剩 ${p.loanOut.days} 天</span>`:''}</div>`:'';
+ const pst=playerStatus(p,S); // 旗标统一走状态出口（pcard 内多处判断共用）
+ const appsHtml=(p.apps||pst.transferRequest||pst.kjia||pst.loanOut)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${pst.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${pst.kjia?` <span style="color:var(--cyan)">· K甲锻炼剩 ${pst.kjiaDays} 天${kjStat}</span>`:''}${pst.loanOut?` <span style="color:var(--cyan)">· 租借 ${pst.loanOutTeam} 剩 ${pst.loanOutDays} 天</span>`:''}</div>`:'';
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
  const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
@@ -218,8 +220,7 @@ function hasMyPending(list,team){
 }
 /* 选手当前不可操作（下放/外租/伤停/集训）——阵容卡按钮禁用共用 */
 function playerBusy(s,p){
- const st=playerStatus(p);
- return st.injury||st.kjia||st.loanOut||st.natCamp;
+ return playerStatus(p,s).busy; // 原实现漏传 s，丢掉了 natCamping(s,p) 分支；改用 busy 单一出口
 }
 /* 董事会面板（解约终局 / 在任 KPI）；选手模式无董事会，返回空串 */
 function clubBoardPanel(){
@@ -779,6 +780,9 @@ function renderTrain(){
  </div>`;
  // 青训营
  const aca=S.academy||[];
+ const acaPending=aca.filter(r=>r.attrs&&!rookieReady(r)).length; // 未达标人数：一键培养按钮的文案与置灰依据
+ const rLeft=(typeof reserveLeft==='function')?reserveLeft(S):2;
+ const rMax=(S.reserveSlots!=null)?S.reserveSlots:2;
  const acaHtml=aca.map(r=>{
  const total=['lane','farm','team','mind'].reduce((t,k)=>t+r.attrs[k],0);
  const ready=total>=300,adult=r.age>=MATCH_MIN_AGE;
@@ -791,15 +795,18 @@ function renderTrain(){
  </div>
  <div class="p-foot"><span>四维 <b class="${ready?'green':'gold'}">${total}/300</b></span><span> ${r.sig}</span></div>
  <div style="display:flex;gap:6px;margin-top:8px">
- <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 17万</button>
+ <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 ${ROOKIE_TRAIN_COST}万</button>
  <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满'+MATCH_MIN_AGE+'岁':'未达标')}</button>
  </div>
  <div class="hint" style="margin-top:6px">${S.academyTrained?'今日已培养过青训':'培养：潜力越高成长越快'}</div>
  </div>`;
  }).join('');
- html+=`<div class="panel"><h3>青训营 <span class="tag">低薪高潜 · 工资帽友好</span></h3>
- <div class="hint" style="margin-bottom:10px">招募新秀（50万）→ 每日培养（17万，潜力越高成长越快）→ 四维总和 ≥300 晋升一线队。青训选手周薪仅 2-4万，是工资帽下的经济型补强。</div>
+ html+=`<div class="panel"><h3>青训营 <span class="tag">低薪高潜 · 自留签 ${rMax-rLeft}/${rMax}</span></h3>
+ <div class="hint" style="margin-bottom:10px">招募新秀（50万）→ 每日培养（${ROOKIE_TRAIN_COST}万）→ 四维≥300 后用<b>自留签</b>晋升（每季 ${rMax} 个，用完本季不能再提）。未自留的苗子可在选秀大会被别队点走。周薪仅 2-4万，工资帽友好。</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
  <button class="btn gold sm" onclick="recruitRookie(S)"> 招募新秀（50万）</button>
+ <button class="btn sm primary" onclick="trainAllRookies(S)" ${S.academyTrained||!acaPending?'disabled':''}>一键培养${acaPending?'（'+acaPending+' 人 · '+(acaPending*ROOKIE_TRAIN_COST)+'万）':'（已达标）'}</button>
+ </div>
  <div class="grid g4" style="margin-top:12px">${acaHtml||'<div class="hint">青训营空无一人，先招募一名新秀吧</div>'}</div>
  </div>`;
  // 位置改造
@@ -968,8 +975,9 @@ function renderKjia(){
  }
  html+=`</div>`;
  // 二队班底（K甲注册选手）
- html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段调整 · 下放的一队选手顶替出场</span></h3>
- <div class="grid g4">${k.squad.map(p=>pcard(p,'')).join('')}</div></div>`;
+ html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段重建 · 可提拔一线队</span></h3>
+ <div class="hint" style="margin-bottom:8px">每赛段自动补充的次级联赛注册选手。年龄达标且大名单未满时，可直接「提拔一线队」——适合伤停缺人时应急，或低价补深度。</div>
+ <div class="grid g4">${k.squad.map(p=>pcard(p,`<button class="btn sm primary mt8" style="width:100%" onclick="promoteKjiaPlayer('${p.id}')" title="提拔进一队：占用大名单名额（≤${ROSTER_MAX}），满 ${MATCH_MIN_AGE} 岁">↑ 提拔一线队</button>`)).join('')}</div></div>`;
  $('#page-kjia').innerHTML=html;
 }
 /* ================= 联盟页（战队总览 / 阵容浏览 / 选手榜单） ================= */

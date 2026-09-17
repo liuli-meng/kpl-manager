@@ -218,7 +218,7 @@ const AG_NATIONS=[['韩国',470],['中国台北',432],['越南',427],['泰国',4
 const AG_CITY='名古屋';
  function agSelectSquad(s){
  const pool=[];
- (s.players||[]).forEach(p=>{if(!p.loan&&!p.retiring)pool.push(p);});
+ (s.players||[]).forEach(p=>{const st=playerStatus(p,s);if(!st.loan&&!st.retiring)pool.push(p);});
  AI_TEAMS.forEach(t=>ensureAiRosters(s,t.name).forEach(p=>pool.push(p)));
  // 集训状态抬一档：合练久的优先入选同位置竞争（打破纯总值平手）
  return POS_ORDER.map(pos=>pool.filter(p=>p.pos===pos)

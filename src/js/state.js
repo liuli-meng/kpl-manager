@@ -42,6 +42,9 @@ const SAVE_DEFAULTS=[
  ['fumbleCount',0,'队史被爆冷次数'],
  ['preseason',false,'赛前转会期'],
  ['transferWindow',0,'转会窗剩余天'],
+ ['reserveSlots',2,'自留签每季名额'],
+ ['reserveUsed',0,'自留签已用'],
+ ['draft',null,'选秀大会'],
  ['transferList',[],'买断市场'],
  ['listed',[],'挂牌'],
  ['bids',[],'挂牌报价'],
@@ -69,8 +72,41 @@ const SAVE_DEFAULTS=[
  ['crest',null,'自建队徽'],
  ['phase','r1','常规赛阶段'],
  ['matches',{},'比赛扁平表 mid→match'],
+ ['_poError',null,'季后赛推进异常原因（诊断用：非空说明 ensureLeagueChampion 走过 catch）'],
  ['socialUsed',false,'选手社交已用'],
  ['wageCap',150,'工资帽（缺失按现役刻度）'],
+ // —— 基础状态字段补齐（2026-09-17）：newState 一直有这些字段，但没登记进默认表，
+ //    于是「导入残缺档 / 手工构造的档」缺字段时不会被兜底 —— 例如 logEvent 直接
+ //    s.eventLog.unshift(...)（season.js:54），缺 eventLog 就抛错。全部登记后由
+ //    applySaveDefaults 统一补；audit-static 有门禁保证以后新增字段不再漏。
+ //    刻意不登记：v / moneyScaled / econReal（缺省=「未迁移」，登记了会让迁移链整条跳过）、
+ //    fund / wageCap（另有 migrateFixZeroZero 与现役刻度兜底，登记会互相打架）。
+ ['teamName','','队名'],
+ ['icon','','队徽字符'],
+ ['season',1,'赛季数'],
+ ['day',1,'当日'],
+ ['sponsorLv',0,'赞助等级'],
+ ['stage','regular','赛段'],
+ ['matchIdx',0,'常规赛轮次指针'],
+ ['streak',0,'连胜数'],
+ ['players',[],'一线队名单'],
+ ['lineup',[],'首发'],
+ ['market',[],'青训/自由市场当日货架'],
+ ['schedule',[],'常规赛赛程'],
+ ['groups',{},'分组'],
+ ['tables',{},'积分榜'],
+ ['aiPower',{},'AI 战力'],
+ ['eliminated',[],'已淘汰'],
+ ['eventLog',[],'事件日志'],
+ ['card',null,'卡位赛'],
+ ['playoff',null,'季后赛'],
+ ['aiRosterDefs',null,'AI 在册 def 映射'],
+ ['career',null,'选手/教练生涯'],
+ ['coachDeal',null,'教练合同履历'],
+ ['trained',false,'当日成长行动已用'],
+ ['marketRefreshed',false,'当日市场已刷新'],
+ ['academyTrained',false,'当日青训已培养'],
+ ['champion',false,'本赛季夺冠'],
 ];
 function applySaveDefaults(s){
  SAVE_DEFAULTS.forEach(([k,d])=>{
@@ -78,6 +114,11 @@ function applySaveDefaults(s){
  if(s[k]!==undefined&&!(s[k]===null&&d!==null))return;
  s[k]=(typeof d==='object'&&d!==null)?JSON.parse(JSON.stringify(d)):d;
  });
+ // ⚠ wageCap 的 `<50 → 150` 兜底必须留在这里（迁移之前），不要挪到 migrateEconReal 之后。
+ // 两种顺序各有代价，verify-migrate ④ 已锁定本顺序的期望值（cap 180 ÷6 = 30，不得被抬回 150）：
+ //   本顺序：缺失 cap → 150 → ×10 → ÷6 = 250（偏宽松，现役区间 150~250 的顶格）；
+ //   移到迁移后：合法迁移出的 30 会被抬成 150（把迁移结果改掉）。
+ // 结论是有意保持现状。真要动这条，先想清楚「缺失 cap」和「合法的小 cap」如何区分。
  if(!s.wageCap||s.wageCap<50)s.wageCap=150;
  if(s.streak)s.streak=0;
  if(s.mode==='player'&&!s.career)s.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
@@ -193,6 +234,7 @@ function initTabGuard(){
 function newState(teamName,icon){
  return {
  teamName,icon,crest:null,v:SAVE_VERSION,season:1,day:1,fund:1300,sponsorLv:0,moneyScaled:true,econReal:true,
+ reserveSlots:2,reserveUsed:0, // 自留签：每季 2 个（晋升青训消耗）
  honors:[], // 历史荣誉（多赛季）
  stage:'regular',phase:'r1',matchIdx:0,wageCap:150,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
  players:[],lineup:[],market:[],
@@ -495,13 +537,20 @@ function scrubWages(s){
 }
 /* 存档序列化：剔除可重建/仅运行期字段。
   aiRosters 读档时 migrateSave 统一清空重建，写进去纯属白占 localStorage；
+  matches 是 bracket 树 + series.mid 的派生索引（L1/L2 归一化后不再是真相源），
+  migrateSave → rebuildMatchStore 会按 bracket 重灌，实测占全文 8.2%（9909/120972 字符）。
+  ** 以下字段看着像缓存，实际不能剥——内容由随机数生成，剥掉读档会换人/换意愿 **：
+  transferList / freeAgents（buildTransferMarket 内用 rnd/shuffle）、market（refreshMarket 用 Math.random）。
+  同理「把 save() 改成防抖」也不可行：verify-save 断言静默解除后 save 必须同步落盘。
   _achAt/_asCache 等是节流缓存。导出/备份同样走这里。 */
 function serializeForSave(s){
  if(!s)return 'null';
- const cache=s.aiRosters;
+ const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList};
  s.aiRosters={};
+ s.matches={};
+ s.transferList=[]; // 可重建缓存：buildTransferMarket 开窗重建，落盘可占全文 1/3+
  try{return JSON.stringify(s);}
- finally{if(cache)s.aiRosters=cache;}
+ finally{Object.assign(s,cache);} // 原样还原（含 undefined 情形），只影响序列化产物
 }
 function save(){
  if(!S)return false;

@@ -149,6 +149,37 @@ const out = vm.runInContext(`
      else if(S.career.mediaBuff)fail('mediaBuff 用后未清空');
      else log('⑩ mediaBuff：采访加成生效（+'+d+'）且已消费');
     }
+
+    // ⑪ 规则下沉到 playerops 后可测：playerTrainDay 的资格门槛
+    me.injury=0;me.energy=100;S.trained=false;me.attrs.lane=50;
+    if(playerTrainDay({mode:'coach'},'lane').ok)fail('⑪非选手模式应拒绝加练');
+    else if(!playerTrainDay(S,'lane').ok)fail('⑪正常态应允许加练');
+    else if(playerTrainDay(S,'lane').ok)fail('⑪同日第二次加练应被拒');
+    else{
+      S.trained=false;me.energy=9;
+      const rE=playerTrainDay(S,'lane');
+      if(rE.ok||rE.reason.indexOf('体力不足')<0)fail('⑪体力不足未拦: '+JSON.stringify(rE));
+      else log('⑪ playerTrainDay：非选手模式 / 同日重复 / 体力不足 三种拒绝均生效');
+    }
+
+    // ⑫ playerRestDay：体力+55 · 士气+4 · 伤情-2 · 同日限一次
+    me.energy=30;me.morale=50;me.injury=5;S.trained=false;
+    const rRest=playerRestDay(S);
+    if(!rRest.ok)fail('⑫休息应成功');
+    else if(me.energy!==85||me.morale!==54||me.injury!==3)fail('⑫休息结算错: 体力'+me.energy+' 士气'+me.morale+' 伤情'+me.injury);
+    else if(!S.trained)fail('⑫休息未占用每日行动');
+    else if(playerRestDay(S).ok)fail('⑫同日第二次休息应被拒');
+    else log('⑫ playerRestDay：体力 30→85 · 士气 50→54 · 伤情 5→3，同日限一次');
+
+    // ⑬ playerHeroTrainDay：熟练(lv2)升绝活(lv3) · 体力-15 · 招牌不入候选
+    me.energy=60;S.trained=false;me.sig='貂蝉';me.injury=0; // ⑫ 留下的 3 天伤情会被 trainBlockedReason 拦截，先清零
+    me.heroPool=[{n:'貂蝉',lv:2},{n:'不知火舞',lv:2},{n:'小乔',lv:1}];
+    const rHero=playerHeroTrainDay(S);
+    if(!rHero.ok)fail('⑬英雄特训应成功: '+(rHero.reason||''));
+    else if(me.energy!==45)fail('⑬体力应 -15，实际 '+me.energy);
+    else if((me.heroPool||[]).filter(h=>h.lv===3).length!==1)fail('⑬应恰好练成 1 个绝活');
+    else if(rHero.hero==='貂蝉')fail('⑬不该把招牌英雄当特训对象');
+    else log('⑬ playerHeroTrainDay：'+rHero.hero+' 升为绝活 · 体力 60→45 · 招牌已排除');
   }
 
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');

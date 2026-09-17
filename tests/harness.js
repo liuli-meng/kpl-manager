@@ -4,7 +4,20 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..');
-const FILES = ['data.js','state.js','players.js','transfer.js','train.js','season.js','natcamp.js','board.js','clubops.js','kjia.js','cups.js','career.js','playerops.js','hall.js','guide.js','bp.js','match.js','ui.js','ui-lineup.js','ui-market.js','ui-career.js','main.js'];
+/* 模块清单单一真相源：直接解析 src/index.html 的 <script src> 顺序（build.ps1 读的是同一份）。
+   以前这里手抄一份，新增模块漏改任一处 → 构建产物缺模块、或测试压根没加载该模块，
+   只能靠 verify-built 事后抓（draft.js 就被抓过一次）。现在两份清单不可能再分叉。
+   解析失败必须抛错：静默退化成空列表会让所有测试「空跑通过」，比漏模块更危险。 */
+function readModuleList() {
+  const html = fs.readFileSync(path.join(ROOT, 'src', 'index.html'), 'utf8');
+  const out = [];
+  const re = /<script\s+src="js\/([^"]+)"\s*>\s*<\/script>/g;
+  let m;
+  while ((m = re.exec(html))) out.push(m[1]);
+  if (out.length < 10) throw new Error('harness: 从 src/index.html 只解析到 ' + out.length + ' 个模块，正则疑似失配——拒绝空跑');
+  return out;
+}
+const FILES = readModuleList();
 
 function loadCode() {
   let code = '';

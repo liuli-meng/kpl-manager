@@ -162,6 +162,36 @@ const out = vm.runInContext(`
    else log('⑦ 收官与面板：二队夺冠（奖金+粉丝+公告）· 二队页四区块渲染齐全（含选手 K甲表现）');
   }
 
+  // ⑧ K甲班底上调一线队：移出 squad、进 s.players、守卫生效
+  const s8=newState('提拔队','x');fillRoster(s8,'mid','star');S=s8;
+  initKjia(s8);
+  const pickAdult=s8.kjia.squad.find(p=>(p.age||0)>=MATCH_MIN_AGE);
+  if(!pickAdult)fail('二队班底无成年选手可提拔');
+  else{
+   const n0=s8.players.length, sq0=s8.kjia.squad.length;
+   promoteKjiaPlayer(s8,pickAdult.id);
+   const inMain=s8.players.some(p=>p.id===pickAdult.id);
+   const stillSq=s8.kjia.squad.some(p=>p.id===pickAdult.id);
+   if(!inMain)fail('提拔后未进入一队名单');
+   else if(stillSq)fail('提拔后仍在二队班底');
+   else if(s8.players.length!==n0+1)fail('一队人数未 +1');
+   else if(s8.kjia.squad.length!==sq0-1)fail('二队班底未 -1');
+   else if(!(pickAdult.tags||[]).includes('K甲提拔'))fail('缺 K甲提拔 标签');
+   else{
+    // 满员拦截
+    while((s8.players||[]).length<ROSTER_MAX){
+     const b=genPlayer(genFreeAgentDef(pick(POS_ORDER),'mid',new Set(s8.players.map(p=>p.name))));
+     s8.players.push(b);
+    }
+    const other=s8.kjia.squad.find(p=>(p.age||0)>=MATCH_MIN_AGE);
+    if(other){
+     promoteKjiaPlayer(s8,other.id);
+     if(s8.players.some(p=>p.id===other.id))fail('大名单满员仍可提拔');
+     else log('⑧ 班底上调：'+pickAdult.name+' 进一队（'+sq0+'→'+s8.kjia.squad.length+' 班底）· 满员拦截 OK');
+    }else log('⑧ 珿底上调：'+pickAdult.name+' 进一队 OK（无第二成年选手测满员）');
+   }
+  }
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()

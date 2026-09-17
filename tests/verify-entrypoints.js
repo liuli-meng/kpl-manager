@@ -63,6 +63,9 @@ const out = vm.runInContext(`
     // ===== 挑战者杯（32强单败 → 8强双败 → 决赛 BO9）=====
     advanceCalendar(S);
     if(S.phase!=='challenger')fail('春季赛后未进入挑战者杯: phase='+S.phase);
+    // 异常留痕断言：ensureLeagueChampion 的 catch 一旦走过就置 _poError（cups.js:34 起杯赛前要补出联赛冠军）。
+    // 干净收官必须为空——否则「按排名兜底直接指定冠军」会把真 bug 伪装成一次正常结局。
+    if(S._poError)fail('春季赛后 _poError 非空（季后赛推进曾抛异常）: '+S._poError);
     checkEntry('挑战者杯开幕','uiStartCup');
     let cbPoOpen=false,cbPoMid=false;
     let g1=0;
@@ -106,6 +109,7 @@ const out = vm.runInContext(`
     checkEntry(S.phase==='champion'?'夏季冠军收官':'夏季止步收官','uiAdvanceCalendar');
     // ===== 亚运年：亚运会（玩家放人观赛，只断言推进按钮）=====
     advanceCalendar(S);
+    if(S._poError)fail('夏季赛后 _poError 非空（季后赛推进曾抛异常）: '+S._poError);
     if(isAsiadYear(S)){
       if(S.phase!=='asiad')fail('亚运年夏季赛后应进入亚运会: phase='+S.phase);
       checkEntry('亚运会','uiAsiadStep');

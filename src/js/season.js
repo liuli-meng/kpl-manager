@@ -315,18 +315,19 @@ function ensureLeagueChampion(s){
   s.groups={S:ranked.slice(0,6),A:ranked.slice(6,12),B:ranked.slice(12,18)};
  }
  if(!p||!p.wb){
-  try{buildPlayoff(s);}catch(e){}
+  try{buildPlayoff(s);}catch(e){s._poError='buildPlayoff: '+(e&&e.message||e);console.warn('buildPlayoff fail',e);}
   p=s.playoff;
  }
  if(!p)return null;
  let guard=0;
  while(!(p.final&&p.final.r)&&guard++<25){
-  try{playoffStep(s);}catch(e){break;}
+  try{playoffStep(s);}catch(e){s._poError='playoffStep: '+(e&&e.message||e);console.warn('playoffStep fail',e);break;}
   p=s.playoff;
   if(!p)break;
  }
  if(p&&p.final&&!p.final.r){
-  // 极端残局（对阵树缺口）：按 S/A 排名直接指定冠军，保证赛历可推进
+  // 极端残局（对阵树缺口）：按 S/A 排名直接指定冠军，保证赛历可推进。
+  // 兜底本身是设计内的，但必须留痕——否则重建期真 bug（mid 找不到/引用失效）会伪装成一次正常收官。
   const ranks=[...sortGroup(s,'S'),...sortGroup(s,'A')];
   const champ=ranks[0]||s.teamName;
   const runner=ranks[1]||champ;
@@ -336,7 +337,7 @@ function ensureLeagueChampion(s){
   p.champ=p.final.r;
   if(s.phase!=='eliminated')s.phase='champion';
   s.champion=p.final.r===s.teamName;
-  try{logEvent(s,' 季后赛残局补完：'+p.final.r+' 夺得 '+splitLabel(s)+' 冠军');}catch(e){}
+  try{logEvent(s,' 季后赛残局补完：'+p.final.r+' 夺得 '+splitLabel(s)+' 冠军'+(s._poError?'（推进异常：'+s._poError+'）':''));}catch(e){}
  }
  return (p&&p.final&&p.final.r)?p:null;
 }
@@ -592,6 +593,7 @@ function newSeason(s){
  try{recordSeasonAwards(s);}catch(e){logEvent(s,' 最佳阵容结算异常：'+(e&&e.message)+'（不影响赛季轮换）');} // 上赛季最佳阵容入册（趁阵容还没跨季老化）；失败不得挡住 newSeason
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
+ s._poError=null; // 季后赛异常标记按赛季归零：干净走完的赛季必须保持为空（诊断用，勿静默）
  s.academyTrained=false;
  // 亚运会状态归零：仅当届有效（防 agDone 跨年残留导致下一届亚运年不触发）
  s.agDone=false;s.ag=null;s.natSquad=null;s.natCampIds=[];s.natAnnounced=false;s.natCampDay=0;
@@ -709,6 +711,7 @@ function newSeason(s){
  boardApplyEffect(s); // 董事会：下赛季的干预（砍帽）或特权（追加预算）按月生效
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
  try{gcDefs(s);}catch(e){} // 年度轮换：清杯赛临时 def / 退役 def / 青训幽灵
+ try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上
  startSplit(s,'spring');
 }
 
@@ -734,7 +737,11 @@ function startSplit(s,split){
  return;
  }
  if(split==='summer')s.fund+=133; // 夏季赛启动金（春季 220 万在年度轮换时发放）
- s.transferWindow=7;s.preseason=true;s.windowSold=0; // 赛前转会期 7 天：自由组队，结束/到期后联赛才开打（卖出计数清零）
+ s.transferWindow=7;s.transferWindowStart=7;s.preseason=true;s.windowSold=0; // 赛前转会期 7 天：前4自由交易+后3挂牌期
+ s.reserveUsed=0; // 自留签每季刷新
+ if(s.reserveSlots==null)s.reserveSlots=2;
+ try{if(typeof initTempSeats==='function')initTempSeats(s);}catch(e){}
+ try{if(typeof youthDirectEntry==='function')youthDirectEntry(s);}catch(e){}
  s.pick={};
  aiTransferWindow(s); // AI 转会期：退役结算/缺位补强/明星流转/新星出道/换帅（联盟生态推进）
  buildTransferMarket(s); // 构建转会市场（AI 队选手 + 非卖品）
@@ -742,6 +749,7 @@ function startSplit(s,split){
  s.aiInj={}; // 伤停清零
  initGroups(s);
  initKjia(s); // 二队 K甲联赛：每个赛段重开一届（独立赛程+积分榜，二队页可查）
+ try{if(typeof initDraft==='function')initDraft(s);}catch(e){} // 选秀大会：新秀池 + 倒序点名
  if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s); // 亚运年夏季：先宣布国家队征召（集训缺席整季）
  logEvent(s,' '+splitLabel(s)+' 赛前转会期开启（7天）：可买断/挂牌/直签选手与教练，市场刷新免费；结束转会期后联赛开打');
  logEvent(s,' '+splitLabel(s)+' 开始！18队 S/A/B 赛制，目标：'+SPLIT_NAME[split]+'总冠军（年度积分 +'+ANNUAL_PTS[split].p1+'）！');

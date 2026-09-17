@@ -112,21 +112,53 @@ function recruitRookie(s){
  logEvent(s,' 青训营招募新秀 '+r.name+'（'+POS[r.pos][0]+' · 潜力'+r.potential+'）');
  save();renderAll();toast('新秀 '+r.name+' 加入青训营');
 }
-function trainRookie(s,id){
- if(s.academyTrained){toast('今日已培养过青训选手');return;}
- const r=(s.academy||[]).find(x=>x.id===id);
- if(!r)return;
- if(s.fund<17){toast('青训培养需 17万');return;}
- s.fund-=17;
- s.academyTrained=true;
- // 潜力越高成长越快：2-4 起步 + 潜力加成（pot/2），平均 4~6/天 —— 约 3~4 周培养到晋升线（四维和300）
+const ROOKIE_TRAIN_COST=17; // 单次培养费用（万）：单独培养与一键培养共用，勿各写一份
+/* 单次培养结算（单独培养 / 一键培养共用，避免两份成长公式漂移）。
+   潜力越高成长越快：2-4 起步 + 潜力加成（pot/2），平均 4~6/天 —— 约 3~4 周培养到晋升线（四维和300） */
+function applyRookieTrain(r){
  const gain=2+rnd(0,2)+Math.floor((r.potential||3)/2);
  const key=pick(['lane','farm','team','mind']);
  r.attrs[key]=clamp(r.attrs[key]+gain,40,95);
  r.morale=clamp(r.morale-3,20,100);
- const label=(TRAIN_ITEMS.find(t=>t.k===key)||{}).n||'属性';
- logEvent(s,' 青训培养：'+r.name+'「'+label+'」+'+gain+'（潜力'+r.potential+'）');
+ return {key,gain,label:(TRAIN_ITEMS.find(t=>t.k===key)||{}).n||'属性'};
+}
+function trainRookie(s,id){
+ if(s.academyTrained){toast('今日已培养过青训选手');return;}
+ const r=(s.academy||[]).find(x=>x.id===id);
+ if(!r)return;
+ if(s.fund<ROOKIE_TRAIN_COST){toast('青训培养需 '+ROOKIE_TRAIN_COST+'万');return;}
+ s.fund-=ROOKIE_TRAIN_COST;
+ s.academyTrained=true;
+ const t=applyRookieTrain(r);
+ logEvent(s,' 青训培养：'+r.name+'「'+t.label+'」+'+t.gain+'（潜力'+r.potential+'）');
  save();renderAll();
+}
+/* 一键培养：把青训营里所有「未达标」的青训各培养一次（每人 ROOKIE_TRAIN_COST 万）。
+   起因：每日名额 academyTrained 是全局的，青训一多就得跨天一个一个点；这里一次点完。
+   与 trainRookie 共用同一个每日名额（点过一键，当天就不能再单独培养），语义仍是「今日已培养过青训」。
+   资金不够时按潜力从高到低优先——钱花在刀刃上，而不是按入库顺序断在某个低潜苗子那里。 */
+function trainAllRookies(s){
+ if(s.academyTrained){toast('今日已培养过青训');return;}
+ const all=s.academy||[];
+ if(!all.length){toast('青训营还没有人，先招募一名新秀');return;}
+ const list=all.filter(r=>r&&r.attrs&&!rookieReady(r));
+ if(!list.length){toast('青训营已全部达标，去「晋升一线」或招募新秀吧');return;}
+ list.sort((a,b)=>(b.potential||0)-(a.potential||0));
+ let done=0,spent=0,short=0;
+ const parts=[];
+ for(const r of list){
+  if(s.fund<ROOKIE_TRAIN_COST){short++;continue;}
+  s.fund-=ROOKIE_TRAIN_COST;spent+=ROOKIE_TRAIN_COST;
+  const t=applyRookieTrain(r);
+  parts.push(r.name+'「'+t.label+'」+'+t.gain);
+  done++;
+ }
+ if(!done){toast('资金不足（每人需 '+ROOKIE_TRAIN_COST+'万）');return;}
+ s.academyTrained=true;
+ // 聚合成一条日志：一次培养 5 人若逐人各写一条，eventLog（上限 200）会被批量操作刷满
+ logEvent(s,' 青训一键培养 '+done+' 人（共 '+spent+'万）：'+parts.join(' · ')+(short?'；'+short+' 人资金不足跳过':''));
+ save();renderAll();
+ toast('青训培养完成：'+done+' 人 / 共 '+spent+'万'+(short?'（'+short+' 人资金不足跳过）':''));
 }
 function rookieReady(r){
  return ['lane','farm','team','mind'].reduce((t,k)=>t+r.attrs[k],0)>=300;
@@ -137,6 +169,12 @@ function promoteRookie(s,id){
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
  if(r.age<MATCH_MIN_AGE){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛——再等一年');return;}
  if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
+ // 自留签：每季 2 个名额（对齐 KPL）；用完只能等下赛季或走选秀/转会
+ if(typeof reserveLeft==='function'&&reserveLeft(s)<=0){
+ toast('自留签已用完（每季 '+(s.reserveSlots!=null?s.reserveSlots:2)+' 个）——下赛季刷新，或转会市场补人');
+ return;
+ }
+ if(typeof useReserveSlot==='function')useReserveSlot(s);
  s.academy=s.academy.filter(x=>x.id!==id);
  r.isRookie=false;
  r.tags=['青训'];
@@ -147,7 +185,8 @@ function promoteRookie(s,id){
  // 该位置空缺时直接进首发
  s.lineup.push(r.id);
  }
- logEvent(s,' '+r.name+'（'+r.age+'岁）从青训晋升一线队！');
+ const left=(typeof reserveLeft==='function')?reserveLeft(s):null;
+ logEvent(s,' '+r.name+'（'+r.age+'岁）自留签晋升一线队！'+(left!=null?'（自留签剩余 '+left+'）':''));
  save();renderAll();toast(r.name+' 晋升一线队！');
 }
 

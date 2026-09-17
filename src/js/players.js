@@ -33,6 +33,10 @@ function heroLv(p,heroId){const h=(p.heroPool||[]).find(x=>x.n===heroId);return 
 /* 英雄熟练度：绝活+8% / 熟练+4% / 一般0% / 生疏-8% */
 function buyPlayer(s,p){
  if(!rosterGuard(s))return false; // 联盟规则：大名单 ≤10 人
+ if(typeof freeSignBlockedReason==='function'){
+ const blocked=freeSignBlockedReason(s);
+ if(blocked){toast(blocked);return false;}
+ }
  const cost=capFee(Math.round(valueOf(overall(p))*(p.discount||1)));
  if(s.fund<cost){toast('资金不足');return false;}
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return false;}

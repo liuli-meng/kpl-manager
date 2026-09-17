@@ -42,7 +42,7 @@ function playerSocial(s,key){
     me.energy=clamp(me.energy-act.energy,0,ENERGY_MAX);
     logEvent(s,' 更衣室：'+me.name+' 组局聚餐，全队士气回暖');
   }else if(key==='help'){
-    const mates=(s.players||[]).filter(p=>p.id!==me.id&&!p.loanOut&&!(p.kjia>0)&&!p.retiring);
+    const mates=(s.players||[]).filter(p=>{const st=playerStatus(p,s);return p.id!==me.id&&!st.loanOut&&!st.kjia&&!st.retiring;});
     if(!mates.length){toast('队内暂无陪练对象');return false;}
     const t=pick(mates);
     const ak=pick(['lane','farm','team','mind']);
@@ -246,9 +246,70 @@ function benchMoraleDelta(role,base){
 }
 /* 赛后钩子：选手模式可能触发媒体 */
 function playerAfterMatch(s,finalWin){
-  if(!s||s.mode!=='player')return;
-  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
-  s.career.stats.matches++;
-  if(finalWin&&s.phase==='champion')maybeOpenMedia(s,'title');
-  else maybeOpenMedia(s,'match');
+ if(!s||s.mode!=='player')return;
+ s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
+ s.career.stats.matches++;
+ if(finalWin&&s.phase==='champion')maybeOpenMedia(s,'title');
+ else maybeOpenMedia(s,'match');
+}
+/* ================= 每日成长行动：加练 / 英雄特训 / 休息 =================
+   从 ui-career.js 下沉（README 约定：规则与结算进引擎文件，ui*.js 只渲染与 onclick 转发）。
+   三条行动原本写在 UI 里，导致能量门槛、媒体加成、伤情恢复这些规则测试覆盖不到、也调不动。
+   统一返回 {ok,reason,...}：UI 只负责 toast(reason) 与 save/renderAll，不再自己判资格。 */
+function playerTrainDay(s,k){
+ if(!s||s.mode!=='player')return {ok:false,reason:''};
+ if(s.trained)return {ok:false,reason:'今天已经练过了，明天再来'};
+ const me=myPlayer(s);if(!me)return {ok:false,reason:''};
+ if(s.career&&s.career.retired)return {ok:false,reason:'职业生涯已结束'};
+ const blocked=trainBlockedReason(s,me);
+ if(blocked)return {ok:false,reason:blocked};
+ if(me.energy<10)return {ok:false,reason:'体力不足（需 10），先休息'};
+ const r=trainOutcome(playerRole(s),me,k);
+ // 采访「用训练说话」：本次有空间则保底/加成 +1，用完即清
+ if(s.career&&s.career.mediaBuff==='train'){
+  s.career.mediaBuff=null;
+  const room=Math.max(0,(r.peak!=null?r.peak:99)-(me.attrs[k]||0));
+  if(room>0){
+   if(r.gain<1)r.gain=1;
+   else if(r.gain<room)r.gain=Math.min(r.gain+1,room);
+   r.note=(r.note||'状态平稳')+' · 采访加成';
+  }
+ }
+ me.attrs[k]=clamp(me.attrs[k]+r.gain,40,99);
+ me.energy=clamp(me.energy-10,0,ENERGY_MAX);
+ s.trained=true;
+ if(s.career){s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};s.career.stats.trained++;}
+ const label={lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k]||'属性';
+ logEvent(s, r.gain>0
+  ?(' 加练'+label+'：'+me.name+' '+r.note+'，属性 +'+r.gain+'（状态 '+r.form+' · 天花板 '+(r.peak||'—')+'）')
+  :(' 加练'+label+'：'+me.name+' '+r.note+'（状态 '+r.form+'），今天没有提升'));
+ return {ok:true,gain:r.gain,note:r.note};
+}
+function playerHeroTrainDay(s){
+ if(!s||s.mode!=='player')return {ok:false,reason:''};
+ if(s.trained)return {ok:false,reason:'今天已经练过了'};
+ const me=myPlayer(s);if(!me)return {ok:false,reason:''};
+ if(s.career&&s.career.retired)return {ok:false,reason:'职业生涯已结束'};
+ const blocked=trainBlockedReason(s,me);
+ if(blocked)return {ok:false,reason:blocked};
+ if(me.energy<15)return {ok:false,reason:'体力不足（需 15），先休息'};
+ const cand=(me.heroPool||[]).filter(h=>h.lv===2&&h.n!==me.sig);
+ if(!cand.length)return {ok:false,reason:'没有可升绝活的熟练英雄（先在英雄池把英雄练到「熟练」）'};
+ const h=pick(cand);h.lv=3;
+ me.energy=clamp(me.energy-15,0,ENERGY_MAX);
+ s.trained=true;
+ logEvent(s,' 英雄特训：'+me.name+' 把 '+h.n+' 练成了绝活（战力 +8%）');
+ return {ok:true,hero:h.n};
+}
+function playerRestDay(s){
+ if(!s||s.mode!=='player')return {ok:false,reason:''};
+ if(s.trained)return {ok:false,reason:'今天已经休息过了'};
+ const me=myPlayer(s);if(!me)return {ok:false,reason:''};
+ const injBefore=me.injury||0;
+ me.energy=clamp(me.energy+55,0,ENERGY_MAX);
+ me.morale=clamp(me.morale+4,20,100);
+ if(me.injury>0)me.injury=Math.max(0,me.injury-2); // 与教练模式全队休息同规则：休息加速养伤
+ s.trained=true;
+ logEvent(s,' 休息一天：'+me.name+' 体力恢复'+(injBefore>0?'，伤情 '+injBefore+'→'+me.injury+' 天':''));
+ return {ok:true};
 }

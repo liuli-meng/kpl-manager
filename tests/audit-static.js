@@ -31,11 +31,97 @@ while ((m2 = reDup.exec(code))) counts[m2[1]] = (counts[m2[1]] || 0) + 1;
 const dupFns = Object.keys(counts).filter(k => counts[k] > 1);
 T.check(!dupFns.length, '重复函数定义(后者覆盖前者): ' + dupFns.join(', '));
 
+// ③ 选手状态旗标单一出口（README 架构约定）：一行内裸拼 ≥2 个旗标 = 加新旗标时必漏的位置。
+//    判据用「≥2 个」而非「1 个」：单旗标判断不会因为新增旗标而失效，组合判断才会。
+//    只匹配单字母前缀（p./s./me./r./p1.），刻意不匹配 st./pst. —— 那是 playerStatus() 的返回值，正是合法出口。
+//    state.js 是出口定义处，跳过；没有条件运算符的行（复位/赋值，如 s.players.forEach(p=>{p.natCamp=false;})）跳过。
+const FLAG_KEYS = ['injury', 'kjia', 'loanOut', 'loan', 'natCamp', 'natFill', 'retiring', 'transferRequest', 'minor'];
+const flagRe = {};
+FLAG_KEYS.forEach(k => { flagRe[k] = new RegExp('\\b(?:[ps]|p\\d|me|r|x|o)\\.' + k + '\\b'); });
+const flagBad = [];
+fs.readdirSync(path.join(ROOT, 'src', 'js')).filter(f => f.endsWith('.js')).forEach(f => {
+  if (f === 'state.js') return;
+  fs.readFileSync(path.join(ROOT, 'src', 'js', f), 'utf8').split('\n').forEach((ln, i) => {
+    if (/^\s*(\/\/|\*|\/\*)/.test(ln)) return;
+    if (!/(\|\||&&|\?|\bif\b)/.test(ln)) return; // 不是条件 → 复位/赋值行，合法
+    const hit = FLAG_KEYS.filter(k => flagRe[k].test(ln));
+    if (hit.length < 2) return;
+    flagBad.push(f + ':' + (i + 1) + '(' + hit.join('+') + ')');
+  });
+});
+T.check(!flagBad.length, '选手状态旗标被裸拼，应走 playerStatus/matchEligible: ' + flagBad.join(', '));
+
+// ④ 引擎与 UI 分离门禁（README 架构约定）：ui*.js 只渲染 + onclick 转发，不得改数值/写名单/写日志。
+//    当前为 0 命中（棘轮：只要不新增就不失败）。main.js 不在检查范围 —— 它负责「开局创建」，
+//    本来就要用模板建出初始状态，属于设计内。规则要下沉到 transfer/playerops/clubops 等引擎文件。
+const UI_MUTATE_RULES = [
+  [/\b\w+\.attrs\.\w+\s*[-+*/]?=(?!=)/, '改属性'],
+  [/\b\w+\.(energy|morale|injury|popularity|wage|val)\s*[-+*/]?=(?!=)/, '改选手数值'],
+  [/S\.(fund|wageCap|fans|sponsorLv)\s*[-+*/]?=(?!=)/, '改全局数值'],
+  [/S\.(players|academy|honors|history|listed|bids|freeAgents)\s*\.\s*(push|splice|pop|shift)\(/, '改名单'],
+  [/\blogEvent\s*\(/, '写日志'],
+];
+const uiBad = [];
+fs.readdirSync(path.join(ROOT, 'src', 'js')).filter(f => /^ui.*\.js$/.test(f)).forEach(f => {
+  fs.readFileSync(path.join(ROOT, 'src', 'js', f), 'utf8').split('\n').forEach((ln, i) => {
+    if (/^\s*(\/\/|\*|\/\*)/.test(ln)) return;
+    UI_MUTATE_RULES.forEach(([re, tag]) => { if (re.test(ln)) uiBad.push(f + ':' + (i + 1) + '(' + tag + ')'); });
+  });
+});
+T.check(!uiBad.length, 'ui*.js 里出现了数值/名单/日志写入（应下沉到引擎）: ' + uiBad.join(', '));
+
+// ③b 约定扩展（静态扫盘，不进 vm）：引擎禁 DOM · UI 禁直接改四维
+{
+  const jsDir = path.join(ROOT, 'src', 'js');
+  const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
+  // 例外：data.js 提供 $/$$ 给 UI；hall.js 分享图 canvas；match.js 可选 AI 战报读输入框
+  const DOM_OK = new Set(['data.js', 'hall.js', 'match.js']);
+  const engineDom = files.filter(f => !/^ui/.test(f) && f !== 'main.js' && !DOM_OK.has(f)).filter(f => {
+    const txt = fs.readFileSync(path.join(jsDir, f), 'utf8');
+    return /document\.(querySelector|getElementById|createElement)/.test(txt);
+  });
+  T.check(!engineDom.length, '引擎文件出现 DOM API（应只在 ui*，例外见 DOM_OK）: ' + engineDom.join(', '));
+  const uiAttrs = [];
+  files.filter(f => /^ui/.test(f)).forEach(f => {
+    const lines = fs.readFileSync(path.join(jsDir, f), 'utf8').split(/\r?\n/);
+    lines.forEach((ln, i) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(ln)) return;
+      if (/\.attrs\.(lane|farm|team|mind)\s*(\+\+|--|\+=|-=|=(?!=))/.test(ln)) uiAttrs.push(f + ':' + (i + 1));
+    });
+  });
+  T.check(!uiAttrs.length, 'UI 直接改四维（应走 train/引擎）: ' + uiAttrs.slice(0, 5).join(', '));
+}
+
 // ③ 数据一致性 + 存档往返（进沙箱）
 const { dom } = makeDom();
 const out = vm_run(dom, `
 (function(){
   const R=[];
+  /* 存档字段登记门禁：newState() 建出来的每个字段都必须在 SAVE_DEFAULTS 登记，
+     否则「导入残缺档 / 手工构造的档」缺该字段时不会被兜底 —— 例如 logEvent 直接
+     s.eventLog.unshift(...)（season.js:54），缺 eventLog 会抛错。2026-09-17 补齐了 26 个。
+     ⚠ 白名单三个是「缺省即未迁移」的语义字段，登记了会让迁移链整条跳过（applySaveDefaults
+     跑在 migrateMoneyScale/migrateEconReal 之前）：v / moneyScaled / econReal。
+     fund / wageCap 另有 migrateFixZeroZero 与现役刻度兜底，登记会互相打架，也不在表内。 */
+  const SAVE_DEFAULT_EXEMPT=['v','moneyScaled','econReal','fund','wageCap'];
+  (function(){
+    const st=newState('字段登记门禁','测');
+    const reg=new Set(SAVE_DEFAULTS.map(d=>d[0]));
+    const miss=Object.keys(st).filter(k=>!reg.has(k)&&!SAVE_DEFAULT_EXEMPT.includes(k));
+    if(miss.length)R.push('newState 字段未登记 SAVE_DEFAULTS(残缺档不会被兜底): '+miss.join(', '));
+  })();
+  /* 经济刻度门禁：现役与历代联盟的俱乐部模板必须同在「真实刻度」（2026-09 全联盟 ÷6 之后）。
+     踩过的坑：866ec5c 只压了现役 CLUB_TEMPLATES，漏改 KPL_ERAS 的 clubs → 时代开档
+     资金/工资帽是现役的 6 倍，且 newState 已置 moneyScaled/econReal，迁移永远不生效。
+     单看「有没有赋值」的断言抓不到，必须锁数值区间 + 资金帽比。 */
+  const econBadOf=c=>{
+    const bad=[];
+    if(!(c.cap>=150&&c.cap<=300))bad.push('工资帽'+c.cap);
+    if(!(c.budget>=800&&c.budget<=2700))bad.push('资金'+c.budget);
+    const r=c.cap?c.budget/c.cap:0;
+    if(r<4.5||r>12)bad.push('资金帽比'+r.toFixed(1));
+    return bad;
+  };
   const heroNames={},dupHero=[];
   HEROES.forEach(h=>{if(heroNames[h.n])dupHero.push(h.n);heroNames[h.n]=1;});
   if(dupHero.length)R.push('英雄重名:'+JSON.stringify(dupHero));
@@ -82,6 +168,8 @@ const out = vm_run(dom, `
     if(c.players.length!==5)tplBad.push(c.name+':首发人数');
     const poss=c.players.map(id=>{const d=PLAYER_POOL.find(x=>x.id===id);return d?d.pos:'?';});
     if(poss.includes('?')||poss.filter((p,i)=>poss.indexOf(p)!==i).length)tplBad.push(c.name+':首发非法');
+    const eb=econBadOf(c);
+    if(eb.length)tplBad.push(c.name+':经济刻度'+eb.join('/'));
   });
   if(tplBad.length)R.push('俱乐部模板:'+JSON.stringify(tplBad));
   const coachBad=COACH_POOL.concat(ASSISTANT_POOL).filter(c=>!['lane','farm','team','mind'].includes(c.style)).map(c=>c.name);
@@ -117,6 +205,8 @@ const out = vm_run(dom, `
         if(!AI_TEAMS.some(t=>t.name===c.name))eraBad.push(id+':模板球队不在联盟:'+c.name);
         const poss=c.players.map(pid=>{const d=PLAYER_POOL.find(x=>x.id===pid);return d?d.pos:'?';});
         if(poss.includes('?')||poss.filter((p,i)=>poss.indexOf(p)!==i).length)eraBad.push(id+':'+c.name+'模板首发非法');
+        const eb=econBadOf(c);
+        if(eb.length)eraBad.push(id+':'+c.name+'经济刻度'+eb.join('/'));
       });
       // 时代新档：执教该时代最后一支俱乐部 → 分组/市场/迁移/全页渲染
       const tmpl=CLUB_TEMPLATES[CLUB_TEMPLATES.length-1];

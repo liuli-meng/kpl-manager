@@ -72,7 +72,7 @@ function tickPlayerBench(s){
  if(!s||s.mode!=='player'||!s.career)return;
  const me=myPlayer(s);
  if(!me)return;
- const eligible=matchEligible(s,me)&&!me.loanOut&&(me.kjia||0)<=0;
+ const eligible=matchEligible(s,me); // matchEligible 已含 伤停/外租/K甲/集训/未成年，勿再手拼旗标
  const benched=eligible&&!s.lineup.includes(me.id);
  if(benched){
  const was=s.career.benchDays||0;
@@ -223,7 +223,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
  });
  s.expiring=[];
  // 缺位判定看「现在能不能打」：伤停/集训/租借/未成年/K甲不算可用首发
- const playable=p=>p&&!p.loan&&!p.loanOut&&(p.kjia||0)<=0&&matchEligible(s,p);
+ const playable=p=>p&&!playerStatus(p,s).loan&&matchEligible(s,p); // 只补 matchEligible 不管的「租入」
  let need=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos&&playable(p)));
  const u=new Set(s.players.map(p=>p.name));
  let g=0;

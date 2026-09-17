@@ -614,6 +614,10 @@ function negoComplete(s,p,fee){
  s.aiRosters={}; // 玩家签走任何选手后重建全部对手名册（自由球员也可能是他人首发，防同一名选手出现在两队）
 }
 function openNegotiation(s,pid){
+ if(typeof freeSignBlockedReason==='function'){
+ const blocked=freeSignBlockedReason(s);
+ if(blocked){toast(blocked);return;}
+ }
  const p=s.transferList.find(x=>x.id===pid)||(s.freeAgents||[]).find(x=>x.id===pid);
  if(!p){toast('该选手不在转会市场');return;}
  if(s.players.some(x=>x.id===pid)){toast('已拥有该选手');return;}
@@ -1277,7 +1281,7 @@ function untouchableSet(){
 }
 function loanRent(p){return Math.max(80,Math.round(valueOf(overall(p))*0.15));}
 function healthyPosCount(s,pos){ // 当前能打该位置的人（不含外租/K甲/伤停/未成年）
- return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)&&!p.loanOut&&(p.kjia||0)<=0).length;
+ return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)).length; // matchEligible 已含外租/K甲/伤停/集训/未成年
 }
 function injuryGapPositions(s){ // 伤停/K甲后完全无人可打的位置——应急租借触发条件
  return POS_ORDER.filter(pos=>healthyPosCount(s,pos)===0);
@@ -1349,7 +1353,9 @@ function tickLoans(s){
  门禁模拟不结算真实比赛表现（val 只在 gamePerform 更新），不会触发本系统。 */
 const OFFER_TTL=3; // 报价有效期（天）
 function eligibleForOffer(s,p){
- if(!p||p.loan||p.loanOut||p.kjia>0)return false;
+ if(!p)return false;
+ const st=playerStatus(p,s);
+ if(st.loan||st.loanOut||st.kjia)return false;
  if(typeof natCamping==='function'&&natCamping(s,p))return false; // 国家队集训缺席，不接 offer
  if((p.val||100)<112)return false; // 表现门槛：打出名堂（火热≥112%）
  return true;

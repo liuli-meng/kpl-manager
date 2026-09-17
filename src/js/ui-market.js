@@ -4,15 +4,23 @@ function renderMarket(){
  // 转会期提示条：开局落在市场页，结束转会期按钮在俱乐部页——这里补回跳，避免找不到怎么开赛
  let windowBanner='';
  if(S.preseason&&(S.transferWindow||0)>0){
+  const ph=(typeof transferPhaseLabel==='function')?transferPhaseLabel(S):'';
+  const free=(typeof canFreeSign==='function')?canFreeSign(S):true;
   windowBanner=`<div class="panel" style="margin:0 0 10px;border-color:rgba(217,164,65,.45)">
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-  <div><b class="gold">赛前转会期</b>　<span class="hint">剩余 ${S.transferWindow} 天 · 市场每日首次刷新免费 · 天数用完自动开赛</span></div>
+  <div><b class="gold">赛前转会期${ph?' · '+ph:''}</b>　<span class="hint">剩余 ${S.transferWindow} 天${free?' · 可买断/直签':' · 挂牌期：只挂牌/竞价/续约/租借'} · 天数用完自动开赛</span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
   <button class="btn sm" onclick="goPage('club')">去俱乐部页组队/开赛</button>
   <button class="btn sm gold" onclick="uiSkipTransfer(S)">跳过剩余 ${S.transferWindow} 天</button>
   <button class="btn sm gold" onclick="uiEndPreseason(S)">结束转会期 · 开始赛季</button>
   </div></div></div>`;
  }
+ // 临时席位
+ let tempHtml='';
+ try{if(typeof tempSeatsPanelHtml==='function')tempHtml=tempSeatsPanelHtml();}catch(e){}
+ // 选秀大会：转会期最上方（轮到你时优先点名）
+ let draftHtml='';
+ try{if(typeof draftPanelHtml==='function')draftHtml=draftPanelHtml();}catch(e){}
  // 教练区
  let coachHtml=`<div class="panel ${foldCls('mcoach')}" data-fold="mcoach"><h3>教练市场 <span class="tag">主教练决定全队战力</span></h3>`;
  if(S.coach){
@@ -181,5 +189,5 @@ function renderMarket(){
  ?`<button class="btn sm danger" style="flex:1" onclick="delistPlayer(S,'${p.id}')">撤牌</button>`
  :`<button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button><button class="btn sm" style="flex:1" onclick="listPlayer(S,'${p.id}')"> 挂牌</button>`}</div>`);}).join('')||'<div class="hint">全部队员都在首发阵容中</div>'}</div>`:'<div class="hint">还没有队员</div>'}
  </div>`;
- $('#page-market').innerHTML=windowBanner+pageHint('market')+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
+ $('#page-market').innerHTML=windowBanner+pageHint('market')+tempHtml+draftHtml+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
 }

@@ -181,3 +181,28 @@ function kjiaTick(s){ // 每天结算一次；到期归队并成长
  logEvent(s,' K甲归队：'+p.name+' 锻炼归来，属性成长 +'+gain+kjiaReturnNote(p));
  });
 }
+/* K甲班底上调一线队：每赛段自动生成的注册选手，表现合格可提拔（对称青训晋升） */
+function promoteKjiaPlayer(s,id){
+ if(id===undefined){id=s;s=S;}
+ s=s||S;
+ if(!s.kjia||!s.kjia.squad){toast('本届 K甲尚未开赛');return;}
+ const p=s.kjia.squad.find(x=>x.id===id);
+ if(!p){toast('该选手不在二队班底');return;}
+ if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 年仅 '+(p.age||'?')+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛');return;}
+ if(!rosterGuard(s))return; // 大名单 ≤10
+ if(s.players.some(x=>x.id===id)){toast(p.name+' 已在一队');return;}
+ s.kjia.squad=s.kjia.squad.filter(x=>x.id!==id);
+ p.team=s.teamName;
+ p.tags=(p.tags||[]).filter(t=>t!=='K甲');
+ if(!p.tags.includes('K甲提拔'))p.tags.push('K甲提拔');
+ p.contract=Math.max(1,p.contract||2);
+ p.wage=Math.min(p.wage||wageOf(overall(p)),PLAYER_WAGE_MAX);
+ s.players.push(p);
+ // 该位置无首发时直接顶上
+ if(!s.lineup.includes(p.id)&&!s.players.some(x=>x.id!==p.id&&x.pos===p.pos&&s.lineup.includes(x.id))){
+ s.lineup.push(p.id);
+ }
+ logEvent(s,' K甲上调：'+p.name+'（'+POS[p.pos][0]+' · 总值'+overall(p)+' · '+p.age+'岁）从二队提拔进一线队');
+ save();renderAll();
+ toast(p.name+' 已提拔一线队！');
+}

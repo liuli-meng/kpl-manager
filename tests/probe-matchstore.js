@@ -1,4 +1,7 @@
-// 实验：series.mid + s.matches 扁平表 —— 读档后不依赖 bracket 引用也能写回 r
+// 实验：series.mid + s.matches 扁平表 —— 读档重建后仅凭 mid 即可解析对阵并写回 r
+// 注意（2026-09-17）：matches 是 bracket 树的派生索引，已不进存档（serializeForSave 剥离，省 8.2%）。
+// 所以「不 rebuild 也能靠存档里的 matches 工作」不再是契约；现契约是：
+//   存档只带 series.mid 和 bracket → 走真实读档（migrateSave 内 rebuildMatchStore 重灌）→ mid 可解析 → 写 r 落到真相源。
 const vm = require('vm');
 const { makeDom, injectHelpers } = require('./harness');
 const { dom } = makeDom();
@@ -43,26 +46,24 @@ const out = vm.runInContext(`
   else{
     if(!S.series.mid)fail('series 无 mid');
     else log('series.mid='+S.series.mid+' storeHas='+!!getMatch(S,S.series.mid));
-    // 断引用：JSON 往返 + 显式清空缓存对象 + 不调 rebuild（只靠存档里的 matches 表）
+    // 断引用：JSON 往返 → 走真实读档路径（migrateSave 内含 rebuildMatchStore 重灌派生表）
     const raw=serializeForSave(S);
+    if(/"matches":\{"po/.test(raw))fail('派生索引 matches 不应写进存档（应被 serializeForSave 剥掉）');
+    else log('matches 未落盘 OK（派生索引，读档由 bracket 重灌）');
     S=JSON.parse(raw);
-    migrateSave(); // 会 rebuild —— 再手动测「不 rebuild」路径
-    // 二次：只带 matches 表，不 rebuild bracket 重绑
-    const S2=JSON.parse(raw);
-    // 模拟极简读档：只恢复 matches + series.mid，不跑 rebuildMatchStore
-    const sr=S2.series;
-    delete sr.poMatch; delete sr.cupMatch; delete sr.cardMatch;
-    // 故意不把 playoff 树里的对象和 series 关联；只保留 mid
-    const live=getMatch(S2,sr.mid);
-    if(!live)fail('仅靠 s.matches[mid] 找不到对阵 mid='+sr.mid);
+    migrateSave(); // = 真实读档：rebuildMatchStore 按 bracket 树重灌 s.matches
+    const sr=S.series;
+    delete sr.poMatch;delete sr.cupMatch;delete sr.cardMatch; // 断掉对象引用，只留 series.mid
+    const live=getMatch(S,sr.mid);
+    if(!live)fail('读档重建后仅靠 s.matches[mid] 找不到对阵 mid='+sr.mid);
     else{
-      log('仅扁平表解析 OK mid='+sr.mid+' a/b='+live.a+' vs '+live.b);
+      log('读档重建后仅靠 mid 解析 OK mid='+sr.mid+' a/b='+live.a+' vs '+live.b);
       sr.mw=Math.ceil(sr.max/2);sr.ow=1;
-      // 最小 finishSeries 路径
-      const m=getMatch(S2,sr.mid);
-      m.r=sr.myName;
-      if(!m.r)fail('写 r 失败');
-      else log('写回 r='+m.r+' OK');
+      live.r=sr.myName;
+      if(!live.r)fail('写 r 失败');
+      // 关键：写回必须落到真相源（bracket），否则再存再读会丢
+      else if(!getMatch(S,sr.mid)||getMatch(S,sr.mid).r!==sr.myName)fail('写回的 r 未落到真相源');
+      else log('写回 r='+live.r+' OK 且落在真相源（再存再读可保留）');
     }
   }
 

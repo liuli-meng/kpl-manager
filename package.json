@@ -4,7 +4,7 @@
   "description": "王者电竞经理 · KPL 篇 —— LOL 电竞经理式的 KPL 俱乐部经营同人游戏（粉丝自制，非商用）",
   "private": true,
   "scripts": {
-    "build": "powershell -ExecutionPolicy Bypass -File build.ps1",
+    "build": "node build.js",
     "test": "node tests/run.js",
     "test:fast": "node tests/run.js --skip=sim-quick,sim-yearend",
     "fuzz": "node tests/fuzz.js",

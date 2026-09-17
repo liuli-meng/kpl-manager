@@ -56,6 +56,21 @@ const out = vm.runInContext(`
   else if(!S.aiRosters['测试AI'])fail('⑦序列化后运行期 aiRosters 缓存被清空（应保留）');
   else log('⑦serializeForSave：aiRosters 剔除 · 运行期缓存保留（读档由 migrateSave 重建）');
 
+  // ⑨ matches 同为派生索引（bracket 树 + series.mid 的投影），不落盘；运行期必须原样还原。
+  // 注意：这里只断言「不落盘 + 内存不坏」。可重建性由 probe-matchstore 覆盖。
+  S.matches={'m1':{a:'甲队',b:'乙队',r:null}};
+  const raw2=serializeForSave(S);
+  if(raw2.includes('"m1"'))fail('⑨matches 内容不应写入序列化结果');
+  else if(!S.matches||!S.matches.m1)fail('⑨序列化后运行期 matches 被清空（应保留）');
+  else log('⑨serializeForSave：matches 剔除 · 运行期索引保留（读档由 rebuildMatchStore 重灌）');
+
+  // ⑨b transferList 不落盘（可重建缓存，占存档体积大头）
+  S.transferList=[{id:'tl_x',name:'缓存选手',pos:'mid',base:[70,70,70,70]}];
+  const raw3=serializeForSave(S);
+  if(raw3.includes('tl_x'))fail('⑨btransferList 不应写入序列化结果');
+  else if(!S.transferList.length)fail('⑨b序列化后运行期 transferList 被清空（应保留）');
+  else log('⑨bserializeForSave：transferList 剔除 · 运行期缓存保留');
+
   // ⑧ nextDay 静默存档：_quietSave 时不写 localStorage
   S=newState('静默队','静');fillRoster(S,'mid');
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
