@@ -777,6 +777,10 @@ function migrateSave(){
  if(S.series&&!S.series.side)S.series.side='blue';
  try{rebuildMatchStore(S);}catch(e){}
  try{rebindSeriesMatch(S);}catch(e){}
+ // 转会列表不落盘：读档后若仍在转会期，立刻重建，避免空列表上的买卖/谈判路径踩坑
+ if(S.preseason&&!(S.transferList||[]).length){
+  try{if(typeof buildTransferMarket==='function')buildTransferMarket(S);}catch(e){}
+ }
  (S.transferList||[]).forEach(p=>{if(p.untouchable&&p.willingness===100)p.willingness=rnd(85,100);});
  try{if(typeof gcDefs==='function')gcDefs(S);}catch(e){}
  try{if(typeof scrubWages==='function')scrubWages(S);}catch(e){}

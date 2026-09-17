@@ -1723,6 +1723,10 @@ function migrateSave(){
  if(S.series&&!S.series.side)S.series.side='blue';
  try{rebuildMatchStore(S);}catch(e){}
  try{rebindSeriesMatch(S);}catch(e){}
+
+ if(S.preseason&&!(S.transferList||[]).length){
+  try{if(typeof buildTransferMarket==='function')buildTransferMarket(S);}catch(e){}
+ }
  (S.transferList||[]).forEach(p=>{if(p.untouchable&&p.willingness===100)p.willingness=rnd(85,100);});
  try{if(typeof gcDefs==='function')gcDefs(S);}catch(e){}
  try{if(typeof scrubWages==='function')scrubWages(S);}catch(e){}
