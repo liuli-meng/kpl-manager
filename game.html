@@ -3714,19 +3714,33 @@ function fireCoach(s){
  save();renderAll();
 }
 
-/* ================= 租借系统（非转会期唯一的人员流动方式） =================
- 转会窗关闭时不能买卖选手，但可以向其他战队租借替补：支付租金（身价 15%），
- 租借 21 天，到期自动归队；非卖品不可租，同时最多租 2 人；租借期间原队出青训递补。 */
+/* ================= 租借系统（全年可租；转会期买断优先，租借是应急补位） =================
+ 向其他战队租借替补：支付租金（身价 15%），租借 LOAN_DAYS 天，到期自动归队。
+ 非卖品不可租；同时最多 LOAN_CAP_BASE 人，某位置无健康选手时 +1 应急名额（上限 LOAN_CAP_MAX）。
+ 租借期间原队出青训递补。KPL 允许赛季中紧急租借——伤停缺人时这是合法补位手段。 */
 const LOAN_DAYS=21;
+const LOAN_CAP_BASE=2;
+const LOAN_CAP_MAX=3;
 function untouchableSet(){
  const U=new Set();
  for(const tn in AI_ROSTERS)AI_ROSTERS[tn].u.forEach(id=>U.add(id));
  return U;
 }
 function loanRent(p){return Math.max(80,Math.round(valueOf(overall(p))*0.15));}
+function healthyPosCount(s,pos){ // 当前能打该位置的人（不含外租/K甲/伤停/未成年）
+ return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)&&!p.loanOut&&(p.kjia||0)<=0).length;
+}
+function injuryGapPositions(s){ // 伤停/K甲后完全无人可打的位置——应急租借触发条件
+ return POS_ORDER.filter(pos=>healthyPosCount(s,pos)===0);
+}
+function loanCap(s){
+ const gap=injuryGapPositions(s).length;
+ return Math.min(LOAN_CAP_MAX,LOAN_CAP_BASE+(gap>0?1:0));
+}
 function loanCandidates(s){
  const U=untouchableSet();
  const map=aiRosterDefMap(s);
+ const need=new Set(injuryGapPositions(s)); // 缺人位置优先推人
  const out=[];
  for(const tn in map){
  if(tn===s.teamName)continue;
@@ -3735,11 +3749,18 @@ function loanCandidates(s){
  out.push({p,from:tn,rent:loanRent(p)});
  });
  }
- return out.sort((a,b)=>overall(b.p)-overall(a.p));
+ return out.sort((a,b)=>{
+ const an=need.has(a.p.pos)?1:0,bn=need.has(b.p.pos)?1:0;
+ if(an!==bn)return bn-an;
+ return overall(b.p)-overall(a.p);
+ });
 }
 function loanPlayer(s,teamName,pid){
- if(s.transferWindow>0){toast('转会窗内可以直接买断，无需租借');return;}
- if((s.players||[]).filter(p=>p.loan).length>=2){toast('租借名额已满（最多同时租借 2 人）');return;}
+ const cap=loanCap(s);
+ if((s.players||[]).filter(p=>p.loan).length>=cap){
+ toast('租借名额已满（当前上限 '+cap+' 人'+(cap>LOAN_CAP_BASE?' · 含伤停应急名额':'')+'）');
+ return;
+ }
  const p=(ensureAiRosters(s,teamName)||[]).find(x=>x.id===pid);
  if(!p){toast('该选手不在租借名单');return;}
  if(untouchableSet().has(p.id)){toast(p.name+' 是非卖品，不外借');return;}
@@ -3750,7 +3771,8 @@ function loanPlayer(s,teamName,pid){
  s.players.push(p);
  aiDetachDef(s,p.id); // 原队除名（真实 def）：租借期内原队青训递补
  s.aiRosters={}; // 名册缓存失效
- logEvent(s,' 租借达成：'+p.name+'（'+POS[p.pos][0]+' · 总值'+overall(p)+'）从 '+teamName+' 租借 '+LOAN_DAYS+' 天，租金 '+rent+'万');
+ const gap=injuryGapPositions(s).includes(p.pos);
+ logEvent(s,' 租借达成：'+p.name+'（'+POS[p.pos][0]+' · 总值'+overall(p)+'）从 '+teamName+' 租借 '+LOAN_DAYS+' 天，租金 '+rent+'万'+(gap?'——应急补位':''));
  save();renderAll();toast(p.name+' 租借加盟！'+LOAN_DAYS+' 天后自动归队');
 }
 function tickLoans(s){
@@ -5232,6 +5254,7 @@ function applySeasonPatch(s,upN,downN){
  成长两条路：场上好表现小概率即时 +1；归队时 kjiaTick 结算 +2~4×2——都计入
  p.kjiaGain（成就「练级成功」依据）。平衡门禁的模拟不下放选手，本系统不触碰门禁校准区间。 */
 const KJIA_DAYS=30;
+const KJIA_MIN_RECALL=7; // 提前召回最少已练天数（不足则拒绝，防「下放第二天就拉回」）
 const KJIA_AI_TEAMS=['K甲·苍穹','K甲·星火','K甲·沧澜','K甲·曜石','K甲·铁鳞','K甲·游隼','K甲·雾嶂'];
 const KJIA_EVERY=2; // 每 2 天一轮（7 轮=14 天，转会期 7 天内先打 3 轮）
 const KJIA_FILLER_NAMES=['冷峤','照野','束禾','闻鹿','栖迟','枕流','叩舷','扫雪','拾星','衔山','汲露','司南','执桨','引笛','泊岸','拓海','听澜','折桨','纵马','悬旌','负剑','摘星','衔烛','趁风'];
@@ -5361,18 +5384,49 @@ function sendKjia(s,id){
  logEvent(s,' 下放 K甲：'+p.name+'（'+POS[p.pos][0]+'）加入二队征战 K甲联赛 '+KJIA_DAYS+' 天——真实出战积累表现数据，「二队」页可查，归队时带成长回来');
  save();renderAll();
 }
+function kjiaDaysServed(p){return Math.max(0,KJIA_DAYS-(p.kjia||0));}
+function kjiaGrantReturnGrowth(p,daysServed){ // 归队/召回结算成长；满期两项 +2~4，提前按进度缩档
+ const keys=['lane','farm','team','mind'];
+ let gain=0;
+ const nAttrs=daysServed>=20?2:1;
+ const dMax=daysServed>=KJIA_DAYS?4:(daysServed>=20?3:2);
+ const dMin=daysServed>=KJIA_DAYS?2:1;
+ for(let i=0;i<nAttrs;i++){
+ const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];
+ const d=rnd(dMin,dMax);
+ p.attrs[k]=clamp(p.attrs[k]+d,40,99);
+ gain+=d;
+ }
+ p.kjiaGain=(p.kjiaGain||0)+gain; // 成就「练级成功」依据（含 K甲场上的即时成长）
+ return gain;
+}
+function kjiaReturnNote(p){ // 归队日志共用后缀
+ const st=p.kjiaStats;
+ return '（K甲累计出场 '+(st?st.apps:0)+' 场'+(st&&st.apps?' · 场均 '+Math.round(st.k/st.apps*10)/10+'/'+Math.round(st.d/st.apps*10)/10+'/'+Math.round(st.a/st.apps*10)/10:'')+'）';
+}
+function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉回一队，成长按已练天数折算
+ if(id===undefined){id=s;s=S;}
+ s=s||S;
+ const p=(s.players||[]).find(x=>x.id===id);
+ if(!p){toast('选手不在阵中');return;}
+ if(!(p.kjia>0)){toast(p.name+' 不在 K甲锻炼中');return;}
+ const served=kjiaDaysServed(p);
+ if(served<KJIA_MIN_RECALL){toast(p.name+' 至少练满 '+KJIA_MIN_RECALL+' 天才能召回（已练 '+served+' 天）');return;}
+ const left=p.kjia;
+ p.kjia=0;
+ const gain=kjiaGrantReturnGrowth(p,served);
+ logEvent(s,' 提前召回：'+p.name+' 结束 K甲锻炼（已练 '+served+'/'+KJIA_DAYS+' 天，提前 '+left+' 天），属性成长 +'+gain+kjiaReturnNote(p));
+ toast(p.name+' 已召回一队（成长 +'+gain+'）');
+ save();renderAll();
+}
 function kjiaTick(s){ // 每天结算一次；到期归队并成长
  (s.players||[]).forEach(p=>{
  if(!p.kjia)return;
  p.kjia--;
  if(p.kjia>0)return;
  p.kjia=0;
- const keys=['lane','farm','team','mind'];
- let gain=0;
- for(let i=0;i<2;i++){const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];const d=rnd(2,4);p.attrs[k]=clamp(p.attrs[k]+d,40,99);gain+=d;}
- p.kjiaGain=(p.kjiaGain||0)+gain; // 成就「练级成功」依据（含 K甲场上的即时成长）
- const st=p.kjiaStats;
- logEvent(s,' K甲归队：'+p.name+' 锻炼归来，属性成长 +'+gain+'（K甲累计出场 '+(st?st.apps:0)+' 场'+(st?' · 场均 '+Math.round(st.k/st.apps*10)/10+'/'+Math.round(st.d/st.apps*10)/10+'/'+Math.round(st.a/st.apps*10)/10:'')+'）');
+ const gain=kjiaGrantReturnGrowth(p,KJIA_DAYS);
+ logEvent(s,' K甲归队：'+p.name+' 锻炼归来，属性成长 +'+gain+kjiaReturnNote(p));
  });
 }
 </script>
@@ -9317,9 +9371,10 @@ function renderKjia(){
  const wr=st.apps?Math.round(st.wins/st.apps*100)+'%':'—';
  return `<tr><td><b>${p.name}</b></td><td>${POS[p.pos][1]}</td><td>${st.apps}</td><td>${avg}</td><td>${st.mvp||0}</td><td>${wr}</td><td class="gold">+${p.kjiaGain||0}</td></tr>`;
  }).join('')}</table>
- <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">${(p.kjiaLog||[]).slice(0,3).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>`)).join('')}</div>`;
+  <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">已练 ${kjiaDaysServed(p)}/${KJIA_DAYS} 天 · 剩 ${p.kjia} 天<br>${(p.kjiaLog||[]).slice(0,2).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>
+  <button class="btn sm primary mt8" style="width:100%" onclick="recallKjia('${p.id}')" title="提前召回一队：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`)).join('')}</div>`;
  }else{
- html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 30 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长。</div>`;
+ html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 ${KJIA_DAYS} 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长；练满 ${KJIA_MIN_RECALL} 天后可在本页或阵容页「提前召回」。</div>`;
  }
  html+=`</div>`;
  // 二队班底（K甲注册选手）
@@ -9635,7 +9690,7 @@ function sortChips(key,pos){
 }
 </script>
 <script>
-/* 阕容页 UI（从 ui.js 拆出：只搬渲染，引擎仍在 train/transfer/clubops） */
+/* 阵容页 UI（从 ui.js 拆出：只搬渲染，引擎仍在 train/transfer/clubops） */
 function renderLineup(){
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
@@ -9647,15 +9702,17 @@ function renderLineup(){
  return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div>${(S.mode||'manager')==='manager'?`<button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`:''}`);
  }).join('')}</div></div>`;
  html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
- <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长。</div>
+ <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长；练满 ${KJIA_MIN_RECALL} 天可提前召回。</div>
  ${bn.length?`<div class="grid g4">${bn.map(p=>{
  const lo=p.loanOut;
  const busy=playerBusy(S,p);
- return pcard(p,`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${p.kjia>0?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天</div>`:''}
+ const onKjia=p.kjia>0;
+ return pcard(p,`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${onKjia?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天 · 已练 ${kjiaDaysServed(p)} 天</div>`:''}
+ ${onKjia?`<button class="btn sm primary" onclick="recallKjia('${p.id}')" title="提前召回：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`:`
  <button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${busy?'disabled':''}>↑ 放入首发</button>
  ${S.mode==='manager'?`<button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')" ${busy?'disabled':''}> 出售（谈判）</button>`:''}
- <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长" ${busy?'disabled':''}> 下放 K甲</button>
- <button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="外租 ${LOAN_DAYS} 天：去缺人的俱乐部打主力，租金入账，归队带成长" ${busy?'disabled':''}> 外租练级</button>`);
+ <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长"> 下放 K甲</button>
+ <button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="外租 ${LOAN_DAYS} 天：去缺人的俱乐部打主力，租金入账，归队带成长"> 外租练级</button>`}`);
  }).join('')}</div>`:'<div class="hint">暂无替补——转会市场签人，或等俱乐部自动引援</div>'}
  </div>`;
  // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算
@@ -9830,24 +9887,26 @@ function renderMarket(){
  </div>`;
  }else{
  transferHtml=`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3>转会市场 <span class="tag">转会窗已关闭</span></h3>
- <div class="hint">KPL 转会窗在新赛季开启时开放 7 天：可买断其他俱乐部选手（非卖品除外）、挂牌交易、AI 竞价报价。非转会期可在下方租借市场临时租人。</div></div>`;
+ <div class="hint">KPL 转会窗在新赛季开启时开放 7 天：可买断其他俱乐部选手（非卖品除外）、挂牌交易、AI 竞价报价。全年可在下方租借市场临时租人（含转会期应急补位）。</div></div>`;
  }
- // 租借市场（非转会期唯一的人员流动）：向 AI 队租替补，21 天自动归队
- if(S.transferWindow<=0){
- const myLoans=(S.players||[]).filter(p=>p.loan);
- const cands=loanCandidates(S).slice(0,12);
- transferHtml+=`<div class="panel ${foldCls('mloan')}" data-fold="mloan"><h3>租借市场 <span class="tag">租期 ${LOAN_DAYS} 天 · 名额 ${myLoans.length}/2 · 到期自动归队</span></h3>
- <div class="hint" style="margin-bottom:8px">非转会期不能买卖，但可以租借：支付租金（身价 15%）即可租来应急/补位置，工资由原队承担；非卖品不外借，租借选手不能出售/挂牌。</div>
- ${myLoans.length?`<div style="margin-bottom:8px">${myLoans.map(p=>`<div class="match" style="margin-bottom:5px;padding:7px 10px">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · 来自${p.loan.from})</span></span></div>
- <div class="score" style="font-size:12px;min-width:0">剩余 <b class="gold">${p.loan.days}</b> 天</div>
- </div>`).join('')}</div>`:''}
- <div style="max-height:300px;overflow-y:auto">${cands.map(c=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
- <div class="vs"><span class="tname" style="font-size:13px">${c.p.name} <span style="color:var(--dim);font-size:10px">(${c.from} · ${POS[c.p.pos][0]} · 总值${overall(c.p)} · ${c.p.age}岁)</span></span></div>
- <div class="score" style="font-size:13px;min-width:0">租金 ${c.rent}万</div>
- <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${c.from}','${c.p.id}')">租借 21天</button>
- </div>`).join('')||'<div class="hint">联盟暂无可租借的选手</div>'}</div>
- </div>`;
+ // 租借市场（全年可开）：向 AI 队租替补，21 天自动归队；伤停缺人时名额+1并优先推缺位
+ {
+  const myLoans=(S.players||[]).filter(p=>p.loan);
+  const cap=loanCap(S);
+  const gaps=injuryGapPositions(S);
+  const cands=loanCandidates(S).slice(0,12);
+  transferHtml+=`<div class="panel ${foldCls('mloan')}" data-fold="mloan"><h3>租借市场 <span class="tag">租期 ${LOAN_DAYS} 天 · 名额 ${myLoans.length}/${cap}${cap>LOAN_CAP_BASE?' · 伤停应急':''} · 到期自动归队</span></h3>
+  <div class="hint" style="margin-bottom:8px">全年可租（含转会期）：支付租金（身价 15%）即可租来应急/补位置，工资由原队承担；非卖品不外借，租借选手不能出售/挂牌。${gaps.length?'<b class="red">当前 '+gaps.map(p=>POS[p][0]).join('、')+' 无人可打——已开放应急名额，下列缺位选手优先。</b>':'某位置因伤停/K甲无人时，名额上限 +1 并优先推荐该位置。'}</div>
+  ${myLoans.length?`<div style="margin-bottom:8px">${myLoans.map(p=>`<div class="match" style="margin-bottom:5px;padding:7px 10px">
+  <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · 来自${p.loan.from})</span></span></div>
+  <div class="score" style="font-size:12px;min-width:0">剩余 <b class="gold">${p.loan.days}</b> 天</div>
+  </div>`).join('')}</div>`:''}
+  <div style="max-height:300px;overflow-y:auto">${cands.map(c=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+  <div class="vs"><span class="tname" style="font-size:13px">${c.p.name} <span style="color:var(--dim);font-size:10px">(${c.from} · ${POS[c.p.pos][0]} · 总值${overall(c.p)} · ${c.p.age}岁)${gaps.includes(c.p.pos)?' <b class="red">缺位优先</b>':''}</span></span></div>
+  <div class="score" style="font-size:13px;min-width:0">租金 ${c.rent}万</div>
+  <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${c.from}','${c.p.id}')">租借 ${LOAN_DAYS}天</button>
+  </div>`).join('')||'<div class="hint">联盟暂无可租借的选手</div>'}</div>
+  </div>`;
  }
  // 自由球员与退役名宿：始终可见（不依赖转会窗）→ 侧栏
  sideHtml+=`<div class="panel ${foldCls('mfa')}" data-fold="mfa"><h3>自由球员 <span class="tag">各队无球可打的替补 · 低价直签</span></h3>
