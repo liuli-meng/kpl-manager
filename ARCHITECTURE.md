@@ -27,9 +27,10 @@ src/js/
 |---|---|
 | L1/L2 比赛扁平表 mid | 已在主线 |
 | 目录分层 + actions 抽出 | 本分支 |
-| 实体 byId | 待做 |
+| 选手 byId 索引 findPlayer | 本分支 |
+| 实体表（球队/转会市场） | 待做 |
 | step 状态机收束 season | 待做 |
-| 去掉 series 缓存字段 | 待做 |
+| 去掉 series 缓存字段 | L2 已基本完成 |
 
 ## 回滚
 

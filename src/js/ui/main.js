@@ -840,7 +840,7 @@ function applyClub(){
  try{if(typeof youthDirectEntry==='function')youthDirectEntry(S);}catch(e){}
  try{if(typeof initDraft==='function')initDraft(S);}catch(e){} // 首赛季选秀大会
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
- logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${S.lineup.map(id=>(S.players.find(p=>p.id===id)||{name:'?'}).name).join(' / ')}`);
+ logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${S.lineup.map(id=>(findPlayer(S,id)||{name:'?'}).name).join(' / ')}`);
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税，转会期可卖人减负');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');

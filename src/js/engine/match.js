@@ -248,7 +248,7 @@ function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 
  rosterLineup(s).forEach(p=>{p.energy=clamp(p.energy-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;});
  if(g.w)sr.mw++;else sr.ow++;
  const mvp=gamePerform(g.w);
- if(mvp){const mp=s.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}}
+ if(mvp){const mp=findPlayer(s,mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}}
  if(mvp){sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id);sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a);}
  const me=myPlayer(s);
  const meIn=me&&rosterLineup(s).some(p=>p.id===me.id);
@@ -403,7 +403,7 @@ function renderPreMatch(){
 }
 function prepChoosePos(pos){window._prepPos=pos;renderPreMatch();}
 function prepSwapIn(pid){
- const p=S.players.find(x=>x.id===pid);
+ const p=findPlayer(S,pid);
  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
  const cur=rosterLineup(S).find(x=>x.pos===p.pos);
  if(!cur)return;
@@ -428,7 +428,7 @@ function playGame(){
  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
  const tag=isPeak?' 巅峰对决（盲选）':'';
  const mvp=gamePerform(g.w);
- if(mvp){const mp=S.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
+ if(mvp){const mp=findPlayer(S,mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
  if(mvp)sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id); // 系列赛各局 MVP 记录（FMVP 评选用）
  if(mvp)sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a); // 各局 MVP 的 KDA（AI 战报语境用）
  sr.logs.push('第'+(sr.mw+sr.ow)+'局 '+(g.w?'':'')+' 我方 '+g.myK+'-'+g.opK+' '+(g.w?'击败':'憾负')+' '+sr.opName+' ｜ 总比分 '+sr.mw+':'+sr.ow+tag+' '+(sr.side==='red'?'红方':'蓝方')+' '+pick(CASTER)+(mvp?' ｜ MVP：'+mvp.name+'（'+mvp.k+'/'+mvp.d+'/'+mvp.a+'）':''));
@@ -589,7 +589,7 @@ function finishSeries(finalWin){
  const r={win:finalWin,logs:sr.logs,opName:sr.opName,
  stageTxt:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
  score:sr.mw+':'+sr.ow,
- mvps:(sr.mvpIds||[]).map((id,i)=>{const p=S.players.find(x=>x.id===id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
+ mvps:(sr.mvpIds||[]).map((id,i)=>{const p=findPlayer(S,id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
  };
  // 夺冠仪式感：总决赛/各杯赛决赛赢下时全屏庆典（一次性覆盖层，点按或 6 秒自动消失）
  if(finalWin&&(sr.stage==='po'&&sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot))){

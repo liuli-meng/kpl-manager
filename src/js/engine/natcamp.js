@@ -16,7 +16,7 @@ function announceNatCamp(s){
  if(mine.length){
  const names=mine.map(p=>p.name+'（'+POS[p.pos][0]+'）').join('、');
  logEvent(s,' 国家队征召：'+names+' 入选中国代表队！夏赛期间集训+出征名古屋亚运会，缺席俱乐部整个夏季赛');
- const empty=POS_ORDER.filter(pos=>!s.lineup.some(id=>{const p=s.players.find(x=>x.id===id);return p&&p.pos===pos;}));
+ const empty=POS_ORDER.filter(pos=>!s.lineup.some(id=>{const p=findPlayer(s,id);return p&&p.pos===pos;}));
  if(empty.length)logEvent(s,' 警告：'+empty.map(pos=>POS[pos][0]).join('、')+'没有替补可顶——转会市场签替补 / 训练页提拔青训，否则该位置整段夏季赛无法出战');
  }else{
  logEvent(s,' '+gameYear(s)+' 亚运年：中国代表队集结完毕（本队无选手入选，不受影响）');

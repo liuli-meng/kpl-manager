@@ -11,7 +11,7 @@ function trainBlockedReason(s,p){
  return '';
 }
 function doTrain(s,pid,attr){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
  const blocked=trainBlockedReason(s,p);
@@ -37,7 +37,7 @@ function doRest(s){
 }
 /* 英雄特训：优先提升熟练度（生疏→一般→熟练→绝活），全部满级则学新英雄（生疏） */
 function doHeroTrain(s,pid){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p)return;
  if(s.trained){toast('本日已进行过行动');return;}
  const blocked=trainBlockedReason(s,p);
@@ -194,7 +194,7 @@ function promoteRookie(s,id){
  现实中职业选手会转型换位置；游戏内用于解决特定位置断档。
  重构英雄池：新旧位置通用英雄保留熟练度，招牌不通用则重立，属性不变。 */
 function convertPos(s,pid,newPos){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p)return;
  if(p.pos===newPos){toast('已经是该位置');return;}
  const blocked=trainBlockedReason(s,p);
@@ -203,7 +203,7 @@ function convertPos(s,pid,newPos){
  const cost=50;
  if(s.fund<cost){toast('位置改造需要 '+cost+'万');return;}
  if(s.lineup.includes(pid)&&s.lineup.some(id=>{
- const o=s.players.find(x=>x.id===id);return o&&o.id!==pid&&o.pos===newPos;
+ const o=findPlayer(s,id);return o&&o.id!==pid&&o.pos===newPos;
  })){toast(POS[newPos][0]+' 首发已有选手，请先将其换下再改造');return;}
  s.fund-=cost;
  const oldPos=p.pos;

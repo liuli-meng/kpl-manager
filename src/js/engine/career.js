@@ -216,7 +216,7 @@ function clubLoanOutPlayer(s,pid){
 }
 function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引援（你只管竞技）
  (s.expiring||[]).slice().forEach(pid=>{
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p||p.loan)return;
  if(s.mode==='player'&&s.career&&pid===s.career.me)return; // 你本人的合同由选手分支单独谈/续
  p.contract=(p.contract||0)+1; // 俱乐部统一续约一年

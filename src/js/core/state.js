@@ -276,9 +276,26 @@ function newState(teamName,icon){
  };
 }
 function rosterAll(s){return s.players;}
+/* 选手 byId 索引：查找 O(1)，miss 时回退线性扫描并回填（名单增删后自愈）。
+   索引不落盘（serializeForSave 剥离），读档 rebuildPlayerIndex 重建。 */
+function rebuildPlayerIndex(s){
+ if(!s)return {};
+ const idx=Object.create(null);
+ (s.players||[]).forEach(p=>{if(p&&p.id)idx[p.id]=p;});
+ s.playersById=idx;
+ return idx;
+}
+function findPlayer(s,id){
+ if(!s||!id)return null;
+ const idx=s.playersById;
+ if(idx&&idx[id]&&idx[id].id===id)return idx[id];
+ const p=(s.players||[]).find(x=>x&&x.id===id)||null;
+ if(p&&idx)idx[id]=p;
+ return p;
+}
 function rosterLineup(s){const set=new Set(s.lineup);return s.players.filter(p=>set.has(p.id));}
 function rosterBench(s){const set=new Set(s.lineup);return s.players.filter(p=>!set.has(p.id));}
-function myPlayer(s){return (s&&s.mode==='player'&&s.career)?s.players.find(p=>p.id===s.career.me)||null:null;} // 选手生涯：我扮演的选手
+function myPlayer(s){return (s&&s.mode==='player'&&s.career)?findPlayer(s,s.career.me):null;} // 选手生涯：我扮演的选手
 /* ================= 选手状态机（唯一出口） =================
  同一选手可能同时挂多枚状态旗（伤停/K甲/外租/集训/退役/闹离队…）。
  各处不要再用 if (p.kjia>0 || p.loanOut || …) 自行拼条件——一律读 playerStatus(p)。
@@ -546,10 +563,11 @@ function scrubWages(s){
   _achAt/_asCache 等是节流缓存。导出/备份同样走这里。 */
 function serializeForSave(s){
  if(!s)return 'null';
- const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList};
+ const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList,playersById:s.playersById};
  s.aiRosters={};
  s.matches={};
  s.transferList=[]; // 可重建缓存：buildTransferMarket 开窗重建，落盘可占全文 1/3+
+ s.playersById=undefined;
  try{return JSON.stringify(s);}
  finally{Object.assign(s,cache);} // 原样还原（含 undefined 情形），只影响序列化产物
 }
@@ -784,6 +802,7 @@ function migrateSave(){
  }
  applySaveDefaults(S); // 字段级兜底：一律走 SAVE_DEFAULTS
  S.aiRosters={};
+ try{rebuildPlayerIndex(S);}catch(e){}
  migrateFixZeroZero(S);
  if(S.series&&!S.series.side)S.series.side='blue';
  // 派生索引重建失败要留痕并清空：getMatch 只读 s.matches，留着半建的索引比空索引更危险

@@ -145,7 +145,7 @@ function noGoDetail(s,noGo){
 }
 function autoFillLineup(s){
  POS_ORDER.forEach(pos=>{
- const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
+ const cur=s.lineup.map(id=>findPlayer(s,id)).filter(Boolean);
  const inPos=cur.find(p=>p.pos===pos);
  if(inPos&&natBusy(s,inPos)){ // 伤员/集训/未成年自动下场
  const cands=s.players.filter(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p))
@@ -181,10 +181,10 @@ function optimizeLineup(s){
   if(!pool.length)return;
   const best=pool.slice().sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig))[0];
   const idx=s.lineup.findIndex(id=>{
-   const p=s.players.find(x=>x.id===id);
+   const p=findPlayer(s,id);
    return p&&p.pos===pos;
   });
-  const cur=idx>=0?s.players.find(p=>p.id===s.lineup[idx]):null;
+  const cur=idx>=0?findPlayer(s,s.lineup[idx]):null;
   if(!best||(cur&&best.id===cur.id))return;
   if(cur&&playerPower(best,best.sig)<=playerPower(cur,cur.sig))return;
   if(s.lineup.includes(best.id))return; // 已在首发其他位：不跨位强换
@@ -456,7 +456,7 @@ function applyBp(sels){
 function bpOpenSwap(){const d=window._draft;if(!d)return;d.swap=true;renderBP();}
 function bpSwapIn(pid){
  const d=window._draft;if(!d)return;
- const p=S.players.find(x=>x.id===pid);
+ const p=findPlayer(S,pid);
  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
  const cur=rosterLineup(S).find(x=>x.pos===p.pos);
  if(!cur){toast('该位置没有首发');return;}

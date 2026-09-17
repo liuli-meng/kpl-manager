@@ -53,7 +53,7 @@ function pcard(p,extra){
  ${extra||''}
  </div>`;
 }
-function findPlayerCard(id){return S.players.find(x=>x.id===id)||S.market.find(x=>x.id===id)||null;}
+function findPlayerCard(id){return findPlayer(S,id)||S.market.find(x=>x.id===id)||null;}
 /* 选手档案弹窗 */
 /* 比赛复盘：回放历史比赛逐局日志 */
 function showReplay(h){
@@ -533,7 +533,7 @@ function clubFooterPanels(){
  html+=`<div class="panel"><h3>赛中转会报价 <span class="tag">${S.offers.length} 份待答复 · ${OFFER_TTL} 天内有效 · 过期作废</span></h3>
  <div class="hint" style="margin-bottom:8px">${S.mode==='coach'?'转会资金由俱乐部打理，但阵容得失是你的事：留人保战力，放人换预算。':'留人/放人/抬价三选：钱、名单、更衣室一起权衡。'}</div>
  ${S.offers.map((o,i)=>{
- const p=S.players.find(x=>x.id===o.pid);
+ const p=findPlayer(S,o.pid);
  let meta='';
  if(p){
  try{meta=`${(POS[p.pos]||['?','?'])[1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 周薪 ${p.wage||0}万`;}

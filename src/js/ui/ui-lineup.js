@@ -50,7 +50,7 @@ function renderLineup(){
  $('#page-lineup').innerHTML=html;
 }
 function swapPlayer(pid){
- const p=S.players.find(x=>x.id===pid);
+ const p=findPlayer(S,pid);
  const inLineup=S.lineup.includes(pid);
  if(!inLineup&&p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），暂不能进入首发');return;}
  if(!inLineup&&!matchEligible(S,p)){toast(p.name+' '+matchIneligibleReason(S,p)+'，不能进入首发');return;}

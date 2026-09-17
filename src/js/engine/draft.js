@@ -83,7 +83,7 @@ function draftTeamRosterCount(s,team){
 }
 function draftPosNeed(s,team,pos){
  if(team===s.teamName){
- const inLine=(s.lineup||[]).some(id=>{const p=s.players.find(x=>x.id===id);return p&&p.pos===pos;});
+ const inLine=(s.lineup||[]).some(id=>{const p=findPlayer(s,id);return p&&p.pos===pos;});
  const bench=(s.players||[]).filter(p=>p.pos===pos&&!s.lineup.includes(p.id)).length;
  return (inLine?0:3)+Math.max(0,2-bench);
  }

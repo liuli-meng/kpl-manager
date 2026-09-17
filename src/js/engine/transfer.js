@@ -747,7 +747,7 @@ function sellCeiling(p){
  return Math.round(anchor*0.9);
 }
 function openSellNego(s,pid){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
  if(p.loanOut){toast(p.name+' 正租借在外，不能出售');return;}
@@ -777,7 +777,7 @@ function openSellNego(s,pid){
 }
 function renderSellNego(){
  const n=window._sellNego;if(!n)return;
- const s=n.s,p=s.players.find(x=>x.id===n.pid);
+ const s=n.s,p=findPlayer(s,n.pid);
  if(!p){window._sellNego=null;return;}
  const rows=n.clubs.map((c,i)=>{
  const badge=c.status==='agreed'?'<span class="green"> 接受你的要价</span>'
@@ -845,7 +845,7 @@ function sellAcceptClub(i){
  if(!c||c.status==='walked'){toast('该俱乐部已退出谈判');return;}
  team=c.name;fee=c.bid;
  }
- const p=s.players.find(x=>x.id===n.pid);
+ const p=findPlayer(s,n.pid);
  if(!p)return;
  const wasStarter=s.lineup.includes(p.id);
  completeSale(s,p,fee,team);
@@ -892,7 +892,7 @@ function completeSale(s,p,fee,team){
 
 /* 玩家挂牌 / 撤牌 */
 function listPlayer(s,pid){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p)return;
  if(p.loan){toast('租借选手不属于俱乐部，不能挂牌');return;}
  if(p.loanOut){toast(p.name+' 正租借在外，归队后再挂牌');return;}
@@ -908,7 +908,7 @@ function listPlayer(s,pid){
  save();renderAll();
 }
 function delistPlayer(s,pid){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  const bids=(s.bids||[]).filter(x=>x.id===pid);
  if(bids.length&&!confirmDanger('撤掉 '+((p&&p.name)||'选手')+' 的挂牌？\n当前 '+bids.length+' 份报价将全部作废。'))return;
  s.listed=(s.listed||[]).filter(x=>x.id!==pid);
@@ -926,7 +926,7 @@ function aiBidTick(s){
  const pool=AI_TEAMS.filter(t=>t.name!==s.teamName);
  const elite=pool.filter(t=>aiTierOf(s,t.name)==='elite');
  const team=(elite.length&&Math.random()<0.6)?pick(elite):pick(pool);
- const p=s.players.find(x=>x.id===item.id);
+ const p=findPlayer(s,item.id);
  let bid=Math.min(TRANSFER_CAP,Math.round(item.price*(0.85+Math.random()*0.35))); // AI 报价同样受 1500 封顶
  if(p){const cap=sellCeiling(p);if(cap!=null)bid=Math.min(bid,cap);} // 挂牌报价同样受转售保护
  s.bids=[...(s.bids||[]),{id:item.id,team:team.name,bid}];
@@ -982,7 +982,7 @@ function aiBidTick(s){
 }
 function acceptBid(s,id){
  const b=(s.bids||[]).find(x=>x.id===id);
- const p=s.players.find(x=>x.id===id);
+ const p=findPlayer(s,id);
  if(!b||!p)return;
  completeSale(s,p,b.bid,b.team);
  save();renderAll();toast('转会完成！');
@@ -1000,7 +1000,7 @@ function renewCost(p){
  return Math.max(100,Math.round(sellAskPrice(p)*0.18*f));
 }
 function renewPlayer(s,pid,years,offerWage){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p||p.loan||(p.contract||0)>1){toast('该选手合同未到期');return;}
  const y=Math.min(4,Math.max(1,years||RENEW_YEARS));
  const cost=renewCostN(p,y);
@@ -1032,7 +1032,7 @@ function renewAskWage(p,years){
 function renewCostN(p,years){return Math.max(50,Math.round(renewCost(p)*(0.55+0.45*((years||2)-1))));}
 let _nego=null;
 function openRenewNego(s,pid){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p||p.loan){_nego=null;return;}
  if((p.contract||0)>1){_nego=null;toast('合同还剩 '+p.contract+' 年，最后一年再谈不迟');return;}
  _nego={pid,years:2,attempt:0,ask:renewAskWage(p,2),offer:null};
@@ -1040,7 +1040,7 @@ function openRenewNego(s,pid){
 }
 function renewNegoYears(y){
  if(!_nego)return;
- _nego.years=y;_nego.offer=null;_nego.ask=renewAskWage(S.players.find(x=>x.id===_nego.pid),y);
+ _nego.years=y;_nego.offer=null;_nego.ask=renewAskWage(findPlayer(S,_nego.pid),y);
  renderRenewNego();
 }
 function renewNegoOffer(d){
@@ -1055,7 +1055,7 @@ function renewNegoOfferInput(v){
 }
 function renderRenewNego(){
  if(!_nego||!S)return;
- const p=S.players.find(x=>x.id===_nego.pid);
+ const p=findPlayer(S,_nego.pid);
  if(!p){closeModal('app-modal');return;}
  const y=_nego.years,ask=_nego.ask;
  const offer=Math.max(5,Math.round((_nego.offer!=null?_nego.offer:ask)/5)*5);
@@ -1090,7 +1090,7 @@ function renderRenewNego(){
 }
 function submitRenewNego(){
  if(!_nego||!S)return;
- const p=S.players.find(x=>x.id===_nego.pid);
+ const p=findPlayer(S,_nego.pid);
  if(!p){closeModal('app-modal');return;}
  const y=_nego.years,offer=_nego.offer,ask=_nego.ask,cost=renewCostN(p,y);
  if(S.fund<cost){toast('资金不足（签字费 '+cost+'万）');return;}
@@ -1118,7 +1118,7 @@ function submitRenewNego(){
  toast(p.name+' 的经纪人嫌低了，要价涨到 '+_nego.ask+'万/周');
 }
 function releasePlayer(s,pid){
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(!p||p.contract>0){toast('该选手合同未到期');return;}
  if(p.loanOut){toast(p.name+' 正租借在外，归队后再操作');return;}
  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能放走');return;}
@@ -1139,7 +1139,7 @@ function releasePlayer(s,pid){
 function endTransferWindow(s){
  // 合同到期未处理的自动续约 1 年（防误伤主力；想放走需在转会期主动点"不续约"）
  (s.expiring||[]).slice().forEach(pid=>{
- const p=s.players.find(x=>x.id===pid);
+ const p=findPlayer(s,pid);
  if(p&&!p.loan&&p.contract<=0){
  p.contract=1;
  logEvent(s,' '+p.name+' 合同自动续约 1 年（转会期未处理）');
@@ -1403,7 +1403,7 @@ function respondOffer(s,idx,action){
  if(!o)return;
  if(s.mode==='player'){ // 选手生涯：只有自己的报价可回应——留队=涨薪续约，接受=赛段间转会
  if(o.pid!==(s.career&&s.career.me)){toast('那是队友的报价，经纪人不是你');return;}
- const p=s.players.find(x=>x.id===o.pid);
+ const p=findPlayer(s,o.pid);
  if(!p){s.offers.splice(idx,1);save();renderAll();return;}
  if(action==='keep'){
  const raise=Math.max(2,Math.round(p.wage*0.08));
@@ -1422,7 +1422,7 @@ function respondOffer(s,idx,action){
  save();renderAll();
  return;
  }
- const p=s.players.find(x=>x.id===o.pid);
+ const p=findPlayer(s,o.pid);
  if(!p){s.offers.splice(idx,1);save();renderAll();return;}
  if(action==='keep'){ // 留人：回绝报价 + 涨薪表达诚意
  const raise=Math.max(2,Math.round(p.wage*0.08));

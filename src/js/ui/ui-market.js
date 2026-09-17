@@ -85,7 +85,7 @@ function renderMarket(){
  ${p.contract<=0?`<button class="btn sm danger" style="margin:0" onclick="releasePlayer(S,'${p.id}')">不续约</button>`:''}
  </div></div>`;
  const expRows=(S.expiring||[]).map(pid=>{
- const p=S.players.find(x=>x.id===pid);
+ const p=findPlayer(S,pid);
  if(!p||p.loan)return '';
  return renewRow(p,'合同到期');
  }).join('');
@@ -108,7 +108,7 @@ function renderMarket(){
  </div>`;
  }).join('');
  const listed=(S.listed||[]).map(item=>{
- const p=S.players.find(x=>x.id===item.id);
+ const p=findPlayer(S,item.id);
  if(!p)return '';
  const bid=(S.bids||[]).find(b=>b.id===item.id);
  return `<div class="match" style="margin-bottom:6px;padding:8px 10px">
