@@ -117,8 +117,9 @@ function genRoundSchedule(s){
  const g=myGroup(s);
  const opps=(s.groups[g]||[]).filter(n=>n!==s.teamName);
  shuffle(opps);
- s.schedule=opps.map((op,i)=>({round:i+1,opp:op,result:null,myScore:0,opScore:0}));
+ s.schedule=opps.map((op,i)=>({round:i+1,opp:op,result:null,myScore:0,opScore:0,mid:'reg_'+(s.phase||'r1')+'_'+(i+1)}));
  s.matchIdx=0;
+ try{(s.schedule||[]).forEach(m=>{if(m.mid)tagMatch(s,m,m.mid);});}catch(e){}
  buildGroupSchedule(s);
 }
 /* 全联盟赛程：每组单循环（6队→5轮×3场），玩家的场次留给真人打，其余由 AI 逐轮模拟 */

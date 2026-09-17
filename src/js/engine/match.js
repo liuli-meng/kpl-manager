@@ -293,7 +293,10 @@ function startMatch(){
  showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第'+(S.series.mw+S.series.ow+1)+'局（'+S.series.mw+':'+S.series.ow+'）');
  return;
  }
- S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
+ const mid=m.mid||('reg_'+(S.phase||'r1')+'_'+(S.matchIdx+1));
+ m.mid=mid;
+ tagMatch(S,m,mid);
+ S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',mid,logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
  resetOppEnergy(S,m.opp); // 对手体力回满：衰减只在系列赛内累积
  showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
 }
@@ -518,7 +521,7 @@ function finishSeries(finalWin){
  if(sr.stage==='regular'){
  const g=myGroup(S);
  const t=(g&&S.tables[g])?S.tables[g][S.teamName]:null;
- const m=(S.schedule||[])[S.matchIdx];
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||(S.schedule||[])[S.matchIdx];
  const ot=(g&&m&&S.tables[g])?S.tables[g][m.opp]:null;
  if(m){m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;}
  if(t){

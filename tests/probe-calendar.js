@@ -30,6 +30,9 @@ const out = vm.runInContext(`
     const r=stepCalendar(S,null);
     if(!S.series)fail('startMatch 未开 series');
     else log('② startMatch series='+S.series.stage+' mid='+S.series.mid);
+    if(!S.series.mid)fail('常规赛 series 无 mid');
+    else if(!getMatch(S,S.series.mid))fail('mid 不在扁平表: '+S.series.mid);
+    else log('②b 常规赛 mid 进表 OK');
     // 收掉本场
     S.series.mw=3;S.series.ow=1;finishSeries(true);
   }

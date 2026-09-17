@@ -296,6 +296,13 @@ function findPlayer(s,id){
 function rosterLineup(s){const set=new Set(s.lineup);return s.players.filter(p=>set.has(p.id));}
 function rosterBench(s){const set=new Set(s.lineup);return s.players.filter(p=>!set.has(p.id));}
 function myPlayer(s){return (s&&s.mode==='player'&&s.career)?findPlayer(s,s.career.me):null;} // 选手生涯：我扮演的选手
+/* 球队名录：静态 AI_TEAMS + 玩家队名。查找统一走 findTeam。 */
+function findTeam(s,name){
+ if(!name)return null;
+ if(s&&s.teamName===name)return {name:s.teamName,icon:s.icon,isPlayer:true};
+ const t=AI_TEAMS.find(x=>x&&x.name===name);
+ return t?{...t,isPlayer:false}:null;
+}
 /* ================= 选手状态机（唯一出口） =================
  同一选手可能同时挂多枚状态旗（伤停/K甲/外租/集训/退役/闹离队…）。
  各处不要再用 if (p.kjia>0 || p.loanOut || …) 自行拼条件——一律读 playerStatus(p)。
@@ -607,12 +614,14 @@ function getMatch(s,mid){
  if(s.matches&&s.matches[mid])return s.matches[mid];
  return null;
 }
-function rebuildMatchStore(s){
+ function rebuildMatchStore(s){
  if(!s)return;
  ensureMatchStore(s);
  s.matches={};
  const reg=(m,mid)=>{if(m&&mid)tagMatch(s,m,mid);};
  const regList=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+i));};
+ // 常规赛玩家场次
+ (s.schedule||[]).forEach((m,i)=>reg(m,m.mid||('reg_'+(s.phase||'r1')+'_'+(i+1))));
  const regCup8=(p,prefix)=>{
  if(!p)return;
  regList(p.wb1,prefix+'wb1_');regList(p.lb1,prefix+'lb1_');
@@ -720,6 +729,11 @@ function resolveSeriesMatch(s,srIn){
 	if(sr.mid){
 	const live=getMatch(s,sr.mid);
 	if(live)return live;
+	}
+	if(sr.stage==='regular'&&sr.mid==null&&s.schedule){
+	// 旧档：按当前 matchIdx 对齐
+	const m=s.schedule[s.matchIdx];
+	if(m)return m;
 	}
 	if(sr.stage==='card'&&s.card&&s.card.matches){
 	if(sr.cardIdx!=null&&s.card.matches[sr.cardIdx])return s.card.matches[sr.cardIdx];
