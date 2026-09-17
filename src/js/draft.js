@@ -113,10 +113,29 @@ function draftMaxAiBid(s,team,slot){
  const tempBoost=(typeof isTempSeat==='function'&&isTempSeat(s,team))?1.25:1;
  return Math.min(Math.round(fund*0.25*tempBoost), Math.round((base+need*12)*tempBoost));
 }
+/* 旧档/异常档修复：竞拍价与领先者一旦被写成 NaN/null，整场竞拍再也不可能收敛
+   （早期 `draftBidRaise` 误用 s.bid，NaN 会跟着存档落盘，JSON 里变 null 再读出）。
+   读档时统一归一化，别指望坏值自己好。 */
+function draftRepair(s,d){
+ if(!d||typeof d!=='object')return null;
+ d.pool=Array.isArray(d.pool)?d.pool:[];
+ d.log=Array.isArray(d.log)?d.log:[];
+ d.picks=Array.isArray(d.picks)?d.picks:[];
+ d.passed=(d.passed&&typeof d.passed==='object')?d.passed:{};
+ d.order=(Array.isArray(d.order)&&d.order.length)?d.order:draftOrder(s);
+ const slot=Number(d.slot);
+ d.slot=(Number.isFinite(slot)&&slot>=0)?Math.floor(slot):0;
+ const bid=Number(d.bid);
+ d.bid=(Number.isFinite(bid)&&bid>0)?bid:draftSlotPrice(d.slot);
+ if(typeof d.leader!=='string')d.leader=null;
+ if(d.phase!=='auction'&&d.phase!=='pick'&&d.phase!=='done')d.phase=d.picks.length?'done':'auction';
+ d.done=!!d.done||d.phase==='done';
+ return d;
+}
 function initDraft(s,force){
  if(!s||!s.preseason)return null;
  if(s.mode&&s.mode!=='manager')return null;
- if(!force&&s.draft&&s.draft.season===s.season&&s.draft.split===s.split)return s.draft;
+ if(!force&&s.draft&&s.draft.season===s.season&&s.draft.split===s.split)return draftRepair(s,s.draft);
  const used=new Set((s.players||[]).map(p=>p.name));
  (s.academy||[]).forEach(p=>p&&p.name&&used.add(p.name));
  const kj=draftKjiaTier(s);
@@ -129,6 +148,7 @@ function initDraft(s,force){
  picks:[], // {slot,team,playerId}
  kjiaTier:kj
  };
+ draftRepair(s,s.draft);
  draftAiAuction(s);
  return s.draft;
 }
@@ -137,42 +157,35 @@ function draftAiAuction(s){ // AI 叫价直到轮到玩家或签位落定
  if(!d||d.done||d.phase!=='auction')return;
  let guard=0;
  while(d.phase==='auction'&&guard++<80){
- if(!d.pool.length){d.phase='done';d.done=true;break;}
- // 候选：还没 pass、仍想要人的队；弱队优先叫价
- const candidates=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
- if(!candidates.length){
- // 全放弃：签位免费给倒序里第一个还没选过的队
- const free=d.order.find(t=>!d.picks.some(p=>p.team===t));
- if(free){
- draftWinSlot(s,free,0);
- }else{d.done=true;d.phase='done';}
- break;
- }
- // 当前应叫价的队：按倒序找下一个未 pass
- let next=null;
- for(const t of d.order){
- if(!d.passed[t]&&draftStillWant(s,t)){next=t;break;}
- }
- if(!next){d.done=true;d.phase='done';break;}
- if(next===s.teamName)break; // 等玩家
- const max=draftMaxAiBid(s,next,d.slot);
- if(max>=d.bid+DRAFT_BID_STEP&&(d.leader!==next)){
- d.bid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
- d.leader=next;
- d.log.push(next+' 叫价 '+d.bid+'万（第'+(d.slot+1)+'签）');
- }else{
- d.passed[next]=true;
- }
- // 若仅剩 leader 未 pass 且已有叫价 → 成交
- const alive=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
- if(d.leader&&alive.length===1&&alive[0]===d.leader){
- draftWinSlot(s,d.leader,d.bid);
- break;
- }
- if(alive.length===0&&d.leader){
- draftWinSlot(s,d.leader,d.bid);
- break;
- }
+  if(!d.pool.length){d.phase='done';d.done=true;break;}
+  // 候选：还没 pass、仍想要人的队；弱队优先叫价
+  const candidates=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
+  if(!candidates.length){
+   // 全放弃：签位归当前最高价者。不能直接「顺位免费」给下一个队——那会作废领先者已出的价
+   if(d.leader)draftWinSlot(s,d.leader,d.bid);
+   else{
+    const free=d.order.find(t=>!d.picks.some(p=>p.team===t));
+    if(free)draftWinSlot(s,free,0);
+    else{d.done=true;d.phase='done';}
+   }
+   break;
+  }
+  /* 只剩领先者还在场 → 成交。这条必须排在「轮到玩家就 break」之前：
+     玩家叫价后领先的正是玩家本人，先 break 会让签位永不落定（玩家只能自己跟自己加价、或被迫放弃白送签位）。 */
+  if(d.leader&&candidates.length===1&&candidates[0]===d.leader){draftWinSlot(s,d.leader,d.bid);break;}
+  // 下一个要表态的队：领先者本人不用再表态（它已持最高价），跳过它看后面谁跟
+  let next=null;
+  for(const t of candidates){if(t===d.leader)continue;next=t;break;}
+  if(!next)break;
+  if(next===s.teamName)break; // 等玩家
+  const max=draftMaxAiBid(s,next,d.slot);
+  if(max>=d.bid+DRAFT_BID_STEP){
+   d.bid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
+   d.leader=next;
+   d.log.push(next+' 叫价 '+d.bid+'万（第'+(d.slot+1)+'签）');
+  }else{
+   d.passed[next]=true;
+  }
  }
 }
 function draftWinSlot(s,team,cost){
@@ -224,7 +237,11 @@ function draftBidRaise(s){
  if(s===undefined)s=S;
  const d=s.draft;
  if(!d||d.done||d.phase!=='auction')return;
- const nxt=d.leader?s.bid+DRAFT_BID_STEP:d.bid;
+ // 当前价必须是 d.bid（选秀自己的竞拍价）；以前误写成 s.bid（转会报价字段，选秀里恒为 undefined）
+ // → NaN 万叫价，连锁把领先者/成交价全污染。这里再兜一层，坏档也拉得回来。
+ if(!Number.isFinite(d.bid))d.bid=draftSlotPrice(d.slot);
+ if(!draftStillWant(s,s.teamName)){toast('大名单已满（'+ROSTER_MAX+' 人），无法再拍签位');return;}
+ const nxt=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
  if(s.fund<nxt){toast('资金不足（需 '+nxt+'万）');return;}
  d.bid=nxt;
  d.leader=s.teamName;
@@ -238,6 +255,7 @@ function draftBidPass(s){
  if(s===undefined)s=S;
  const d=s.draft;
  if(!d||d.done||d.phase!=='auction')return;
+ if(d.passed[s.teamName])return; // 已放弃，重复点不重复记账
  d.passed[s.teamName]=true;
  d.log.push(s.teamName+' 放弃第'+(d.slot+1)+'签竞拍');
  draftAiAuction(s);
@@ -314,7 +332,9 @@ function draftPanelHtml(){
  const s=S;
  if(!s.preseason||(s.transferWindow||0)<=0)return '';
  if(s.mode&&s.mode!=='manager')return '';
- const d=s.draft||initDraft(s);
+ // 渲染期只修不建：initDraft(s) 在 season/split 不匹配时会重建整场选秀，
+ // 在 render 里重建会吞掉进行中的竞拍；坏值交给 draftRepair 归一化即可。
+ const d=draftRepair(s,s.draft)||initDraft(s);
  if(!d)return '';
  const kj=d.kjiaTier||draftKjiaTier(s);
  const taken=d.picks.filter(x=>x.playerId).length;
@@ -331,7 +351,7 @@ function draftPanelHtml(){
  </div>`;
  if(meAuction){
  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
- <button class="btn gold" onclick="draftBidRaise()"> 叫价 ${d.leader?s.bid+DRAFT_BID_STEP:s.bid}万</button>
+ <button class="btn gold" onclick="draftBidRaise()"> 叫价 ${d.leader?d.bid+DRAFT_BID_STEP:d.bid}万</button>
  <button class="btn sm" onclick="draftBidPass()">放弃本签竞拍</button>
  </div>`;
  }else if(d.phase==='auction'){

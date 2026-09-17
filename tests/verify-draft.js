@@ -31,35 +31,36 @@ const out = vm.runInContext(`
   else if(d1.bid!==DRAFT_BID_TOP)fail('前8签应 '+DRAFT_BID_TOP+'万起拍，实际 '+d1.bid);
   else log('① 竞拍开局：池 '+d1.pool.length+' 人 · 第1签起拍 '+d1.bid+'万 · 弱队优先');
 
-  // ② 玩家叫价 → 拍得签位 → 点名
-  if(d1.phase==='pick'||d1.done){/* AI 已推进到我方点名或结束 */}
+  // ② 竞拍真实收敛：玩家一路叫价必须能落定（历史 bug：误用 s.bid → NaN，签位永不落定、玩家反被顺位抢签）
+  if(d1.phase!=='auction'||d1.order[0]!==s1.teamName)fail('开局应停在玩家竞拍（弱队第一顺位），实际 phase='+d1.phase+' order0='+d1.order[0]);
   else{
-    // 强制我方叫价直到成交（AI 可能继续加）
-    let g=0;
-    while(d1.phase==='auction'&&g++<20){
-      if(d1.leader===s1.teamName){
-        // 等 AI 应价；若 AI 全 pass 则成交
-        const alive=d1.order.filter(t=>!d1.passed[t]&&draftStillWant(s1,t));
-        if(alive.length===1&&alive[0]===s1.teamName)break;
-      }
+    let g=0,err='';
+    while(d1.phase==='auction'&&g++<25){
+      const f0=s1.fund;
       draftBidRaise(s1);
-      if(d1.phase!=='auction')break;
+      if(!Number.isFinite(d1.bid)){err='叫价把竞拍价写成 NaN';break;}
+      if(!Number.isFinite(s1.fund)){err='叫价把资金写成 NaN';break;}
+      if(d1.bid<DRAFT_BID_TOP){err='竞拍价跌破起拍价（'+d1.bid+'）';break;}
+      if(d1.phase==='auction'&&d1.leader===s1.teamName&&d1.passed[s1.teamName]){err='玩家既领先又已放弃';break;}
+      if(s1.fund>f0){err='叫价反而加钱';break;}
     }
+    if(err)fail('竞拍叫价异常：'+err);
+    else if(d1.phase==='auction')fail('竞拍不收敛：'+g+' 次叫价后仍在 auction（领先='+d1.leader+' 价='+d1.bid+'）');
+    else if(d1.phase!=='pick')fail('玩家拍得签后应进入点名，实际 '+d1.phase);
+    else if(d1.leader!==s1.teamName)fail('点名阶段领先者应是玩家，实际 '+d1.leader);
+    else log('② 竞拍收敛：第1签 '+d1.bid+'万成交给玩家 · 资金 '+s1.fund+'（'+g+' 次叫价）');
   }
-  // 无论如何推进到可测点名：若仍在 auction 且我方是 leader 且仅剩自己，应已 win
-  if(d1.phase==='auction'){
-    // 手动成交给玩家以便测点名
-    draftWinSlot(s1,s1.teamName,d1.bid);
-  }
-  if(d1.phase!=='pick')fail('拍得签后应进入点名，实际 '+d1.phase);
-  else if(!d1.pool.length)fail('点名时池已空');
-  else{
+
+  // ②b 点名
+  if(d1.phase==='pick'){
     const n0=s1.players.length;
+    const winBid=d1.bid;
     const t=d1.pool[0];
     draftPick(s1,t.id);
     if(!s1.players.some(p=>p.id===t.id))fail('点名后未入队');
     else if(s1.players.length!==n0+1)fail('一队人数未+1');
-    else log('② 竞拍+点名：'+t.name+' 入队 · 已签 '+d1.picks.filter(x=>x.playerId).length+' 人');
+    else if(!d1.picks.length||d1.picks[0].team!==s1.teamName)fail('成交/点名记录未归玩家');
+    else log('②b 点名：'+t.name+' 入队 · 已签 '+d1.picks.filter(x=>x.playerId).length+' 人 · 花费 '+winBid+'万');
   }
 
   // ③ 自家青训不可选
@@ -119,7 +120,33 @@ const out = vm.runInContext(`
   if(rErr)fail('转会页渲染异常: '+rErr);
   else if(!html.includes('选秀大会'))fail('缺选秀面板');
   else if(!html.includes('竞拍')&&!html.includes('点名'))fail('面板缺竞拍/点名提示');
-  else log('⑥ 面板：含选秀大会（竞拍/点名）');
+  else if(/NaN/.test(html))fail('选秀面板出现 NaN（竞拍价/叫价文案坏了）');
+  else log('⑥ 面板：含选秀大会（竞拍/点名）· 无 NaN');
+
+  // ⑦ 全场放弃竞拍 → 签位必须归当前最高价者（不能「顺位免费」白送给别的队）
+  const s7=mkS(0);
+  const d7=initDraft(s7,true);
+  const lead7=d7.order.filter(t=>t!==s7.teamName)[0];
+  d7.order.filter(t=>t!==s7.teamName).slice(1).forEach(t=>{d7.passed[t]=true;});
+  d7.passed[s7.teamName]=true;
+  d7.leader=lead7;d7.bid=120;
+  draftAiAuction(s7);
+  const rec7=d7.picks[0];
+  if(!rec7||rec7.team!==lead7)fail('全场放弃后签位应归领先者 '+lead7+'，实际 '+(rec7?rec7.team:'无'));
+  else log('⑦ 全场放弃：第1签归领先者 '+lead7+'（'+d7.bid+'万，未白送）');
+
+  // ⑧ 坏档修复：竞拍价被写成 NaN（老 bug 落盘后的产物）→ 归一化后仍可正常叫价
+  const s8=mkS(0);
+  const d8=initDraft(s8,true);
+  d8.bid=NaN;d8.leader=null;
+  draftRepair(s8,d8);
+  if(!Number.isFinite(d8.bid)||d8.bid<DRAFT_BID_TOP)fail('draftRepair 未修好 NaN 竞拍价（'+d8.bid+'）');
+  else{
+    d8.leader=d8.order.filter(t=>t!==s8.teamName)[0];
+    draftBidRaise(s8);
+    if(!Number.isFinite(d8.bid)||!Number.isFinite(s8.fund))fail('坏档叫价仍会污染数值');
+    else log('⑧ 坏档修复：NaN 竞拍价 → '+d8.bid+'万，叫价后 bid/资金均为有限数');
+  }
 
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
