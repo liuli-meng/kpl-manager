@@ -203,6 +203,14 @@ const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:15,cost:0,fans:0},
  {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:180,cost:1650,fans:200}];
 const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
 
+/* ================= 经济结算系数（P2-12：由引擎各处魔法数字收敛，调平衡只动这里） ================= */
+const BONUS_PER_WIN_GAME={regular:13,card:20,po:25,cup:20}; // 系列赛胜小局奖金（万/小局）
+const REG_WIN_EXTRA_CHANCE=0.5, REG_WIN_EXTRA=33;           // 常规赛胜场随机追加（概率 / 万）
+const PO_CHAMPION_BONUS=100;                                 // 季后赛夺冠追加（万）
+const PRIZE_PLAYER_SHARE=0.7, PRIZE_CLUB_SHARE=0.3;          // 杯赛奖金 70/30 分成（KPL 硬规则：选手分成≥70%）
+const ENDORSE_PER_POP=0.3;                                   // 代言收入：每点人气 × 万/周（payWage 结算与选手卡展示共用）
+const RENEW_MORALE_DIV=500;                                  // 续约谈判：士气偏离 50 的概率修正除数（±50 士气 = ±10%）
+
 /* ================= 英雄池（KPL 常用英雄 · 含摇摆位） =================
  n:英雄名 pos:可打位置[主位,...摇摆位] t:倾向(对线lane/运营farm/团战team/心态mind) hot:版本热门 */
 const HEROES=[

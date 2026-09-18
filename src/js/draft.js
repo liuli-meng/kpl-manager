@@ -508,6 +508,7 @@ function draftPanelHtml(){
  }
  if(d.pool.length&&(d.phase==='pick'||mePick||d.done===false)){
  const interactive=mePick;
+ if(interactive){
  html+=`<div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
  const card=pcard(p,interactive
@@ -520,6 +521,19 @@ function draftPanelHtml(){
  ?`<div onclick="draftPick('${p.id}')" style="cursor:pointer" title="点击签约">${card}</div>`
  :card;
  }).join('')}</div>`;
+ }else{
+ /* 非本队点名回合（竞拍中 / 你已放弃 / 已收官）：新秀卡只能看不能点，可原来是 20 张完整
+    pcard 实测 40.7 KB——约占转会页的 1/3，而它承载的信息只有「名字/位置/总值/档级」。
+    这里压成紧凑行（约 3 KB），信息一条不少；轮到自己点名时仍走上面的完整卡片路径，
+    「整卡可点」和满员提示（0aeaf0b）都不受影响。 */
+ const src=p=>{const t=(p.tags||[]).filter(x=>x!=='选秀'&&x!=='青训出身');return t.join('/')||'训练营';};
+ html+=`<div class="hint" style="margin-bottom:6px">新秀池 ${d.pool.length} 人 · 轮到你点名时自动展开为可点卡片</div>
+ <div style="max-height:220px;overflow-y:auto">${d.pool.map(p=>`<div class="match" style="margin-bottom:4px;padding:5px 8px">
+ <div class="vs"><span class="tname" style="font-size:12px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.age||18}岁${p.fromClub?' · '+p.fromClub+'青训':''})</span></span></div>
+ <div class="power" style="font-size:10px">${src(p)}</div>
+ <div class="score" style="font-size:12px;min-width:0">总值 ${overall(p)}</div>
+ </div>`).join('')}</div>`;
+ }
  }
  // 放弃按钮必须独立于「池里有人」：池子空时原来连按钮都不渲染 → 玩家卡死在点名阶段
  if(mePick)html+=`<button class="btn sm mt8" onclick="draftSkip()">放弃点名</button>`;

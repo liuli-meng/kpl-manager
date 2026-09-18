@@ -1130,7 +1130,7 @@ function submitRenewNego(){
  if(S.fund<cost){toast('资金不足（签字费 '+cost+'万）');return;}
  const r=offer/ask;
  let prob=r>=1.2?0.98:r>=1.05?0.85:r>=0.95?0.55:r>=0.85?0.25:0.05;
- prob=clamp(prob+((p.morale||50)-50)/500,0.02,0.99);
+ prob=clamp(prob+((p.morale||50)-50)/RENEW_MORALE_DIV,0.02,0.99);
  if(rnd(1,100)<=Math.round(prob*100)){
  renewPlayer(S,p.id,y,offer);
  _nego=null;

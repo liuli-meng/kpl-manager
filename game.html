@@ -8,7 +8,7 @@
 <link rel="icon" href="data:,">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-:root{--bg:#141416;--surface:#1d1d20;--surface2:#1d1d20;--raise:#242428;--sunken:#101012;--line:#2a2a2e;--line2:#3a3a40;--txt:#e6e6e9;--dim:#9a9aa2;--faint:#6f6f77;--accent:#5c8af5;--accent-deep:#3d6bd6;--accent2:#5c8af5;--gold:#d9a441;--red:#d95d5d;--green:#4ba368;--r:#9a9aa2;--sr:#5c8af5;--ssr:#d9a441;--card2:#1d1d20;--cyan:var(--accent);--grad-a:none;--grad-btn:none;--grad-gold:none}*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}html{color-scheme:dark}body{background:radial-gradient(1100px 480px at 50% -8%,rgba(92,138,245,.075),transparent 62%),var(--bg);color:var(--txt);font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;font-size:14px;line-height:1.55;min-height:100vh;padding-bottom:20px;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}::-webkit-scrollbar-track{background:transparent}::selection{background:rgba(92,138,245,.3)}.wrap{max-width:1060px;margin:0 auto;padding:14px 16px 20px}.ic{flex:none;vertical-align:-2px}svg.ic{display:inline-block}.cut{border-radius:3px}header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:4px;position:sticky;top:8px;z-index:50}.logo{display:flex;align-items:center;justify-content:center;flex:none}.hd-name{font-size:16px;font-weight:700;line-height:1.3}.hd-name small{display:block;font-size:11px;color:var(--dim);font-weight:400}.stats{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}.stat{display:flex;align-items:center;gap:6px;background:var(--raise);border:1px solid var(--line);border-radius:3px;padding:5px 10px;min-width:0}.stat .ic{color:var(--faint)}.stat b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.stat small{font-size:10px;color:var(--faint);white-space:nowrap}.stat.gold b{color:var(--gold)}.stat.red b{color:var(--red)}.stat.green b{color:var(--green)}.stat.gold .ic{color:var(--gold)}.stat.red .ic{color:var(--red)}.stat.green .ic{color:var(--green)}.hd-btn{display:inline-flex;align-items:center;gap:4px;background:transparent;border:1px solid var(--line2);color:var(--dim);border-radius:3px;padding:6px 10px;cursor:pointer;font-size:12px;transition:.15s}.hd-btn:hover{color:var(--txt);border-color:var(--accent);background:rgba(92,138,245,.08)}nav{display:flex;gap:2px;margin:12px 0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{flex:1;min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 8px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap}nav button .ic{color:var(--faint)}nav button:hover{color:var(--txt);background:var(--raise)}nav button.on{color:var(--txt);border-bottom-color:var(--accent);background:var(--raise)}nav button.on .ic{color:var(--accent)}section.page{display:none}section.page.on{display:block;animation:fadein .18s ease}@keyframes fadein{from{opacity:0}to{opacity:1}}.panel{background:linear-gradient(180deg,rgba(255,255,255,.022),rgba(255,255,255,0) 56px),var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:12px;position:relative}.panel h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin-bottom:11px;letter-spacing:.2px}.panel h3 .h-ic{display:none}.panel h3 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line);color:var(--dim);padding:1px 8px;border-radius:10px;font-weight:400}.grid{display:grid;gap:10px}.g5{grid-template-columns:repeat(5,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}@media(max-width:900px){.g5{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}@media(max-width:560px){.g2{grid-template-columns:1fr}.stats .stat{min-width:62px}}.page-cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}.page-cols>.col{min-width:0}.page-cols>.col>.panel:last-child{margin-bottom:0}@media(max-width:1000px){.page-cols{grid-template-columns:1fr}}.panel.collapsible>h3{cursor:pointer;user-select:none}.panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .18s;transform:rotate(90deg)}.panel.collapsed>h3::after{transform:rotate(0)}.panel.collapsed>*:not(h3){display:none}.panel.collapsed{padding-bottom:12px}.pcard{background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:11px 12px;position:relative;transition:.15s}.pcard::before{content:none}.pcard:hover{border-color:var(--line2)}.pcard .p-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.pcard .p-name{font-weight:700;font-size:14px}.pcard .p-pos{font-size:10px;font-weight:700;padding:1px 7px;background:rgba(92,138,245,.14);color:var(--accent);border-radius:2px}.pcard .p-rarity{font-size:11px;font-weight:400;color:var(--dim)}.pcard .p-tag{font-size:10px;margin-left:3px;background:var(--sunken);color:var(--dim);padding:1px 5px;border-radius:2px}.pcard .p-hero{font-size:11px;color:var(--dim);margin-bottom:3px}.pcard .p-hero b{color:var(--txt)}.pcard .p-disc{float:right;font-size:10px;background:rgba(217,93,93,.14);color:var(--red);padding:1px 6px;border-radius:2px}.pcard .p-hero-pick{border-color:var(--accent);background:rgba(92,138,245,.06)}.pcard .p-skill{font-size:11px;color:var(--dim);margin:5px 0;line-height:1.5;min-height:32px}.pcard .p-skill b{color:var(--dim)}.pcard .attr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11px;color:var(--faint);margin-bottom:7px}.pcard .attr i{font-style:normal;color:var(--txt);float:right;font-weight:700;font-variant-numeric:tabular-nums}.pcard .p-foot{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);border-top:1px solid var(--line);padding-top:6px}.pcard .p-foot b{color:var(--txt);font-variant-numeric:tabular-nums}.pcard.r{--rc:var(--r)}.pcard.r .p-rarity{color:var(--r)}.pcard.sr{--rc:var(--sr)}.pcard.sr .p-rarity{color:var(--sr)}.pcard.ssr{--rc:var(--ssr)}.pcard.ssr .p-rarity{color:var(--ssr)}.pcard.ssr{border-color:rgba(217,164,65,.45)}.pcard .p-hp{position:absolute;top:7px;right:8px;font-size:10px;color:var(--red)}.pcard .p-salary{color:var(--gold)}.pcard .bench-mark{position:absolute;top:7px;left:8px;font-size:10px;background:var(--sunken);color:var(--dim);padding:1px 7px;border-radius:2px}.pcard button{margin-top:7px;width:100%;padding:7px;border:1px solid var(--line2);background:transparent;color:var(--txt);cursor:pointer;font-size:12px;font-weight:600;transition:.15s;border-radius:3px}.pcard button:hover{border-color:var(--accent);color:var(--accent)}.pcard button.primary{background:var(--accent);border-color:var(--accent);color:#fff}.pcard button.primary:hover{background:var(--accent-deep);color:#fff}.pcard button.danger{color:var(--red)}.pcard button.danger:hover{border-color:var(--red);background:rgba(217,93,93,.08);color:var(--red)}.pcard button:disabled{opacity:.4;cursor:not-allowed}.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 18px;border:1px solid var(--line2);background:var(--raise);color:var(--txt);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;border-radius:3px}.btn:hover{border-color:var(--accent);color:var(--accent)}.btn.primary{background:linear-gradient(180deg,#6b97ff,#5483ec);border-color:#6b97ff;color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(92,138,245,.22)}.btn.primary:hover{background:linear-gradient(180deg,#7aa2ff,#5c8af5);border-color:#7aa2ff;color:#fff}.btn.gold{background:linear-gradient(180deg,#e5b455,#d9a441);border-color:#e0ac47;color:#1d1505;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(217,164,65,.18)}.btn.gold:hover{background:#c8942f;border-color:#c8942f;color:#1d1505}.btn.danger{color:var(--red);border-color:rgba(217,93,93,.5)}.btn.danger:hover{border-color:var(--red);background:rgba(217,93,93,.08);color:var(--red)}.btn:disabled{opacity:.4;cursor:not-allowed}.btn.sm{padding:5px 12px;font-size:12px}.match{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;margin-bottom:8px;transition:.15s}.match:hover{border-color:var(--line2)}.match .vs{display:flex;align-items:center;gap:10px;flex:1;min-width:0}.match .vs .tname{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.match .vs .power{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}.match .score{font-size:18px;font-weight:700;color:var(--dim);min-width:56px;text-align:center;font-variant-numeric:tabular-nums}.match.win{border-color:rgba(75,163,104,.5)}.match.win .score{color:var(--green)}.match.lose{border-color:rgba(217,93,93,.4)}.match.lose .score{color:var(--red)}.tbl{width:100%;border-collapse:collapse;font-size:13px}.tbl th{color:var(--faint);font-size:11px;font-weight:400;text-align:left;padding:7px 9px;border-bottom:1px solid var(--line2)}.tbl td{padding:8px 9px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.tbl tr:last-child td{border-bottom:none}.tbl tr.me td{background:rgba(92,138,245,.08);font-weight:600}.tbl tr.me td:first-child{border-left:2px solid var(--accent)}.logbox{background:var(--sunken);border:1px solid var(--line);border-radius:4px;padding:6px 13px;max-height:320px;overflow-y:auto;font-size:12.5px;line-height:1.9}.logbox div{border-bottom:1px dashed var(--line)}.logbox div:last-child{border-bottom:none}.logbox .win{color:var(--green)}.logbox .lose{color:var(--red)}.logbox .info{color:var(--dim)}.logbox .gold{color:var(--gold)}.event-card{border:1px solid var(--line);border-left:2px solid var(--accent);background:var(--surface);border-radius:3px;padding:10px 13px;margin-bottom:8px}.event-card .et{font-weight:700;color:var(--accent);font-size:12px;margin-bottom:3px}.event-card p{font-size:13px;color:var(--txt);line-height:1.7}.event-card .opt{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}.center{text-align:center}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.dim{color:var(--dim)}.gold{color:var(--gold)}.cyan{color:var(--accent)}.red{color:var(--red)}.green{color:var(--green)}.hint{font-size:11px;color:var(--dim);line-height:1.65}.page-hint{display:flex;align-items:flex-start;gap:8px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:10px}.page-hint span{flex:1;min-width:0}.ph-x{background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:0 2px;line-height:1.2;flex:none;font-family:inherit}.ph-x:hover{color:var(--txt)}.sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:8px;padding-bottom:2px}.sort-row::-webkit-scrollbar{display:none}.s-chip{flex:none;min-height:28px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--dim);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}.s-chip:hover{border-color:var(--line2);color:var(--txt)}.s-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(217,164,65,.08)}.s-div{flex:none;width:1px;height:18px;background:var(--line);margin:0 3px}.progress{height:4px;background:var(--sunken);border-radius:2px;overflow:hidden;margin-top:4px}.progress i{display:block;height:100%;background:var(--accent);border-radius:2px}.pbar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}.pbar .progress{flex:1;margin-top:0}.modal-bg{position:fixed;inset:0;background:rgba(8,8,10,.78);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}.modal-bg.on{display:flex}.modal{background:var(--surface);border:1px solid var(--line2);border-radius:4px;padding:20px;max-width:560px;width:100%;min-width:0;max-height:88vh;overflow-y:auto;position:relative}.modal.wide{max-width:720px}.modal h2{display:flex;align-items:center;gap:8px;margin-bottom:13px;font-size:16px;font-weight:700}.modal h2 .h-ic{display:none}.modal h2 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line);color:var(--dim);padding:1px 8px;border-radius:10px;font-weight:400;margin-left:auto}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--raise);border:1px solid var(--line2);border-left:2px solid var(--accent);color:var(--txt);padding:9px 18px;font-size:13px;z-index:200;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;border-radius:3px}.toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}.league-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;margin-top:10px;border:1px solid var(--gold);background:rgba(217,164,65,.1);color:var(--gold);cursor:pointer;font-size:14px;font-weight:700;transition:.15s;border-radius:3px}.league-btn:hover{background:rgba(217,164,65,.18)}.banner{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:13px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.banner::before{content:none}.banner .big{font-size:18px;font-weight:700}.sponsor{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 13px;margin-bottom:8px}.sponsor .s-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;background:var(--raise);border:1px solid var(--line2);color:var(--accent);font-weight:700;font-size:13px;border-radius:3px}.sponsor .s-name{font-weight:700;font-size:13px}.sponsor .s-desc{font-size:11px;color:var(--dim)}.sponsor .s-price{margin-left:auto;font-weight:700;color:var(--gold);font-size:13px}footer{background:transparent;border-top:1px solid var(--line);text-align:center;padding:10px;font-size:11px;color:var(--faint)}.club-card{cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center;transition:.15s}.club-card:hover{border-color:var(--accent)}.pack-btn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;min-height:48px;background:var(--raise);border:1px solid var(--line2);color:var(--txt);cursor:pointer;padding:8px 10px;transition:.15s;border-radius:3px}.pack-btn:hover{border-color:var(--accent);color:var(--accent)}.ic-pick{cursor:pointer}.bp-board{display:flex;gap:10px;align-items:stretch;margin:8px 0}.bp-col{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px;min-width:0;position:relative}.bp-col::before{content:none}.bp-col.blue::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}.bp-col.red::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}.bp-col-hd{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-col-hd .side-dot{width:8px;height:8px;flex:none;border-radius:2px}.bp-col.blue .side-dot{background:var(--accent)}.bp-col.red .side-dot{background:var(--red)}.bp-col-hd small{font-weight:400;font-size:10px;color:var(--faint);margin-left:auto}.bp-bans{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}.bp-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.bp-slot{background:var(--sunken);border:1px solid var(--line);border-radius:3px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 3px;text-align:center;overflow:hidden}.bp-slot b{font-size:10.5px;font-weight:600;line-height:1.3;max-width:100%;color:var(--faint);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}.bp-slot small{font-size:9px;color:var(--faint)}.bp-slot.ban{min-height:32px;border-style:dashed}.bp-slot.ban.filled{border-style:solid;background:rgba(217,93,93,.1);border-color:rgba(217,93,93,.45)}.bp-slot.ban.filled b{color:var(--red);text-decoration:line-through}.bp-slot.pick.filled{border-color:var(--line2);background:var(--raise)}.bp-slot.pick.filled b{color:var(--txt)}.bp-slot.pick.filled small{color:var(--dim)}.bp-slot.pick.blind b{color:var(--faint)}.bp-center{width:118px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.bp-phase{font-size:12px;font-weight:700;color:var(--gold)}.bp-stepnum{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}.bp-stepbar{width:74px;height:3px;background:var(--sunken);overflow:hidden}.bp-stepbar i{display:block;height:100%;background:var(--gold);transition:width .2s}.bp-used{font-size:9px;color:var(--faint);max-height:72px;overflow-y:auto;line-height:1.6;padding-right:2px}.bp-hero-grid{display:flex;flex-wrap:wrap;gap:6px;max-height:228px;overflow-y:auto;padding:2px}.bp-hero{flex:1 1 96px;max-width:150px;background:var(--raise);border:1px solid var(--line);color:var(--txt);border-radius:3px;padding:7px 9px;cursor:pointer;font-size:12.5px;font-weight:600;transition:.12s;text-align:center}.bp-hero small{display:block;font-size:9px;color:var(--faint);font-weight:400;margin-top:2px}.bp-hero:hover{border-color:var(--accent)}.bp-hero.pos{flex:1 1 108px;display:flex;flex-direction:column;align-items:center;gap:1px}.bp-hero.rec{border-color:var(--accent);background:rgba(92,138,245,.08)}.bp-hero.rec small{color:var(--accent)}.bp-hero.sel{border-color:var(--gold);background:rgba(217,164,65,.1)}.bp-hero.sel small{color:var(--gold)}.bp-hero:active{transform:scale(.97)}.bp-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin:6px 0 2px}.bp-flow .f-step{display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid var(--line);background:var(--raise);white-space:nowrap;border-radius:2px}.bp-flow .f-step.cur{border-color:var(--gold);color:var(--gold)}.bp-flow .f-step.off{opacity:.45}.bp-opp{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin-bottom:8px}.btn:active,.hd-btn:active,nav button:active,.pcard button:active,.club-card:active{transform:scale(.97)}#intro-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none;background:var(--bg);animation:introFade .7s ease .7s forwards}#intro-overlay .intro-inner{text-align:center;animation:introZoom .8s ease both}#intro-overlay .intro-ico{font-size:44px;line-height:1;color:var(--accent);font-weight:700}#intro-overlay .intro-name{font-size:20px;font-weight:700;margin-top:12px}#intro-overlay .intro-sub{font-size:10px;color:var(--dim);margin-top:6px}@keyframes introZoom{0%{transform:scale(.96);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes introFade{to{opacity:0;visibility:hidden}}@media(max-width:640px){body{padding-bottom:76px}.wrap{padding:10px 10px 16px}header{gap:6px;padding:9px 10px;top:0;border-radius:0;border-left:none;border-right:none}.logo{width:32px;height:32px;font-size:16px}.hd-name{font-size:14px}.hd-btn{padding:6px 8px;font-size:11px;min-height:34px}.stats{width:100%;order:5;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-left:0}.stats .stat{min-width:0;padding:5px 8px}.stats .stat b{font-size:12px}.stats .stat small{font-size:9px}nav{position:fixed;bottom:0;left:0;right:0;margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;z-index:80;background:var(--surface);box-shadow:0 -1px 0 var(--line);padding-bottom:env(safe-area-inset-bottom,0)}nav button{min-width:0;flex:1 1 auto;padding:11px 2px;font-size:11.5px;border-bottom-width:2px}.panel{padding:11px;margin-bottom:9px}.banner{padding:10px;gap:8px}.banner .big{font-size:15px}.g4{grid-template-columns:repeat(2,1fr);gap:8px}.g3{grid-template-columns:1fr;gap:8px}.pcard{padding:10px}.pcard .p-name{font-size:13px}.pcard .p-skill{min-height:0}.btn{padding:9px 14px;font-size:13px;min-height:40px}.s-chip{min-height:38px;padding:6px 13px;font-size:12.5px}.btn.sm{padding:7px 10px;font-size:12px;min-height:36px}.match{padding:9px 10px;gap:6px}.match .vs .tname{font-size:13px}.match .score{font-size:15px;min-width:44px}.tbl{font-size:11px}.tbl th,.tbl td{padding:7px 5px}.logbox{font-size:12px;max-height:280px}.modal{padding:14px;max-height:92vh}.modal h2{font-size:15px}.modal-bg{padding:8px}.bp-hero{flex:1 1 42%;min-height:44px;display:flex;flex-direction:column;justify-content:center}.sponsor{padding:9px}.event-card{padding:9px 11px}.pbar{font-size:10px}.toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0))}footer{padding:8px;font-size:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}#tab-self-body .btn,#tab-club-body .btn{width:100%}.btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}.btn.sm{min-height:38px}nav button{min-height:52px}.tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}.tbl th,.tbl td{white-space:nowrap}.modal{border-radius:10px;padding:16px 12px;max-height:94dvh}.modal-bg{padding:6px;align-items:flex-end}.modal-bg .modal{margin-bottom:env(safe-area-inset-bottom,0)}.page-cols{gap:8px}.g5,.g4{grid-template-columns:1fr 1fr}.banner{flex-wrap:wrap}.banner>div:nth-child(2){flex:1 1 140px;min-width:0}.vs-poster{padding:10px 8px;gap:6px}.vs-mid{width:90px}.vs-pow{font-size:16px}.result-band b{font-size:20px;letter-spacing:1px}.mvp-card{padding:8px 10px;gap:8px}.sponsor{padding:9px 10px}.logbox{max-height:220px}nav{scroll-snap-type:x proximity}nav button{scroll-snap-align:center}}@media (max-width:760px){.bp-board{flex-direction:column}.bp-center{width:100%;flex-direction:row;justify-content:center}.bp-hero{flex:1 1 42%}}a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{transition:border-color 150ms ease,background 150ms ease,color 150ms ease,transform 150ms ease}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}.cr-top{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:4px 0 6px}.cr-top #cr-preview{flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}.cr-tip{font-size:11px;line-height:1.7;text-align:left;max-width:280px}.cr-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}.cr-shape{min-width:54px;padding:7px 8px;border-radius:4px}.cr-sw{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0;flex:none}.cr-sw:hover{border-color:var(--accent);transform:scale(1.08)}.cr-sw.on{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 2px rgba(217,164,65,.25)}@media (max-width:640px){.cr-top #cr-preview{width:96px;height:auto}}.tbl th{cursor:pointer;user-select:none}.tbl th:hover{color:var(--cyan)}.pcard .p-top{gap:8px;justify-content:flex-start}.pcard .p-top .p-pos{margin-left:auto}.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(92,138,245,.09),rgba(92,138,245,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}.vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}.vs-pow.op{color:var(--red)}.vs-mid{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:118px}.vs-tag{font-size:17px;font-weight:800;color:var(--dim)}.vs-bar{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}.vs-bar i{height:100%}.vs-wr{font-size:10.5px;color:var(--dim);text-align:center}.result-band{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-radius:6px;margin-bottom:10px;font-weight:700;border:1px solid var(--line)}.result-band span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}.result-band b{font-size:26px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}.result-band.win{background:linear-gradient(180deg,rgba(75,163,104,.16),rgba(75,163,104,.05));border-color:rgba(75,163,104,.45)}.result-band.lose{background:linear-gradient(180deg,rgba(217,93,93,.12),rgba(217,93,93,.04));border-color:rgba(217,93,93,.35)}.mvp-card{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(242,196,27,.13),rgba(242,196,27,.03));border:1px solid rgba(242,196,27,.42);border-radius:8px;padding:10px 14px;margin-bottom:10px}.mvp-tag{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2.5px}.mvp-name{font-size:16px;font-weight:800}.mvp-kda{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}.pts-bar{height:4px;background:var(--sunken);border-radius:2px;margin-top:4px;overflow:hidden;max-width:150px}.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#8a6a24,var(--gold));border-radius:2px}.bp-slot{gap:3px}.bp-slot b{margin-top:1px}.bp-slot.pick.filled b{font-size:12px}#champion-overlay{position:fixed;inset:0;z-index:200;background:rgba(8,9,12,.93);display:flex;align-items:center;justify-content:center;animation:ccFade .5s ease;cursor:pointer}.cc-inner{text-align:center;position:relative;padding:40px}.cc-cup{animation:ccPop .7s cubic-bezier(.2,1.4,.4,1)}.cc-title{font-size:30px;font-weight:800;color:var(--gold);margin-top:16px;letter-spacing:5px}.cc-team{font-size:15px;color:var(--txt);margin-top:8px;letter-spacing:1px}.cc-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}.cc-confetti i{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;opacity:.85;animation:ccFall 3.2s linear infinite}@keyframes ccFall{to{transform:translateY(112vh) rotate(660deg);opacity:.15}}@keyframes ccPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}@keyframes ccFade{from{opacity:0}to{opacity:1}}@media (prefers-reduced-motion:reduce){.cc-confetti i{display:none}.cc-cup{animation:none}#champion-overlay{animation:none}}html.hc{--line:#4a4a52;--line2:#6a6a74;--txt:#f2f2f5;--dim:#c4c4cc;--faint:#9a9aa4;--accent:#7aa4ff;--gold:#f0c35a;--red:#ff7a7a;--green:#6fd48a}html.hc body{background:var(--bg)}html.hc .panel,html.hc header,html.hc nav{border-color:var(--line2)}html.hc .match.win{border-left:4px solid var(--green);border-width:2px}html.hc .match.lose{border-left:4px solid var(--red);border-width:2px}html.hc .match.win .score::before{content:"胜 ";font-weight:800}html.hc .match.lose .score::before{content:"负 ";font-weight:800}html.hc .logbox .win::before{content:"▲ "}html.hc .logbox .lose::before{content:"▼ "}html.hc .result-band.win{border-width:2px}html.hc .result-band.lose{border-width:2px}html.hc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}html.simple .hint{opacity:.92}html.simple .panel h3 .tag{font-size:9px}
+:root{--bg:#141416;--surface:#1d1d20;--surface2:#1d1d20;--raise:#242428;--sunken:#101012;--line:#2a2a2e;--line2:#3a3a40;--txt:#e6e6e9;--dim:#9a9aa2;--faint:#6f6f77;--accent:#5c8af5;--accent-deep:#3d6bd6;--accent2:#5c8af5;--gold:#d9a441;--red:#d95d5d;--green:#4ba368;--r:#9a9aa2;--sr:#5c8af5;--ssr:#d9a441;--card2:#1d1d20;--cyan:var(--accent);--grad-a:none;--grad-btn:none;--grad-gold:none}*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}html{color-scheme:dark}body{background:radial-gradient(1100px 480px at 50% -8%,rgba(92,138,245,.075),transparent 62%),var(--bg);color:var(--txt);font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;font-size:14px;line-height:1.55;min-height:100vh;padding-bottom:20px;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}::-webkit-scrollbar-track{background:transparent}::selection{background:rgba(92,138,245,.3)}.wrap{max-width:1060px;margin:0 auto;padding:14px 16px 20px}.ic{flex:none;vertical-align:-2px}svg.ic{display:inline-block}.cut{border-radius:3px}header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:4px;position:sticky;top:8px;z-index:50}.logo{display:flex;align-items:center;justify-content:center;flex:none}.hd-name{font-size:16px;font-weight:700;line-height:1.3}.hd-name small{display:block;font-size:11px;color:var(--dim);font-weight:400}.stats{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}.stat{display:flex;align-items:center;gap:6px;background:var(--raise);border:1px solid var(--line);border-radius:3px;padding:5px 10px;min-width:0}.stat .ic{color:var(--faint)}.stat b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.stat small{font-size:10px;color:var(--faint);white-space:nowrap}.stat.gold b{color:var(--gold)}.stat.red b{color:var(--red)}.stat.green b{color:var(--green)}.stat.gold .ic{color:var(--gold)}.stat.red .ic{color:var(--red)}.stat.green .ic{color:var(--green)}.hd-btn{display:inline-flex;align-items:center;gap:4px;background:transparent;border:1px solid var(--line2);color:var(--dim);border-radius:3px;padding:6px 10px;cursor:pointer;font-size:12px;transition:.15s}.hd-btn:hover{color:var(--txt);border-color:var(--accent);background:rgba(92,138,245,.08)}nav{display:flex;gap:2px;margin:12px 0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{flex:1;min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 8px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap}nav button .ic{color:var(--faint)}nav button:hover{color:var(--txt);background:var(--raise)}nav button.on{color:var(--txt);border-bottom-color:var(--accent);background:var(--raise)}nav button.on .ic{color:var(--accent)}section.page{display:none}section.page.on{display:block;animation:fadein .18s ease}@keyframes fadein{from{opacity:0}to{opacity:1}}.panel{background:linear-gradient(180deg,rgba(255,255,255,.022),rgba(255,255,255,0) 56px),var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:12px;position:relative}.panel h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin-bottom:11px;letter-spacing:.2px}.panel h3 .h-ic{display:none}.panel h3 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line);color:var(--dim);padding:1px 8px;border-radius:10px;font-weight:400}.grid{display:grid;gap:10px}.g5{grid-template-columns:repeat(5,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}@media(max-width:900px){.g5{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}@media(max-width:560px){.g2{grid-template-columns:1fr}.stats .stat{min-width:62px}}.page-cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}.page-cols>.col{min-width:0}.page-cols>.col>.panel:last-child{margin-bottom:0}@media(max-width:1000px){.page-cols{grid-template-columns:1fr}}.panel.collapsible>h3{cursor:pointer;user-select:none}.panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .18s;transform:rotate(90deg)}.panel.collapsed>h3::after{transform:rotate(0)}.panel.collapsed>*:not(h3){display:none}.panel.collapsed{padding-bottom:12px}.pcard{background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:11px 12px;position:relative;transition:.15s}.pcard::before{content:none}.pcard:hover{border-color:var(--line2)}.pcard .p-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.pcard .p-name{font-weight:700;font-size:14px}.pcard .p-pos{font-size:10px;font-weight:700;padding:1px 7px;background:rgba(92,138,245,.14);color:var(--accent);border-radius:2px}.pcard .p-rarity{font-size:11px;font-weight:400;color:var(--dim)}.pcard .p-tag{font-size:10px;margin-left:3px;background:var(--sunken);color:var(--dim);padding:1px 5px;border-radius:2px}.pcard .p-hero{font-size:11px;color:var(--dim);margin-bottom:3px}.pcard .p-hero b{color:var(--txt)}.pcard .p-disc{float:right;font-size:10px;background:rgba(217,93,93,.14);color:var(--red);padding:1px 6px;border-radius:2px}.pcard .p-hero-pick{border-color:var(--accent);background:rgba(92,138,245,.06)}.pcard .p-skill{font-size:11px;color:var(--dim);margin:5px 0;line-height:1.5;min-height:32px}.pcard .p-skill b{color:var(--dim)}.pcard .attr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11px;color:var(--faint);margin-bottom:7px}.pcard .attr i{font-style:normal;color:var(--txt);float:right;font-weight:700;font-variant-numeric:tabular-nums}.pcard .p-foot{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);border-top:1px solid var(--line);padding-top:6px}.pcard .p-foot b{color:var(--txt);font-variant-numeric:tabular-nums}.pcard.r{--rc:var(--r)}.pcard.r .p-rarity{color:var(--r)}.pcard.sr{--rc:var(--sr)}.pcard.sr .p-rarity{color:var(--sr)}.pcard.ssr{--rc:var(--ssr)}.pcard.ssr .p-rarity{color:var(--ssr)}.pcard.ssr{border-color:rgba(217,164,65,.45)}.pcard .p-hp{position:absolute;top:7px;right:8px;font-size:10px;color:var(--red)}.pcard .p-salary{color:var(--gold)}.pcard .bench-mark{position:absolute;top:7px;left:8px;font-size:10px;background:var(--sunken);color:var(--dim);padding:1px 7px;border-radius:2px}.pcard button{margin-top:7px;width:100%;padding:7px;border:1px solid var(--line2);background:transparent;color:var(--txt);cursor:pointer;font-size:12px;font-weight:600;transition:.15s;border-radius:3px}.pcard button:hover{border-color:var(--accent);color:var(--accent)}.pcard button.primary{background:var(--accent);border-color:var(--accent);color:#fff}.pcard button.primary:hover{background:var(--accent-deep);color:#fff}.pcard button.danger{color:var(--red)}.pcard button.danger:hover{border-color:var(--red);background:rgba(217,93,93,.08);color:var(--red)}.pcard button:disabled{opacity:.4;cursor:not-allowed}.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 18px;border:1px solid var(--line2);background:var(--raise);color:var(--txt);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;border-radius:3px}.btn:hover{border-color:var(--accent);color:var(--accent)}.btn.primary{background:linear-gradient(180deg,#6b97ff,#5483ec);border-color:#6b97ff;color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(92,138,245,.22)}.btn.primary:hover{background:linear-gradient(180deg,#7aa2ff,#5c8af5);border-color:#7aa2ff;color:#fff}.btn.gold{background:linear-gradient(180deg,#e5b455,#d9a441);border-color:#e0ac47;color:#1d1505;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(217,164,65,.18)}.btn.gold:hover{background:#c8942f;border-color:#c8942f;color:#1d1505}.btn.danger{color:var(--red);border-color:rgba(217,93,93,.5)}.btn.danger:hover{border-color:var(--red);background:rgba(217,93,93,.08);color:var(--red)}.btn:disabled{opacity:.4;cursor:not-allowed}.btn.sm{padding:5px 12px;font-size:12px}.match{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 14px;margin-bottom:8px;transition:.15s}.match:hover{border-color:var(--line2)}.match .vs{display:flex;align-items:center;gap:10px;flex:1;min-width:0}.match .vs .tname{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.match .vs .power{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}.match .score{font-size:18px;font-weight:700;color:var(--dim);min-width:56px;text-align:center;font-variant-numeric:tabular-nums}.match.win{border-color:rgba(75,163,104,.5)}.match.win .score{color:var(--green)}.match.lose{border-color:rgba(217,93,93,.4)}.match.lose .score{color:var(--red)}.tbl{width:100%;border-collapse:collapse;font-size:13px}.tbl th{color:var(--faint);font-size:11px;font-weight:400;text-align:left;padding:7px 9px;border-bottom:1px solid var(--line2)}.tbl td{padding:8px 9px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.tbl tr:last-child td{border-bottom:none}.tbl tr.me td{background:rgba(92,138,245,.08);font-weight:600}.tbl tr.me td:first-child{border-left:2px solid var(--accent)}.logbox{background:var(--sunken);border:1px solid var(--line);border-radius:4px;padding:6px 13px;max-height:320px;overflow-y:auto;font-size:12.5px;line-height:1.9}.logbox div{border-bottom:1px dashed var(--line)}.logbox div:last-child{border-bottom:none}.logbox .win{color:var(--green)}.logbox .lose{color:var(--red)}.logbox .info{color:var(--dim)}.logbox .gold{color:var(--gold)}.event-card{border:1px solid var(--line);border-left:2px solid var(--accent);background:var(--surface);border-radius:3px;padding:10px 13px;margin-bottom:8px}.event-card .et{font-weight:700;color:var(--accent);font-size:12px;margin-bottom:3px}.event-card p{font-size:13px;color:var(--txt);line-height:1.7}.event-card .opt{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}.center{text-align:center}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.dim{color:var(--dim)}.gold{color:var(--gold)}.cyan{color:var(--accent)}.red{color:var(--red)}.green{color:var(--green)}.hint{font-size:11px;color:var(--dim);line-height:1.65}.page-hint{display:flex;align-items:flex-start;gap:8px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:10px}.page-hint span{flex:1;min-width:0}.ph-x{background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:0 2px;line-height:1.2;flex:none;font-family:inherit}.ph-x:hover{color:var(--txt)}.sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:8px;padding-bottom:2px}.sort-row::-webkit-scrollbar{display:none}.s-chip{flex:none;min-height:28px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--dim);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}.s-chip:hover{border-color:var(--line2);color:var(--txt)}.s-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(217,164,65,.08)}.s-div{flex:none;width:1px;height:18px;background:var(--line);margin:0 3px}.progress{height:4px;background:var(--sunken);border-radius:2px;overflow:hidden;margin-top:4px}.progress i{display:block;height:100%;background:var(--accent);border-radius:2px}.pbar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}.pbar .progress{flex:1;margin-top:0}.modal-bg{position:fixed;inset:0;background:rgba(8,8,10,.78);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}.modal-bg.on{display:flex}.modal{background:var(--surface);border:1px solid var(--line2);border-radius:4px;padding:20px;max-width:560px;width:100%;min-width:0;max-height:88vh;overflow-y:auto;position:relative}.modal.wide{max-width:720px}.modal h2{display:flex;align-items:center;gap:8px;margin-bottom:13px;font-size:16px;font-weight:700}.modal h2 .h-ic{display:none}.modal h2 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line);color:var(--dim);padding:1px 8px;border-radius:10px;font-weight:400;margin-left:auto}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--raise);border:1px solid var(--line2);border-left:2px solid var(--accent);color:var(--txt);padding:9px 18px;font-size:13px;z-index:200;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;border-radius:3px}.toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}.league-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;margin-top:10px;border:1px solid var(--gold);background:rgba(217,164,65,.1);color:var(--gold);cursor:pointer;font-size:14px;font-weight:700;transition:.15s;border-radius:3px}.league-btn:hover{background:rgba(217,164,65,.18)}.banner{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:13px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.banner::before{content:none}.banner .big{font-size:18px;font-weight:700}.sponsor{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 13px;margin-bottom:8px}.sponsor .s-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;background:var(--raise);border:1px solid var(--line2);color:var(--accent);font-weight:700;font-size:13px;border-radius:3px}.sponsor .s-name{font-weight:700;font-size:13px}.sponsor .s-desc{font-size:11px;color:var(--dim)}.sponsor .s-price{margin-left:auto;font-weight:700;color:var(--gold);font-size:13px}footer{background:transparent;border-top:1px solid var(--line);text-align:center;padding:10px;font-size:11px;color:var(--faint)}.club-card{cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center;transition:.15s}.club-card:hover{border-color:var(--accent)}.pack-btn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;min-height:48px;background:var(--raise);border:1px solid var(--line2);color:var(--txt);cursor:pointer;padding:8px 10px;transition:.15s;border-radius:3px}.pack-btn:hover{border-color:var(--accent);color:var(--accent)}.ic-pick{cursor:pointer}.bp-board{display:flex;gap:10px;align-items:stretch;margin:8px 0}.bp-col{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px;min-width:0;position:relative}.bp-col::before{content:none}.bp-col.blue::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}.bp-col.red::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}.bp-col-hd{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-col-hd .side-dot{width:8px;height:8px;flex:none;border-radius:2px}.bp-col.blue .side-dot{background:var(--accent)}.bp-col.red .side-dot{background:var(--red)}.bp-col-hd small{font-weight:400;font-size:10px;color:var(--faint);margin-left:auto}.bp-bans{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}.bp-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.bp-slot{background:var(--sunken);border:1px solid var(--line);border-radius:3px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 3px;text-align:center;overflow:hidden}.bp-slot b{font-size:10.5px;font-weight:600;line-height:1.3;max-width:100%;color:var(--faint);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}.bp-slot small{font-size:9px;color:var(--faint)}.bp-slot.ban{min-height:32px;border-style:dashed}.bp-slot.ban.filled{border-style:solid;background:rgba(217,93,93,.1);border-color:rgba(217,93,93,.45)}.bp-slot.ban.filled b{color:var(--red);text-decoration:line-through}.bp-slot.pick.filled{border-color:var(--line2);background:var(--raise)}.bp-slot.pick.filled b{color:var(--txt)}.bp-slot.pick.filled small{color:var(--dim)}.bp-slot.pick.blind b{color:var(--faint)}.bp-center{width:118px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.bp-phase{font-size:12px;font-weight:700;color:var(--gold)}.bp-stepnum{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}.bp-stepbar{width:74px;height:3px;background:var(--sunken);overflow:hidden}.bp-stepbar i{display:block;height:100%;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:left center;transition:transform .25s}.bp-used{font-size:9px;color:var(--faint);max-height:72px;overflow-y:auto;line-height:1.6;padding-right:2px}.bp-hero-grid{display:flex;flex-wrap:wrap;gap:6px;max-height:228px;overflow-y:auto;padding:2px}.bp-hero{flex:1 1 96px;max-width:150px;background:var(--raise);border:1px solid var(--line);color:var(--txt);border-radius:3px;padding:7px 9px;cursor:pointer;font-size:12.5px;font-weight:600;transition:.12s;text-align:center}.bp-hero small{display:block;font-size:9px;color:var(--faint);font-weight:400;margin-top:2px}.bp-hero:hover{border-color:var(--accent)}.bp-hero.pos{flex:1 1 108px;display:flex;flex-direction:column;align-items:center;gap:1px}.bp-hero.rec{border-color:var(--accent);background:rgba(92,138,245,.08)}.bp-hero.rec small{color:var(--accent)}.bp-hero.sel{border-color:var(--gold);background:rgba(217,164,65,.1)}.bp-hero.sel small{color:var(--gold)}.bp-hero:active{transform:scale(.97)}.bp-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin:6px 0 2px}.bp-flow .f-step{display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid var(--line);background:var(--raise);white-space:nowrap;border-radius:2px}.bp-flow .f-step.cur{border-color:var(--gold);color:var(--gold)}.bp-flow .f-step.off{opacity:.45}.bp-opp{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin-bottom:8px}.btn:active,.hd-btn:active,nav button:active,.pcard button:active,.club-card:active{transform:scale(.97)}#intro-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none;background:var(--bg);animation:introFade .7s ease .7s forwards}#intro-overlay .intro-inner{text-align:center;animation:introZoom .8s ease both}#intro-overlay .intro-ico{font-size:44px;line-height:1;color:var(--accent);font-weight:700}#intro-overlay .intro-name{font-size:20px;font-weight:700;margin-top:12px}#intro-overlay .intro-sub{font-size:10px;color:var(--dim);margin-top:6px}@keyframes introZoom{0%{transform:scale(.96);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes introFade{to{opacity:0;visibility:hidden}}@media(max-width:640px){body{padding-bottom:76px}.wrap{padding:10px 10px 16px}header{gap:6px;padding:9px 10px;top:0;border-radius:0;border-left:none;border-right:none}.logo{width:32px;height:32px;font-size:16px}.hd-name{font-size:14px}.hd-btn{padding:6px 8px;font-size:11px;min-height:34px}.stats{width:100%;order:5;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-left:0}.stats .stat{min-width:0;padding:5px 8px}.stats .stat b{font-size:12px}.stats .stat small{font-size:9px}nav{position:fixed;bottom:0;left:0;right:0;margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;z-index:80;background:var(--surface);box-shadow:0 -1px 0 var(--line);padding-bottom:env(safe-area-inset-bottom,0)}nav button{min-width:0;flex:1 1 auto;padding:11px 2px;font-size:11.5px;border-bottom-width:2px}.panel{padding:11px;margin-bottom:9px}.banner{padding:10px;gap:8px}.banner .big{font-size:15px}.g4{grid-template-columns:repeat(2,1fr);gap:8px}.g3{grid-template-columns:1fr;gap:8px}.pcard{padding:10px}.pcard .p-name{font-size:13px}.pcard .p-skill{min-height:0}.btn{padding:9px 14px;font-size:13px;min-height:40px}.s-chip{min-height:38px;padding:6px 13px;font-size:12.5px}.btn.sm{padding:7px 10px;font-size:12px;min-height:36px}.match{padding:9px 10px;gap:6px}.match .vs .tname{font-size:13px}.match .score{font-size:15px;min-width:44px}.tbl{font-size:11px}.tbl th,.tbl td{padding:7px 5px}.logbox{font-size:12px;max-height:280px}.modal{padding:14px;max-height:92vh}.modal h2{font-size:15px}.modal-bg{padding:8px}.bp-hero{flex:1 1 42%;min-height:44px;display:flex;flex-direction:column;justify-content:center}.sponsor{padding:9px}.event-card{padding:9px 11px}.pbar{font-size:10px}.toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0))}footer{padding:8px;font-size:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}#tab-self-body .btn,#tab-club-body .btn{width:100%}.btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}.btn.sm{min-height:38px}nav button{min-height:52px}.tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}.tbl th,.tbl td{white-space:nowrap}.modal{border-radius:10px;padding:16px 12px;max-height:94dvh}.modal-bg{padding:6px;align-items:flex-end}.modal-bg .modal{margin-bottom:env(safe-area-inset-bottom,0)}.page-cols{gap:8px}.g5,.g4{grid-template-columns:1fr 1fr}.banner{flex-wrap:wrap}.banner>div:nth-child(2){flex:1 1 140px;min-width:0}.vs-poster{padding:10px 8px;gap:6px}.vs-mid{width:90px}.vs-pow{font-size:16px}.result-band b{font-size:20px;letter-spacing:1px}.mvp-card{padding:8px 10px;gap:8px}.sponsor{padding:9px 10px}.logbox{max-height:220px}nav{scroll-snap-type:x proximity}nav button{scroll-snap-align:center}}@media (max-width:760px){.bp-board{flex-direction:column}.bp-center{width:100%;flex-direction:row;justify-content:center}.bp-hero{flex:1 1 42%}}a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{transition:border-color 150ms ease,background 150ms ease,color 150ms ease,transform 150ms ease}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}.cr-top{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:4px 0 6px}.cr-top #cr-preview{flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}.cr-tip{font-size:11px;line-height:1.7;text-align:left;max-width:280px}.cr-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}.cr-shape{min-width:54px;padding:7px 8px;border-radius:4px}.cr-sw{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0;flex:none}.cr-sw:hover{border-color:var(--accent);transform:scale(1.08)}.cr-sw.on{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 2px rgba(217,164,65,.25)}@media (max-width:640px){.cr-top #cr-preview{width:96px;height:auto}}.tbl th{cursor:pointer;user-select:none}.tbl th:hover{color:var(--cyan)}.pcard .p-top{gap:8px;justify-content:flex-start}.pcard .p-top .p-pos{margin-left:auto}.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(92,138,245,.09),rgba(92,138,245,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}.vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}.vs-pow.op{color:var(--red)}.vs-mid{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:118px}.vs-tag{font-size:17px;font-weight:800;color:var(--dim)}.vs-bar{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}.vs-bar i{height:100%}.vs-wr{font-size:10.5px;color:var(--dim);text-align:center}.result-band{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-radius:6px;margin-bottom:10px;font-weight:700;border:1px solid var(--line)}.result-band span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}.result-band b{font-size:26px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}.result-band.win{background:linear-gradient(180deg,rgba(75,163,104,.16),rgba(75,163,104,.05));border-color:rgba(75,163,104,.45)}.result-band.lose{background:linear-gradient(180deg,rgba(217,93,93,.12),rgba(217,93,93,.04));border-color:rgba(217,93,93,.35)}.mvp-card{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(242,196,27,.13),rgba(242,196,27,.03));border:1px solid rgba(242,196,27,.42);border-radius:8px;padding:10px 14px;margin-bottom:10px}.mvp-tag{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2.5px}.mvp-name{font-size:16px;font-weight:800}.mvp-kda{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}.pts-bar{height:4px;background:var(--sunken);border-radius:2px;margin-top:4px;overflow:hidden;max-width:150px}.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#8a6a24,var(--gold));border-radius:2px}.bp-slot{gap:3px}.bp-slot b{margin-top:1px}.bp-slot.pick.filled b{font-size:12px}#champion-overlay{position:fixed;inset:0;z-index:200;background:rgba(8,9,12,.93);display:flex;align-items:center;justify-content:center;animation:ccFade .5s ease;cursor:pointer}.cc-inner{text-align:center;position:relative;padding:40px}.cc-cup{animation:ccPop .7s cubic-bezier(.2,1.4,.4,1)}.cc-title{font-size:30px;font-weight:800;color:var(--gold);margin-top:16px;letter-spacing:5px}.cc-team{font-size:15px;color:var(--txt);margin-top:8px;letter-spacing:1px}.cc-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}.cc-confetti i{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;opacity:.85;animation:ccFall 3.2s linear infinite}@keyframes ccFall{to{transform:translateY(112vh) rotate(660deg);opacity:.15}}@keyframes ccPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}@keyframes ccFade{from{opacity:0}to{opacity:1}}@media (prefers-reduced-motion:reduce){.cc-confetti i{display:none}.cc-cup{animation:none}#champion-overlay{animation:none}}html.hc{--line:#4a4a52;--line2:#6a6a74;--txt:#f2f2f5;--dim:#c4c4cc;--faint:#9a9aa4;--accent:#7aa4ff;--gold:#f0c35a;--red:#ff7a7a;--green:#6fd48a}html.hc body{background:var(--bg)}html.hc .panel,html.hc header,html.hc nav{border-color:var(--line2)}html.hc .match.win{border-left:4px solid var(--green);border-width:2px}html.hc .match.lose{border-left:4px solid var(--red);border-width:2px}html.hc .match.win .score::before{content:"胜 ";font-weight:800}html.hc .match.lose .score::before{content:"负 ";font-weight:800}html.hc .logbox .win::before{content:"▲ "}html.hc .logbox .lose::before{content:"▼ "}html.hc .result-band.win{border-width:2px}html.hc .result-band.lose{border-width:2px}html.hc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}html.simple .hint{opacity:.92}html.simple .panel h3 .tag{font-size:9px}
 </style>
 </head>
 <body>
@@ -243,6 +243,13 @@ const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:15,cost:0,fans:0},
  {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:90,cost:650,fans:80},
  {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:180,cost:1650,fans:200}];
 const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
+
+const BONUS_PER_WIN_GAME={regular:13,card:20,po:25,cup:20}; // 系列赛胜小局奖金（万/小局）
+const REG_WIN_EXTRA_CHANCE=0.5, REG_WIN_EXTRA=33;           // 常规赛胜场随机追加（概率 / 万）
+const PO_CHAMPION_BONUS=100;                                 // 季后赛夺冠追加（万）
+const PRIZE_PLAYER_SHARE=0.7, PRIZE_CLUB_SHARE=0.3;          // 杯赛奖金 70/30 分成（KPL 硬规则：选手分成≥70%）
+const ENDORSE_PER_POP=0.3;                                   // 代言收入：每点人气 × 万/周（payWage 结算与选手卡展示共用）
+const RENEW_MORALE_DIV=500;                                  // 续约谈判：士气偏离 50 的概率修正除数（±50 士气 = ±10%）
 
 const HEROES=[
 
@@ -1552,6 +1559,8 @@ function rebuildMatchStore(s){
  reg(p.wf,prefix+'wf');reg(p.lbs,prefix+'lbs');reg(p.lbf,prefix+'lbf');reg(p.final,prefix+'final');
  };
  if(s.card&&s.card.matches)regList(s.card.matches,'card_');
+
+ (s.schedule||[]).forEach((m,i)=>reg(m,m.mid||('reg_'+(s.phase||'r1')+'_'+(i+1))));
  if(s.playoff){
  const p=s.playoff;
  regList(p.wb,'po_wb');regList(p.lb,'po_lb');regList(p.lb2,'po_lb2');regList(p.lb3,'po_lb3');
@@ -1650,6 +1659,11 @@ function resolveSeriesMatch(s,srIn){
 	const live=getMatch(s,sr.mid);
 	if(live)return live;
 	}
+	if(sr.stage==='regular'&&sr.mid==null&&s.schedule){
+
+	const m=s.schedule[s.matchIdx];
+	if(m)return m;
+	}
 	if(sr.stage==='card'&&s.card&&s.card.matches){
 	if(sr.cardIdx!=null&&s.card.matches[sr.cardIdx])return s.card.matches[sr.cardIdx];
 	}
@@ -1709,6 +1723,11 @@ function rebindSeriesMatch(s){
 	if(sr.stage==='card'&&sr.cardIdx!=null)sr.mid='card_'+sr.cardIdx;
 	else if(sr.stage==='po'&&sr.poSlot)sr.mid='po_'+sr.poSlot;
 	else if(sr.stage==='cup'&&sr.cupSlot)sr.mid=sr.cupSlot;
+	else if(sr.stage==='regular'&&s.schedule&&s.schedule[s.matchIdx]){
+
+	const m=s.schedule[s.matchIdx];
+	sr.mid=m.mid||('reg_'+(s.phase||'r1')+'_'+(s.matchIdx+1));
+	}
 }
 function migrateSave(){
  if(!S)return;
@@ -1752,6 +1771,7 @@ function migrateSave(){
  migrateCoachRating(S);
  migrateSeasonShape(S);
  migratePlayerFields(S);
+ migrateFreeAgents(S);
 
  try{
  if(typeof yearRollPending==='function'&&yearRollPending(S)&&typeof finishAnnual==='function')finishAnnual(S,true);
@@ -1847,6 +1867,15 @@ function migratePlayerFields(s){
  (s.players||[]).forEach(renameRookie);
  (s.academy||[]).forEach(renameRookie);
  (s.academy||[]).forEach(r=>{if(r.contract==null)r.contract=2;});
+}
+
+function migrateFreeAgents(s){
+ (s.freeAgents||[]).forEach(p=>{
+ if(!p||typeof p!=='object')return;
+ if(p.freeAgent!==true)p.freeAgent=true;
+ if(typeof p.signCost!=='number'||!isFinite(p.signCost))p.signCost=Math.round(valueOf(overall(p))*0.58);
+ if(typeof p.willingness!=='number'||!isFinite(p.willingness))p.willingness=rnd(70,100);
+ });
 }
 function ensureSeason(s){
 
@@ -3057,7 +3086,7 @@ function submitRenewNego(){
  if(S.fund<cost){toast('资金不足（签字费 '+cost+'万）');return;}
  const r=offer/ask;
  let prob=r>=1.2?0.98:r>=1.05?0.85:r>=0.95?0.55:r>=0.85?0.25:0.05;
- prob=clamp(prob+((p.morale||50)-50)/500,0.02,0.99);
+ prob=clamp(prob+((p.morale||50)-50)/RENEW_MORALE_DIV,0.02,0.99);
  if(rnd(1,100)<=Math.round(prob*100)){
  renewPlayer(S,p.id,y,offer);
  _nego=null;
@@ -3675,7 +3704,7 @@ function logCat(txt){
  for(const c of LOG_CATS){if(c.re.test(t))return c.k;}
  return 'other';
 }
-function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,200);} // 200：newSeason 的 AI 转会/青训日志很多，120 会把王朝反制等玩家向文案挤掉
+function logEvent(s,txt){(s.eventLog=s.eventLog||[]).unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,200);} // 200：newSeason 的 AI 转会/青训日志很多，120 会把王朝反制等玩家向文案挤掉
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(0,i);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function powerOf(s,name){
  if(name===s.teamName)return teamPower(s);
@@ -3741,8 +3770,10 @@ function genRoundSchedule(s){
  const g=myGroup(s);
  const opps=(s.groups[g]||[]).filter(n=>n!==s.teamName);
  shuffle(opps);
- s.schedule=opps.map((op,i)=>({round:i+1,opp:op,result:null,myScore:0,opScore:0}));
+
+ s.schedule=opps.map((op,i)=>({round:i+1,opp:op,result:null,myScore:0,opScore:0,mid:'reg_'+(s.phase||'r1')+'_'+(i+1)}));
  s.matchIdx=0;
+ try{(s.schedule||[]).forEach(m=>{if(m.mid)tagMatch(s,m,m.mid);});}catch(e){}
  buildGroupSchedule(s);
 }
 
@@ -3870,8 +3901,13 @@ function playCardNext(s){
  }
 
  if(s.series&&s.series.stage==='card'){
+ if(!s.series.mid||s.series.mid==='card_'+s.card.idx){
  showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
+ }
+ logEvent(s,'⚠ 赛程修复：废弃未同步的卡位赛残影（'+s.series.mid+'），本场重新开打');
+ console.warn('stale card series discarded',s.series.mid,s.card.idx);
+ s.series=null;
  }
  tagMatch(s,m,'card_'+s.card.idx);
 
@@ -4033,8 +4069,13 @@ function playPoMatch(s,m,slot){
  }
 
  if(s.series&&s.series.stage==='po'){
+ if(!s.series.poSlot||s.series.poSlot===slot){
  showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
+ }
+ logEvent(s,'⚠ 赛程修复：废弃未同步的季后赛残影（'+s.series.poSlot+'），本场重新开打');
+ console.warn('stale po series discarded',s.series.poSlot,slot);
+ s.series=null;
  }
  tagMatch(s,m,'po_'+slot);
 
@@ -4112,7 +4153,7 @@ function payWage(s){
  try{scrubWages(s);}catch(e){}
  const wage=weeklyWage(s);
 
- const endorse=Math.round((s.players||[]).reduce((t,p)=>t+((p.popularity||0)*0.3),0)*fanMul(s,300));
+ const endorse=Math.round((s.players||[]).reduce((t,p)=>t+((p.popularity||0)*ENDORSE_PER_POP),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;
@@ -4577,14 +4618,14 @@ function dailyCommercialIncome(s){
 }
 
 function grantPrize(s,total,label){
- const club=Math.round(total*0.3);
+ const club=Math.round(total*PRIZE_CLUB_SHARE);
  s.fund+=club;
  const roster=(s.players||[]).slice();
  if(roster.length)roster.forEach(p=>{
  p.morale=clamp((p.morale||50)+3,20,100);
  p.willingness=Math.min(100,(p.willingness||50)+2);
  });
- const each=roster.length?Math.round(total*0.7/roster.length):0;
+ const each=roster.length?Math.round(total*PRIZE_PLAYER_SHARE/roster.length):0;
  logEvent(s,' '+label+'：总奖金 '+total+' 万——选手分成 70%（人均约 '+each+' 万：士气+3 · 签约意愿+2），俱乐部留成 30%（+'+club+' 万）');
 }
 
@@ -5386,6 +5427,7 @@ function draftPanelHtml(){
  }
  if(d.pool.length&&(d.phase==='pick'||mePick||d.done===false)){
  const interactive=mePick;
+ if(interactive){
  html+=`<div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
  const card=pcard(p,interactive
@@ -5397,6 +5439,16 @@ function draftPanelHtml(){
  ?`<div onclick="draftPick('${p.id}')" style="cursor:pointer" title="点击签约">${card}</div>`
  :card;
  }).join('')}</div>`;
+ }else{
+
+ const src=p=>{const t=(p.tags||[]).filter(x=>x!=='选秀'&&x!=='青训出身');return t.join('/')||'训练营';};
+ html+=`<div class="hint" style="margin-bottom:6px">新秀池 ${d.pool.length} 人 · 轮到你点名时自动展开为可点卡片</div>
+ <div style="max-height:220px;overflow-y:auto">${d.pool.map(p=>`<div class="match" style="margin-bottom:4px;padding:5px 8px">
+ <div class="vs"><span class="tname" style="font-size:12px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.age||18}岁${p.fromClub?' · '+p.fromClub+'青训':''})</span></span></div>
+ <div class="power" style="font-size:10px">${src(p)}</div>
+ <div class="score" style="font-size:12px;min-width:0">总值 ${overall(p)}</div>
+ </div>`).join('')}</div>`;
+ }
  }
 
  if(mePick)html+=`<button class="btn sm mt8" onclick="draftSkip()">放弃点名</button>`;
@@ -5528,6 +5580,8 @@ function freeSignBlockedReason(s){
 
 </script>
 <script>
+const loserOf=m=>m.r===m.a?m.b:m.a;
+
 const CHALLENGER_TEAMS=[['K甲·苍穹','K甲'],['K甲·星火','K甲'],['K甲·沧澜','K甲'],
  ['全国大赛·破晓','全国大赛'],['青训·晨曦','青训'],['高校·逐梦','高校'],['职工·匠心','职工'],
  ['主播·不夜城','主播'],['主播·山海','主播'],['主播·云隐','主播'],['主播·听风','主播'],
@@ -5591,31 +5645,35 @@ function challengerStep(s){
  }
  challengerPoStep(s);
 }
+
+function cup8PoStep(s,p,cfg){
+ const P=(m,suf,label)=>playCupMatch(s,m,cfg.prefix+suf,cfg.label+label,KPL.BO7);
+ for(let i=0;i<4;i++)if(!p.wb1[i].r){P(p.wb1[i],'wb1_'+(i+1),'·胜者组首轮');return;}
+ for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'lb1_'+(i+1),'·败者组首轮');return;}}
+ for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'wb2_'+(i+1),'·胜者组半决赛');return;}}
+ for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'lb2_'+(i+1),'·败者组第二轮');return;}}
+ if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
+ if(!p.wf.r){P(p.wf,'wf','·胜者组决赛');return;}
+ if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
+ if(!p.lbs.r){P(p.lbs,'lbs','·败者组半决赛');return;}
+ if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
+ if(!p.lbf.r){P(p.lbf,'lbf','·败者组决赛');return;}
+ const fin=cfg.finalMatch();
+ if(fin.a===null)fin.a=p.wf.r;
+ if(fin.b===null)fin.b=p.lbf.r;
+ if(!fin.r){playCupMatch(s,fin,cfg.finalSlot,cfg.finalLabel,cfg.finalBo);return;}
+ cfg.onFinish();
+}
 function challengerPoStep(s){
  const c=s.challenger;const p=c.po;if(!p)return;
- const loserOf=m=>m.r===m.a?m.b:m.a;
- const P=(m,slot,label,bo)=>playCupMatch(s,m,slot,label,bo);
- for(let i=0;i<4;i++)if(!p.wb1[i].r){P(p.wb1[i],'chpo_wb1_'+(i+1),'挑杯·胜者组首轮',KPL.BO7);return;}
- for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'chpo_lb1_'+(i+1),'挑杯·败者组首轮',KPL.BO7);return;}}
- for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'chpo_wb2_'+(i+1),'挑杯·胜者组半决赛',KPL.BO7);return;}}
- for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'chpo_lb2_'+(i+1),'挑杯·败者组第二轮',KPL.BO7);return;}}
- if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
- if(!p.wf.r){P(p.wf,'chpo_wf','挑杯·胜者组决赛',KPL.BO7);return;}
- if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
- if(!p.lbs.r){P(p.lbs,'chpo_lbs','挑杯·败者组半决赛',KPL.BO7);return;}
- if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
- if(!p.lbf.r){P(p.lbf,'chpo_lbf','挑杯·败者组决赛',KPL.BO7);return;}
-
- if(!c.final)c.final={a:null,b:null,r:null};
- if(c.final.a===null)c.final.a=p.wf.r;
- if(c.final.b===null)c.final.b=p.lbf.r;
- if(!c.final.r){P(c.final,'ch_final','挑战者杯·总决赛',9);return;}
- finishChallenger(s);
+ if(!c.final)c.final={a:null,b:null,r:null}; // 挑杯决赛落在 c.final（原实现也是这个落点，只是创建时机提前）
+ cup8PoStep(s,p,{prefix:'chpo_',label:'挑杯',
+ finalMatch:()=>c.final,finalSlot:'ch_final',finalLabel:'挑战者杯·总决赛',finalBo:9, // 决赛 BO9（第9局巅峰对决）
+ onFinish:()=>finishChallenger(s)});
 }
 function finishChallenger(s){
  const c=s.challenger;if(!c||!c.final||!c.final.r||c.champ)return; // c.champ 防双入口重复结算
  c.champ=c.final.r;
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(c.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'挑战者杯',champ:c.champ}]).slice(-48);
  logEvent(s,' 挑战者杯落幕：'+c.champ+' 问鼎！（BO9 巅峰对决）'+(c.champ===s.teamName?'挑战者，皆王者！':''));
@@ -5714,7 +5772,6 @@ function ewcStep(s){
 function finishEWC(s){
  const e=s.ewc;if(!e||!e.final.r||e.champ)return; // e.champ：防重复收尾（AI 补完与正常路径可能双入口）
  e.champ=e.final.r;
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(e.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'EWC',champ:e.champ}]).slice(-48);
  logEvent(s,' EWC 总决赛落幕：'+e.champ+' 捧杯！'+(e.champ===s.teamName?'中国赛区的世界之巅！':''));
@@ -5800,7 +5857,6 @@ function asiadStep(s){
 function finishAsianGames(s){
  const a=s.ag;if(!a||a.champ)return;
  a.champ=a.final.r;
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(a.final);
  const bronzes=a.sf.map(loserOf).filter(Boolean);
  a.medal=a.champ==='中国代表队'?'金牌':runner==='中国代表队'?'银牌':bronzes.includes('中国代表队')?'铜牌':'无';
@@ -5966,21 +6022,9 @@ function buildCup8(teams){
 }
 function annualPoStep(s){
  const p=s.annual.po;if(!p)return;
- const loserOf=m=>m.r===m.a?m.b:m.a;
- const P=(m,slot,label)=>playCupMatch(s,m,slot,label,KPL.BO7);
- for(let i=0;i<4;i++)if(!p.wb1[i].r){P(p.wb1[i],'apo_wb1_'+(i+1),'年总·胜者组首轮');return;}
- for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'apo_lb1_'+(i+1),'年总·败者组首轮');return;}}
- for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'apo_wb2_'+(i+1),'年总·胜者组半决赛');return;}}
- for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'apo_lb2_'+(i+1),'年总·败者组第二轮');return;}}
- if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
- if(!p.wf.r){P(p.wf,'apo_wf','年总·胜者组决赛');return;}
- if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
- if(!p.lbs.r){P(p.lbs,'apo_lbs','年总·败者组半决赛');return;}
- if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
- if(!p.lbf.r){P(p.lbf,'apo_lbf','年总·败者组决赛');return;}
- if(p.final.a===null){p.final.a=p.wf.r;p.final.b=p.lbf.r;}
- if(!p.final.r){P(p.final,'apo_final','年总·总决赛');return;}
- finishAnnual(s,true);
+ cup8PoStep(s,p,{prefix:'apo_',label:'年总',
+ finalMatch:()=>p.final,finalSlot:'apo_final',finalLabel:'年总·总决赛',finalBo:KPL.BO7,
+ onFinish:()=>finishAnnual(s,true)});
 }
 
 function yearRollPending(s){
@@ -5996,7 +6040,6 @@ function finishAnnual(s,silent){
  if(!p.champ){
  p.champ=p.final.r;
  try{
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(p.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'年总',champ:p.champ}]).slice(-48);
  logEvent(s,' '+gameYear(s)+' KPL 年度总决赛落幕：'+p.champ+' 捧起圣龙杯！'+(p.champ===s.teamName?'年度至尊荣耀！':''));
@@ -6023,7 +6066,6 @@ function finishAnnual(s,silent){
  if(!s._annualSettled){
  try{
  s.yearStages=s.yearStages||[];
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const myPlace=p.champ===s.teamName?'冠军':loserOf(p.final)===s.teamName?'亚军'
  :[p.lbf,p.lbs].some(m=>m.r&&loserOf(m)===s.teamName)?'四强'
  :p.lb2.concat(p.lb1).some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'参赛';
@@ -6854,7 +6896,7 @@ function renderHall(){
  html+=`<div class="panel"><h3>本队荣誉墙 <span class="tag">${myHon.length} 条记录</span></h3>`;
  html+=myHon.length?myHon.map(h=>`<div class="sponsor" style="margin-bottom:6px">
  <span class="s-icon" style="${h.champion?'border-color:var(--gold);color:var(--gold)':''}">${h.champion?'冠':'亚'}</span>
- <div><div class="s-name">${_escTxt(h.title||('赛季'+h.season))}</div>
+ <div><div class="s-name">${_escTxt(h.title||('赛季'+(h.season==null?'—':h.season)))}</div>
  <div class="s-desc">${h.roster?'夺冠阵容：<span class="cyan">'+_escTxt(h.roster)+'</span>':'暂无阵容快照'}</div></div></div>`).join('')
  :'<div class="hint">还没有冠军/亚军记录——打进季后赛与杯赛决赛会自动入册</div>';
  html+=`</div>`;
@@ -6872,11 +6914,11 @@ function renderHall(){
 
  html+=`<div class="panel"><h3>历届冠军 <span class="tag">联盟时间线 · 最近 ${th.length} 冠</span></h3>`;
  html+=th.length?th.map(t=>`<div class="match" style="margin-bottom:5px;padding:8px 10px;${t.champ===S.teamName?'border-color:rgba(217,164,65,.45)':''}">
- <div class="vs"><span class="tname" style="font-size:13px">${_escTxt(t.event)} · S${t.season}</span></div>
+ <div class="vs"><span class="tname" style="font-size:13px">${_escTxt(t.event)} · S${t.season==null?'—':t.season}</span></div>
  <div class="score" style="min-width:0;font-size:13px;color:${t.champ===S.teamName?'var(--gold)':'var(--txt)'}">${_escTxt(t.champ)}</div></div>`).join('')
  :'<div class="hint">本赛季尚未产生冠军</div>';
  if(Object.keys(byEv).length){
- html+=`<div class="hint mt8">按赛事：${Object.keys(byEv).map(ev=>ev+'×'+byEv[ev].length).join(' · ')}</div>`;
+ html+=`<div class="hint mt8">按赛事：${Object.keys(byEv).map(ev=>(ev||'其他')+'×'+byEv[ev].length).join(' · ')}</div>`;
  }
  html+=`</div>`;
 
@@ -6889,7 +6931,7 @@ function renderHall(){
 
  html+=`<div class="panel"><h3>赛季最佳阵容 <span class="tag">历届一阵/二阵</span></h3>`;
  html+=awards.length?awards.map(a=>`<div style="margin-bottom:10px">
- <div class="hint" style="margin-bottom:4px">S${a.season} 赛季</div>
+ <div class="hint" style="margin-bottom:4px">S${a.season==null?'—':a.season} 赛季</div>
  <div style="font-size:12px;margin-bottom:2px"><span class="gold">一阵</span> ${(a.first||[]).map(x=>(POS[x.pos]?POS[x.pos][1]:'?')+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
  <div style="font-size:12px"><span class="dim">二阵</span> ${(a.second||[]).map(x=>(POS[x.pos]?POS[x.pos][1]:'?')+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
  </div>`).join('')
@@ -7720,7 +7762,7 @@ function renderBP(){
  board=`<div class="bp-board">
  ${bpSideColumn(d,true)}
  <div class="bp-center"><div class="bp-phase">${phaseLabel(d)}</div>
- <div class="bp-stepnum">${Math.min(d.idx+1,18)} / ${d.isPeak?5:18} 手</div><div class="bp-stepbar"><i style="width:${Math.min(100,Math.round((d.idx)/(d.isPeak?5:18)*100))}%"></i></div>
+ <div class="bp-stepnum">${Math.min(d.idx+1,18)} / ${d.isPeak?5:18} 手</div><div class="bp-stepbar"><i data-v="${Math.min(100,Math.round((d.idx)/(d.isPeak?5:18)*100))}"></i></div>
  ${(d.used.length||d.usedOpp.length)?`<div class="bp-used" style="cursor:help" title="我方已用：${d.used.join('、')||'无'}
 对方已用：${d.usedOpp.join('、')||'无'}">全局BP已用 · 我方 ${d.used.length} 个 ｜ 对方 ${d.usedOpp.length} 个 · 悬停看明细</div>`:''}
  </div>
@@ -7801,6 +7843,16 @@ function renderBP(){
  <button class="btn primary" onclick="bpConfirm()" ${act.type!=='done'?'disabled':''}>确定出战</button>
  </div>`;
  $('#app-modal-body').innerHTML=html;
+
+ const _bar=$('#app-modal-body .bp-stepbar i');
+ if(_bar){
+  const _to=Math.min(100,Math.round((d.idx)/(d.isPeak?5:18)*100));
+  const _from=d.idx===0?0:(window._bpStepV||0); // 新一场 BP 从 0 开始，不倒放
+  _bar.style.transform='scaleX('+(_from/100)+')';
+  void(_bar.offsetWidth);
+  _bar.style.transform='scaleX('+(_to/100)+')';
+  window._bpStepV=_to;
+ }
  $('#app-modal').classList.add('wide');
  $('#app-modal').classList.add('on');
 }
@@ -8078,19 +8130,29 @@ function startPlayerMatch(){ // 常规赛入口（选手模式：代替 startMat
  if((me.age||0)<MATCH_MIN_AGE)logEvent(S,' 注册规则：'+me.name+'（'+me.age+'岁）未满 '+MATCH_MIN_AGE+' 岁，本场不可登场——教练会安排其他选手顶上');
  else logEvent(S,' '+me.name+' '+why+'，本场由队友顶上');
  }
- playerPlayAndFinish(S,m.opp,KPL.BO5,{stage:'regular'});
+ const mid=m.mid||('reg_'+(S.phase||'r1')+'_'+(S.matchIdx+1));
+ m.mid=mid;tagMatch(S,m,mid);
+ playerPlayAndFinish(S,m.opp,KPL.BO5,{stage:'regular',mid});
 }
 
 function startMatch(){
  if(S.preseason){toast(' 赛前转会期进行中：先去转会市场完成组队，结束转会期后联赛才开始');return;}
  const m=S.schedule[S.matchIdx];
  if(!m){toast('赛程已结束');return;}
+ const mid=m.mid||('reg_'+(S.phase||'r1')+'_'+(S.matchIdx+1));
 
  if(S.series&&S.series.stage==='regular'){
+ if(!S.series.mid||S.series.mid===mid){
  showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第'+(S.series.mw+S.series.ow+1)+'局（'+S.series.mw+':'+S.series.ow+'）');
  return;
  }
- S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
+ logEvent(S,'⚠ 赛程修复：废弃未同步的常规赛残影（vs '+S.series.opName+' '+(S.series.mw||0)+':'+(S.series.ow||0)+'），本场重新开打');
+ console.warn('stale regular series discarded',S.series.mid,mid);
+ S.series=null;
+ }
+ m.mid=mid;
+ tagMatch(S,m,mid);
+ S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',mid,logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
  resetOppEnergy(S,m.opp); // 对手体力回满：衰减只在系列赛内累积
  showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
 }
@@ -8312,7 +8374,8 @@ function finishSeries(finalWin){
  if(sr.stage==='regular'){
  const g=myGroup(S);
  const t=(g&&S.tables[g])?S.tables[g][S.teamName]:null;
- const m=(S.schedule||[])[S.matchIdx];
+
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||(S.schedule||[])[S.matchIdx];
  const ot=(g&&m&&S.tables[g])?S.tables[g][m.opp]:null;
  if(m){m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;}
  if(t){
@@ -8324,9 +8387,9 @@ function finishSeries(finalWin){
  if(finalWin){ot.l++;}else{ot.w++;ot.pts++;}
  ot.pw+=sr.ow;
  }
- const bonus=winGames*13;
+ const bonus=winGames*BONUS_PER_WIN_GAME.regular;
  S.fund+=bonus;
- if(finalWin&&Math.random()<0.5)S.fund+=33;
+ if(finalWin&&Math.random()<REG_WIN_EXTRA_CHANCE)S.fund+=REG_WIN_EXTRA;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
@@ -8337,7 +8400,7 @@ function finishSeries(finalWin){
  }else if(sr.stage==='card'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
- const bonus=winGames*20;
+ const bonus=winGames*BONUS_PER_WIN_GAME.card;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,'卡位赛：'+S.teamName+' '+(finalWin?'晋级':'遗憾落败')+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
@@ -8349,9 +8412,9 @@ function finishSeries(finalWin){
  }else if(sr.stage==='po'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
- const bonus=winGames*25;
+ const bonus=winGames*BONUS_PER_WIN_GAME.po;
  S.fund+=bonus;
- if(finalWin&&sr.poSlot==='总决赛')S.fund+=100;
+ if(finalWin&&sr.poSlot==='总决赛')S.fund+=PO_CHAMPION_BONUS;
  if(!finalWin&&sr.poSlot!=='总决赛'){
 
  const place=poPlace(sr.poSlot,false);
@@ -8368,7 +8431,7 @@ function finishSeries(finalWin){
  m.r=finalWin?sr.myName:sr.opName;
  if(m.a===sr.myName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;} // 擂台赛积分按 a/b 记小局
  }
- const bonus=winGames*20;
+ const bonus=winGames*BONUS_PER_WIN_GAME.cup;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+sr.cupLabel+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
@@ -8547,7 +8610,7 @@ function pcard(p,extra){
  const pst=playerStatus(p,S); // 旗标统一走状态出口（pcard 内多处判断共用）
  const appsHtml=(p.apps||pst.transferRequest||pst.kjia||pst.loanOut)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${pst.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${pst.kjia?` <span style="color:var(--cyan)">· K甲锻炼剩 ${pst.kjiaDays} 天${kjStat}</span>`:''}${pst.loanOut?` <span style="color:var(--cyan)">· 租借 ${pst.loanOutTeam} 剩 ${pst.loanOutDays} 天</span>`:''}</div>`:'';
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
- const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
+ const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*ENDORSE_PER_POP)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
@@ -8573,11 +8636,13 @@ function findPlayerCard(id){return S.players.find(x=>x.id===id)||S.market.find(x
 
 function showReplay(h){
  if(!h||!h.logs)return;
+
+ const logLines=Array.isArray(h.logs)?h.logs:[];
  $('#app-modal-body').innerHTML=`
  <h2>复盘：${S.teamName} vs ${h.opp} <span class="tag">${h.stage} ${h.score}</span></h2>
  ${h.peak?'<div class="hint" style="text-align:center;color:var(--gold);margin-bottom:10px">巅峰对决名场面</div>':''}
  ${h.aiReport?`<div class="event-card" style="margin-bottom:10px"><div class="et">AI 战报</div><p>${_escTxt(h.aiReport)}</p></div>`:''}
- <div class="logbox" style="max-height:60vh">${h.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
+ <div class="logbox" style="max-height:60vh">${logLines.map(x=>{const l=typeof x==='string'?x:(x&&typeof x==='object'?String(x.t||x.txt||x.line||''):String(x==null?'':x));return `<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${_escTxt(l)}</div>`;}).join('')}</div>
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('on');
 }
@@ -8647,19 +8712,19 @@ function showYearReview(idx){
  <div class="vs"><span class="tname" style="font-size:12px">${r.team} vs ${h.opp}</span><div class="power" style="font-size:10px">${h.stage}${h.peak?' · 巅峰对决':''}</div></div>
  <div class="score" style="font-size:13px;min-width:0">${h.win?'<span class="green">胜</span>':'<span class="red">负</span>'} ${h.score}</div></div>`).join('')
  :'<div class="hint">本年度无关键战役记录</div>';
- const achRow=r.achieved.length?r.achieved.map(n=>`<span class="p-tag" style="border-color:var(--gold);color:var(--gold);margin:2px">${n}</span>`).join(''):'<span class="hint">本年度无新成就</span>';
+ const achRow=(r.achieved||[]).length?r.achieved.map(n=>`<span class="p-tag" style="border-color:var(--gold);color:var(--gold);margin:2px">${n}</span>`).join(''):'<span class="hint">本年度无新成就</span>';
  $('#app-modal-body').innerHTML=`
- <h2>${r.year} 年度回顾 <span class="tag">${r.team} · 第 ${r.season} 赛季</span></h2>
- <div class="panel" style="margin:10px 0"><h3>成绩曲线 <span class="tag">年度积分 ${r.annualPts} · 联盟第 ${r.annualRank||'—'} 名</span></h3>
+ <h2>${r.year||'—'} 年度回顾 <span class="tag">${r.team||'—'} · 第 ${r.season||'—'} 赛季</span></h2>
+ <div class="panel" style="margin:10px 0"><h3>成绩曲线 <span class="tag">年度积分 ${r.annualPts==null?'—':r.annualPts} · 联盟第 ${r.annualRank||'—'} 名</span></h3>
  ${trend?`<div style="padding:6px 0 10px">${trend}</div><div class="hint" style="text-align:center;margin-bottom:8px">赛段走势：越高越好（冠军在顶）</div>`:''}
  ${stageRow}</div>
  <div class="panel" style="margin:10px 0"><h3>荣誉</h3>${honorRow}</div>
- <div class="panel" style="margin:10px 0"><h3>转会记录 <span class="tag">${r.transfers.length} 笔</span></h3>${trRow}</div>
+ <div class="panel" style="margin:10px 0"><h3>转会记录 <span class="tag">${(r.transfers||[]).length} 笔</span></h3>${trRow}</div>
  <div class="panel" style="margin:10px 0"><h3>董事会评价</h3>${boardRow}</div>
  <div class="panel" style="margin:10px 0"><h3>关键战役 <span class="tag">巅峰对决 / 决赛轮次</span></h3>${keyRow}</div>
  <div class="panel" style="margin:10px 0"><h3>本年度成就</h3><div>${achRow}</div></div>
  <div class="panel" style="margin:10px 0"><h3>经营快照</h3>
- <div class="hint">年末资金 ${fmt(r.fund)} · 粉丝 ${r.fans} 万 · 年度积分 ${r.annualPts} 分</div></div>
+ <div class="hint">年末资金 ${r.fund==null?'—':fmt(r.fund)} · 粉丝 ${r.fans==null?'—':r.fans} 万 · 年度积分 ${r.annualPts==null?'—':r.annualPts} 分</div></div>
  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn gold sm" onclick="shareHonorCard()"> 生成战绩分享图</button>
  <button class="btn primary" onclick="closeModal('app-modal')">关闭</button>
@@ -8693,14 +8758,15 @@ function renderHeader(){
  const spLv=clamp((S&&S.sponsorLv)||0,0,Math.max(0,SPONSORS.length-1));
  const sp=SPONSORS[spLv]||SPONSORS[0];
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
+ const hdPower=teamPower(S),hdWage=weeklyWage(S); // 各算一次：本函数内三处复用
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,32)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>
  <div class="stats">
  <div class="stat"><b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
- <div class="stat"><b data-num="power">${fmt(teamPower(S))}</b><small>总战力</small></div>
+ <div class="stat"><b data-num="power">${fmt(hdPower)}</b><small>总战力</small></div>
  <div class="stat"><b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
- <div class="stat ${weeklyWage(S)>S.wageCap?'red':''}"><b>${weeklyWage(S)}/${S.wageCap}万</b><small>周薪/帽</small></div>
+ <div class="stat ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>周薪/帽</small></div>
  ${S.streak>=3?`<div class="stat gold"><b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red"><b>${-S.streak}连败</b><small>低迷</small></div>`:''}
  <div class="stat"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
  ${S.coach?`<div class="stat gold"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
@@ -8713,7 +8779,7 @@ function renderHeader(){
  try{
  document.querySelectorAll('#header [data-num]').forEach(el=>{
  const key=el.dataset.num;
- tweenNum(el,key,key==='fund'?S.fund:teamPower(S));
+ tweenNum(el,key,key==='fund'?S.fund:hdPower);
  });
  }catch(_){}
 }
@@ -9215,7 +9281,7 @@ function renderBiz(){
  const badge=h.champion?'冠军':'亚军';
  const txt=h.champion?'夺冠':'亚军';
  return `<div class="sponsor" style="margin-bottom:6px"><span class="s-icon">${badge}</span>
- <div><div class="s-name">${h.title||('赛季'+h.season)}</div><div class="s-desc">${txt}${h.roster?` · 夺冠阵容：<span class="cyan">${h.roster}</span>`:''}</div></div></div>`;
+ <div><div class="s-name">${h.title||('赛季'+(h.season==null?'—':h.season))}</div><div class="s-desc">${txt}${h.roster?` · 夺冠阵容：<span class="cyan">${h.roster}</span>`:''}</div></div></div>`;
  }).join('');
  }else{
  html+=`<div class="hint">还没有冠军记录，努力冲击总冠军吧！</div>`;
@@ -9263,8 +9329,8 @@ function renderBiz(){
  html+=`<div class="panel"><h3>年度回顾 <span class="tag">${revs.length} 份归档 · 每年赛季末自动生成</span></h3>
  <div class="hint" style="margin-bottom:8px">每年度轮换时定格一份总结：成绩曲线（各赛段名次）、转会记录、董事会评价、关键战役与经营快照。</div>
  ${revs.length?revs.map((r,i)=>`<div class="match" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" onclick="showYearReview(${i})">
- <div class="vs"><span class="tname" style="font-size:13px">${r.year} 年度回顾${(r.stages||[]).some(st=>st.place==='冠军')?' <span class="gold">冠军赛季</span>':''}</span>
- <div class="power" style="font-size:10px">年度积分 ${r.annualPts} · 联盟第 ${r.annualRank||'—'} 名 · ${(r.transfers||[]).length} 笔转会 · 信任度 ${r.board?r.board.trust:'—'}</div></div>
+ <div class="vs"><span class="tname" style="font-size:13px">${r.year||'—'} 年度回顾${(r.stages||[]).some(st=>st.place==='冠军')?' <span class="gold">冠军赛季</span>':''}</span>
+ <div class="power" style="font-size:10px">年度积分 ${r.annualPts==null?'—':r.annualPts} · 联盟第 ${r.annualRank||'—'} 名 · ${(r.transfers||[]).length} 笔转会 · 信任度 ${r.board?r.board.trust:'—'}</div></div>
  <div class="score" style="font-size:12px;min-width:0">看回顾</div>
  </div>`).join(''):'<div class="hint">还没有年度回顾——完成一个完整年度（年总收官）后自动生成</div>'}
  </div>`;
@@ -9365,7 +9431,7 @@ function renderLeague(){
  const maxPts=Math.max(1,...rank.slice(0,12).map(t=>S.annualPts[t]||0));
  html+=`<div class="panel"><h3>年度积分榜 <span class="tag">${gameYear(S)} · 前 12 进年度总决赛</span></h3>
  <table class="tbl"><tr><th>#</th><th>战队</th><th style="width:46%">年度积分</th></tr>
- ${rank.slice(0,12).map((t,i)=>`<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${S.annualPts[t]||0}<div class="pts-bar"><i style="width:${Math.round((S.annualPts[t]||0)/maxPts*100)}%"></i></div></td></tr>`).join('')}
+ ${rank.slice(0,12).map((t,i)=>{const pts=S.annualPts[t]||0;return `<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${pts}<div class="pts-bar"><i style="width:${Math.round(pts/maxPts*100)}%"></i></div></td></tr>`;}).join('')}
  </table>
  <div class="hint mt8">${myIdx>=0&&myIdx<12?'你队第 '+(myIdx+1)+' 名，'+(myIdx<6?'大师组':'精英组')+'席位在握':(myIdx>=12?'你队第 '+(myIdx+1)+' 名，无缘年度总决赛——春夏赛季继续攒分':'春季赛打完后积分入账')} · 春季冠+100 夏季冠+120</div>
  </div>`;
@@ -9395,16 +9461,16 @@ function renderLeague(){
  }
 
  if(S.schedule&&S.schedule.length){
- html+=`<div class="panel"><h3>本队赛程（${PHASE_NAME[S.phase]}）</h3>${S.schedule.map(m=>{
+ html+=`<div class="panel"><h3>本队赛程（${PHASE_NAME[S.phase]}）</h3>${(()=>{const myPw=fmt(teamPower(S));return S.schedule.map(m=>{
  const cls=m.result==='W'?'win':m.result==='L'?'lose':'';
  const isNext=m===S.schedule[S.matchIdx];
  const oppIcon=(AI_TEAMS.find(t=>t.name===m.opp)||{}).icon||'剑';
  return `<div class="match ${cls}" ${isNext?'style="border-color:var(--cyan)"':''}>
- <div class="vs"><div class="tname">${S.teamName}</div><div class="power">战力 ${fmt(teamPower(S))}</div></div>
+ <div class="vs"><div class="tname">${S.teamName}</div><div class="power">战力 ${myPw}</div></div>
  <div class="score" style="font-size:14px">${m.result?`${m.myScore}:${m.opScore}`:(isNext?' 下一场':'待赛')}</div>
  <div class="vs" style="justify-content:flex-end;text-align:right"><div class="tname">${crest(oppIcon,m.opp,18)} ${m.opp}</div><div class="power">战力 ${fmt(powerOf(S,m.opp))}</div></div>
  </div>`;
- }).join('')}</div>`;
+ }).join('');})()}</div>`;
  }
 
  if(S.phase==='card'&&S.card){
@@ -9801,6 +9867,19 @@ function applySortPref(key,list){
  return out;
 }
 
+const LIST_TRUNC=15;
+const _listMore=Object.create(null);
+function truncSlice(key,list,n){const cap=n||LIST_TRUNC;return _listMore[key]?(list||[]):(list||[]).slice(0,cap);}
+function truncMoreHtml(key,total,n){
+ const cap=n||LIST_TRUNC;
+ if(total<=cap)return '';
+ return _listMore[key]
+  ?`<button class="btn sm" style="margin-top:6px" onclick="listMore('${key}')">收起（共 ${total} 人，已显示全部）</button>`
+  :`<button class="btn sm" style="margin-top:6px" onclick="listMore('${key}')">显示其余 ${total-cap} 人（共 ${total} 人）</button>`;
+}
+function listMore(key){_listMore[key]=!_listMore[key];goPage(curPageName());}
+function resetListMore(){for(const k in _listMore)delete _listMore[k];}
+
 function sortChips(key,pos){
  const curPos=getPosFilter(key),cur=getSortKey(key);
  const chip=(on,label,oc)=>'<button class="s-chip'+(on?' on':'')+'" onclick="'+oc+'">'+label+'</button>';
@@ -9986,7 +10065,8 @@ function renderMarket(){
  const renewPanel=(expRows||earlyRows)?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3>合同续约 <span class="tag">年限 1-4 年可谈 · 报价定周薪</span></h3>
  <div class="hint" style="margin-bottom:8px">续约 = 谈判：选年限 + 出周薪报价，经纪人按心理价位博弈（长约溢价 / 老将抬价 / 三轮谈崩伤士气），签字费按年限递增。到期不处理将自动续约 1 年；「最后一年」可提前谈，拖到合同年有自由身离队风险。</div>
  ${expRows}${earlyRows}</div>`:'';
- const rows=applySortPref('buy',S.transferList).map(p=>{
+ const allBuy=applySortPref('buy',S.transferList);
+ const rows=truncSlice('mtransfer',allBuy).map(p=>{
  const price=buyoutPrice(p);
  const unt=p.untouchable?(p.willingness>=75?`<span style="color:var(--red);font-weight:800">非卖 · 忠诚${p.willingness}</span>`:`<span style="color:var(--gold);font-weight:800">松动 · 意愿${p.willingness}</span>`):'';
  const wil=p.willingness>=60?'<span class="green">愿转会</span>':p.willingness>=30?'<span class="gold">犹豫中</span>':'<span class="red">拒绝加盟</span>';
@@ -10014,7 +10094,7 @@ function renderMarket(){
  transferHtml=renewPanel+`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3>转会市场 <span class="tag">转会窗剩余 ${S.transferWindow} 天 · 31岁+退役</span></h3>
  <div class="hint" style="margin-bottom:8px">多轮谈判：报价需同时打动俱乐部（转会费）和选手（年薪）；非卖品溢价强挖有失败风险；生涯暮年选手（29岁+）买来即巅峰末期</div>
  ${sortChips('buy')}
- <div style="max-height:340px;overflow-y:auto">${rows||'<div class="hint">转会市场暂无选手</div>'}</div>
+ <div style="max-height:340px;overflow-y:auto">${rows||'<div class="hint">转会市场暂无选手</div>'}${truncMoreHtml('mtransfer',allBuy.length)}</div>
  <div class="hint" style="margin:10px 0 6px">我的挂牌（AI 队会来报价，转会窗关闭未成交自动撤牌）：</div>
  <div>${listed||'<div class="hint">暂无挂牌选手——在下方"我的队员"中点"挂牌"</div>'}</div>
  </div>`;
@@ -10247,7 +10327,7 @@ function playerRest(){
 <script>
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 
-const KM_BUILD='2026-09-17b';
+const KM_BUILD='2026-09-18b';
 
 const _foldCache=new Map();
 function foldCls(key,def){
@@ -10414,6 +10494,17 @@ function toggleSaveHowto(){
  if(show)try{el.scrollIntoView({block:'nearest'});}catch(e){}
 }
 
+function resetRuntimeGlobals(){
+ try{
+  _nego=null;                                   // 转会话术上下文（transfer.js）
+  _clubPick=-1;_eraSel=null;_scenario='normal';  // 开局俱乐部/时代/剧本选择
+  _pcPos='mid';_pcArch=0;_pcTeam=null;_coachPick=-1;_eraSelCoach=null;_eraSelPlayer=null;
+  for(const k in _uiArm)delete _uiArm[k];        // 连点节流时间戳：不清会让新档第一次点击被判成连点
+  resetListMore();                               // 长列表「显示全部」展开状态（ui.js）
+  _tour={on:false,i:0,mode:'quick'};             // 引导进度（是否再弹由 km_tour 标记决定）
+ }catch(e){console.warn('resetRuntimeGlobals fail',e);}
+}
+
 function restoreAutoBackup(){
  const raw=localStorage.getItem(slotKey()+'_auto');
  if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
@@ -10423,12 +10514,14 @@ function restoreAutoBackup(){
  if(cur)localStorage.setItem(slotKey()+'_pre_restored',cur);
  S=JSON.parse(raw);
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ resetRuntimeGlobals();
  migrateSave();save();renderAll();closeModal('app-modal');
  toast('已恢复到上赛季末（覆盖前进度存在「恢复前备份」，可再次恢复找回）');
  }catch(e){toast('恢复失败：备份不可用');}
 }
 function setSlot(i){
  curSlot=i;localStorage.setItem('esport_manager_curslot',String(i));
+ resetRuntimeGlobals(); // 换档：先清上一档残留的会话级 UI/开局选择状态，再读新档
  if(load()){save();renderAll();closeModal('app-modal');toast('已切换到 槽'+i);}
  else{S=null;closeModal('app-modal');initStart();toast('槽'+i+' 暂无存档，请创建新战队开局');}
 }
@@ -10555,6 +10648,7 @@ function applyImport(d,from){
  S=d;
 
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ resetRuntimeGlobals(); // 导入 = 换档：不能沿用当前会话里的谈判上下文/开局选择/列表展开
  migrateSave();save();renderAll();closeModal('app-modal');
  toast('已从'+from+'导入：'+S.teamName+'（'+gameYear(S)+'年 · v'+S.v+'）');
 }

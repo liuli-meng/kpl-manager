@@ -31,7 +31,7 @@ function pcard(p,extra){
  const pst=playerStatus(p,S); // 旗标统一走状态出口（pcard 内多处判断共用）
  const appsHtml=(p.apps||pst.transferRequest||pst.kjia||pst.loanOut)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${pst.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${pst.kjia?` <span style="color:var(--cyan)">· K甲锻炼剩 ${pst.kjiaDays} 天${kjStat}</span>`:''}${pst.loanOut?` <span style="color:var(--cyan)">· 租借 ${pst.loanOutTeam} 剩 ${pst.loanOutDays} 天</span>`:''}</div>`:'';
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
- const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*0.3)}万/周 · 人气 ${p.popularity}</div>`:'';
+ const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*ENDORSE_PER_POP)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}">
  ${hpCls}
@@ -58,11 +58,14 @@ function findPlayerCard(id){return S.players.find(x=>x.id===id)||S.market.find(x
 /* 比赛复盘：回放历史比赛逐局日志 */
 function showReplay(h){
  if(!h||!h.logs)return;
+ // logs 里只要混进一个非字符串（导入档/旧档/半截写入），下面 l.includes 就整弹窗抛错——
+ // 复盘是「点开就白屏」级别的路径，逐条兜成字符串比信任数据更划算。
+ const logLines=Array.isArray(h.logs)?h.logs:[];
  $('#app-modal-body').innerHTML=`
  <h2>复盘：${S.teamName} vs ${h.opp} <span class="tag">${h.stage} ${h.score}</span></h2>
  ${h.peak?'<div class="hint" style="text-align:center;color:var(--gold);margin-bottom:10px">巅峰对决名场面</div>':''}
  ${h.aiReport?`<div class="event-card" style="margin-bottom:10px"><div class="et">AI 战报</div><p>${_escTxt(h.aiReport)}</p></div>`:''}
- <div class="logbox" style="max-height:60vh">${h.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
+ <div class="logbox" style="max-height:60vh">${logLines.map(x=>{const l=typeof x==='string'?x:(x&&typeof x==='object'?String(x.t||x.txt||x.line||''):String(x==null?'':x));return `<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${_escTxt(l)}</div>`;}).join('')}</div>
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
  $('#app-modal').classList.add('on');
 }
@@ -134,19 +137,19 @@ function showYearReview(idx){
  <div class="vs"><span class="tname" style="font-size:12px">${r.team} vs ${h.opp}</span><div class="power" style="font-size:10px">${h.stage}${h.peak?' · 巅峰对决':''}</div></div>
  <div class="score" style="font-size:13px;min-width:0">${h.win?'<span class="green">胜</span>':'<span class="red">负</span>'} ${h.score}</div></div>`).join('')
  :'<div class="hint">本年度无关键战役记录</div>';
- const achRow=r.achieved.length?r.achieved.map(n=>`<span class="p-tag" style="border-color:var(--gold);color:var(--gold);margin:2px">${n}</span>`).join(''):'<span class="hint">本年度无新成就</span>';
+ const achRow=(r.achieved||[]).length?r.achieved.map(n=>`<span class="p-tag" style="border-color:var(--gold);color:var(--gold);margin:2px">${n}</span>`).join(''):'<span class="hint">本年度无新成就</span>';
  $('#app-modal-body').innerHTML=`
- <h2>${r.year} 年度回顾 <span class="tag">${r.team} · 第 ${r.season} 赛季</span></h2>
- <div class="panel" style="margin:10px 0"><h3>成绩曲线 <span class="tag">年度积分 ${r.annualPts} · 联盟第 ${r.annualRank||'—'} 名</span></h3>
+ <h2>${r.year||'—'} 年度回顾 <span class="tag">${r.team||'—'} · 第 ${r.season||'—'} 赛季</span></h2>
+ <div class="panel" style="margin:10px 0"><h3>成绩曲线 <span class="tag">年度积分 ${r.annualPts==null?'—':r.annualPts} · 联盟第 ${r.annualRank||'—'} 名</span></h3>
  ${trend?`<div style="padding:6px 0 10px">${trend}</div><div class="hint" style="text-align:center;margin-bottom:8px">赛段走势：越高越好（冠军在顶）</div>`:''}
  ${stageRow}</div>
  <div class="panel" style="margin:10px 0"><h3>荣誉</h3>${honorRow}</div>
- <div class="panel" style="margin:10px 0"><h3>转会记录 <span class="tag">${r.transfers.length} 笔</span></h3>${trRow}</div>
+ <div class="panel" style="margin:10px 0"><h3>转会记录 <span class="tag">${(r.transfers||[]).length} 笔</span></h3>${trRow}</div>
  <div class="panel" style="margin:10px 0"><h3>董事会评价</h3>${boardRow}</div>
  <div class="panel" style="margin:10px 0"><h3>关键战役 <span class="tag">巅峰对决 / 决赛轮次</span></h3>${keyRow}</div>
  <div class="panel" style="margin:10px 0"><h3>本年度成就</h3><div>${achRow}</div></div>
  <div class="panel" style="margin:10px 0"><h3>经营快照</h3>
- <div class="hint">年末资金 ${fmt(r.fund)} · 粉丝 ${r.fans} 万 · 年度积分 ${r.annualPts} 分</div></div>
+ <div class="hint">年末资金 ${r.fund==null?'—':fmt(r.fund)} · 粉丝 ${r.fans==null?'—':r.fans} 万 · 年度积分 ${r.annualPts==null?'—':r.annualPts} 分</div></div>
  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn gold sm" onclick="shareHonorCard()"> 生成战绩分享图</button>
  <button class="btn primary" onclick="closeModal('app-modal')">关闭</button>
@@ -181,14 +184,15 @@ function renderHeader(){
  const spLv=clamp((S&&S.sponsorLv)||0,0,Math.max(0,SPONSORS.length-1));
  const sp=SPONSORS[spLv]||SPONSORS[0];
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
+ const hdPower=teamPower(S),hdWage=weeklyWage(S); // 各算一次：本函数内三处复用
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,32)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>
  <div class="stats">
  <div class="stat"><b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
- <div class="stat"><b data-num="power">${fmt(teamPower(S))}</b><small>总战力</small></div>
+ <div class="stat"><b data-num="power">${fmt(hdPower)}</b><small>总战力</small></div>
  <div class="stat"><b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
- <div class="stat ${weeklyWage(S)>S.wageCap?'red':''}"><b>${weeklyWage(S)}/${S.wageCap}万</b><small>周薪/帽</small></div>
+ <div class="stat ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>周薪/帽</small></div>
  ${S.streak>=3?`<div class="stat gold"><b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red"><b>${-S.streak}连败</b><small>低迷</small></div>`:''}
  <div class="stat"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
  ${S.coach?`<div class="stat gold"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
@@ -201,7 +205,7 @@ function renderHeader(){
  try{
  document.querySelectorAll('#header [data-num]').forEach(el=>{
  const key=el.dataset.num;
- tweenNum(el,key,key==='fund'?S.fund:teamPower(S));
+ tweenNum(el,key,key==='fund'?S.fund:hdPower);
  });
  }catch(_){}
 }
@@ -707,7 +711,7 @@ function renderBiz(){
  const badge=h.champion?'冠军':'亚军';
  const txt=h.champion?'夺冠':'亚军';
  return `<div class="sponsor" style="margin-bottom:6px"><span class="s-icon">${badge}</span>
- <div><div class="s-name">${h.title||('赛季'+h.season)}</div><div class="s-desc">${txt}${h.roster?` · 夺冠阵容：<span class="cyan">${h.roster}</span>`:''}</div></div></div>`;
+ <div><div class="s-name">${h.title||('赛季'+(h.season==null?'—':h.season))}</div><div class="s-desc">${txt}${h.roster?` · 夺冠阵容：<span class="cyan">${h.roster}</span>`:''}</div></div></div>`;
  }).join('');
  }else{
  html+=`<div class="hint">还没有冠军记录，努力冲击总冠军吧！</div>`;
@@ -755,8 +759,8 @@ function renderBiz(){
  html+=`<div class="panel"><h3>年度回顾 <span class="tag">${revs.length} 份归档 · 每年赛季末自动生成</span></h3>
  <div class="hint" style="margin-bottom:8px">每年度轮换时定格一份总结：成绩曲线（各赛段名次）、转会记录、董事会评价、关键战役与经营快照。</div>
  ${revs.length?revs.map((r,i)=>`<div class="match" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" onclick="showYearReview(${i})">
- <div class="vs"><span class="tname" style="font-size:13px">${r.year} 年度回顾${(r.stages||[]).some(st=>st.place==='冠军')?' <span class="gold">冠军赛季</span>':''}</span>
- <div class="power" style="font-size:10px">年度积分 ${r.annualPts} · 联盟第 ${r.annualRank||'—'} 名 · ${(r.transfers||[]).length} 笔转会 · 信任度 ${r.board?r.board.trust:'—'}</div></div>
+ <div class="vs"><span class="tname" style="font-size:13px">${r.year||'—'} 年度回顾${(r.stages||[]).some(st=>st.place==='冠军')?' <span class="gold">冠军赛季</span>':''}</span>
+ <div class="power" style="font-size:10px">年度积分 ${r.annualPts==null?'—':r.annualPts} · 联盟第 ${r.annualRank||'—'} 名 · ${(r.transfers||[]).length} 笔转会 · 信任度 ${r.board?r.board.trust:'—'}</div></div>
  <div class="score" style="font-size:12px;min-width:0">看回顾</div>
  </div>`).join(''):'<div class="hint">还没有年度回顾——完成一个完整年度（年总收官）后自动生成</div>'}
  </div>`;
@@ -857,7 +861,7 @@ function renderLeague(){
  const maxPts=Math.max(1,...rank.slice(0,12).map(t=>S.annualPts[t]||0));
  html+=`<div class="panel"><h3>年度积分榜 <span class="tag">${gameYear(S)} · 前 12 进年度总决赛</span></h3>
  <table class="tbl"><tr><th>#</th><th>战队</th><th style="width:46%">年度积分</th></tr>
- ${rank.slice(0,12).map((t,i)=>`<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${S.annualPts[t]||0}<div class="pts-bar"><i style="width:${Math.round((S.annualPts[t]||0)/maxPts*100)}%"></i></div></td></tr>`).join('')}
+ ${rank.slice(0,12).map((t,i)=>{const pts=S.annualPts[t]||0;return `<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${pts}<div class="pts-bar"><i style="width:${Math.round(pts/maxPts*100)}%"></i></div></td></tr>`;}).join('')}
  </table>
  <div class="hint mt8">${myIdx>=0&&myIdx<12?'你队第 '+(myIdx+1)+' 名，'+(myIdx<6?'大师组':'精英组')+'席位在握':(myIdx>=12?'你队第 '+(myIdx+1)+' 名，无缘年度总决赛——春夏赛季继续攒分':'春季赛打完后积分入账')} · 春季冠+100 夏季冠+120</div>
  </div>`;
@@ -887,16 +891,16 @@ function renderLeague(){
  }
  // 赛程
  if(S.schedule&&S.schedule.length){
- html+=`<div class="panel"><h3>本队赛程（${PHASE_NAME[S.phase]}）</h3>${S.schedule.map(m=>{
+ html+=`<div class="panel"><h3>本队赛程（${PHASE_NAME[S.phase]}）</h3>${(()=>{const myPw=fmt(teamPower(S));return S.schedule.map(m=>{
  const cls=m.result==='W'?'win':m.result==='L'?'lose':'';
  const isNext=m===S.schedule[S.matchIdx];
  const oppIcon=(AI_TEAMS.find(t=>t.name===m.opp)||{}).icon||'剑';
  return `<div class="match ${cls}" ${isNext?'style="border-color:var(--cyan)"':''}>
- <div class="vs"><div class="tname">${S.teamName}</div><div class="power">战力 ${fmt(teamPower(S))}</div></div>
+ <div class="vs"><div class="tname">${S.teamName}</div><div class="power">战力 ${myPw}</div></div>
  <div class="score" style="font-size:14px">${m.result?`${m.myScore}:${m.opScore}`:(isNext?' 下一场':'待赛')}</div>
  <div class="vs" style="justify-content:flex-end;text-align:right"><div class="tname">${crest(oppIcon,m.opp,18)} ${m.opp}</div><div class="power">战力 ${fmt(powerOf(S,m.opp))}</div></div>
  </div>`;
- }).join('')}</div>`;
+ }).join('');})()}</div>`;
  }
  // 卡位赛对阵（联赛页）
  if(S.phase==='card'&&S.card){
@@ -1301,6 +1305,25 @@ function applySortPref(key,list){
  if(s)out.sort(s.f);
  return out;
 }
+/* ============ 长列表按需展开 ============
+   实测口径（tests/dev/audit-perf.js + 真实存档 saves/KPL存档_AG_*.json）：
+   转会页整页 123.5 KB / 约 5,000 个标签，其中「转会市场」面板 43.8 KB（transferList 89 人
+   每人一行 .match）——列表再长也是同一个数量级线性增长，而玩家一屏只看得到 6~8 行。
+   这里默认只渲染前 LIST_TRUNC 条，其余按需用「显示其余 N 人」展开。
+   展开状态是**会话级 UI 状态**，不写 localStorage：跨档/跨设备无意义，且渲染期写盘是
+   上一轮 P1-8 刚清掉的东西，别再引回来。切槽/导入档时由 resetRuntimeGlobals 清空。 */
+const LIST_TRUNC=15;
+const _listMore=Object.create(null);
+function truncSlice(key,list,n){const cap=n||LIST_TRUNC;return _listMore[key]?(list||[]):(list||[]).slice(0,cap);}
+function truncMoreHtml(key,total,n){
+ const cap=n||LIST_TRUNC;
+ if(total<=cap)return '';
+ return _listMore[key]
+  ?`<button class="btn sm" style="margin-top:6px" onclick="listMore('${key}')">收起（共 ${total} 人，已显示全部）</button>`
+  :`<button class="btn sm" style="margin-top:6px" onclick="listMore('${key}')">显示其余 ${total-cap} 人（共 ${total} 人）</button>`;
+}
+function listMore(key){_listMore[key]=!_listMore[key];goPage(curPageName());}
+function resetListMore(){for(const k in _listMore)delete _listMore[k];}
 /* chips 行：位置组 + 排序组；pos 传 null 表示该列表无位置概念（不渲染位置组） */
 function sortChips(key,pos){
  const curPos=getPosFilter(key),cur=getSortKey(key);

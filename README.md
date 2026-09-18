@@ -685,6 +685,35 @@ src/
 - 存档：`career.role/stats/media/natFocus` + `socialUsed`，`migrateSave` 旧档兜底
 - 回归：`verify-playerops`（8 用例）+ `verify-guide`（9 用例）+ 全量 `npm test` 全绿
 
+## 2026-09 系列赛身份校验（P2-7）与本轮清账
+
+按 `OPTIMIZE-AUDIT-2.md` 第七节的剩余尾巴做一轮定点治理，没有加新玩法。
+
+### 续赛必须校验身份（`match.js` / `season.js` / `state.js`）
+
+三处「系列赛中断恢复」原先只看 `series.stage`，而 stage 只有 5 个取值——只要存档里残留一场**别的场次**的同阶段系列赛，恢复分支就会接着打：比分是旧的，而结果经 `resolveSeriesMatch` 会写进**另一场对阵**，把不该有结果的场次判胜。杯赛侧（`cups.js`）早就校验 `cupSlot`，本轮把常规赛/卡位赛/季后赛补齐成同一套：
+
+- **L2b 归一化（从 rewrite 线移植）**：`genRoundSchedule` 给每场常规赛发 `mid:'reg_<相位>_<轮次>'` 并登记进扁平表；`rebuildMatchStore` 对旧档缺 mid 的对阵按同构规则补写；`rebindSeriesMatch` 让旧档进行中的常规赛按 `matchIdx` 接上身份；`finishSeries` 常规赛分支的结果写回改走 mid 权威解析。
+- **僵尸系列赛废弃**：stage 相同但身份不符时不再续打——废弃重开并 `logEvent` 留痕（沿用 P0-3 的「兜底必须留痕」原则，别让真 bug 伪装成正常收官）。
+- 回归：新增 `tests/verify-series-resume.js`（17 条断言，含真实 `serializeForSave`→`migrateSave` 往返、旧档无 mid 迁移、卡位/季后赛僵尸用例）。四处注入反向验证全部报红。
+
+### 存档兜底与代码收敛
+
+- **自由球员身份字段**（`state.js` 新增 `migrateFreeAgents`）：缺 `freeAgent` 会让谈判被当转会凭空要价，缺 `signCost` 渲染 `undefined万`，缺 `willingness` 意愿恒 0。**必须跑在两条货币迁移之后**——本函数补出的 `signCost` 已是当前刻度，再被 ÷6 就毁了（审计原建议在 `applySaveDefaults`，那里跑在缩放之前，故改挂点）。回归 `verify-save` ⑩/⑩b。
+- **经济系数集中**（`data.js`）：`BONUS_PER_WIN_GAME` / `REG_WIN_EXTRA` / `PO_CHAMPION_BONUS` / `PRIZE_PLAYER_SHARE`+`PRIZE_CLUB_SHARE` / `ENDORSE_PER_POP` / `RENEW_MORALE_DIV` 取代散落的 `*13`、`*0.3`、`/500`、`+=33`。其中代言系数原先在 `payWage` 结算与选手卡展示里各写一份 `0.3`（两处必须同值），现共用常量。零数值变化。
+- **双败骨架收敛**（`cups.js`）：挑杯与年总各自 9 行的双败推进链合并为 `cup8PoStep(s,p,cfg)`，差异只留 slot 前缀 / 文案 / 决赛落点与 BO。
+- **渲染重复计算**：`renderHeader` 的 `teamPower`/`weeklyWage` 各算一次供三处复用；联赛页赛程面板把 `teamPower(S)` 提到 `schedule.map()` 外（原来每行重算一遍同样的值）。
+
+### 页面：BP 进度条改成真在动的动画
+
+`.bp-stepbar i` 过去写 `transition:width .2s`，但 BP 每手都是整块 `innerHTML` 重建——新建元素没有前态，**过渡根本不会播放**，那行 CSS 是死代码。现改为元素满宽 + `transform:scaleX()`（合成层，不触发 layout），渲染后先贴旧值并强制回流再写目标值，补间才真的出现；新一场 BP 从 0 起放、不倒放。另外 `showYearReview`/`showReplay` 的缺字段兜底与荣誉墙脏文本已随上一批落地。
+
+### 测试稳定性与仓库整理
+
+- `verify-aiplan` 的断言是阈值型（成长不倒退 / 顶星不被拖垮 / 流动日志够多），但没播种随机数，跑批里会极偶发红（本轮遇到一次，单跑 42 次不复现）。现按 `verify-offer` 的既有做法在沙箱内替换 `Math.random`（mulberry32 固定种子），把阈值断言变成可复现断言；注入回归仍能报红。
+- 副本处置：`kpl-manager-refactor/` 已删除（无 git、0 个独有标识符、缺 2 个模块，被主线完全取代）；`kpl-manager-rewrite/ARCHITECTURE.md` 顶部标注「本线已停止」并写明哪些结论已被实测推翻，避免下次又当合并候选。
+- 版本戳 `KM_BUILD` → `2026-09-18b`（BP 进度条与选秀面板是玩家可见变化）。全量 `npm test` 53 项绿。
+
 ## 相比旧版的改动
 
 - **稀有度退场，FC26 式总值（OVR）**：删除 R/SR/SSR 标签与整张查表定价——选手唯一评价是 `overall()` 按位置加权四维实时计算的总值（0-99），训练/年龄/表现即时反映在数字上；身价、周薪、签约费、市场档位、意向俱乐部数全部由总值曲线出（顶星≈260万 / 主力≈130万 / 轮换≈55万锚位不变）；选手池手写的 `base` 成为选手真实评级（清融 92、一诺 92 一目了然），青训生练出来总值自然涨、自然卖上价；退役转教练/主播改看生涯成就与总值。卡面色阶保留但按实时总值映射，旧存档免迁移（选手总值即时补算，教练 rarity→rating 自动升级）

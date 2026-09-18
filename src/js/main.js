@@ -1,6 +1,6 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-17b';
+const KM_BUILD='2026-09-18b';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
    pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
@@ -171,6 +171,22 @@ function toggleSaveHowto(){
  el.style.display=show?'block':'none';
  if(show)try{el.scrollIntoView({block:'nearest'});}catch(e){}
 }
+/* 换档时必须清掉的模块级全局（P2-6）。
+   这些变量声明在各文件的顶层（构建后同处一个脚本作用域），换档/导入/恢复备份时不会自动复位：
+   带着上一档的值进新档，轻则面板展开状态错乱，重则「A 档谈好的价/点到的签位」被带进 B 档。
+   刻意**不复位**的：_foldCache / _sortCache / _missionCache / _hintCache / _defIdx ——
+   它们是跨档共享的偏好或从静态池派生的索引，复位反而丢用户设置。
+   调用点：setSlot / applyImport / restoreAutoBackup（均在拿到新 S 之后、渲染之前）。 */
+function resetRuntimeGlobals(){
+ try{
+  _nego=null;                                   // 转会话术上下文（transfer.js）
+  _clubPick=-1;_eraSel=null;_scenario='normal';  // 开局俱乐部/时代/剧本选择
+  _pcPos='mid';_pcArch=0;_pcTeam=null;_coachPick=-1;_eraSelCoach=null;_eraSelPlayer=null;
+  for(const k in _uiArm)delete _uiArm[k];        // 连点节流时间戳：不清会让新档第一次点击被判成连点
+  resetListMore();                               // 长列表「显示全部」展开状态（ui.js）
+  _tour={on:false,i:0,mode:'quick'};             // 引导进度（是否再弹由 km_tour 标记决定）
+ }catch(e){console.warn('resetRuntimeGlobals fail',e);}
+}
 /* 赛季轮转自动备份的恢复：把 _auto 快照写回当前槽（覆盖前先把它再挪一份，防二次误操作） */
 function restoreAutoBackup(){
  const raw=localStorage.getItem(slotKey()+'_auto');
@@ -181,12 +197,14 @@ function restoreAutoBackup(){
  if(cur)localStorage.setItem(slotKey()+'_pre_restored',cur);
  S=JSON.parse(raw);
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ resetRuntimeGlobals();
  migrateSave();save();renderAll();closeModal('app-modal');
  toast('已恢复到上赛季末（覆盖前进度存在「恢复前备份」，可再次恢复找回）');
  }catch(e){toast('恢复失败：备份不可用');}
 }
 function setSlot(i){
  curSlot=i;localStorage.setItem('esport_manager_curslot',String(i));
+ resetRuntimeGlobals(); // 换档：先清上一档残留的会话级 UI/开局选择状态，再读新档
  if(load()){save();renderAll();closeModal('app-modal');toast('已切换到 槽'+i);}
  else{S=null;closeModal('app-modal');initStart();toast('槽'+i+' 暂无存档，请创建新战队开局');}
 }
@@ -321,6 +339,7 @@ function applyImport(d,from){
  S=d;
  // 时代联盟按档重装：era 档装该时代；导入现代档时必须还原默认联盟（否则浏览器里装过的时代残留错装）
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
+ resetRuntimeGlobals(); // 导入 = 换档：不能沿用当前会话里的谈判上下文/开局选择/列表展开
  migrateSave();save();renderAll();closeModal('app-modal');
  toast('已从'+from+'导入：'+S.teamName+'（'+gameYear(S)+'年 · v'+S.v+'）');
 }

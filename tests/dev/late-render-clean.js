@@ -1,6 +1,6 @@
 // 干净后期压测：不注入脏字段，只靠 season 膨胀 + 真实结构调用 render*
 const vm = require('vm');
-const { makeDom, injectHelpers } = require('./harness');
+const { makeDom, injectHelpers } = require('../harness');
 const { dom } = makeDom();
 injectHelpers(dom);
 

@@ -5,6 +5,10 @@
  → 8 强双败淘汰（BO7）→ 决赛 BO9（第9局巅峰对决）
  「挑战者的祝福」：低赛道队伍 vs KPL 时战力 +5%（ensureAiRosters 统一结算，玩家对局同样生效）
  年总积分：冠军85 / 亚军60 / 第3名40 / 第4名20 / 5-6名10；冠军 300 万奖金 + FMVP。 */
+/* 双败败者落位用的统一取负者：原来在 7 个 *PoStep 函数里各定义一遍（逐字相同）。
+   提到文件顶层一份，行为不变，改判定时只有一处要改。 */
+const loserOf=m=>m.r===m.a?m.b:m.a;
+
 const CHALLENGER_TEAMS=[['K甲·苍穹','K甲'],['K甲·星火','K甲'],['K甲·沧澜','K甲'],
  ['全国大赛·破晓','全国大赛'],['青训·晨曦','青训'],['高校·逐梦','高校'],['职工·匠心','职工'],
  ['主播·不夜城','主播'],['主播·山海','主播'],['主播·云隐','主播'],['主播·听风','主播'],
@@ -70,31 +74,37 @@ function challengerStep(s){
  }
  challengerPoStep(s);
 }
+/* ================= 8 队双败淘汰骨架（挑杯/年总共用） =================
+ 胜者组两轮 → 败者组三轮（逐轮由上一轮败者落位）→ 决赛。
+ 两处曾是逐字复制的 9 行推进链，差异只有 slot 前缀/文案/决赛落点与 BO，收敛为一个函数。 */
+function cup8PoStep(s,p,cfg){
+ const P=(m,suf,label)=>playCupMatch(s,m,cfg.prefix+suf,cfg.label+label,KPL.BO7);
+ for(let i=0;i<4;i++)if(!p.wb1[i].r){P(p.wb1[i],'wb1_'+(i+1),'·胜者组首轮');return;}
+ for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'lb1_'+(i+1),'·败者组首轮');return;}}
+ for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'wb2_'+(i+1),'·胜者组半决赛');return;}}
+ for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'lb2_'+(i+1),'·败者组第二轮');return;}}
+ if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
+ if(!p.wf.r){P(p.wf,'wf','·胜者组决赛');return;}
+ if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
+ if(!p.lbs.r){P(p.lbs,'lbs','·败者组半决赛');return;}
+ if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
+ if(!p.lbf.r){P(p.lbf,'lbf','·败者组决赛');return;}
+ const fin=cfg.finalMatch();
+ if(fin.a===null)fin.a=p.wf.r;
+ if(fin.b===null)fin.b=p.lbf.r;
+ if(!fin.r){playCupMatch(s,fin,cfg.finalSlot,cfg.finalLabel,cfg.finalBo);return;}
+ cfg.onFinish();
+}
 function challengerPoStep(s){
  const c=s.challenger;const p=c.po;if(!p)return;
- const loserOf=m=>m.r===m.a?m.b:m.a;
- const P=(m,slot,label,bo)=>playCupMatch(s,m,slot,label,bo);
- for(let i=0;i<4;i++)if(!p.wb1[i].r){P(p.wb1[i],'chpo_wb1_'+(i+1),'挑杯·胜者组首轮',KPL.BO7);return;}
- for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'chpo_lb1_'+(i+1),'挑杯·败者组首轮',KPL.BO7);return;}}
- for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'chpo_wb2_'+(i+1),'挑杯·胜者组半决赛',KPL.BO7);return;}}
- for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'chpo_lb2_'+(i+1),'挑杯·败者组第二轮',KPL.BO7);return;}}
- if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
- if(!p.wf.r){P(p.wf,'chpo_wf','挑杯·胜者组决赛',KPL.BO7);return;}
- if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
- if(!p.lbs.r){P(p.lbs,'chpo_lbs','挑杯·败者组半决赛',KPL.BO7);return;}
- if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
- if(!p.lbf.r){P(p.lbf,'chpo_lbf','挑杯·败者组决赛',KPL.BO7);return;}
- // 决赛 BO9（第9局巅峰对决）
- if(!c.final)c.final={a:null,b:null,r:null};
- if(c.final.a===null)c.final.a=p.wf.r;
- if(c.final.b===null)c.final.b=p.lbf.r;
- if(!c.final.r){P(c.final,'ch_final','挑战者杯·总决赛',9);return;}
- finishChallenger(s);
+ if(!c.final)c.final={a:null,b:null,r:null}; // 挑杯决赛落在 c.final（原实现也是这个落点，只是创建时机提前）
+ cup8PoStep(s,p,{prefix:'chpo_',label:'挑杯',
+ finalMatch:()=>c.final,finalSlot:'ch_final',finalLabel:'挑战者杯·总决赛',finalBo:9, // 决赛 BO9（第9局巅峰对决）
+ onFinish:()=>finishChallenger(s)});
 }
 function finishChallenger(s){
  const c=s.challenger;if(!c||!c.final||!c.final.r||c.champ)return; // c.champ 防双入口重复结算
  c.champ=c.final.r;
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(c.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'挑战者杯',champ:c.champ}]).slice(-48);
  logEvent(s,' 挑战者杯落幕：'+c.champ+' 问鼎！（BO9 巅峰对决）'+(c.champ===s.teamName?'挑战者，皆王者！':''));
@@ -197,7 +207,6 @@ function ewcStep(s){
 function finishEWC(s){
  const e=s.ewc;if(!e||!e.final.r||e.champ)return; // e.champ：防重复收尾（AI 补完与正常路径可能双入口）
  e.champ=e.final.r;
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(e.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'EWC',champ:e.champ}]).slice(-48);
  logEvent(s,' EWC 总决赛落幕：'+e.champ+' 捧杯！'+(e.champ===s.teamName?'中国赛区的世界之巅！':''));
@@ -286,7 +295,6 @@ function asiadStep(s){
 function finishAsianGames(s){
  const a=s.ag;if(!a||a.champ)return;
  a.champ=a.final.r;
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(a.final);
  const bronzes=a.sf.map(loserOf).filter(Boolean);
  a.medal=a.champ==='中国代表队'?'金牌':runner==='中国代表队'?'银牌':bronzes.includes('中国代表队')?'铜牌':'无';
@@ -456,21 +464,9 @@ function buildCup8(teams){
 }
 function annualPoStep(s){
  const p=s.annual.po;if(!p)return;
- const loserOf=m=>m.r===m.a?m.b:m.a;
- const P=(m,slot,label)=>playCupMatch(s,m,slot,label,KPL.BO7);
- for(let i=0;i<4;i++)if(!p.wb1[i].r){P(p.wb1[i],'apo_wb1_'+(i+1),'年总·胜者组首轮');return;}
- for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'apo_lb1_'+(i+1),'年总·败者组首轮');return;}}
- for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'apo_wb2_'+(i+1),'年总·胜者组半决赛');return;}}
- for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'apo_lb2_'+(i+1),'年总·败者组第二轮');return;}}
- if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
- if(!p.wf.r){P(p.wf,'apo_wf','年总·胜者组决赛');return;}
- if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
- if(!p.lbs.r){P(p.lbs,'apo_lbs','年总·败者组半决赛');return;}
- if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
- if(!p.lbf.r){P(p.lbf,'apo_lbf','年总·败者组决赛');return;}
- if(p.final.a===null){p.final.a=p.wf.r;p.final.b=p.lbf.r;}
- if(!p.final.r){P(p.final,'apo_final','年总·总决赛');return;}
- finishAnnual(s,true);
+ cup8PoStep(s,p,{prefix:'apo_',label:'年总',
+ finalMatch:()=>p.final,finalSlot:'apo_final',finalLabel:'年总·总决赛',finalBo:KPL.BO7,
+ onFinish:()=>finishAnnual(s,true)});
 }
 /* 年总已打完但尚未完成年度轮换（截图症状：圣龙杯已出、仍停在夏季末）。
  颁奖/settle 任一步抛错都会卡死——finishAnnual 可重试：champ 已写入时跳过颁奖，只补完 newSeason。 */
@@ -487,7 +483,6 @@ function finishAnnual(s,silent){
  if(!p.champ){
  p.champ=p.final.r;
  try{
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const runner=loserOf(p.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'年总',champ:p.champ}]).slice(-48);
  logEvent(s,' '+gameYear(s)+' KPL 年度总决赛落幕：'+p.champ+' 捧起圣龙杯！'+(p.champ===s.teamName?'年度至尊荣耀！':''));
@@ -514,7 +509,6 @@ function finishAnnual(s,silent){
  if(!s._annualSettled){
  try{
  s.yearStages=s.yearStages||[];
- const loserOf=m=>m.r===m.a?m.b:m.a;
  const myPlace=p.champ===s.teamName?'冠军':loserOf(p.final)===s.teamName?'亚军'
  :[p.lbf,p.lbs].some(m=>m.r&&loserOf(m)===s.teamName)?'四强'
  :p.lb2.concat(p.lb1).some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'参赛';

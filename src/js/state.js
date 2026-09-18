@@ -602,6 +602,8 @@ function rebuildMatchStore(s){
  reg(p.wf,prefix+'wf');reg(p.lbs,prefix+'lbs');reg(p.lbf,prefix+'lbf');reg(p.final,prefix+'final');
  };
  if(s.card&&s.card.matches)regList(s.card.matches,'card_');
+ // 常规赛赛程也登记进扁平表（L2b）；旧档对阵缺 mid 时按相位+序号补写（与 genRoundSchedule 同构），读档迁移在此完成
+ (s.schedule||[]).forEach((m,i)=>reg(m,m.mid||('reg_'+(s.phase||'r1')+'_'+(i+1))));
  if(s.playoff){
  const p=s.playoff;
  regList(p.wb,'po_wb');regList(p.lb,'po_lb');regList(p.lb2,'po_lb2');regList(p.lb3,'po_lb3');
@@ -703,6 +705,11 @@ function resolveSeriesMatch(s,srIn){
 	const live=getMatch(s,sr.mid);
 	if(live)return live;
 	}
+	if(sr.stage==='regular'&&sr.mid==null&&s.schedule){
+	// 旧档/手造 series（无 mid）：按当前 matchIdx 对齐
+	const m=s.schedule[s.matchIdx];
+	if(m)return m;
+	}
 	if(sr.stage==='card'&&s.card&&s.card.matches){
 	if(sr.cardIdx!=null&&s.card.matches[sr.cardIdx])return s.card.matches[sr.cardIdx];
 	}
@@ -762,6 +769,11 @@ function rebindSeriesMatch(s){
 	if(sr.stage==='card'&&sr.cardIdx!=null)sr.mid='card_'+sr.cardIdx;
 	else if(sr.stage==='po'&&sr.poSlot)sr.mid='po_'+sr.poSlot;
 	else if(sr.stage==='cup'&&sr.cupSlot)sr.mid=sr.cupSlot;
+	else if(sr.stage==='regular'&&s.schedule&&s.schedule[s.matchIdx]){
+	// 旧档进行中常规赛：rebuildMatchStore 已给对阵补 mid，按 matchIdx 对齐接上
+	const m=s.schedule[s.matchIdx];
+	sr.mid=m.mid||('reg_'+(s.phase||'r1')+'_'+(s.matchIdx+1));
+	}
 }
 function migrateSave(){
  if(!S)return;
@@ -806,6 +818,7 @@ function migrateSave(){
  migrateCoachRating(S);
  migrateSeasonShape(S);
  migratePlayerFields(S);
+ migrateFreeAgents(S);
  // 年总卡死恢复：决赛已打完/冠军已出但 newSeason 未完成 → 读档自动补完年度轮换
  try{
  if(typeof yearRollPending==='function'&&yearRollPending(S)&&typeof finishAnnual==='function')finishAnnual(S,true);
@@ -901,6 +914,18 @@ function migratePlayerFields(s){
  (s.players||[]).forEach(renameRookie);
  (s.academy||[]).forEach(renameRookie);
  (s.academy||[]).forEach(r=>{if(r.contract==null)r.contract=2;});
+}
+/* 自由球员身份字段兜底：老档/导入档的 freeAgents 可能缺 freeAgent/signCost/willingness——
+   缺 freeAgent → 谈判被当转会处理凭空要转会费（openNegotiation 按 !!p.freeAgent 分流）；
+   缺 signCost → 转会页渲染 undefined万；缺 willingness → 意愿显示 0/100 永远谈不成。
+   必须跑在两条货币迁移之后单独成步：这里补出的 signCost 已是当前刻度，再被 ÷6 就毁了。 */
+function migrateFreeAgents(s){
+ (s.freeAgents||[]).forEach(p=>{
+ if(!p||typeof p!=='object')return;
+ if(p.freeAgent!==true)p.freeAgent=true;
+ if(typeof p.signCost!=='number'||!isFinite(p.signCost))p.signCost=Math.round(valueOf(overall(p))*0.58);
+ if(typeof p.willingness!=='number'||!isFinite(p.willingness))p.willingness=rnd(70,100);
+ });
 }
 function ensureSeason(s){
  // 启动/读档后确保赛制状态完整（新档 initGroups 在 createTeam 调用）

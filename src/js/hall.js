@@ -46,7 +46,7 @@ function renderHall(){
  html+=`<div class="panel"><h3>本队荣誉墙 <span class="tag">${myHon.length} 条记录</span></h3>`;
  html+=myHon.length?myHon.map(h=>`<div class="sponsor" style="margin-bottom:6px">
  <span class="s-icon" style="${h.champion?'border-color:var(--gold);color:var(--gold)':''}">${h.champion?'冠':'亚'}</span>
- <div><div class="s-name">${_escTxt(h.title||('赛季'+h.season))}</div>
+ <div><div class="s-name">${_escTxt(h.title||('赛季'+(h.season==null?'—':h.season)))}</div>
  <div class="s-desc">${h.roster?'夺冠阵容：<span class="cyan">'+_escTxt(h.roster)+'</span>':'暂无阵容快照'}</div></div></div>`).join('')
  :'<div class="hint">还没有冠军/亚军记录——打进季后赛与杯赛决赛会自动入册</div>';
  html+=`</div>`;
@@ -64,11 +64,11 @@ function renderHall(){
  // 历届冠军（联盟时间线）
  html+=`<div class="panel"><h3>历届冠军 <span class="tag">联盟时间线 · 最近 ${th.length} 冠</span></h3>`;
  html+=th.length?th.map(t=>`<div class="match" style="margin-bottom:5px;padding:8px 10px;${t.champ===S.teamName?'border-color:rgba(217,164,65,.45)':''}">
- <div class="vs"><span class="tname" style="font-size:13px">${_escTxt(t.event)} · S${t.season}</span></div>
+ <div class="vs"><span class="tname" style="font-size:13px">${_escTxt(t.event)} · S${t.season==null?'—':t.season}</span></div>
  <div class="score" style="min-width:0;font-size:13px;color:${t.champ===S.teamName?'var(--gold)':'var(--txt)'}">${_escTxt(t.champ)}</div></div>`).join('')
  :'<div class="hint">本赛季尚未产生冠军</div>';
  if(Object.keys(byEv).length){
- html+=`<div class="hint mt8">按赛事：${Object.keys(byEv).map(ev=>ev+'×'+byEv[ev].length).join(' · ')}</div>`;
+ html+=`<div class="hint mt8">按赛事：${Object.keys(byEv).map(ev=>(ev||'其他')+'×'+byEv[ev].length).join(' · ')}</div>`;
  }
  html+=`</div>`;
  // FMVP
@@ -81,7 +81,7 @@ function renderHall(){
  // 最佳阵容
  html+=`<div class="panel"><h3>赛季最佳阵容 <span class="tag">历届一阵/二阵</span></h3>`;
  html+=awards.length?awards.map(a=>`<div style="margin-bottom:10px">
- <div class="hint" style="margin-bottom:4px">S${a.season} 赛季</div>
+ <div class="hint" style="margin-bottom:4px">S${a.season==null?'—':a.season} 赛季</div>
  <div style="font-size:12px;margin-bottom:2px"><span class="gold">一阵</span> ${(a.first||[]).map(x=>(POS[x.pos]?POS[x.pos][1]:'?')+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
  <div style="font-size:12px"><span class="dim">二阵</span> ${(a.second||[]).map(x=>(POS[x.pos]?POS[x.pos][1]:'?')+' '+_escTxt(x.name)+'（'+_escTxt(x.team)+'）').join('、')}</div>
  </div>`).join('')

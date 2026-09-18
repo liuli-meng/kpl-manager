@@ -257,7 +257,7 @@ footer{background:transparent;border-top:1px solid var(--line);
 .bp-phase{font-size:12px;font-weight:700;color:var(--gold)}
 .bp-stepnum{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}
 .bp-stepbar{width:74px;height:3px;background:var(--sunken);overflow:hidden}
-.bp-stepbar i{display:block;height:100%;background:var(--gold);transition:width .2s}
+.bp-stepbar i{display:block;height:100%;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:left center;transition:transform .25s}
 .bp-used{font-size:9px;color:var(--faint);max-height:72px;overflow-y:auto;line-height:1.6;padding-right:2px}
 .bp-hero-grid{display:flex;flex-wrap:wrap;gap:6px;max-height:228px;overflow-y:auto;padding:2px}
 .bp-hero{flex:1 1 96px;max-width:150px;background:var(--raise);border:1px solid var(--line);color:var(--txt);border-radius:3px;

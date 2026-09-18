@@ -1,7 +1,7 @@
 // 临时诊断：12~20 年全链路，抓膨胀/幽灵/年总指针/名单缩编/资金与王朝
 // 运行：node tests/late-diag.js --n=16 --seed=999983
 const vm = require('vm');
-const { makeDom, injectHelpers } = require('./harness');
+const { makeDom, injectHelpers } = require('../harness');
 
 const seedArg = (process.argv.find(a => a.startsWith('--seed=')) || '').split('=')[1];
 const SEED = seedArg ? (parseInt(seedArg, 10) || 1) : 999983;

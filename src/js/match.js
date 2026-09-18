@@ -281,19 +281,30 @@ function startPlayerMatch(){ // 常规赛入口（选手模式：代替 startMat
  if((me.age||0)<MATCH_MIN_AGE)logEvent(S,' 注册规则：'+me.name+'（'+me.age+'岁）未满 '+MATCH_MIN_AGE+' 岁，本场不可登场——教练会安排其他选手顶上');
  else logEvent(S,' '+me.name+' '+why+'，本场由队友顶上');
  }
- playerPlayAndFinish(S,m.opp,KPL.BO5,{stage:'regular'});
+ const mid=m.mid||('reg_'+(S.phase||'r1')+'_'+(S.matchIdx+1));
+ m.mid=mid;tagMatch(S,m,mid);
+ playerPlayAndFinish(S,m.opp,KPL.BO5,{stage:'regular',mid});
 }
 
 function startMatch(){
  if(S.preseason){toast(' 赛前转会期进行中：先去转会市场完成组队，结束转会期后联赛才开始');return;}
  const m=S.schedule[S.matchIdx];
  if(!m){toast('赛程已结束');return;}
- // 系列赛中断恢复：不重置比分，直接回到赛前准备
+ const mid=m.mid||('reg_'+(S.phase||'r1')+'_'+(S.matchIdx+1));
+ // 系列赛中断恢复（P2-7 校验身份）：mid 对不上 = 赛程指针已离开那场——
+ // 续打它会用旧比分污染当前对阵，按僵尸系列赛废弃重开
  if(S.series&&S.series.stage==='regular'){
+ if(!S.series.mid||S.series.mid===mid){
  showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第'+(S.series.mw+S.series.ow+1)+'局（'+S.series.mw+':'+S.series.ow+'）');
  return;
  }
- S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
+ logEvent(S,'⚠ 赛程修复：废弃未同步的常规赛残影（vs '+S.series.opName+' '+(S.series.mw||0)+':'+(S.series.ow||0)+'），本场重新开打');
+ console.warn('stale regular series discarded',S.series.mid,mid);
+ S.series=null;
+ }
+ m.mid=mid;
+ tagMatch(S,m,mid);
+ S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',mid,logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
  resetOppEnergy(S,m.opp); // 对手体力回满：衰减只在系列赛内累积
  showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
 }
@@ -518,7 +529,8 @@ function finishSeries(finalWin){
  if(sr.stage==='regular'){
  const g=myGroup(S);
  const t=(g&&S.tables[g])?S.tables[g][S.teamName]:null;
- const m=(S.schedule||[])[S.matchIdx];
+ // L2b：结果写回走 mid 权威解析（扁平表内就是 schedule 真对象），matchIdx 只作旧档兜底
+ const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||(S.schedule||[])[S.matchIdx];
  const ot=(g&&m&&S.tables[g])?S.tables[g][m.opp]:null;
  if(m){m.result=finalWin?'W':'L';m.myScore=sr.mw;m.opScore=sr.ow;}
  if(t){
@@ -531,9 +543,9 @@ function finishSeries(finalWin){
  if(finalWin){ot.l++;}else{ot.w++;ot.pts++;}
  ot.pw+=sr.ow;
  }
- const bonus=winGames*13;
+ const bonus=winGames*BONUS_PER_WIN_GAME.regular;
  S.fund+=bonus;
- if(finalWin&&Math.random()<0.5)S.fund+=33;
+ if(finalWin&&Math.random()<REG_WIN_EXTRA_CHANCE)S.fund+=REG_WIN_EXTRA;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
@@ -544,7 +556,7 @@ function finishSeries(finalWin){
  }else if(sr.stage==='card'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
- const bonus=winGames*20;
+ const bonus=winGames*BONUS_PER_WIN_GAME.card;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,'卡位赛：'+S.teamName+' '+(finalWin?'晋级':'遗憾落败')+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
@@ -556,9 +568,9 @@ function finishSeries(finalWin){
  }else if(sr.stage==='po'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
- const bonus=winGames*25;
+ const bonus=winGames*BONUS_PER_WIN_GAME.po;
  S.fund+=bonus;
- if(finalWin&&sr.poSlot==='总决赛')S.fund+=100;
+ if(finalWin&&sr.poSlot==='总决赛')S.fund+=PO_CHAMPION_BONUS;
  if(!finalWin&&sr.poSlot!=='总决赛'){
  // 联盟分润：按出局名次（总决赛败者的亚军分润由 playoffStep 冠军分支统一发放，此处不再发，避免双倍）
  const place=poPlace(sr.poSlot,false);
@@ -575,7 +587,7 @@ function finishSeries(finalWin){
  m.r=finalWin?sr.myName:sr.opName;
  if(m.a===sr.myName){m.ms=sr.mw;m.es=sr.ow;}else{m.ms=sr.ow;m.es=sr.mw;} // 擂台赛积分按 a/b 记小局
  }
- const bonus=winGames*20;
+ const bonus=winGames*BONUS_PER_WIN_GAME.cup;
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+sr.cupLabel+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');

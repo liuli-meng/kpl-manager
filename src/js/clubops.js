@@ -34,14 +34,14 @@ function dailyCommercialIncome(s){
  官方奖金选手分成不得低于 70%（士气/签约意愿体现），俱乐部最多留成 30% 入基金。
  统一入口：挑战者杯/EWC/亚运/年总/K甲 奖金全部走此函数。 */
 function grantPrize(s,total,label){
- const club=Math.round(total*0.3);
+ const club=Math.round(total*PRIZE_CLUB_SHARE);
  s.fund+=club;
  const roster=(s.players||[]).slice();
  if(roster.length)roster.forEach(p=>{
  p.morale=clamp((p.morale||50)+3,20,100);
  p.willingness=Math.min(100,(p.willingness||50)+2);
  });
- const each=roster.length?Math.round(total*0.7/roster.length):0;
+ const each=roster.length?Math.round(total*PRIZE_PLAYER_SHARE/roster.length):0;
  logEvent(s,' '+label+'：总奖金 '+total+' 万——选手分成 70%（人均约 '+each+' 万：士气+3 · 签约意愿+2），俱乐部留成 30%（+'+club+' 万）');
 }
 /* 赛段收官结算粉丝：阵容人气是基本盘，夺冠/亚军额外加成 */

@@ -1,6 +1,6 @@
 // 时代档残留探针：在现役档运行中 installEra 后再还原，看 AI 名册缓存是否被污染
 const vm = require('vm');
-const { makeDom, injectHelpers } = require('./harness');
+const { makeDom, injectHelpers } = require('../harness');
 const { dom } = makeDom();
 injectHelpers(dom);
 

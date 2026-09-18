@@ -107,6 +107,27 @@ const out = vm.runInContext(`
    else log('⑧nextDay 静默：'+ (S._quietSave?'批量跳过期不写盘':'正常 save 落盘'));
   }
 
+  // ⑩ 自由球员身份字段兜底：老档 freeAgents 缺 freeAgent/signCost/willingness → 读档补齐（且在当前刻度档上不被货币迁移再缩放）
+  S=newState('兜底队','兜');fillRoster(S,'mid');
+  S.moneyScaled=true;S.econReal=true;
+  const faDef=PLAYER_POOL.find(d=>d.pos==='mid')||PLAYER_POOL[0];
+  const faP=genSeasonPlayer(S,faDef);
+  delete faP.freeAgent;delete faP.signCost;delete faP.willingness;
+  S.freeAgents=[faP];
+  migrateSave();
+  const g=S.freeAgents[0];
+  const wantCost=Math.round(valueOf(overall(faP))*0.58);
+  if(g.freeAgent!==true)fail('⑩freeAgent 未补齐');
+  else if(g.signCost!==wantCost)fail('⑩signCost 应为 '+wantCost+'（当前刻度 58 折），实际 '+g.signCost);
+  else if(typeof g.willingness!=='number'||g.willingness<70||g.willingness>100)fail('⑩willingness 未补进口径区间[70,100]: '+g.willingness);
+  else log('⑩自由球员兜底：freeAgent 补齐 · signCost='+g.signCost+' · willingness='+g.willingness);
+  // ⑩b 已有有效字段不得被兜底覆盖
+  const keepCost=Math.round(valueOf(overall(g))*0.7);
+  S.freeAgents=[{...g,signCost:keepCost,freeAgent:true,willingness:88}];
+  migrateSave();
+  if(S.freeAgents[0].signCost!==keepCost||S.freeAgents[0].willingness!==88)fail('⑩b已有有效字段被覆盖: '+S.freeAgents[0].signCost+'/'+S.freeAgents[0].willingness);
+  else log('⑩b已有有效字段保持（signCost='+keepCost+' · willingness=88 均不被改写）');
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; '));
   return res.join(String.fromCharCode(10));
 })()

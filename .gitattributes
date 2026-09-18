@@ -1,0 +1,14 @@
+# 统一行尾：仓库此前是混态（77 个源文件里 9 个 CRLF：board/career/clubops/cups/kjia/
+# natcamp/season/state/ui-market.js，其余 LF），且 core.autocrlf=true 时按行做精确替换的
+# 脚本会在 CRLF 文件上「匹配 0 次」静默失败——上一轮审计就被绊过一次。
+# 见 OPTIMIZE-AUDIT.md「新发现」与 OPTIMIZE-AUDIT-2.md 第五节。
+* text=auto eol=lf
+*.js text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.svg text eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

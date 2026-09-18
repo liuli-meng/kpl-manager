@@ -51,7 +51,7 @@ function logCat(txt){
  for(const c of LOG_CATS){if(c.re.test(t))return c.k;}
  return 'other';
 }
-function logEvent(s,txt){s.eventLog.unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,200);} // 200：newSeason 的 AI 转会/青训日志很多，120 会把王朝反制等玩家向文案挤掉
+function logEvent(s,txt){(s.eventLog=s.eventLog||[]).unshift({txt,t:Date.now(),level:logLevel(txt),cat:logCat(txt)});s.eventLog=s.eventLog.slice(0,200);} // 200：newSeason 的 AI 转会/青训日志很多，120 会把王朝反制等玩家向文案挤掉
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(0,i);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function powerOf(s,name){
  if(name===s.teamName)return teamPower(s);
@@ -117,8 +117,10 @@ function genRoundSchedule(s){
  const g=myGroup(s);
  const opps=(s.groups[g]||[]).filter(n=>n!==s.teamName);
  shuffle(opps);
- s.schedule=opps.map((op,i)=>({round:i+1,opp:op,result:null,myScore:0,opScore:0}));
+ // L2b：常规赛对阵也发 mid 并登记进扁平表，与卡位/季后/杯赛同一套权威键（P2-7）
+ s.schedule=opps.map((op,i)=>({round:i+1,opp:op,result:null,myScore:0,opScore:0,mid:'reg_'+(s.phase||'r1')+'_'+(i+1)}));
  s.matchIdx=0;
+ try{(s.schedule||[]).forEach(m=>{if(m.mid)tagMatch(s,m,m.mid);});}catch(e){}
  buildGroupSchedule(s);
 }
 /* 全联盟赛程：每组单循环（6队→5轮×3场），玩家的场次留给真人打，其余由 AI 逐轮模拟 */
@@ -244,10 +246,16 @@ function playCardNext(s){
  playerPlayAndFinish(s,opName,KPL.BO7,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
  return;
  }
- // 系列赛中断恢复：不重置比分
+ // 系列赛中断恢复（P2-7 校验身份）：mid 不属于当前卡位场次 = 僵尸系列赛——
+ // 续打它会用旧比分把结果写进错误对阵，必须废弃重开
  if(s.series&&s.series.stage==='card'){
+ if(!s.series.mid||s.series.mid==='card_'+s.card.idx){
  showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
+ }
+ logEvent(s,'⚠ 赛程修复：废弃未同步的卡位赛残影（'+s.series.mid+'），本场重新开打');
+ console.warn('stale card series discarded',s.series.mid,s.card.idx);
+ s.series=null;
  }
  tagMatch(s,m,'card_'+s.card.idx);
  // L2：series 只留 mid（权威键），不再挂 cardMatch 对象引用——写结果一律 resolveSeriesMatch
@@ -410,10 +418,15 @@ function playPoMatch(s,m,slot){
  playerPlayAndFinish(s,opName,KPL.BO7,{stage:'po',mid:'po_'+slot,poSlot:slot});
  return;
  }
- // 系列赛中断恢复：不重置比分
+ // 系列赛中断恢复（P2-7 校验身份）：poSlot 不属于当前场次 = 僵尸系列赛，废弃重开
  if(s.series&&s.series.stage==='po'){
+ if(!s.series.poSlot||s.series.poSlot===slot){
  showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
+ }
+ logEvent(s,'⚠ 赛程修复：废弃未同步的季后赛残影（'+s.series.poSlot+'），本场重新开打');
+ console.warn('stale po series discarded',s.series.poSlot,slot);
+ s.series=null;
  }
  tagMatch(s,m,'po_'+slot);
  // L2：series 只留 mid，不再挂 poMatch 对象引用
@@ -495,9 +508,9 @@ function nextDay(s){
 function payWage(s){
  try{scrubWages(s);}catch(e){}
  const wage=weeklyWage(s);
- // 选手代言收入：人气 × 0.3万/周 × 粉丝系数（商业价值对冲工资帽压力）
+ // 选手代言收入：人气 × ENDORSE_PER_POP 万/周 × 粉丝系数（商业价值对冲工资帽压力）
  // 注意：×3 是旧千万级刻度残留——在现役「万」单位下会把基金刷爆（5 人人气 40 → 周入 600 万，远超周薪）
- const endorse=Math.round((s.players||[]).reduce((t,p)=>t+((p.popularity||0)*0.3),0)*fanMul(s,300));
+ const endorse=Math.round((s.players||[]).reduce((t,p)=>t+((p.popularity||0)*ENDORSE_PER_POP),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;

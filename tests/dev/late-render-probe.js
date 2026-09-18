@@ -1,7 +1,7 @@
 // 临时排查：UI/渲染层后期 bug（不改产品代码，只跑真实 render*）
 // 运行：node tests/late-render-probe.js
 const vm = require('vm');
-const { makeDom, injectHelpers } = require('./harness');
+const { makeDom, injectHelpers } = require('../harness');
 
 const { dom } = makeDom();
 injectHelpers(dom);

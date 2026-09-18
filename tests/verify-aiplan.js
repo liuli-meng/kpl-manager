@@ -10,6 +10,13 @@ const out = vm.runInContext(`
   const fail=m=>{res.push('[FAIL] '+m);hadFail=true;};
   const log=t=>res.push('[PASS] '+t);
 
+  /* 播种随机数（mulberry32，公版算法）。本测试的断言全是阈值型（成长不得倒退 / 豪门顶星
+     不得被拖垮 / 转会流动日志够多），而 aiTransferWindow 里每个 rnd() 都会改变这些计数——
+     不播种时同一份代码会有极低的偶发红（实测在整套 53 项的跑批里出现过一次，单跑 42 次不复现）。
+     固定种子把「阈值断言」变成可复现断言：挂了就是真回归，不再是机器负载噪声。 */
+  let _rs=20260918>>>0;
+  Math.random=function(){_rs=(_rs+0x6D2B79F5)>>>0;let t=_rs;t=Math.imul(t^(t>>>15),1|t);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};
+
   const mk=()=>{S=newState('AI规划队','x');fillRoster(S,'mid','mid');
    S.coach={...COACH_POOL.find(c=>c.id==='co12')};
    S.seedPower=380;initGroups(S);S.preseason=false;S.transferWindow=0;

@@ -531,7 +531,7 @@ function renderBP(){
  board=`<div class="bp-board">
  ${bpSideColumn(d,true)}
  <div class="bp-center"><div class="bp-phase">${phaseLabel(d)}</div>
- <div class="bp-stepnum">${Math.min(d.idx+1,18)} / ${d.isPeak?5:18} 手</div><div class="bp-stepbar"><i style="width:${Math.min(100,Math.round((d.idx)/(d.isPeak?5:18)*100))}%"></i></div>
+ <div class="bp-stepnum">${Math.min(d.idx+1,18)} / ${d.isPeak?5:18} 手</div><div class="bp-stepbar"><i data-v="${Math.min(100,Math.round((d.idx)/(d.isPeak?5:18)*100))}"></i></div>
  ${(d.used.length||d.usedOpp.length)?`<div class="bp-used" style="cursor:help" title="我方已用：${d.used.join('、')||'无'}
 对方已用：${d.usedOpp.join('、')||'无'}">全局BP已用 · 我方 ${d.used.length} 个 ｜ 对方 ${d.usedOpp.length} 个 · 悬停看明细</div>`:''}
  </div>
@@ -612,6 +612,17 @@ function renderBP(){
  <button class="btn primary" onclick="bpConfirm()" ${act.type!=='done'?'disabled':''}>确定出战</button>
  </div>`;
  $('#app-modal-body').innerHTML=html;
+ // 进度条补间：innerHTML 重建出的元素没有前态，transition 不会自发播放——
+ // 先贴旧值并强制提交（reflow），再写目标值才会被当作「变化」动画（transform 走合成层，不触发 layout）
+ const _bar=$('#app-modal-body .bp-stepbar i');
+ if(_bar){
+  const _to=Math.min(100,Math.round((d.idx)/(d.isPeak?5:18)*100));
+  const _from=d.idx===0?0:(window._bpStepV||0); // 新一场 BP 从 0 开始，不倒放
+  _bar.style.transform='scaleX('+(_from/100)+')';
+  void(_bar.offsetWidth);
+  _bar.style.transform='scaleX('+(_to/100)+')';
+  window._bpStepV=_to;
+ }
  $('#app-modal').classList.add('wide');
  $('#app-modal').classList.add('on');
 }
