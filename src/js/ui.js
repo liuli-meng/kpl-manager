@@ -33,10 +33,10 @@ function pcard(p,extra){
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
  const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*ENDORSE_PER_POP)}万/周 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
- return `<div class="pcard ${ovrCls(o)}">
+ return `<div class="pcard ${ovrCls(o)}" data-pos="${p.pos}">
  ${hpCls}
- <div class="p-top">${avatar(p,34)}<span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
- <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b style="font-size:16px">${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
+ <div class="p-top">${avatar(p,34)}<span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" data-pos="${p.pos}" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
+ <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b>${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
  ${stageHtml}
  ${contractHtml}
  ${appsHtml}
@@ -812,7 +812,7 @@ function renderTrain(){
  const total=['lane','farm','team','mind'].reduce((t,k)=>t+r.attrs[k],0);
  const ready=total>=300,adult=r.age>=MATCH_MIN_AGE;
  return `<div class="pcard" style="border-color:${ready&&adult?'var(--green)':'var(--line)'}">
- <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
+ <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos" data-pos="${r.pos}">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
  <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 周薪${r.wage}万</div>
  <div class="attr" style="margin-top:6px">
  <span>对线<i>${r.attrs.lane}</i></span><span>运营<i>${r.attrs.farm}</i></span>
