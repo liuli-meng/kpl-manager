@@ -140,6 +140,9 @@ function draftRepair(s,d){
  if(d.phase!=='auction'&&d.phase!=='pick'&&d.phase!=='done')d.phase=d.picks.length?'done':'auction';
  // 点名阶段但池子空了 = 死局（面板既没卡片也没放弃按钮，玩家卡在这一步）：直接收官
  if(d.phase==='pick'&&!d.pool.length)d.phase='done';
+ /* 旧档可能 done 与 phase 不一致（老版本 draftPick 不落盘，存档停在半场）：
+    「已收官但 phase 还停在点名/竞拍」会让面板显示成进行中、却一个按钮都不给 → 玩家以为选不了人。 */
+ if(d.done&&d.phase!=='done')d.phase='done';
  d.done=!!d.done||d.phase==='done';
  return d;
 }
@@ -468,11 +471,13 @@ function draftPanelHtml(){
  if(!d)return '';
  const kj=d.kjiaTier||draftKjiaTier(s);
  const taken=d.picks.filter(x=>x.playerId).length;
- const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&draftStillWant(s,s.teamName);
+ const rosterNow=(s.players||[]).length;
+ const myFull=!draftStillWant(s,s.teamName);   // 大名单满 → 既不能拍签也不能点名，界面必须说清楚
+ const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&!myFull;
  const mePick=d.phase==='pick'&&!d.done;
  const alive=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
- let html=`<div class="panel ${foldCls('mdraft')}" data-fold="mdraft"><h3>KPL 选秀大会 <span class="tag">${d.done?'已收官':(d.phase==='auction'?'竞拍签位':'点名')} · 已签 ${taken} · 第${Math.min(d.slot+1,d.order.length)}签 · 自留签剩 ${reserveLeft(s)}</span></h3>
- <div class="hint" style="margin-bottom:8px">流程：先<strong>竞拍签位</strong>（前8签 ${DRAFT_BID_TOP}万起 / 第9签起 ${DRAFT_BID_REST}万起，加价 ${DRAFT_BID_STEP} 万），拍到再<strong>点名</strong>。池子=训练营+K甲突出者（本届二队名次影响 K甲前三档：${kj.n}人 · 底子${kj.base}+）。<strong>不能选自家青训</strong>；自家苗子用训练页自留签（每季2个）。</div>`;
+ let html=`<div class="panel ${foldCls('mdraft')}" data-fold="mdraft"><h3>KPL 选秀大会 <span class="tag">${d.done?'已收官':(d.phase==='auction'?'竞拍签位':'点名')} · 已签 ${taken} · 第${Math.min(d.slot+1,d.order.length)}签 · 大名单 ${rosterNow}/${ROSTER_MAX} · 自留签剩 ${reserveLeft(s)}</span></h3>
+ <div class="hint" style="margin-bottom:8px">流程：先<strong>竞拍签位</strong>（前8签 ${DRAFT_BID_TOP}万起 / 第9签起 ${DRAFT_BID_REST}万起，加价 ${DRAFT_BID_STEP} 万），拍到再<strong>点名</strong>。池子=训练营+K甲突出者（本届二队名次影响 K甲前三档：${kj.n}人 · 底子${kj.base}+）。<strong>不能选自家青训</strong>；自家苗子用训练页自留签（每季2个）；大名单上限 ${ROSTER_MAX} 人。</div>`;
  if(!d.done&&d.phase==='auction'){
  html+=`<div class="match" style="border-color:var(--gold);margin-bottom:8px">
  <div class="vs"><div class="tname">第${d.slot+1}签</div><div class="power">起拍 ${draftSlotPrice(d.slot)}万</div></div>
@@ -485,20 +490,35 @@ function draftPanelHtml(){
  <button class="btn sm" onclick="draftBidPass()">放弃本签竞拍</button>
  </div>`;
  }else if(d.phase==='auction'){
- html+=`<div class="hint" style="margin-bottom:8px">等待其他队叫价…（你已放弃或未轮到）</div>`;
+ html+= myFull
+ /* 满员是最容易被当成「点了没反应」的状态：原本文案只说「你已放弃或未轮到」，
+    玩家看不出真正原因，也没有任何可做的动作。这里直说要先腾位置。 */
+ ?`<div class="hint" style="margin-bottom:8px;color:var(--red)">大名单已满（${rosterNow}/${ROSTER_MAX}）：无法再拍签。先去转会页卖掉或放走选手腾出位置，否则本届剩余签位全部由 AI 分配。</div>`
+ :`<div class="hint" style="margin-bottom:8px">等待其他队叫价…（你已放弃或未轮到）</div>`;
  }
  }
  if(d.phase==='pick'&&!d.done&&mePick){
- html+=`<div class="hint" style="margin-bottom:8px"><b class="gold">轮到你点名</b>（第${d.slot+1}签）${d.pool.length?'':'——池子已空，只能放弃本签'}</div>`;
+ html+=`<div class="hint" style="margin-bottom:8px"><b class="gold">轮到你点名</b>（第${d.slot+1}签）${d.pool.length?'':'——池子已空，只能放弃本签'}${myFull?`　<b class="red">但大名单已满（${rosterNow}/${ROSTER_MAX}），只能放弃本签</b>`:''}</div>`;
+ }
+ /* 大名单满员时整场选秀会被 AI 一口气跑完（玩家不是候选，竞拍不会停下来等），
+    面板直接显示「已收官」——玩家看不到任何可点的东西，只能得出「选不了人」的结论。
+    这里必须把原因写在脸上。 */
+ if(d.done&&myFull&&!d.picks.some(x=>x.team===s.teamName&&x.playerId)){
+ html+=`<div class="hint" style="color:var(--red);margin-bottom:8px">本届选秀你未能参与：开始时大名单已满（${rosterNow}/${ROSTER_MAX}）。想选新秀请先在转会页卖掉或放走选手腾位置，下届选秀即可参与。</div>`;
  }
  if(d.pool.length&&(d.phase==='pick'||mePick||d.done===false)){
  const interactive=mePick;
  html+=`<div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
- return pcard(p,interactive
+ const card=pcard(p,interactive
  ?(blocked?`<div class="hint mt8">本队青训 · 不可选</div>`
- :`<button class="btn sm primary mt8" style="width:100%" onclick="draftPick('${p.id}')"> 点名签约</button>`)
+ :`<button class="btn sm primary mt8" style="width:100%"> 点名签约</button>`)
  :'');
+ /* 整张卡可点：只把小按钮做成热区时，玩家点卡片本体没反应，会被当成「选不了人」。
+    onclick 只挂在外层容器上（内层按钮靠冒泡触发，避免一次点击调用两次 draftPick）。 */
+ return (interactive&&!blocked)
+ ?`<div onclick="draftPick('${p.id}')" style="cursor:pointer" title="点击签约">${card}</div>`
+ :card;
  }).join('')}</div>`;
  }
  // 放弃按钮必须独立于「池里有人」：池子空时原来连按钮都不渲染 → 玩家卡死在点名阶段

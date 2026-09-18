@@ -263,6 +263,50 @@ const out = vm.runInContext(`
   if(d13b.phase!=='done'||!d13b.done)fail('⑬b pick+空池 的坏档未归一化（phase='+d13b.phase+'）');
   else log('⑬b 坏档归一化：pick+空池 → 收官');
 
+  // ⑯ 大名单满员时必须说清原因（原来只说「你已放弃或未轮到」，玩家会以为点了没反应/选不了人）
+  const s16=mkS(0);
+  while(s16.players.length<ROSTER_MAX){
+    const pos=POS_ORDER[s16.players.length%5];
+    const def=PLAYER_POOL.find(x=>x.pos===pos&&!s16.players.some(y=>y.id===x.id)&&!(s16.retiredDefs||[]).includes(x.id));
+    if(!def)break;
+    s16.players.push(genPlayer(def));
+  }
+  const d16=initDraft(s16,true);
+  let h16='';
+  try{S=s16;goPage('market');h16=document.querySelector('#page-market').innerHTML;}catch(e){fail('⑯ 满员渲染异常 '+e.message);}
+  const fullOk=s16.players.length>=ROSTER_MAX;
+  const hasReason=h16.indexOf('大名单已满')>=0||h16.indexOf('未能参与')>=0;
+  if(!fullOk)fail('⑯ 未能构造满员名单（'+s16.players.length+'/'+ROSTER_MAX+'）');
+  else if(!hasReason)fail('⑯ 满员时面板没说明原因（只给「你已放弃或未轮到」/直接显示收官）');
+  else if(/<button[^>]*onclick="draftBid/.test(h16))fail('⑯ 满员时仍渲染了叫价/放弃按钮');
+  else if(h16.indexOf('大名单 '+s16.players.length+'/'+ROSTER_MAX)<0)fail('⑯ 面板标题未显示大名单人数');
+  else log('⑯ 满员（'+s16.players.length+'/'+ROSTER_MAX+'，phase='+d16.phase+'）：面板明示原因「大名单已满/未能参与」且不给叫价按钮');
+
+  // ⑰ 点名阶段整张卡可点，且一次点击只触发一次 draftPick（内层按钮不能再挂 onclick，否则冒泡会调两次）
+  const s17=mkS(0);const d17=initDraft(s17,true);
+  let g17=0;while(d17.phase==='auction'&&g17++<25)draftBidRaise(s17);
+  if(d17.phase!=='pick')fail('⑰ 未能进入点名阶段');
+  else{
+    let h17='';
+    try{S=s17;goPage('market');h17=document.querySelector('#page-market').innerHTML;}catch(e){fail('⑰ 渲染异常 '+e.message);}
+    const wrap=(h17.match(/onclick="draftPick\\('/g)||[]).length;
+    const btn=(h17.match(/<button[^>]*onclick="draftPick\\('/g)||[]).length;
+    if(!wrap)fail('⑰ 池卡片外层没有 onclick（点卡片本体没反应 → 会被当成选不了人）');
+    else if(btn)fail('⑰ 内层按钮也挂了 onclick：点击会冒泡触发两次 draftPick');
+    else log('⑰ 点名阶段 '+wrap+' 张卡整卡可点（onclick 只在容器上，单次触发）');
+  }
+
+  // ⑱ 老档 done/phase 不一致 → 归一化，否则面板显示进行中却一个按钮都不给
+  const s18=mkS(0);const d18=initDraft(s18,true);
+  d18.done=true;d18.phase='pick';
+  draftRepair(s18,d18);
+  const s18b=mkS(0);const d18b=initDraft(s18b,true);
+  d18b.done=true;d18b.phase='auction';
+  draftRepair(s18b,d18b);
+  if(d18.phase!=='done')fail('⑱ done=true 但 phase='+d18.phase+' 未归一化为收官');
+  else if(d18b.phase!=='done')fail('⑱ done=true + auction 未归一化（phase='+d18b.phase+'）');
+  else log('⑱ 老档归一化：done=true 时 phase 一律收敛为 done');
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()
