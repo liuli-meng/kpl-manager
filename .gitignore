@@ -2,3 +2,6 @@ node_modules/
 *.log
 Thumbs.db
 .DS_Store
+# 玩家导出的真实存档（saves/*.json）：含个人进度且每次都变，不该进版本库——
+# 与 kpl-manager-rewrite 的同一决定保持一致，免得 git status 长期碍眼或被 git add . 误收
+saves/
