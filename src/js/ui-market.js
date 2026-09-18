@@ -180,7 +180,7 @@ function renderMarket(){
  ${sortChips('sign')}
  <div class="g2">${applySortPref('sign',S.market).map(p=>{
  const c=costOf(p);
- return pcard(p,`<button class="btn sm primary" onclick="buyPlayer(S,S.market.find(x=>x.id==='${p.id}'))">签约 ${p.discount?`<s style="color:var(--dim)">${valueOf(overall(p))}万</s> ${c}万`:c+'万'}</button>`);
+ return pcard(p,`<button class="btn sm primary" onclick="buyPlayer(S,S.market.find(x=>x.id==='${p.id}'))">签约 ${p.discount?`<s>${valueOf(overall(p))}万</s> ${c}万`:c+'万'}</button>`);
  }).join('')||'<div class="hint">市场空空如也，刷新一下吧</div>'}</div>
  <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${S.transferWindow>0?'（转会期内免费）':'（5万）'}</button>
  </div>`;
