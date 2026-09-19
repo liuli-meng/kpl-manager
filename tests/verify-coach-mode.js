@@ -144,6 +144,11 @@ for (const mode of ['coach', 'manager']) {
     firedTally.push(`${mode}/${scene} ${before.length}→${after.length}`);
     check(before.length > 0, `④(${mode}/${scene}) 未下课也扫不到推进类按钮，这条差分什么都没测到（前提失效）`);
     check(after.length === 0, `④(${mode}/${scene}) 下课态仍留着推进类按钮（点了只有 toast）：${JSON.stringify(after.slice(0, 6))}`);
+    // 任务条上的「推进一场比赛 / 结束转会期开赛」也是同一类残留：onclick 只有 goPage，
+    // 不会被上面的判据抓到，但它把玩家指向一颗已经不存在的按钮，所以单独判
+    const strip = vm.runInContext(`(function(){ goPage('club');
+      return /新手任务|推进一场比赛|结束转会期开赛/.test(document.getElementById('page-club').innerHTML||''); })()`, dom);
+    check(!strip, `④(${mode}/${scene}) 下课态俱乐部页仍留着新手任务条的开赛指引`);
   }
 }
 // 下课页本身必须留一条明确出路（不能只剩一页无返货的按钮）
@@ -184,22 +189,28 @@ for (const mode of ['coach', 'manager']) {
 }
 
 // ── ⑥ 连续换赛段都要重建市场；换队执教后市场不能含新班底的人 ────────────
+// 两处都用「先清空/投毒、再看有没有重建」的写法：只查长度会靠开局那份旧池假绿
 {
   const dom = boot('coach');
   const r = vm.runInContext(`(function(){
     const faBoot=(S.freeAgents||[]).length;
+    S.freeAgents=[];                 // 掏空：换赛段这一步必须自己把市场建回来
     startSplit(S,'summer');
     const faSummer=(S.freeAgents||[]).length;
-    // 豪门邀约：接受后重建班底，市场必须随之重建
+    // 豪门邀约：先投一名「本队选手」进池，接受邀约后必须被重建冲掉（否则 coachAutoSquad 会把他再签一遍）
+    S.freeAgents=[S.players[0],...(S.freeAgents||[])];
+    const poisoned=S.freeAgents.length;
     const other=CLUB_TEMPLATES.find(c=>c.name!==S.teamName);
     S.coachOffer={team:other.name};
     respondCoachOffer(true);
     const ids=new Set(S.players.map(p=>p.id));
-    return {faBoot,faSummer,换队后池:(S.freeAgents||[]).length,
+    return {faBoot,faSummer,投毒数:poisoned,换队后池:(S.freeAgents||[]).length,
       换队后撞车:(S.freeAgents||[]).filter(p=>ids.has(p.id)).length,队名换了:S.teamName===other.name};
   })()`, dom);
-  check(r.faBoot > 0 && r.faSummer > 0 && r.换队后池 > 0,
-    `⑥ 市场没跟着身份走：开局 ${r.faBoot} → 换赛段 ${r.faSummer} → 换队后 ${r.换队后池}`);
+  check(r.faBoot > 0, `⑥ 教练档开局没建市场（freeAgents=${r.faBoot}）`);
+  check(r.faSummer > 0, `⑥ 换到夏季赛后市场仍是空的（startSplit 没重建：开局 ${r.faBoot} → 换段 ${r.faSummer}）`);
+  check(r.换队后池 > 0 && r.换队后池 !== r.投毒数,
+    `⑥ 换队执教后市场没重建（投毒后 ${r.投毒数} 人 → 换队后 ${r.换队后池} 人，那颗投进去的钉子还在）`);
   check(r.换队后撞车 === 0, `⑥ 换队执教后市场里仍有新班底选手 ${r.换队后撞车} 名（会被再签一遍）`);
   check(r.队名换了, '⑥ respondCoachOffer 没换成邀约队，用例前提失效');
 }
