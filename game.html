@@ -4460,6 +4460,8 @@ function newSeason(s){
 
 function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
+
+ s._afterMatch=null;
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
  if(s.mode==='player'){

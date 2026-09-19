@@ -750,6 +750,9 @@ function newSeason(s){
  年龄/合同/退役/工资帽结算只在年度轮换（newSeason）做，夏季赛年中直开（不老化）。 */
 function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
+ // 换赛段必须清掉挂起推进：_afterMatch 是闭包（不进存档）。春季赛最后一场杯赛若把它留在内存里，
+ // 夏季赛点「继续」会执行 challengerStep 而不是推进当天（match.js 的 closeMatchContinue 优先跑 after），白丢一天
+ s._afterMatch=null;
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
  if(s.mode==='player'){
