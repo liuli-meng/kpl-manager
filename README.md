@@ -829,7 +829,7 @@ v5.1 之后用户仍反馈「颜色太暗」。这次先量再改——`ladder-c
 - 真实存档（第 2 季 · 转会期）扫雷：修复前 `dirty=1`（`undefined万`），修复后 **errors/dirty/deadHandlers/dupIds/uiClickFail 全 0**；三种身份合成档扫雷同样 0 命中（`setSlot` 切到空槽回开局页属设计行为，已在扫雷里排除）。
 - 开局页队徽编辑器浏览器实测（390×780）：敲「星河」→ 预览出字、切外形高亮跟到第 3 项、点配色跟到第 6 项，出图 `gui-test-screenshots/start-crest-live.png`。
 - 静态 id 遮蔽扫描：修完 0 可疑项；`npm run build` → game.html 654KB；无头截图 桌面 10 页 + 移动 4 页零 console 报错、零横向溢出。
-- **仍未解决（外部条件）**：本地 `main` 领先 `origin/main` 5 个提交，视觉 v5/v6 至今没进 GitHub Pages——线上 `index.html` 与 `origin/main:game.html` 逐字节一致（661622B，`theme-color #141416`）。当前这台机器 `github.com:443` 直连被重置（`git fetch` 超时、`curl` 空响应），而 `github.io`/`api.github.com` 可达，代理 `127.0.0.1:10808` 未启动，所以推送要等网络或代理可用。
+- **推送与线上一致性（本轮实测更新）**：那 5 个视觉提交已于 2026-09-19 12:09 推上 `origin/main`（`0326931`），GitHub Pages 重新构建后线上已是 v6 石墨皮——抓回的 index.html 为 668952B、`theme-color #1b1f27`，与 CI 从 src 重建的产物同尺寸（`/kpl-manager/game.html` 仍 404，是 `pages.yml` 只发 index.html 的设计）。同一次 push 的 **CI 跑红**（`conclusion: failure`），正是上面第 1 条构建产物漂移卡在 `git diff --exit-code game.html`；Pages 是另一条 workflow，所以"CI 红但线上已更新"两件事会同时出现。本轮 4 个提交推上去后 CI 应转绿（`game.html` 已是 `npm run build` 的产物）。
 
 ## 2026-09 转会市场刷新：把「每日首刷免费」的口径收敛成一处
 
