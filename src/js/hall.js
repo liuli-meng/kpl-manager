@@ -179,7 +179,7 @@ function shareHonorCard(){
  const recent=myHon.slice(-3).reverse(); // honors 按时间序 push：取末 3 条倒序=最近三冠
  if(!recent.length){
  ctx.font='400 20px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#a6b0bf';
+ ctx.fillStyle='#adb7c5';
  ctx.fillText('奖杯柜还在等第一座冠军',56,y);y+=40;
  }else{
  recent.forEach(h=>{
@@ -198,7 +198,7 @@ function shareHonorCard(){
  // 页脚
  ctx.textAlign='center';
  ctx.font='400 16px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#a6b0bf';
+ ctx.fillStyle='#adb7c5';
  ctx.fillText('单机存档 · 数据来自本地赛季记录',375,1120);
  });
 }
@@ -239,7 +239,7 @@ function shareCareerCard(){
  });
  ctx.textAlign='center';
  ctx.font='400 16px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#a6b0bf';
+ ctx.fillStyle='#adb7c5';
  ctx.fillText('王者电竞经理 · KPL 篇',375,1120);
  });
 }

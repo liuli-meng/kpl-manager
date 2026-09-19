@@ -13,9 +13,10 @@
   --bg:#1b1f27; --surface:#232833; --surface2:#282e3a; --raise:#2f3644; --sunken:#161a21;
   --line:#3a4150; --line2:#4e5768;
   /* 文字三级：底色提亮后每一级都要重测，否则"亮是亮了，字糊了"。
-     --faint 用在 9.5-12px 小字上：#9ba5b5 在新行卡底 #2f3644 上只有 4.87:1，余量太薄，
-     提到 #a6b0bf = 5.53:1 */
-  --txt:#f3f6fb; --dim:#c5cdd9; --faint:#a6b0bf;
+     --faint 用在 9.5-12px 小字上：#9ba5b5 在新行卡底 #2f3644 上只有 4.87:1，余量太薄；
+     但真正的卡点是页头「资金」磁贴——它叠了一层金色 tint，--faint 的标签掉到 4.49:1。
+     提到 #adb7c5：纯行卡底 5.98:1、金 tint 底 4.87:1，两处都留出余量 */
+  --txt:#f3f6fb; --dim:#c5cdd9; --faint:#adb7c5;
   /* 主色 #6d9dff→#79aaff：旧值作 10.5-13px 标签文字时，在提亮一档的行卡底上只剩 4.3:1 */
   --accent:#79aaff; --accent-deep:#5b9cff; --accent2:#79aaff;
   --gold:#f0bb60; --red:#ff8f92; --green:#5cc486;
