@@ -79,6 +79,48 @@ const scored = p => [p.wb, p.lb, p.lb2, p.lb3].flat().concat([p.wf, p.lb4, p.lbf
   check(before !== after || vm.runInContext('!!S.series', dom), '④ 点「进行卡位赛」后状态毫无变化（按钮是死的）');
 }
 
+// ── ⑤⑥ 阵容缺位不得把玩家锁死：BP 开不出来时必须给"真能点的出口"，且补签后能开出 BP ──
+// （死锁成因：常规赛里时间只能靠打完比赛推进，openBP 旧版只 toast+return，
+//   实测 day 停住、S.series 挂着、nextAction 恒为 startMatch、页面零出口）
+{
+  const dom = freshBracketState();
+  // 把对抗路唯一选手打成伤停，并堵死青训与市场两条自救路（复现最恶劣局面）
+  vm.runInContext(`(function(){
+    S.players.filter(p=>p.pos==='top').forEach(p=>{p.injury=8;});
+    S.academy=[]; S.fund=20;
+    S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'reg',mid:'reg_r1_1',logs:[],myName:S.teamName,opName:AI_TEAMS[0].name,side:'blue'};
+  })()`, dom);
+  const noGo = vm.runInContext('lineupNoGo(S).length', dom);
+  check(noGo > 0, `⑤ 前置条件不成立：伤停后 lineupNoGo 为 0，测不到缺位路径`);
+  const modal = vm.runInContext(`(function(){
+    openBP('测试 BP',function(){});
+    const body=document.getElementById('app-modal-body').innerHTML||'';   // 沙箱 DOM 桩按选择器缓存，可直接读回写入的 HTML
+    return {body:body.slice(0,600), opened:/uiNoGoEmergency/.test(body)&&/uiNoGoDefer/.test(body), draft:!!window._draft};
+  })()`, dom);
+  check(modal.opened, '⑤ 缺位时 openBP 没有给出带出口按钮的弹窗（旧行为=toast+return，玩家被锁死）');
+  check(/紧急补签/.test(modal.body) && /推迟本场/.test(modal.body), '⑤ 缺位弹窗缺少「紧急补签」或「推迟本场」出口');
+  check(!modal.draft, '⑤ 缺位未处理却已经建好 BP 状态（顺序错了）');
+
+  const after = vm.runInContext(`(function(){
+    uiNoGoEmergency();                       // 点「紧急补签自由球员并继续」
+    return {noGo:lineupNoGo(S).length, draft:!!window._draft, board:!!document.querySelector('.bp-board')||!!window._draft};
+  })()`, dom);
+  check(after.noGo === 0, `⑥ 紧急补签后仍缺位 ${after.noGo} 个位置`);
+  check(after.draft, '⑥ 补齐阵容后 BP 仍未打开（玩家还是打不了这场）');
+
+  // 推迟休息：一局没打时允许，且必须真的推进时间（伤停 -1）
+  const defer = vm.runInContext(`(function(){
+    openBP('测试 BP',function(){});          // 再次触发缺位弹窗
+    const inj0=(S.players.find(p=>p.pos==='top'&&p.injury>0)||{}).injury||0;
+    const day0=S.day;
+    uiNoGoDefer();
+    return {dayDelta:S.day-day0, injuryNow:(S.players.find(p=>p.pos==='top'&&p.injury>0)||{}).injury, series:S.series?1:0};
+  })()`, dom);
+  check(defer.dayDelta === 1, `⑦「推迟本场 · 休息一天」没有推进时间（Δday=${defer.dayDelta}）`);
+  check(defer.injuryNow < 8, `⑦ 休息一天后伤停没减少（仍 ${defer.injuryNow} 天）`);
+  check(!defer.series, '⑦ 推迟后应清掉未开打的系列赛，让赛程可重开');
+}
+
 if (errors.length) {
   console.log('[FAIL] 季后赛/卡位赛入口回归:\n  ' + errors.join('\n  '));
   process.exitCode = 1;

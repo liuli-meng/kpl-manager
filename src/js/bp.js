@@ -240,15 +240,50 @@ function resetOppEnergy(s,opName){
  });
  s.aiPower[opName]=aiRosterPower(r,s,opName);
 }
+/* 阵容缺位时 BP 开不出来。原来只 toast 一句「签约替补顶位 / 青训晋升 / 休息等伤愈」就 return，
+   但常规赛里**时间只能靠打完比赛推进**（「推进一天」按钮只存在于转会期面板），所以第三条路不存在：
+   实测 day 停住、S.series 挂着、nextAction 恒为 startMatch、页面零出口 → 伤停永远好不了。
+   教练模式更狠：自由市场恒空（season.js 的 coach 分支提前 return，跳过了 buildTransferMarket），
+   连第一条路都没有。这里把三条路做成真能点的按钮，并补上缺失的第四条「推迟休息」。 */
+function showNoGoModal(title,onConfirm,noGo){
+ _noGoRetry={title,onConfirm};
+ const canDefer=!!(S.series&&S.series.mw+S.series.ow===0); // 一局没打才允许推迟，避免白丢系列赛进度
+ $('#app-modal-body').innerHTML=`
+ <h2>无法出战 · 阵容缺位 <span class="tag">${noGo.map(pos=>POS[pos][1]).join(' / ')}</span></h2>
+ <div class="hint" style="margin-bottom:10px">${noGoDetail(S,noGo)} 无法出战。挑一条处理完就能继续打本场。</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap">
+ <button class="btn primary" onclick="uiNoGoEmergency()">紧急补签自由球员并继续</button>
+ <button class="btn" onclick="closeModal('app-modal');goPage('market')">前往转会市场签约</button>
+ <button class="btn" onclick="closeModal('app-modal');goPage('train')">前往训练 · 青训晋升</button>
+ ${canDefer?`<button class="btn" onclick="uiNoGoDefer()">推迟本场 · 休息一天等伤愈</button>`:''}
+ </div>
+ ${canDefer?'':'<div class="hint mt8">本场已开出小局比分，不能推迟——请先补齐阵容再继续系列赛。</div>'}`;
+ $('#app-modal').classList.add('on');
+}
+function uiNoGoEmergency(){
+ if(typeof emergencyFillRoster==='function')emergencyFillRoster(S); // 自动模式同款：不花钱、按位置补自由球员
+ autoFillLineup(S);
+ closeModal('app-modal');
+ const r=_noGoRetry||{};_noGoRetry=null;
+ if(lineupNoGo(S).length){toast(' 紧急补签后仍有人无法出战（集训/伤停），请去转会市场签约或推迟本场');renderAll();return;}
+ save();renderAll();
+ openBP(r.title||'BP',r.onConfirm||function(){});
+}
+function uiNoGoDefer(){
+ const sr=S.series;
+ if(!sr){toast(' 当前没有待打的系列赛');return;}
+ if(sr.mw+sr.ow>0){toast(' 系列赛已开打，不能推迟');return;}
+ S.series=null;S.seriesAuto=false;
+ closeModal('app-modal');
+ nextDay(S);save();renderAll();
+ toast(' 已推迟本场：时间推进一天，伤停 -1 天，补齐阵容后可重新开赛');
+}
+let _noGoRetry=null; // 缺位处理弹窗记住原来的 BP 回调，补人后直接重试
 function openBP(title,onConfirm){
  autoFillLineup(S);
  const ls=rosterLineup(S);
  const noGo=lineupNoGo(S);
- if(noGo.length){
- const detail=noGoDetail(S,noGo);
- toast(' '+detail+' 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈');
- return;
- }
+ if(noGo.length){showNoGoModal(title,onConfirm,noGo);return;}
  const sr=S.series;
  const isPeak=sr&&sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：BO7 3:3 / BO9 4:4
  window._draft={
