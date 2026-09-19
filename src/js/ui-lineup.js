@@ -2,7 +2,20 @@
 function renderLineup(){
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
- let html=pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
+ // 教练模式：伤停/缺位时给出「去应急租借」入口（此前教练没有转会页，伤了只能干瞪眼）
+ let gapBanner='';
+ if(S.mode==='coach'){
+  const gaps=injuryGapPositions(S);
+  const inj=(S.players||[]).filter(p=>playerStatus(p,S).injury);
+  if(gaps.length||inj.length){
+   gapBanner=`<div class="panel" style="margin:0 0 10px;border-color:rgba(239,68,68,.5)">
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+   <div><b class="red">阵容告急</b>　<span class="hint">${inj.length?'伤停：'+inj.map(p=>p.name+'('+p.injury+'天)').join('、')+' · ':''}${gaps.length?gaps.map(p=>POS[p][0]).join('、')+' 无人可打':''}</span></div>
+   <button class="btn sm gold" onclick="goPage('market')">去应急租借 / 引援建议</button>
+   </div></div>`;
+  }
+ }
+ let html=gapBanner+pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
  <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 周薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);

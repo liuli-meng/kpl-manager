@@ -104,6 +104,8 @@ const SAVE_DEFAULTS=[
  ['aiRosterDefs',null,'AI 在册 def 映射'],
  ['career',null,'选手/教练生涯'],
  ['coachDeal',null,'教练合同履历'],
+ ['coachRecs',[],'教练引援/租借申请队列'],
+ ['clubChoice',null,'战队关系待办事件（选择题）'],
  ['trained',false,'当日成长行动已用'],
  ['marketRefreshed',false,'当日市场已刷新'],
  ['academyTrained',false,'当日青训已培养'],

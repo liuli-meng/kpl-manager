@@ -222,9 +222,72 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
  p.contract=(p.contract||0)+1; // 俱乐部统一续约一年
  });
  s.expiring=[];
+ // 教练引援申请队列：优先消化（伤停应急/教练点名），再走自动补位
+ if(s.mode==='coach'&&Array.isArray(s.coachRecs)&&s.coachRecs.length){
+  const rest=[];
+  s.coachRecs.forEach(rec=>{
+   try{
+    if(rec.type==='loan'&&rec.pid){
+     const cands=loanCandidates(s);
+     const hit=cands.find(c=>c.p.id===rec.pid)||cands.find(c=>c.p.pos===rec.pos);
+     if(hit&&loanCap(s)>(s.players||[]).filter(p=>p.loan).length){
+      loanPlayer(s,hit.from,hit.p.id);
+      return; // 成功租借
+     }
+    }
+    if(rec.type==='sign'&&rec.pid){
+     const fa=(s.freeAgents||[]).find(p=>p.id===rec.pid);
+     if(fa&&s.fund>(fa.signCost||0)&&!rosterFull(s)){
+      const cost=Math.max(0,Math.round(fa.signCost||valueOf(overall(fa))));
+      if(s.fund>=cost){
+       s.fund-=cost;fa.acqCost=cost;fa.contract=2;fa.loan=null;
+       delete fa.freeAgent;delete fa.signCost;
+       s.players.push(fa);
+       s.freeAgents=s.freeAgents.filter(x=>x.id!==fa.id);
+       s.aiRosters={};
+       logEvent(s,' 俱乐部采纳教练申请：签下自由球员 '+fa.name+'（'+POS[fa.pos][0]+' · 总值 '+overall(fa)+' · '+cost+'万）');
+       return;
+      }
+     }
+    }
+    if(rec.type==='gap'&&rec.pos){
+     // 纯缺位申请：自动签该位置自由人/新援
+     const need=rec.pos;
+     if(s.players.some(p=>p.pos===need&&matchEligible(s,p)))return;
+     const fa=(s.freeAgents||[]).filter(p=>p.pos===need).sort((a,b)=>overall(b)-overall(a))[0];
+     if(fa&&s.fund>=(fa.signCost||80)&&!rosterFull(s)){
+      const cost=Math.max(0,Math.round(fa.signCost||80));
+      s.fund-=cost;fa.acqCost=cost;fa.contract=2;
+      delete fa.freeAgent;delete fa.signCost;
+      s.players.push(fa);
+      s.freeAgents=s.freeAgents.filter(x=>x.id!==fa.id);
+      s.aiRosters={};
+      logEvent(s,' 俱乐部采纳教练申请：紧急签下 '+POS[need][0]+' '+fa.name+'（总值 '+overall(fa)+'）');
+      return;
+     }
+    }
+   }catch(e){}
+   rest.push(rec);
+  });
+  s.coachRecs=rest.slice(0,8);
+ }
  // 缺位判定看「现在能不能打」：伤停/集训/租借/未成年/K甲不算可用首发
  const playable=p=>p&&!playerStatus(p,s).loan&&matchEligible(s,p); // 只补 matchEligible 不管的「租入」
  let need=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos&&playable(p)));
+ // 教练模式：缺位优先尝试应急租借（自动），资金不足再自由签
+ if(s.mode==='coach'&&need.length&&(s.fund||0)>=80){
+  need.slice().forEach(pos=>{
+   const healthy=s.players.some(p=>p.pos===pos&&playable(p));
+   if(healthy)return;
+   try{
+    const cands=(loanCandidates(s)||[]).filter(c=>c.p.pos===pos);
+    if(cands.length&&s.fund>=cands[0].rent&&loanCap(s)>(s.players||[]).filter(p=>p.loan).length){
+     loanPlayer(s,cands[0].from,cands[0].p.id);
+     need=need.filter(x=>x!==pos);
+    }
+   }catch(e){}
+  });
+ }
  const u=new Set(s.players.map(p=>p.name));
  let g=0;
  while((s.players.length<7||need.length)&&g++<10){
@@ -234,9 +297,74 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
  p.contract=2;
  s.players.push(p);
  u.add(p.name);
- logEvent(s,(s.mode==='player'?' 俱乐部运作：':' 俱乐部引援：')+'签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
+ logEvent(s,(s.mode==='player'?' 俱乐部运作：':s.mode==='coach'?'俱乐部响应教练：':' 俱乐部引援：')+'签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
  if(need.length&&s.players.some(x=>x.pos===need[0]&&playable(x)))need.shift();
  }
+ s.lineup=buildBestLineup(s);
+}
+/* 教练引援建议：按缺位/最弱位置给出租借或直签候选（UI 展示 + 可一键申请） */
+function coachAdvice(s){
+ if(!s||s.mode!=='coach')return {gaps:[],weak:[],loans:[],signs:[]};
+ const gaps=injuryGapPositions(s);
+ const healthyPos=pos=>(s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p));
+ const weak=POS_ORDER.map(pos=>{
+  const list=healthyPos(pos);
+  const best=list.length?Math.max.apply(null,list.map(p=>overall(p))):0;
+  return {pos,best,cnt:list.length};
+ }).filter(x=>x.cnt===0||x.best<78).sort((a,b)=>(a.cnt-b.cnt)||(a.best-b.best));
+ const loans=(loanCandidates(s)||[]).slice(0,8).map(c=>({
+  id:c.p.id,pos:c.p.pos,name:c.p.name,from:c.from,ovr:overall(c.p),rent:c.rent,
+  gap:gaps.includes(c.p.pos),age:c.p.age
+ }));
+ const signs=(s.freeAgents||[]).slice().sort((a,b)=>{
+  const ag=gaps.includes(a.pos)?1:0,bg=gaps.includes(b.pos)?1:0;
+  if(ag!==bg)return bg-ag;
+  return overall(b)-overall(a);
+ }).slice(0,6).map(p=>({
+  id:p.id,pos:p.pos,name:p.name,ovr:overall(p),cost:Math.round(p.signCost||valueOf(overall(p))),
+  gap:gaps.includes(p.pos),age:p.age
+ }));
+ return {gaps,weak:weak.slice(0,4),loans,signs};
+}
+function coachRequest(s,type,pid,pos){
+ s=s||S;
+ if(!s||s.mode!=='coach'){toast('仅教练模式可用');return;}
+ s.coachRecs=s.coachRecs||[];
+ if(type==='loan'){
+  const hit=(loanCandidates(s)||[]).find(c=>c.p.id===pid);
+  if(!hit){toast('该选手暂不可租');return;}
+  if(s.coachRecs.some(r=>r.pid===pid&&r.type==='loan')){toast('已提交过该租借申请');return;}
+  s.coachRecs.unshift({type:'loan',pid,pos:hit.p.pos,name:hit.p.name});
+  logEvent(s,' 教练申请：租借 '+hit.p.name+'（'+POS[hit.p.pos][0]+' · '+hit.from+'）应急补位——俱乐部将尽快办理');
+  // 有缺位/伤停时立刻尝试执行，不等赛季轮换
+  if(injuryGapPositions(s).length||s.transferWindow===0){
+   const rest=s.coachRecs.slice();
+   s.coachRecs=[{type:'loan',pid,pos:hit.p.pos}];
+   coachAutoSquad(s);
+   if(s.players.some(p=>p.id===pid)){
+    toast(hit.p.name+' 租借加盟！');
+    s.coachRecs=s.coachRecs.filter(r=>!(r.pid===pid&&r.type==='loan'));
+    save();renderAll();return;
+   }
+   s.coachRecs=rest.filter(r=>!(r.pid===pid&&r.type==='loan'));
+   toast('已登记租借申请（资金/名额不足时俱乐部会在条件具备后办理）');
+  }else toast('租借申请已提交，俱乐部办理中');
+ }else if(type==='sign'){
+  const fa=(s.freeAgents||[]).find(p=>p.id===pid);
+  if(!fa){toast('该自由球员已不在名单');return;}
+  if(s.coachRecs.some(r=>r.pid===pid&&r.type==='sign')){toast('已提交过该引援申请');return;}
+  s.coachRecs.unshift({type:'sign',pid,pos:fa.pos,name:fa.name});
+  coachAutoSquad(s); // 立刻尝试：资金够就签
+  if(s.players.some(p=>p.id===pid))toast(fa.name+' 已加盟！');
+  else toast('引援申请已提交（俱乐部将在资金/名单允许时办理）');
+ }else if(type==='gap'){
+  if(!pos)return;
+  s.coachRecs.unshift({type:'gap',pos});
+  coachAutoSquad(s);
+  toast('已申请俱乐部补强 '+POS[pos][0]);
+ }
+ try{if(typeof playMoment==='function')playMoment(1,'教练申请已登记',null,null);}catch(e){}
+ save();renderAll();
 }
 function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；接受=换队执教，履历入册）
  if(s.board&&s.board.fired)return;

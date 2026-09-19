@@ -29,7 +29,8 @@ document.addEventListener('click',e=>{
 const MODE_PAGES={
  manager:['club','lineup','market','train','league','kjia','union','hall','biz'],
  player:['career','club','league','kjia','union','hall'], // 选手：生涯/球队日程/联赛/二队/联盟/荣誉馆
- coach:['club','lineup','train','league','kjia','union','hall'], // 教练：竞技全权，转会/经营由俱乐部打理
+ // 教练：竞技全权 + 紧急租借/引援建议（买断谈判仍由俱乐部打理，见 renderMarket 教练分支）
+ coach:['club','lineup','market','train','league','kjia','union','hall'],
 };
 function applyModeNav(){
  const pages=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;

@@ -270,8 +270,20 @@ function clubBoardPanel(){
  const kpi=b.kpi,last=(b.log||[])[0];
  // label 兜底：旧档/中间版本存档的 kpi 可能只有 target 没有 label，不能渲染出 undefined
  const kpiText=k=>k?('赛季末年度积分进前 '+(k.target||12)):'赛季末不评价（缺历史数据）';
+ // 战队关系待办：股东/赞助/球迷/更衣室选择题（board.js clubRelTick 写入）
+ let relHtml='';
+ if(S.clubChoice){
+  const c=S.clubChoice;
+  relHtml=`<div class="event-card" style="margin-top:10px;border-color:rgba(217,164,65,.55)">
+  <div class="et">关系事件 · ${_escTxt(c.title||'')}</div>
+  <p>${_escTxt(c.text||'')}</p>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+  ${(c.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="applyClubChoice(S,${i})">${_escTxt(o.l)}${o.trust?'（信任'+(o.trust>0?'+':'')+o.trust+(o.fund?' · 资金'+(o.fund>0?'+':'')+o.fund:'')+(o.morale?' · 士气'+(o.morale>0?'+':'')+o.morale:'')+'）':''}</button>`).join('')}
+  </div></div>`;
+ }
  return `<div class="panel">
  <h3>董事会 <span class="tag" style="color:${col}">信任度 ${t} · ${boardTierText(S)}</span>${t<=BOARD_WARN_TRUST?'<span class="tag" style="color:var(--red)">最后通牒</span>':''}</h3>
+ ${relHtml}
  ${S.career&&S.career.legacy?`<div class="hint" style="margin-bottom:6px">名宿出身：${S.career.legacy.name} 由选手生涯转型（${S.career.legacy.seasons||0} 赛季 · ${S.career.legacy.titles||0} 冠 · 生涯总值峰值 ${S.career.legacy.ovr||'—'}）</div>`:''}
  <div class="meter"><span class="m-label">信任度</span><div class="m-track"><div style="width:${clamp(t,0,100)}%;background:${col}"></div></div><b class="m-val" style="color:${col}">${clamp(t,0,100)}</b></div>
  <div style="font-size:13px">本赛季目标：<b>${kpiText(kpi)}</b>

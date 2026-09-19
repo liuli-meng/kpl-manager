@@ -1,5 +1,7 @@
 /* 转会市场页 UI（从 ui.js 拆出：只搬渲染，买卖引擎在 transfer/players） */
 function renderMarket(){
+ // 教练模式：不做买断/挂牌生意，但必须能应急租借 + 向俱乐部提引援建议
+ if(S.mode==='coach'){renderCoachMarket();return;}
  const costOf=p=>Math.round(valueOf(overall(p))*(p.discount||1));
  // 转会期提示条：开局落在市场页，结束转会期按钮在俱乐部页——这里补回跳，避免找不到怎么开赛
  let windowBanner='';
@@ -191,4 +193,54 @@ function renderMarket(){
  :`<button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button><button class="btn sm" style="flex:1" onclick="listPlayer(S,'${p.id}')"> 挂牌</button>`}</div>`);}).join('')||'<div class="hint">全部队员都在首发阵容中</div>'}</div>`:'<div class="hint">还没有队员</div>'}
  </div>`;
  $('#page-market').innerHTML=windowBanner+pageHint('market')+tempHtml+draftHtml+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
+}
+/* 教练模式转会页：应急租借 + 引援建议（申请由俱乐部执行，教练不能挂牌/卖人） */
+function renderCoachMarket(){
+ const adv=coachAdvice(S);
+ const gaps=adv.gaps||[];
+ const recs=S.coachRecs||[];
+ const myLoans=(S.players||[]).filter(p=>p.loan);
+ const cap=typeof loanCap==='function'?loanCap(S):2;
+ const injured=(S.players||[]).filter(p=>{
+  const st=playerStatus(p,S);
+  return st.injury||st.kjia||st.loanOut||st.natCamp;
+ });
+ let html=pageHint('market');
+ html+=`<div class="panel" style="border-color:rgba(92,138,245,.45)">
+ <h3>教练工作台 · 应急与引援 <span class="tag">买断挂牌由俱乐部打理</span></h3>
+ <div class="hint" style="margin-bottom:8px">伤停/集训缺人时可<b>紧急租借</b>；也可向俱乐部提交<b>引援申请</b>（资金与名单允许时自动办理）。不能挂牌出售选手——那是管理层的事。</div>
+ ${gaps.length?`<div class="hint" style="color:var(--red);margin-bottom:8px">⚠ ${gaps.map(p=>POS[p][0]).join('、')} 位置当前无人可打——建议立刻租借补位</div>`:''}
+ ${injured.length?`<div class="hint" style="margin-bottom:8px">非健康名单：${injured.map(p=>{const st=playerStatus(p,S);return p.name+'（'+(st.injury?st.injuryDays+'天伤停':st.kjia?'K甲':st.loanOut?'外租':'集训')+'）';}).join(' · ')}</div>`:''}
+ ${recs.length?`<div class="hint" style="margin-bottom:8px"><b>待处理申请：</b>${recs.map(r=>(r.type==='loan'?'租借 ':(r.type==='sign'?'直签 ':'补位 '))+(r.name||(r.pos?POS[r.pos][0]:'—'))).join(' · ')}</div>`:''}
+ </div>`;
+ // 应急租借
+ html+=`<div class="panel"><h3>应急租借市场 <span class="tag">${LOAN_DAYS} 天 · 名额 ${myLoans.length}/${cap}${cap>LOAN_CAP_BASE?' · 伤停应急':''}</span></h3>
+ <div class="hint" style="margin-bottom:8px">租金约身价 15%，工资由原队承担；非卖品不外借。缺位位置优先推荐。</div>
+ ${myLoans.length?`<div style="margin-bottom:8px">${myLoans.map(p=>`<div class="match" style="margin-bottom:5px;padding:7px 10px"><div class="vs"><span class="tname">${p.name} <span class="dim" style="font-size:10px">(${POS[p.pos][0]} · ${p.loan.from} · 剩 ${p.loan.days} 天)</span></span></div></div>`).join('')}</div>`:''}
+ <div style="max-height:280px;overflow-y:auto">${(adv.loans||[]).map(c=>`
+  <div class="match" style="margin-bottom:6px;padding:8px 10px">
+  <div class="vs"><span class="tname" style="font-size:13px">${c.name} <span class="dim" style="font-size:10px">(${c.from} · ${POS[c.pos][0]} · 总值${c.ovr}${c.gap?' · <b class="red">缺位优先</b>':''})</span></span></div>
+  <div class="score" style="font-size:13px">租金 ${c.rent}万</div>
+  <div style="display:flex;gap:4px">
+   <button class="btn sm primary" onclick="loanPlayer(S,'${c.from}','${c.id}')">立即租借</button>
+   <button class="btn sm" onclick="coachRequest(S,'loan','${c.id}')">申请租借</button>
+  </div>
+  </div>`).join('')||'<div class="hint">联盟暂无可租借选手</div>'}</div>
+ </div>`;
+ // 引援建议
+ html+=`<div class="panel"><h3>教练引援建议 <span class="tag">向俱乐部提交 · 自动办理</span></h3>
+ <div class="hint" style="margin-bottom:8px">按缺位与最弱位置推荐。申请后俱乐部会尽快签约；资金不足会排队。</div>
+ ${adv.weak&&adv.weak.length?`<div class="hint" style="margin-bottom:8px"><b>阵容短板：</b>${adv.weak.map(w=>POS[w.pos][0]+'（'+(w.cnt?w.cnt+'人·顶值'+w.best:'无人')+'）').join(' · ')}
+ ${adv.weak.filter(w=>w.cnt===0).map(w=>`<button class="btn sm" style="margin-left:6px" onclick="coachRequest(S,'gap',null,'${w.pos}')">申请补 ${POS[w.pos][0]}</button>`).join('')}</div>`:''}
+ <div class="g2">${(adv.signs||[]).map(p=>`
+  <div class="match" style="margin-bottom:6px;padding:8px 10px">
+  <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span class="dim" style="font-size:10px">(自由市场 · ${POS[p.pos][0]} · 总值${p.ovr}${p.gap?' · <b class="red">缺位</b>':''})</span></span></div>
+  <div class="score" style="font-size:13px">${p.cost}万</div>
+  <button class="btn sm gold" onclick="coachRequest(S,'sign','${p.id}')">申请直签</button>
+  </div>`).join('')||'<div class="hint">自由市场暂无推荐</div>'}</div>
+ </div>`;
+ html+=`<div class="panel"><h3>我的队员（伤病/名单）</h3>
+ <div class="grid g4">${(S.players||[]).map(p=>pcard(p,'')).join('')||'<div class="hint">暂无队员</div>'}</div>
+ </div>`;
+ $('#page-market').innerHTML=html;
 }

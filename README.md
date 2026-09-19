@@ -137,6 +137,13 @@ src/
 - **UI 按页拆**：`ui.js` 只留共享件（卡片、Header、守卫、排序、队徽、俱乐部赛段）；各页独立 `ui-<page>.js`。构建按 `index.html` 的 script 顺序拼接，新增页先加 script 标签再写文件
 - **选手状态唯一出口**：伤停/K甲/外租/集训/退役/闹离队等旗标一律读 `playerStatus(p,s)`（`state.js`），禁止各处 `if (p.kjia>0 || p.loanOut || …)` 自行拼条件。新旗标先在 `playerStatus` 登记，再在守卫/UI 里消费
 - **存档兼容**：字段缺省一律登记 `SAVE_DEFAULTS`（`state.js`），由 `applySaveDefaults` 统一兜底——禁止再写散落的 `S.x=S.x||default`。结构变更走 `MIGRATIONS` 版本链；经济刻度走 `migrateMoneyScale`（×10）/ `migrateEconReal`（÷6）一次性标记；复杂变换拆成命名步骤（`migratePlayerFields` / `migrateSeasonShape`…）。矩阵单测 `tests/verify-migrate.js`：空壳档 / 已有值不覆盖 / v3 董事会 / 单段÷6 / 两段链 / 幂等
+
+### 教练模式与战队关系（2026-09）
+
+- **教练有「转会」页**（仅竞技向）：应急租借 + 引援建议/申请；不能挂牌出售——那是管理层的事
+- **伤停应对**：阵容页伤病横幅 → 应急租借；`coachAutoSquad` 缺位时自动租借/签约；教练可 `coachRequest` 提交申请队列 `s.coachRecs`
+- **战队关系事件** `clubRelTick`（`board.js`）：每日约 12–28% 触发（低信任更频繁）→ 自动改信任，或出选择题（股东晚宴/赞助商点名/球迷围堵/名嘴质疑/加练要求/更衣室泄露）。选项影响 `board.trust` + 资金 + 士气；单次信任变化 clamp[-15,12]
+- 回归：`verify-coachloan.js` / `verify-relations.js`
 - **全局 `S`**：允许引擎内直接改（单机单档），但新代码优先 `function foo(s, …)` 显式传状态，便于测试与子系统复用
 
 ## 设计系统 v4 「TOUCHLINE」FM 经理模式风

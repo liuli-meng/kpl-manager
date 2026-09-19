@@ -1121,6 +1121,8 @@ const SAVE_DEFAULTS=[
  ['aiRosterDefs',null,'AI 在册 def 映射'],
  ['career',null,'选手/教练生涯'],
  ['coachDeal',null,'教练合同履历'],
+ ['coachRecs',[],'教练引援/租借申请队列'],
+ ['clubChoice',null,'战队关系待办事件（选择题）'],
  ['trained',false,'当日成长行动已用'],
  ['marketRefreshed',false,'当日市场已刷新'],
  ['academyTrained',false,'当日青训已培养'],
@@ -4185,6 +4187,7 @@ function nextDay(s){
  }
  loanOutTick(s); // 任何外租选手日结（选手自请 + 俱乐部外租共用）
  natCampTick(s); // 亚运集训日结：征召选手在国家队合练涨状态
+ if(typeof clubRelTick==='function')clubRelTick(s); // 战队关系事件（媒体/股东/赞助/更衣室）
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
  if(s.transferWindow>0){
@@ -4672,6 +4675,107 @@ function boardTierText(s){ // 面板用一句人话概括董事会态度
  if(t>=40)return '观望';
  if(t>=BOARD_WARN_TRUST)return '不满';
  return '最后通牒';
+}
+
+const BOARD_TRUST_MIN=0,BOARD_TRUST_MAX=100;
+function boardRelDelta(s,delta,note){
+ if(!s||s.mode==='player')return 0;
+ s.board=s.board||{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
+ const before=s.board.trust==null?60:s.board.trust;
+ const d=clamp(Math.round(delta),-15,12);
+ s.board.trust=clamp(before+d,BOARD_TRUST_MIN,BOARD_TRUST_MAX);
+ if(note)logEvent(s,'【关系】'+note+'：信任度 '+(d>=0?'+':'')+d+'（当前 '+s.board.trust+'）');
+ try{if(d>=5&&typeof playMoment==='function')playMoment(1,'俱乐部关系升温','信任度 '+s.board.trust,'gold');}catch(e){}
+ return d;
+}
+function applyBoardTrust(s,delta,note){return boardRelDelta(s,delta,note);}
+function clubRelChoices(s){
+ return [
+  {id:'gala',title:'股东答谢晚宴',text:'大股东邀请管理层出席晚宴，希望你亲自站台。缺席可能被解读为不重视俱乐部。',
+   opts:[
+    {l:'盛装出席',trust:4,fund:0,morale:0,note:'晚宴上重申争冠目标，股东很满意'},
+    {l:'让助教代劳',trust:-2,fund:0,morale:2,note:'你留在基地盯训练，股东略感冷落，但队员看到你全勤备战'},
+   ]},
+  {id:'sponsor',title:'赞助商点名上场',text:'主赞助商希望某位人气选手多出场，暗示商务合作续签看曝光。',
+   opts:[
+    {l:'商务优先，调整首发',trust:5,fund:40,morale:-4,note:'赞助商满意，加签曝光合约；部分队员对轮换不满'},
+    {l:'竞技优先，婉拒商务',trust:2,fund:0,morale:5,note:'更衣室为你点赞；赞助商表示理解但期待成绩'},
+   ]},
+  {id:'fans',title:'球迷围堵主场',text:'连续失利后，极端球迷在主场外拉横幅，俱乐部形象承压。',
+   opts:[
+    {l:'公开道歉+开放日',trust:3,fund:-20,morale:4,note:'你亲自见面球迷，俱乐部口碑回暖'},
+    {l:'强硬回应：成绩说话',trust:-4,fund:0,morale:-3,note:'管理层认为公关失分，队内也有些寒心'},
+   ]},
+  {id:'media',title:'名嘴公开质疑',text:'头部解说连发三条微博质疑你的战术，话题冲上热搜。',
+   opts:[
+    {l:'赛后用胜利回击',trust:1,fund:0,morale:6,note:'更衣室憋了一口气，下一场格外拼'},
+    {l:'发布会长文回应',trust:3,fund:-10,morale:0,note:'公关处理得体，管理层松了口气'},
+   ]},
+  {id:'board_drill',title:'董事会要求加练',text:'董事认为近期训练量不足，要求加开夜训。',
+   opts:[
+    {l:'执行夜训',trust:4,fund:0,morale:-6,note:'管理层满意；队员疲惫，士气下滑'},
+    {l:'科学调控，拒绝硬灌',trust:-2,fund:0,morale:5,note:'你坚持训练计划，队员感激，董事会不置可否'},
+   ]},
+  {id:'leak',title:'更衣室录音外泄',text:'一段更衣室争执录音在网上流传，俱乐部内部气氛紧张。',
+   opts:[
+    {l:'内部处理，冷处理媒体',trust:-1,fund:0,morale:-2,note:'事情压下去了，但信任有些裂痕'},
+    {l:'公开调查+队内会议',trust:3,fund:-15,morale:3,note:'流程干净，队员觉得被尊重'},
+   ]},
+ ];
+}
+function clubRelAutoEvent(s){
+ if(!s||s.mode==='player'||s.board&&s.board.fired)return null;
+ const streak=s.streak||0;
+ const trust=s.board&&s.board.trust!=null?s.board.trust:60;
+ const pool=[];
+ if(streak>=3)pool.push({id:'press',note:'连胜登上头条，赞助商与股东一致好评',trust:3});
+ if(streak<=-3)pool.push({id:'slump',note:'连败引发管理层警觉，内部会议气氛凝重',trust:-4});
+ if((s.fans||0)>=20)pool.push({id:'fanlove',note:'粉丝规模突破里程碑，俱乐部品牌价值上升',trust:2});
+ if((s.fund||0)<200)pool.push({id:'cash',note:'俱乐部现金流吃紧，董事会关注运营',trust:-3});
+ if((s.honors||[]).some(h=>h.season===s.season&&h.champion))pool.push({id:'parade',note:'夺冠游行反响热烈，俱乐部声望大涨',trust:5});
+ if(trust>=85)pool.push({id:'favor',note:'管理层对你高度满意，放权信号明显',trust:1});
+ if(trust<=30)pool.push({id:'heat',note:'董事会私下召开专题会，关注你的帅位',trust:-2});
+ if(!pool.length){
+  pool.push(
+   {id:'day_ok',note:'例行管理层沟通顺畅',trust:1},
+   {id:'day_noise',note:'媒体小作文扰动，公关连夜灭火',trust:-1},
+   {id:'day_sponsor',note:'区域赞助商到访基地，留下好印象',trust:2},
+   {id:'day_ops',note:'主场票务投诉增多，运营压力转嫁到你头上',trust:-2},
+  );
+ }
+ return pick(pool);
+}
+function clubRelTick(s){
+ if(!s||s.mode==='player')return;
+ if(s.board&&s.board.fired)return;
+ if(s.clubChoice)return; // 有未决关系事件：先处理
+
+ const t=s.board&&s.board.trust!=null?s.board.trust:60;
+ const p=t<40?0.28:t>75?0.12:0.18;
+ if(Math.random()>=p)return;
+
+ if(Math.random()<0.4){
+  const c=pick(clubRelChoices(s));
+  s.clubChoice={id:c.id,title:c.title,text:c.text,opts:c.opts.map(o=>({l:o.l,trust:o.trust,fund:o.fund||0,morale:o.morale||0,note:o.note}))};
+  logEvent(s,'【关系】'+c.title+'——俱乐部页待你表态：'+c.text);
+  try{if(typeof playMoment==='function')playMoment(1,'俱乐部关系事件',c.title,null);}catch(e){}
+ }else{
+  const ev=clubRelAutoEvent(s);
+  if(ev)boardRelDelta(s,ev.trust,ev.note);
+ }
+}
+function applyClubChoice(s,idx){
+ s=s||S;
+ if(!s||!s.clubChoice){toast('当前没有待处理的俱乐部关系事件');return false;}
+ const c=s.clubChoice;
+ const opt=(c.opts||[])[idx];
+ if(!opt){toast('选项无效');return false;}
+ s.fund=Math.max(0,(s.fund||0)+(opt.fund||0));
+ if(opt.morale)(s.players||[]).forEach(p=>{p.morale=clamp((p.morale||50)+(opt.morale||0),20,100);});
+ boardRelDelta(s,opt.trust||0, (c.title||'关系事件')+'：你选择「'+opt.l+'」——'+(opt.note||''));
+ s.clubChoice=null;
+ save();renderAll();
+ return true;
 }
 
 </script>
@@ -6489,8 +6593,71 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
  });
  s.expiring=[];
 
+ if(s.mode==='coach'&&Array.isArray(s.coachRecs)&&s.coachRecs.length){
+  const rest=[];
+  s.coachRecs.forEach(rec=>{
+   try{
+    if(rec.type==='loan'&&rec.pid){
+     const cands=loanCandidates(s);
+     const hit=cands.find(c=>c.p.id===rec.pid)||cands.find(c=>c.p.pos===rec.pos);
+     if(hit&&loanCap(s)>(s.players||[]).filter(p=>p.loan).length){
+      loanPlayer(s,hit.from,hit.p.id);
+      return; // 成功租借
+     }
+    }
+    if(rec.type==='sign'&&rec.pid){
+     const fa=(s.freeAgents||[]).find(p=>p.id===rec.pid);
+     if(fa&&s.fund>(fa.signCost||0)&&!rosterFull(s)){
+      const cost=Math.max(0,Math.round(fa.signCost||valueOf(overall(fa))));
+      if(s.fund>=cost){
+       s.fund-=cost;fa.acqCost=cost;fa.contract=2;fa.loan=null;
+       delete fa.freeAgent;delete fa.signCost;
+       s.players.push(fa);
+       s.freeAgents=s.freeAgents.filter(x=>x.id!==fa.id);
+       s.aiRosters={};
+       logEvent(s,' 俱乐部采纳教练申请：签下自由球员 '+fa.name+'（'+POS[fa.pos][0]+' · 总值 '+overall(fa)+' · '+cost+'万）');
+       return;
+      }
+     }
+    }
+    if(rec.type==='gap'&&rec.pos){
+
+     const need=rec.pos;
+     if(s.players.some(p=>p.pos===need&&matchEligible(s,p)))return;
+     const fa=(s.freeAgents||[]).filter(p=>p.pos===need).sort((a,b)=>overall(b)-overall(a))[0];
+     if(fa&&s.fund>=(fa.signCost||80)&&!rosterFull(s)){
+      const cost=Math.max(0,Math.round(fa.signCost||80));
+      s.fund-=cost;fa.acqCost=cost;fa.contract=2;
+      delete fa.freeAgent;delete fa.signCost;
+      s.players.push(fa);
+      s.freeAgents=s.freeAgents.filter(x=>x.id!==fa.id);
+      s.aiRosters={};
+      logEvent(s,' 俱乐部采纳教练申请：紧急签下 '+POS[need][0]+' '+fa.name+'（总值 '+overall(fa)+'）');
+      return;
+     }
+    }
+   }catch(e){}
+   rest.push(rec);
+  });
+  s.coachRecs=rest.slice(0,8);
+ }
+
  const playable=p=>p&&!playerStatus(p,s).loan&&matchEligible(s,p); // 只补 matchEligible 不管的「租入」
  let need=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos&&playable(p)));
+
+ if(s.mode==='coach'&&need.length&&(s.fund||0)>=80){
+  need.slice().forEach(pos=>{
+   const healthy=s.players.some(p=>p.pos===pos&&playable(p));
+   if(healthy)return;
+   try{
+    const cands=(loanCandidates(s)||[]).filter(c=>c.p.pos===pos);
+    if(cands.length&&s.fund>=cands[0].rent&&loanCap(s)>(s.players||[]).filter(p=>p.loan).length){
+     loanPlayer(s,cands[0].from,cands[0].p.id);
+     need=need.filter(x=>x!==pos);
+    }
+   }catch(e){}
+  });
+ }
  const u=new Set(s.players.map(p=>p.name));
  let g=0;
  while((s.players.length<7||need.length)&&g++<10){
@@ -6500,9 +6667,74 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
  p.contract=2;
  s.players.push(p);
  u.add(p.name);
- logEvent(s,(s.mode==='player'?' 俱乐部运作：':' 俱乐部引援：')+'签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
+ logEvent(s,(s.mode==='player'?' 俱乐部运作：':s.mode==='coach'?'俱乐部响应教练：':' 俱乐部引援：')+'签下自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
  if(need.length&&s.players.some(x=>x.pos===need[0]&&playable(x)))need.shift();
  }
+ s.lineup=buildBestLineup(s);
+}
+
+function coachAdvice(s){
+ if(!s||s.mode!=='coach')return {gaps:[],weak:[],loans:[],signs:[]};
+ const gaps=injuryGapPositions(s);
+ const healthyPos=pos=>(s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p));
+ const weak=POS_ORDER.map(pos=>{
+  const list=healthyPos(pos);
+  const best=list.length?Math.max.apply(null,list.map(p=>overall(p))):0;
+  return {pos,best,cnt:list.length};
+ }).filter(x=>x.cnt===0||x.best<78).sort((a,b)=>(a.cnt-b.cnt)||(a.best-b.best));
+ const loans=(loanCandidates(s)||[]).slice(0,8).map(c=>({
+  id:c.p.id,pos:c.p.pos,name:c.p.name,from:c.from,ovr:overall(c.p),rent:c.rent,
+  gap:gaps.includes(c.p.pos),age:c.p.age
+ }));
+ const signs=(s.freeAgents||[]).slice().sort((a,b)=>{
+  const ag=gaps.includes(a.pos)?1:0,bg=gaps.includes(b.pos)?1:0;
+  if(ag!==bg)return bg-ag;
+  return overall(b)-overall(a);
+ }).slice(0,6).map(p=>({
+  id:p.id,pos:p.pos,name:p.name,ovr:overall(p),cost:Math.round(p.signCost||valueOf(overall(p))),
+  gap:gaps.includes(p.pos),age:p.age
+ }));
+ return {gaps,weak:weak.slice(0,4),loans,signs};
+}
+function coachRequest(s,type,pid,pos){
+ s=s||S;
+ if(!s||s.mode!=='coach'){toast('仅教练模式可用');return;}
+ s.coachRecs=s.coachRecs||[];
+ if(type==='loan'){
+  const hit=(loanCandidates(s)||[]).find(c=>c.p.id===pid);
+  if(!hit){toast('该选手暂不可租');return;}
+  if(s.coachRecs.some(r=>r.pid===pid&&r.type==='loan')){toast('已提交过该租借申请');return;}
+  s.coachRecs.unshift({type:'loan',pid,pos:hit.p.pos,name:hit.p.name});
+  logEvent(s,' 教练申请：租借 '+hit.p.name+'（'+POS[hit.p.pos][0]+' · '+hit.from+'）应急补位——俱乐部将尽快办理');
+
+  if(injuryGapPositions(s).length||s.transferWindow===0){
+   const rest=s.coachRecs.slice();
+   s.coachRecs=[{type:'loan',pid,pos:hit.p.pos}];
+   coachAutoSquad(s);
+   if(s.players.some(p=>p.id===pid)){
+    toast(hit.p.name+' 租借加盟！');
+    s.coachRecs=s.coachRecs.filter(r=>!(r.pid===pid&&r.type==='loan'));
+    save();renderAll();return;
+   }
+   s.coachRecs=rest.filter(r=>!(r.pid===pid&&r.type==='loan'));
+   toast('已登记租借申请（资金/名额不足时俱乐部会在条件具备后办理）');
+  }else toast('租借申请已提交，俱乐部办理中');
+ }else if(type==='sign'){
+  const fa=(s.freeAgents||[]).find(p=>p.id===pid);
+  if(!fa){toast('该自由球员已不在名单');return;}
+  if(s.coachRecs.some(r=>r.pid===pid&&r.type==='sign')){toast('已提交过该引援申请');return;}
+  s.coachRecs.unshift({type:'sign',pid,pos:fa.pos,name:fa.name});
+  coachAutoSquad(s); // 立刻尝试：资金够就签
+  if(s.players.some(p=>p.id===pid))toast(fa.name+' 已加盟！');
+  else toast('引援申请已提交（俱乐部将在资金/名单允许时办理）');
+ }else if(type==='gap'){
+  if(!pos)return;
+  s.coachRecs.unshift({type:'gap',pos});
+  coachAutoSquad(s);
+  toast('已申请俱乐部补强 '+POS[pos][0]);
+ }
+ try{if(typeof playMoment==='function')playMoment(1,'教练申请已登记',null,null);}catch(e){}
+ save();renderAll();
 }
 function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；接受=换队执教，履历入册）
  if(s.board&&s.board.fired)return;
@@ -7232,7 +7464,7 @@ const TOUR_KEY='km_tour',HINT_KEY='km_hints',MISSION_KEY='km_missions';
 const PAGE_HINTS={
  club:'推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发',
  lineup:'选手卡管一切：训练、身价、续约、挂牌出售、替补轮换',
- market:'买人卖人：赛前转会期自由组队，赛季中留意报价与自由市场',
+ market:'买人卖人：赛前转会期自由组队，赛季中留意报价与自由市场。教练模式=应急租借与引援申请',
  train:'变强在本页：专项训练/青训营/位置改造，花钱要精打细算',
  league:'联盟战局：积分榜、赛程比分、数据榜——看看对手有多强',
  kjia:'K甲二队：替补和青训生的练级场，表现好可提拔上一队',
@@ -9096,8 +9328,20 @@ function clubBoardPanel(){
  const kpi=b.kpi,last=(b.log||[])[0];
 
  const kpiText=k=>k?('赛季末年度积分进前 '+(k.target||12)):'赛季末不评价（缺历史数据）';
+
+ let relHtml='';
+ if(S.clubChoice){
+  const c=S.clubChoice;
+  relHtml=`<div class="event-card" style="margin-top:10px;border-color:rgba(217,164,65,.55)">
+  <div class="et">关系事件 · ${_escTxt(c.title||'')}</div>
+  <p>${_escTxt(c.text||'')}</p>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+  ${(c.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="applyClubChoice(S,${i})">${_escTxt(o.l)}${o.trust?'（信任'+(o.trust>0?'+':'')+o.trust+(o.fund?' · 资金'+(o.fund>0?'+':'')+o.fund:'')+(o.morale?' · 士气'+(o.morale>0?'+':'')+o.morale:'')+'）':''}</button>`).join('')}
+  </div></div>`;
+ }
  return `<div class="panel">
  <h3>董事会 <span class="tag" style="color:${col}">信任度 ${t} · ${boardTierText(S)}</span>${t<=BOARD_WARN_TRUST?'<span class="tag" style="color:var(--red)">最后通牒</span>':''}</h3>
+ ${relHtml}
  ${S.career&&S.career.legacy?`<div class="hint" style="margin-bottom:6px">名宿出身：${S.career.legacy.name} 由选手生涯转型（${S.career.legacy.seasons||0} 赛季 · ${S.career.legacy.titles||0} 冠 · 生涯总值峰值 ${S.career.legacy.ovr||'—'}）</div>`:''}
  <div class="meter"><span class="m-label">信任度</span><div class="m-track"><div style="width:${clamp(t,0,100)}%;background:${col}"></div></div><b class="m-val" style="color:${col}">${clamp(t,0,100)}</b></div>
  <div style="font-size:13px">本赛季目标：<b>${kpiText(kpi)}</b>
@@ -10185,7 +10429,20 @@ function sortChips(key,pos){
 function renderLineup(){
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
- let html=pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
+
+ let gapBanner='';
+ if(S.mode==='coach'){
+  const gaps=injuryGapPositions(S);
+  const inj=(S.players||[]).filter(p=>playerStatus(p,S).injury);
+  if(gaps.length||inj.length){
+   gapBanner=`<div class="panel" style="margin:0 0 10px;border-color:rgba(239,68,68,.5)">
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+   <div><b class="red">阵容告急</b>　<span class="hint">${inj.length?'伤停：'+inj.map(p=>p.name+'('+p.injury+'天)').join('、')+' · ':''}${gaps.length?gaps.map(p=>POS[p][0]).join('、')+' 无人可打':''}</span></div>
+   <button class="btn sm gold" onclick="goPage('market')">去应急租借 / 引援建议</button>
+   </div></div>`;
+  }
+ }
+ let html=gapBanner+pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
  <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 周薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
@@ -10259,6 +10516,8 @@ function swapPlayer(pid){
 </script>
 <script>
 function renderMarket(){
+
+ if(S.mode==='coach'){renderCoachMarket();return;}
  const costOf=p=>Math.round(valueOf(overall(p))*(p.discount||1));
 
  let windowBanner='';
@@ -10452,6 +10711,56 @@ function renderMarket(){
  $('#page-market').innerHTML=windowBanner+pageHint('market')+tempHtml+draftHtml+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
 }
 
+function renderCoachMarket(){
+ const adv=coachAdvice(S);
+ const gaps=adv.gaps||[];
+ const recs=S.coachRecs||[];
+ const myLoans=(S.players||[]).filter(p=>p.loan);
+ const cap=typeof loanCap==='function'?loanCap(S):2;
+ const injured=(S.players||[]).filter(p=>{
+  const st=playerStatus(p,S);
+  return st.injury||st.kjia||st.loanOut||st.natCamp;
+ });
+ let html=pageHint('market');
+ html+=`<div class="panel" style="border-color:rgba(92,138,245,.45)">
+ <h3>教练工作台 · 应急与引援 <span class="tag">买断挂牌由俱乐部打理</span></h3>
+ <div class="hint" style="margin-bottom:8px">伤停/集训缺人时可<b>紧急租借</b>；也可向俱乐部提交<b>引援申请</b>（资金与名单允许时自动办理）。不能挂牌出售选手——那是管理层的事。</div>
+ ${gaps.length?`<div class="hint" style="color:var(--red);margin-bottom:8px">⚠ ${gaps.map(p=>POS[p][0]).join('、')} 位置当前无人可打——建议立刻租借补位</div>`:''}
+ ${injured.length?`<div class="hint" style="margin-bottom:8px">非健康名单：${injured.map(p=>{const st=playerStatus(p,S);return p.name+'（'+(st.injury?st.injuryDays+'天伤停':st.kjia?'K甲':st.loanOut?'外租':'集训')+'）';}).join(' · ')}</div>`:''}
+ ${recs.length?`<div class="hint" style="margin-bottom:8px"><b>待处理申请：</b>${recs.map(r=>(r.type==='loan'?'租借 ':(r.type==='sign'?'直签 ':'补位 '))+(r.name||(r.pos?POS[r.pos][0]:'—'))).join(' · ')}</div>`:''}
+ </div>`;
+
+ html+=`<div class="panel"><h3>应急租借市场 <span class="tag">${LOAN_DAYS} 天 · 名额 ${myLoans.length}/${cap}${cap>LOAN_CAP_BASE?' · 伤停应急':''}</span></h3>
+ <div class="hint" style="margin-bottom:8px">租金约身价 15%，工资由原队承担；非卖品不外借。缺位位置优先推荐。</div>
+ ${myLoans.length?`<div style="margin-bottom:8px">${myLoans.map(p=>`<div class="match" style="margin-bottom:5px;padding:7px 10px"><div class="vs"><span class="tname">${p.name} <span class="dim" style="font-size:10px">(${POS[p.pos][0]} · ${p.loan.from} · 剩 ${p.loan.days} 天)</span></span></div></div>`).join('')}</div>`:''}
+ <div style="max-height:280px;overflow-y:auto">${(adv.loans||[]).map(c=>`
+  <div class="match" style="margin-bottom:6px;padding:8px 10px">
+  <div class="vs"><span class="tname" style="font-size:13px">${c.name} <span class="dim" style="font-size:10px">(${c.from} · ${POS[c.pos][0]} · 总值${c.ovr}${c.gap?' · <b class="red">缺位优先</b>':''})</span></span></div>
+  <div class="score" style="font-size:13px">租金 ${c.rent}万</div>
+  <div style="display:flex;gap:4px">
+   <button class="btn sm primary" onclick="loanPlayer(S,'${c.from}','${c.id}')">立即租借</button>
+   <button class="btn sm" onclick="coachRequest(S,'loan','${c.id}')">申请租借</button>
+  </div>
+  </div>`).join('')||'<div class="hint">联盟暂无可租借选手</div>'}</div>
+ </div>`;
+
+ html+=`<div class="panel"><h3>教练引援建议 <span class="tag">向俱乐部提交 · 自动办理</span></h3>
+ <div class="hint" style="margin-bottom:8px">按缺位与最弱位置推荐。申请后俱乐部会尽快签约；资金不足会排队。</div>
+ ${adv.weak&&adv.weak.length?`<div class="hint" style="margin-bottom:8px"><b>阵容短板：</b>${adv.weak.map(w=>POS[w.pos][0]+'（'+(w.cnt?w.cnt+'人·顶值'+w.best:'无人')+'）').join(' · ')}
+ ${adv.weak.filter(w=>w.cnt===0).map(w=>`<button class="btn sm" style="margin-left:6px" onclick="coachRequest(S,'gap',null,'${w.pos}')">申请补 ${POS[w.pos][0]}</button>`).join('')}</div>`:''}
+ <div class="g2">${(adv.signs||[]).map(p=>`
+  <div class="match" style="margin-bottom:6px;padding:8px 10px">
+  <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span class="dim" style="font-size:10px">(自由市场 · ${POS[p.pos][0]} · 总值${p.ovr}${p.gap?' · <b class="red">缺位</b>':''})</span></span></div>
+  <div class="score" style="font-size:13px">${p.cost}万</div>
+  <button class="btn sm gold" onclick="coachRequest(S,'sign','${p.id}')">申请直签</button>
+  </div>`).join('')||'<div class="hint">自由市场暂无推荐</div>'}</div>
+ </div>`;
+ html+=`<div class="panel"><h3>我的队员（伤病/名单）</h3>
+ <div class="grid g4">${(S.players||[]).map(p=>pcard(p,'')).join('')||'<div class="hint">暂无队员</div>'}</div>
+ </div>`;
+ $('#page-market').innerHTML=html;
+}
+
 </script>
 <script>
 function renderCareer(){
@@ -10639,7 +10948,8 @@ document.addEventListener('click',e=>{
 const MODE_PAGES={
  manager:['club','lineup','market','train','league','kjia','union','hall','biz'],
  player:['career','club','league','kjia','union','hall'], // 选手：生涯/球队日程/联赛/二队/联盟/荣誉馆
- coach:['club','lineup','train','league','kjia','union','hall'], // 教练：竞技全权，转会/经营由俱乐部打理
+
+ coach:['club','lineup','market','train','league','kjia','union','hall'],
 };
 function applyModeNav(){
  const pages=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
