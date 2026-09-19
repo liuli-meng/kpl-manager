@@ -642,6 +642,16 @@ const EVENTS=[
  {t:'转会传闻',desc:'媒体爆料 {p} 收到豪门高额报价，人心浮动。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.max(5,(p.willingness||50)-8);p.morale=clamp(p.morale-5,20,100);}},
  {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
 ];
+/* 怠政事件池：只在 s.idleDays>=7（连续一周没有任何训练/转会/比赛动作）时才可能抽到，
+   正常玩家永远碰不到——所以它不会改动 EVENTS 既有 19 好 / 8 坏的期望，平衡门禁数值不受影响。
+   作用是把"什么都不干"从纯收益改成有代价：钱、士气、信任三头都要掉。 */
+const IDLE_EVENTS=[
+ {t:'赞助商追责',desc:'赞助商以「曝光义务未履约」为由扣减本期推广费，财务要求俱乐部给出说法。',good:false,fn:s=>{s.fund=Math.max(0,s.fund-45);}},
+ {t:'主场退票',desc:'长期没有训练与比赛动态，主场门票销售遇冷，周边滞销。',good:false,fn:s=>{s.fund=Math.max(0,s.fund-30);}},
+ {t:'更衣室涣散',desc:'教练组连续一周没有安排针对性训练，主力开始质疑备战态度。',good:false,fn:s=>{moraleAll(s,-9);}},
+ {t:'训练赛缺席',desc:'队员自行组织训练赛，成绩部门对俱乐部的备战计划提出书面异议。',good:false,fn:s=>{moraleAll(s,-5);if(typeof applyBoardTrust==='function')applyBoardTrust(s,-3,'备战计划被质疑');}},
+ {t:'核心选手申请离队',desc:'{p} 向管理层提交沟通申请，认为俱乐部长期缺乏竞技规划。',good:false,fn:s=>{const p=pick(rosterAll(s));if(p){p.willingness=Math.max(5,(p.willingness||50)-14);p.morale=clamp(p.morale-8,20,100);}}},
+];
 
 /* ================= 比赛模拟（Elo 胜率） =================
  分母 220：削弱纯战力碾压（BP/选人/版本强势才能真正左右胜负，弱队靠 BP 有翻盘空间） */

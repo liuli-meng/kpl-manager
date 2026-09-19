@@ -463,7 +463,12 @@ function poPlace(slot,isFinal){
  return '四强';
 }
 function nextDay(s){
- s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
+ s.day++;
+ // 怠政判定必须排在清旗标之前：四个每日行动位 + 当天打过比赛，是「玩家这一天动没动手」的全部痕迹。
+ // 放在 reset 之后就永远读到 false，等于把所有玩家都判成挂机。
+ const acted=s.trained||s.marketRefreshed||s.academyTrained||s.socialUsed||((s._actedDay||0)>=s.day-1);
+ s.idleDays=acted?0:((s.idleDays||0)+1);
+ s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
  kjiaTick(s); // K甲下放倒计时：到期归队并成长
  kjiaDayTick(s); // K甲联赛：二队每 2 天一轮，下放选手真实出战
  if(s.mode==='player'){
@@ -504,13 +509,29 @@ function nextDay(s){
  if(s.day%WAGE_EVERY===0)payWage(s);
  s.players.forEach(p=>{p.injury=Math.max(0,p.injury-1);p.energy=clamp(p.energy+10,0,ENERGY_MAX);}); // 伤情恢复 + 体力自然回复
  tickLoans(s); // 租借倒计时：到期自动归队
- if(s.day%3===0){s.fund+=80;toast('签到奖励：赞助补贴 +80万');}
- if(Math.random()<0.65&&s.players.length){ // 名单被卖空时跳过随机事件（事件需要选手参与）
+ // 签到补贴改成「履约奖励」：只有当日做过经营动作才发。原来每 3 天无条件 +80 万，
+ // 60 天纯挂机白拿 1600 万——那是"什么都不干也暴富"的头号来源（实测占挂机净收益 72%）
+ if(s.day%3===0&&s.idleDays===0){s.fund+=80;toast('赞助补贴到账 +80万（当日有经营动作）');}
+ // 随机事件：连续怠政满一周就不再抽"好事"——赞助商追加、粉丝应援、青训惊喜这些正期望事件
+ // 需要一个还在运转的俱乐部做基本盘；顺带把纯挂机的收益方差压下来（门禁才能钉得住）
+ if(Math.random()<0.65&&s.players.length&&s.idleDays<2){
  const ev=pick(EVENTS);
  const tp=pick(rosterAll(s)); // 公告文案与效果作用同一名选手
  const txt=ev.desc.replace('{p}',()=>tp.name);
  ev.fn(s,tp);
  logEvent(s,' 【'+ev.t+'】'+txt);
+ }
+ // 董事会压力：整周不决策不可能没有反馈。此前实测挂机 60 天 trust 恒 60、warn 恒 0，
+ // KPI 系统对"什么都不干"完全无感。走 applyBoardTrust 单一出口（选手生涯自动豁免、上下限受钳）
+ if(s.idleDays>0&&s.idleDays%5===0&&typeof applyBoardTrust==='function'){
+  applyBoardTrust(s,-2,'连续 '+s.idleDays+' 天没有训练/转会/比赛动作');
+ }
+ // 怠政事件独立小池，只在 idleDays 达标时抽——正常玩永远碰不到，不污染既有 EVENTS 的期望
+ if(s.idleDays>=10&&s.idleDays%10===0){ // 每满 10 天怠政必发一次，不搞骰子——后果要可预期，方差也要压得住（门禁才钉得稳）
+  const ev=pick(IDLE_EVENTS);
+  const tp=pick(rosterAll(s)); // 与 EVENTS 同一口径：文案里的 {p} 与效果作用同一名选手
+  logEvent(s,' 【'+ev.t+'】'+(ev.desc||'').replace('{p}',()=>tp?tp.name:'队内核心'));
+  ev.fn(s,tp);
  }
  if(s._quietSave)return; // 批量跳过（转会期 skip）：由外层统一 save，避免 30 次全量序列化
  save();

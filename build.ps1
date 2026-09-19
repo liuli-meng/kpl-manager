@@ -6,4 +6,7 @@
 $ErrorActionPreference = 'Stop'
 $node = Get-Command node -ErrorAction Stop
 & node (Join-Path $PSScriptRoot 'build.js')
-if ($LASTEXITCODE -ne 0) { throw "build.js 失败（exit $LASTEXITCODE）" }
+# 字符串里不要用全角括号：本文件是无 BOM 的 UTF-8，Windows PowerShell 5.1 会按 ANSI/GBK 解码，
+# 全角「）」的尾字节会吞掉后面的半角引号 → 整脚本 ParserError: TerminatorExpectedAtEndOfString。
+# 注释里的中文不受影响（不参与字符串定界），所以只有这一行必须保持 ASCII。
+if ($LASTEXITCODE -ne 0) { throw "build.js failed, exit $LASTEXITCODE" }

@@ -651,6 +651,14 @@ const EVENTS=[
  {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
 ];
 
+const IDLE_EVENTS=[
+ {t:'赞助商追责',desc:'赞助商以「曝光义务未履约」为由扣减本期推广费，财务要求俱乐部给出说法。',good:false,fn:s=>{s.fund=Math.max(0,s.fund-45);}},
+ {t:'主场退票',desc:'长期没有训练与比赛动态，主场门票销售遇冷，周边滞销。',good:false,fn:s=>{s.fund=Math.max(0,s.fund-30);}},
+ {t:'更衣室涣散',desc:'教练组连续一周没有安排针对性训练，主力开始质疑备战态度。',good:false,fn:s=>{moraleAll(s,-9);}},
+ {t:'训练赛缺席',desc:'队员自行组织训练赛，成绩部门对俱乐部的备战计划提出书面异议。',good:false,fn:s=>{moraleAll(s,-5);if(typeof applyBoardTrust==='function')applyBoardTrust(s,-3,'备战计划被质疑');}},
+ {t:'核心选手申请离队',desc:'{p} 向管理层提交沟通申请，认为俱乐部长期缺乏竞技规划。',good:false,fn:s=>{const p=pick(rosterAll(s));if(p){p.willingness=Math.max(5,(p.willingness||50)-14);p.morale=clamp(p.morale-8,20,100);}}},
+];
+
 function winChance(my,opp){return 1/(1+Math.pow(10,(opp-my)/220));}
 const CASTER=['一拉三！','极限操作！','名场面预定！','这波运营拉满！','经典绕后，丝血反杀！','水晶不倒，战斗不止！','教科书级团战！','来了！又是他！','反手就是一记大招！','这波决策太顶了！'];
 
@@ -1064,6 +1072,7 @@ const SAVE_DEFAULTS=[
  ['fumbleCount',0,'队史被爆冷次数'],
  ['preseason',false,'赛前转会期'],
  ['transferWindow',0,'转会窗剩余天'],
+ ['idleDays',0,'连续无经营动作天数（怠政：签到/赞助/董事会信任都读它）'],
  ['reserveSlots',2,'自留签每季名额'],
  ['reserveUsed',0,'自留签已用'],
  ['draft',null,'选秀大会'],
@@ -4178,7 +4187,11 @@ function poPlace(slot,isFinal){
  return '四强';
 }
 function nextDay(s){
- s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
+ s.day++;
+
+ const acted=s.trained||s.marketRefreshed||s.academyTrained||s.socialUsed||((s._actedDay||0)>=s.day-1);
+ s.idleDays=acted?0:((s.idleDays||0)+1);
+ s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
  kjiaTick(s); // K甲下放倒计时：到期归队并成长
  kjiaDayTick(s); // K甲联赛：二队每 2 天一轮，下放选手真实出战
  if(s.mode==='player'){
@@ -4219,13 +4232,26 @@ function nextDay(s){
  if(s.day%WAGE_EVERY===0)payWage(s);
  s.players.forEach(p=>{p.injury=Math.max(0,p.injury-1);p.energy=clamp(p.energy+10,0,ENERGY_MAX);}); // 伤情恢复 + 体力自然回复
  tickLoans(s); // 租借倒计时：到期自动归队
- if(s.day%3===0){s.fund+=80;toast('签到奖励：赞助补贴 +80万');}
- if(Math.random()<0.65&&s.players.length){ // 名单被卖空时跳过随机事件（事件需要选手参与）
+
+ if(s.day%3===0&&s.idleDays===0){s.fund+=80;toast('赞助补贴到账 +80万（当日有经营动作）');}
+
+ if(Math.random()<0.65&&s.players.length&&s.idleDays<2){
  const ev=pick(EVENTS);
  const tp=pick(rosterAll(s)); // 公告文案与效果作用同一名选手
  const txt=ev.desc.replace('{p}',()=>tp.name);
  ev.fn(s,tp);
  logEvent(s,' 【'+ev.t+'】'+txt);
+ }
+
+ if(s.idleDays>0&&s.idleDays%5===0&&typeof applyBoardTrust==='function'){
+  applyBoardTrust(s,-2,'连续 '+s.idleDays+' 天没有训练/转会/比赛动作');
+ }
+
+ if(s.idleDays>=10&&s.idleDays%10===0){ // 每满 10 天怠政必发一次，不搞骰子——后果要可预期，方差也要压得住（门禁才钉得稳）
+  const ev=pick(IDLE_EVENTS);
+  const tp=pick(rosterAll(s)); // 与 EVENTS 同一口径：文案里的 {p} 与效果作用同一名选手
+  logEvent(s,' 【'+ev.t+'】'+(ev.desc||'').replace('{p}',()=>tp?tp.name:'队内核心'));
+  ev.fn(s,tp);
  }
  if(s._quietSave)return; // 批量跳过（转会期 skip）：由外层统一 save，避免 30 次全量序列化
  save();
@@ -4804,8 +4830,13 @@ const FAN_CAP=600; // 粉丝计效上限（万）：所有商业系数共用同�
 const fanEff=s=>Math.min(s.fans||0,FAN_CAP);
 const fanMul=(s,div)=>1+fanEff(s)/div; // 粉丝加成
 
+function idleMul(s){
+ const d=(s&&s.idleDays)||0;
+ return d>=12?0.82:d>=6?0.91:d>=3?0.97:1;
+}
+
 function dailyCommercialIncome(s){
- return Math.round(SPONSORS[s.sponsorLv].income*fanMul(s,500))+Math.round(fanEff(s)*0.08);
+ return Math.round((SPONSORS[s.sponsorLv].income*fanMul(s,500)+Math.round(fanEff(s)*0.08))*idleMul(s));
 }
 
 function grantPrize(s,total,label){
@@ -8828,6 +8859,7 @@ function finishSeries(finalWin){
  const sr=S.series;
  if(!sr)return; // 重复点击/异常重入：系列赛已清，直接忽略，避免二次结算毁档
  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
+ S._actedDay=S.day; // 打过比赛就算"当日有经营动作"：nextDay 的怠政判定读它（签到/赞助折扣/董事会信任）
 
  rosterLineup(S).forEach(p=>{p.apps=(p.apps||0)+1;});
  S.series=null; // 先清系列赛状态，再走收尾链（playoffStep/playCardNext 可能立即开启下一场）
@@ -10923,7 +10955,7 @@ function playerRest(){
 <script>
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 
-const KM_BUILD='2026-09-19f';
+const KM_BUILD='2026-09-19g';
 
 const _foldCache=new Map();
 function foldCls(key,def){

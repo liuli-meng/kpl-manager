@@ -42,6 +42,7 @@ const SAVE_DEFAULTS=[
  ['fumbleCount',0,'队史被爆冷次数'],
  ['preseason',false,'赛前转会期'],
  ['transferWindow',0,'转会窗剩余天'],
+ ['idleDays',0,'连续无经营动作天数（怠政：签到/赞助/董事会信任都读它）'],
  ['reserveSlots',2,'自留签每季名额'],
  ['reserveUsed',0,'自留签已用'],
  ['draft',null,'选秀大会'],

@@ -526,6 +526,7 @@ function finishSeries(finalWin){
  const sr=S.series;
  if(!sr)return; // 重复点击/异常重入：系列赛已清，直接忽略，避免二次结算毁档
  S._lastMvps=(sr.mvpIds||[]).slice(); // 本系列赛各局 MVP（决赛后评 FMVP 用）
+ S._actedDay=S.day; // 打过比赛就算"当日有经营动作"：nextDay 的怠政判定读它（签到/赞助折扣/董事会信任）
  // 出场统计（更衣室系统用）：本系列赛首发的选手各记一次出场——替补的不满按"出场差距"累积
  rosterLineup(S).forEach(p=>{p.apps=(p.apps||0)+1;});
  S.series=null; // 先清系列赛状态，再走收尾链（playoffStep/playCardNext 可能立即开启下一场）

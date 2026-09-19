@@ -26,9 +26,15 @@ function addFans(s,n,why){
 const FAN_CAP=600; // 粉丝计效上限（万）：所有商业系数共用同一个帽子，避免极端值把日流水顶穿
 const fanEff=s=>Math.min(s.fans||0,FAN_CAP);
 const fanMul=(s,div)=>1+fanEff(s)/div; // 粉丝加成
+/* 怠政折扣：赞助商合同里带曝光义务（直播露出/线下活动），连续不训练、不转会、不打比赛
+   就等于没履约——商业流水按档位打折。抽成纯函数，verify-idle 直接钉这条曲线。 */
+function idleMul(s){
+ const d=(s&&s.idleDays)||0;
+ return d>=12?0.82:d>=6?0.91:d>=3?0.97:1;
+}
 /* 每日商业流水：赞助单价（粉丝加成）+ 门票/周边（同样走封顶）。抽成纯函数便于精确断言 */
 function dailyCommercialIncome(s){
- return Math.round(SPONSORS[s.sponsorLv].income*fanMul(s,500))+Math.round(fanEff(s)*0.08);
+ return Math.round((SPONSORS[s.sponsorLv].income*fanMul(s,500)+Math.round(fanEff(s)*0.08))*idleMul(s));
 }
 /* ================= 赛事奖金 70/30 分成（KPL 硬规则） =================
  官方奖金选手分成不得低于 70%（士气/签约意愿体现），俱乐部最多留成 30% 入基金。
