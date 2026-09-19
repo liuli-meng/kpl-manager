@@ -28,7 +28,7 @@ function renderLineup(){
  const cur=tacticById(S.tactic||'balanced');
  html+=`<div class="panel"><h3>战术板 <span class="tag">当前：${cur.name}</span></h3>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${TACTICS.map(t=>`<button class="btn sm ${t.id===(S.tactic||'balanced')?'primary':''}" onclick="setTactic('${t.id}')" title="${t.desc}${t.beats?' · 克制「'+tacticById(t.beats).name+'」':''}">${t.name}</button>`).join('')}</div>
- <div class="hint">${cur.desc}${cur.beats?' · 克制「'+tacticById(cur.beats).name+'」、被「'+TACTICS.filter(t=>t.beats===cur.id).map(t=>t.name).join('/')+'」克制':''}。权重只作用在我方战力上（对手战术每场随机，赛前页可见克制结果）。</div>
+ <div class="hint">${cur.desc}${cur.beats?' · 克制「'+tacticById(cur.beats).name+'」、被「'+TACTICS.filter(t=>t.beats===cur.id).map(t=>t.name).join('/')+'」克制':''}。权重只作用在我方战力上；对手教练组会读盘反制（豪门概率更高），赛前页可见克制结果。</div>
  </div>`;
  }
  // 战队羁绊（上场选手触发，属于阵容维度）

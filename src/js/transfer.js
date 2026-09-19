@@ -223,6 +223,21 @@ function aiDiffMul(s,tn){
  const t=aiTierOf(s,tn);
  return (t==='elite'?1.35:t==='mid'?1:0.72)*pressure;
 }
+/* AI 智能系数（0.35~1.6）：统一驱动战术读盘 / BP 盯防 / 选边复盘 / 转会积极性。
+ = 对手档位难度(aiDiffMul) × 玩家开局剧本难度(SCENARIOS.hard 加压)
+ 难剧本不是只削玩家资源，联盟也会更会打；简单剧本 AI 更容易犯错。 */
+function aiBrain(s,tn){
+ let base=1;
+ try{ base=(typeof aiDiffMul==='function')?aiDiffMul(s,tn):1; }catch(e){ base=1; }
+ let sc=1;
+ try{
+  const id=(s&&s.scenario)||'normal';
+  if(id==='exodus'||id==='cursed')sc=1.14; // 残阵/魔咒：对手更针对
+  else if(id==='debt'||id==='cap')sc=1.08; // 穷/帽紧：联盟不会放水
+  else sc=1;
+ }catch(e){}
+ return Math.max(0.35,Math.min(1.6,base*sc));
+}
 /* AI 赛训成长：每赛季给首发补最弱属性（模拟教练组日常特训）。
  玩家每天可练，AI 若只靠 ageDrift 会原地踏步——中下游尤其明显。
  额度按档位：elite 8 / mid 6 / weak 4 点，拆到 1~2 名最弱首发的最弱项。 */

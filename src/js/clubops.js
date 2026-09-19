@@ -143,11 +143,46 @@ function mentorSeasonSettle(s){
 }
 /* ================= 战术板 / 版本大改 / K甲下放 =================
  战术克制：双方各带一个战术倾向，克制方 ±3%（只在比赛模拟处生效，见 match.js）。
- AI 的战术按系列赛懒生成并缓存——同一场系列赛里对手战术不会变。 */
+ AI 战术按「教练组读盘」生成：豪门更爱反制玩家战术，中游看阵容强项，弱旅偏随机。 */
+function aiRosterFitTactic(s,opName){
+ const roster=(typeof ensureAiRosters==='function'?ensureAiRosters(s,opName):null)||[];
+ if(!roster.length)return null;
+ const sum={lane:0,farm:0,team:0,mind:0};
+ roster.forEach(p=>{Object.keys(sum).forEach(k=>{sum[k]+=(p.attrs&&p.attrs[k])||0;});});
+ // 选与全队最强维度同向的战术（均衡除外）
+ const keys=Object.keys(sum).sort((a,b)=>sum[b]-sum[a]);
+ const top=keys[0];
+ const t=TACTICS.find(x=>x.id===top);
+ return t?t.id:null;
+}
+function aiChooseTactic(s,sr,opName){
+ const brain=(typeof aiBrain==='function')?aiBrain(s,opName)
+  :((typeof aiTierOf==='function'&&aiTierOf(s,opName)==='elite')?1.3:aiTierOf(s,opName)==='weak'?0.7:1);
+ const playerTactic=(s.tactic&&s.tactic!=='balanced')?s.tactic:null;
+ if(playerTactic){
+  const counter=TACTICS.find(t=>t.beats===playerTactic);
+  // 智能系数越高越爱反制；连冠已含在 aiBrain 的 aiDiffMul 里
+  const pCounter=Math.max(0,Math.min(0.92,0.08+0.48*brain));
+  if(counter&&Math.random()<pCounter){
+   try{logEvent(s,' 对手教练组研究录像：'+opName+' 布置「'+counter.name+'」反制你的「'+tacticById(playerTactic).name+'」（难度系数 '+brain.toFixed(2)+'）');}catch(e){}
+   return counter.id;
+  }
+ }
+ const fit=aiRosterFitTactic(s,opName);
+ // 按阵容强项配战术：智能越高越少乱选
+ const pFit=Math.max(0.15,Math.min(0.85,0.2+0.4*brain));
+ if(fit&&Math.random()<pFit)return fit;
+ return tacticById(pick(TACTICS).id).id;
+}
 function seriesTacticEdge(s,sr){
  if(!s.tactic||s.tactic==='balanced')return 0;
  const mine=tacticById(s.tactic);
- if(!sr._opTactic)sr._opTactic=tacticById(pick(TACTICS).id).id;
+ if(!sr._opTactic){
+  const opName=sr.opName||null;
+  sr._opTactic=(opName&&opName!==s.teamName&&typeof aiChooseTactic==='function')
+   ?aiChooseTactic(s,sr,opName)
+   :tacticById(pick(TACTICS).id).id;
+ }
  const theirs=tacticById(sr._opTactic);
  sr._myTactic=mine.id;
  return theirs.beats===mine.id?-0.03:(mine.beats===theirs.id?0.03:0);

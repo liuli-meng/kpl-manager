@@ -2244,6 +2244,19 @@ function aiDiffMul(s,tn){
  return (t==='elite'?1.35:t==='mid'?1:0.72)*pressure;
 }
 
+function aiBrain(s,tn){
+ let base=1;
+ try{ base=(typeof aiDiffMul==='function')?aiDiffMul(s,tn):1; }catch(e){ base=1; }
+ let sc=1;
+ try{
+  const id=(s&&s.scenario)||'normal';
+  if(id==='exodus'||id==='cursed')sc=1.14; // 残阵/魔咒：对手更针对
+  else if(id==='debt'||id==='cap')sc=1.08; // 穷/帽紧：联盟不会放水
+  else sc=1;
+ }catch(e){}
+ return Math.max(0.35,Math.min(1.6,base*sc));
+}
+
 function aiDevelopStarters(s,tn,map,ovrOf){
  const ids=(map[tn]||[]).slice();
  if(ids.length<3)return;
@@ -4795,10 +4808,45 @@ function mentorSeasonSettle(s){
  });
 }
 
+function aiRosterFitTactic(s,opName){
+ const roster=(typeof ensureAiRosters==='function'?ensureAiRosters(s,opName):null)||[];
+ if(!roster.length)return null;
+ const sum={lane:0,farm:0,team:0,mind:0};
+ roster.forEach(p=>{Object.keys(sum).forEach(k=>{sum[k]+=(p.attrs&&p.attrs[k])||0;});});
+
+ const keys=Object.keys(sum).sort((a,b)=>sum[b]-sum[a]);
+ const top=keys[0];
+ const t=TACTICS.find(x=>x.id===top);
+ return t?t.id:null;
+}
+function aiChooseTactic(s,sr,opName){
+ const brain=(typeof aiBrain==='function')?aiBrain(s,opName)
+  :((typeof aiTierOf==='function'&&aiTierOf(s,opName)==='elite')?1.3:aiTierOf(s,opName)==='weak'?0.7:1);
+ const playerTactic=(s.tactic&&s.tactic!=='balanced')?s.tactic:null;
+ if(playerTactic){
+  const counter=TACTICS.find(t=>t.beats===playerTactic);
+
+  const pCounter=Math.max(0,Math.min(0.92,0.08+0.48*brain));
+  if(counter&&Math.random()<pCounter){
+   try{logEvent(s,' 对手教练组研究录像：'+opName+' 布置「'+counter.name+'」反制你的「'+tacticById(playerTactic).name+'」（难度系数 '+brain.toFixed(2)+'）');}catch(e){}
+   return counter.id;
+  }
+ }
+ const fit=aiRosterFitTactic(s,opName);
+
+ const pFit=Math.max(0.15,Math.min(0.85,0.2+0.4*brain));
+ if(fit&&Math.random()<pFit)return fit;
+ return tacticById(pick(TACTICS).id).id;
+}
 function seriesTacticEdge(s,sr){
  if(!s.tactic||s.tactic==='balanced')return 0;
  const mine=tacticById(s.tactic);
- if(!sr._opTactic)sr._opTactic=tacticById(pick(TACTICS).id).id;
+ if(!sr._opTactic){
+  const opName=sr.opName||null;
+  sr._opTactic=(opName&&opName!==s.teamName&&typeof aiChooseTactic==='function')
+   ?aiChooseTactic(s,sr,opName)
+   :tacticById(pick(TACTICS).id).id;
+ }
  const theirs=tacticById(sr._opTactic);
  sr._myTactic=mine.id;
  return theirs.beats===mine.id?-0.03:(mine.beats===theirs.id?0.03:0);
@@ -7359,7 +7407,20 @@ function firstSide(s,stage,opName){
  if(hi===s.teamName)return Math.random()<0.5?'blue':'red';
  return Math.random()<0.6?'red':'blue'; // AI 偏好红方 counter
 }
-function aiPickSide(s){return Math.random()<0.5?'red':'blue';}
+function aiPickSide(s){
+ const sr=s&&s.series;
+ const opName=sr&&sr.opName;
+ const brain=(s&&opName&&typeof aiBrain==='function')?aiBrain(s,opName)
+  :(opName&&typeof aiTierOf==='function'?(aiTierOf(s,opName)==='elite'?1.3:aiTierOf(s,opName)==='weak'?0.7:1):1);
+
+ const pSwitch=Math.max(0.2,Math.min(0.9,0.35+0.4*brain));
+ if(sr&&sr._aiLastSide&&sr._aiLastGameLost&&Math.random()<pSwitch){
+  return sr._aiLastSide==='blue'?'red':'blue';
+ }
+
+ const pRed=Math.max(0.42,Math.min(0.75,0.42+0.2*brain));
+ return Math.random()<pRed?'red':'blue';
+}
 
 function showSideChoice(nextTitle){
  $('#app-modal-body').innerHTML=`
@@ -7632,32 +7693,42 @@ function bestBanFor(d){
 
 function aiDraftStep(d){
  const st=d.steps[d.idx];
+ const sr=d.sr||{};
+ const s=(typeof S!=='undefined')?S:null;
+ const opName=sr.opName;
+ const brain=(s&&opName&&typeof aiBrain==='function')?aiBrain(s,opName)
+  :(s&&opName&&typeof aiTierOf==='function'?(aiTierOf(s,opName)==='elite'?1.3:aiTierOf(s,opName)==='weak'?0.7:1):1);
+ const behind=(sr.ow||0)>(sr.mw||0); // 系列赛落后：智能越高越会加压
+ const noise=Math.max(0.25,1.9-1.2*brain); // 高难度=低噪声=决策更稳
+ const behindBoost=behind?Math.max(0,2.8*(brain-0.5)):0;
+ const sigW=Math.max(0.4,2.6*(brain-0.45)); // 盯防招牌：低难度几乎不盯
  if(st.type==='ban'){
-
- const avail=banCandidates(d).filter(h=>!((d.usedOpp||[]).includes(h)));
- let best=null,bs=-1;
- avail.forEach(h=>{
- const th=threatOf(d,h,'me')||0;
- const score=th+(heroOf(h).hot?2:0)+(Math.random()*1.5);
- if(score>bs){bs=score;best=h;}
- });
- if(best)d.oppBans.push(best);
- return;
+  const avail=banCandidates(d).filter(h=>!((d.usedOpp||[]).includes(h)));
+  const mySig=new Set((d.ls||[]).map(p=>p&&p.sig).filter(Boolean));
+  let best=null,bs=-1;
+  avail.forEach(h=>{
+   const th=threatOf(d,h,'me')||0;
+   let score=th+(heroOf(h).hot?2:0)+Math.random()*noise+behindBoost*(th>0?1:0);
+   if(mySig.has(h))score+=sigW;
+   if(score>bs){bs=score;best=h;}
+  });
+  if(best)d.oppBans.push(best);
+  return;
  }
-
  let bestPos=null,bestHero=null,bs=-1;
  POS_ORDER.forEach(pos=>{
- if(pos in d.oppPicks)return;
- const p=(d.oppRoster||[]).find(x=>x.pos===pos&&x.injury<=0);
- if(!p)return;
- const taken=takenSet(d),oppUsed=d.usedOpp||[]; // 全局BP：对方本系列赛己方用过的也不能再选
- let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
- if(!cand.length)cand=HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0})); // 兜底：临时掏
- cand.forEach(h=>{
- const pw=playerPower(p,h.n);
- let score=pw+(heroOf(h.n).hot?1.2:0)+(h.n===p.sig?0.8:0)+Math.random();
- if(score>bs){bs=score;bestPos=pos;bestHero=h.n;}
- });
+  if(pos in d.oppPicks)return;
+  const p=(d.oppRoster||[]).find(x=>x.pos===pos&&x.injury<=0);
+  if(!p)return;
+  const taken=takenSet(d),oppUsed=d.usedOpp||[];
+  let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
+  if(!cand.length)cand=HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0}));
+  cand.forEach(h=>{
+   const pw=playerPower(p,h.n);
+   let score=pw+(heroOf(h.n).hot?1.2:0)+(h.n===p.sig?Math.max(0.4,1.6*(brain-0.4)):0)+Math.random()*noise;
+   if(behind&&heroOf(h.n)&&heroOf(h.n).hot)score+=behindBoost*0.5;
+   if(score>bs){bs=score;bestPos=pos;bestHero=h.n;}
+  });
  });
  if(bestPos){d.oppPicks[bestPos]=bestHero;ensureHeroInPool((d.oppRoster||[]).find(x=>x.pos===bestPos&&x.injury<=0),bestHero);}
 }
@@ -8380,6 +8451,11 @@ function playGame(){
  if(g.w)sr.mw++;else sr.ow++;
  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
  const tag=isPeak?' 巅峰对决（盲选）':'';
+
+ if(sr.opName&&sr.opName!==S.teamName){
+ sr._aiLastSide=sr.side;
+ sr._aiLastGameLost=!g.w;
+ }
  const mvp=gamePerform(g.w);
  if(mvp){const mp=S.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
  if(mvp)sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id); // 系列赛各局 MVP 记录（FMVP 评选用）
@@ -10060,7 +10136,7 @@ function renderLineup(){
  const cur=tacticById(S.tactic||'balanced');
  html+=`<div class="panel"><h3>战术板 <span class="tag">当前：${cur.name}</span></h3>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${TACTICS.map(t=>`<button class="btn sm ${t.id===(S.tactic||'balanced')?'primary':''}" onclick="setTactic('${t.id}')" title="${t.desc}${t.beats?' · 克制「'+tacticById(t.beats).name+'」':''}">${t.name}</button>`).join('')}</div>
- <div class="hint">${cur.desc}${cur.beats?' · 克制「'+tacticById(cur.beats).name+'」、被「'+TACTICS.filter(t=>t.beats===cur.id).map(t=>t.name).join('/')+'」克制':''}。权重只作用在我方战力上（对手战术每场随机，赛前页可见克制结果）。</div>
+ <div class="hint">${cur.desc}${cur.beats?' · 克制「'+tacticById(cur.beats).name+'」、被「'+TACTICS.filter(t=>t.beats===cur.id).map(t=>t.name).join('/')+'」克制':''}。权重只作用在我方战力上；对手教练组会读盘反制（豪门概率更高），赛前页可见克制结果。</div>
  </div>`;
  }
 

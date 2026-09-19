@@ -441,6 +441,11 @@ function playGame(){
  if(g.w)sr.mw++;else sr.ow++;
  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
  const tag=isPeak?' 巅峰对决（盲选）':'';
+ // AI 教练复盘钩子：供下一局选边/BP 加压读取
+ if(sr.opName&&sr.opName!==S.teamName){
+ sr._aiLastSide=sr.side;
+ sr._aiLastGameLost=!g.w;
+ }
  const mvp=gamePerform(g.w);
  if(mvp){const mp=S.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
  if(mvp)sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id); // 系列赛各局 MVP 记录（FMVP 评选用）

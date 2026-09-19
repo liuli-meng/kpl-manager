@@ -24,7 +24,20 @@ function firstSide(s,stage,opName){
  if(hi===s.teamName)return Math.random()<0.5?'blue':'red';
  return Math.random()<0.6?'red':'blue'; // AI 偏好红方 counter
 }
-function aiPickSide(s){return Math.random()<0.5?'red':'blue';}
+function aiPickSide(s){
+ const sr=s&&s.series;
+ const opName=sr&&sr.opName;
+ const brain=(s&&opName&&typeof aiBrain==='function')?aiBrain(s,opName)
+  :(opName&&typeof aiTierOf==='function'?(aiTierOf(s,opName)==='elite'?1.3:aiTierOf(s,opName)==='weak'?0.7:1):1);
+ // 教练复盘：上一局输了就换边（智能越高越果断）
+ const pSwitch=Math.max(0.2,Math.min(0.9,0.35+0.4*brain));
+ if(sr&&sr._aiLastSide&&sr._aiLastGameLost&&Math.random()<pSwitch){
+  return sr._aiLastSide==='blue'?'red':'blue';
+ }
+ // 红方 counter 偏好随难度上升；弱旅接近抛硬币
+ const pRed=Math.max(0.42,Math.min(0.75,0.42+0.2*brain));
+ return Math.random()<pRed?'red':'blue';
+}
 /* 败方选边弹窗（玩家拥有选边权时） */
 function showSideChoice(nextTitle){
  $('#app-modal-body').innerHTML=`
@@ -313,35 +326,45 @@ function bestBanFor(d){
  banCandidates(d).forEach(h=>{const v=banScore(d,h);if(v>bs){bs=v;best=h;}});
  return best;
 }
-/* ---------- AI 逐手决策 ---------- */
+/* ---------- AI 逐手决策（统一走 aiBrain 难度系数） ---------- */
 function aiDraftStep(d){
  const st=d.steps[d.idx];
+ const sr=d.sr||{};
+ const s=(typeof S!=='undefined')?S:null;
+ const opName=sr.opName;
+ const brain=(s&&opName&&typeof aiBrain==='function')?aiBrain(s,opName)
+  :(s&&opName&&typeof aiTierOf==='function'?(aiTierOf(s,opName)==='elite'?1.3:aiTierOf(s,opName)==='weak'?0.7:1):1);
+ const behind=(sr.ow||0)>(sr.mw||0); // 系列赛落后：智能越高越会加压
+ const noise=Math.max(0.25,1.9-1.2*brain); // 高难度=低噪声=决策更稳
+ const behindBoost=behind?Math.max(0,2.8*(brain-0.5)):0;
+ const sigW=Math.max(0.4,2.6*(brain-0.45)); // 盯防招牌：低难度几乎不盯
  if(st.type==='ban'){
- // 对方 AI 禁用：禁掉我方阵容威胁最大的英雄（跳过自己本系列赛已用的——本局也选不了）
- const avail=banCandidates(d).filter(h=>!((d.usedOpp||[]).includes(h)));
- let best=null,bs=-1;
- avail.forEach(h=>{
- const th=threatOf(d,h,'me')||0;
- const score=th+(heroOf(h).hot?2:0)+(Math.random()*1.5);
- if(score>bs){bs=score;best=h;}
- });
- if(best)d.oppBans.push(best);
- return;
+  const avail=banCandidates(d).filter(h=>!((d.usedOpp||[]).includes(h)));
+  const mySig=new Set((d.ls||[]).map(p=>p&&p.sig).filter(Boolean));
+  let best=null,bs=-1;
+  avail.forEach(h=>{
+   const th=threatOf(d,h,'me')||0;
+   let score=th+(heroOf(h).hot?2:0)+Math.random()*noise+behindBoost*(th>0?1:0);
+   if(mySig.has(h))score+=sigW;
+   if(score>bs){bs=score;best=h;}
+  });
+  if(best)d.oppBans.push(best);
+  return;
  }
- // AI 选人：挑剩余位置中（选手×英雄）战力最高的一手，稍带保护招牌倾向；伤员跳过
  let bestPos=null,bestHero=null,bs=-1;
  POS_ORDER.forEach(pos=>{
- if(pos in d.oppPicks)return;
- const p=(d.oppRoster||[]).find(x=>x.pos===pos&&x.injury<=0);
- if(!p)return;
- const taken=takenSet(d),oppUsed=d.usedOpp||[]; // 全局BP：对方本系列赛己方用过的也不能再选
- let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
- if(!cand.length)cand=HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0})); // 兜底：临时掏
- cand.forEach(h=>{
- const pw=playerPower(p,h.n);
- let score=pw+(heroOf(h.n).hot?1.2:0)+(h.n===p.sig?0.8:0)+Math.random();
- if(score>bs){bs=score;bestPos=pos;bestHero=h.n;}
- });
+  if(pos in d.oppPicks)return;
+  const p=(d.oppRoster||[]).find(x=>x.pos===pos&&x.injury<=0);
+  if(!p)return;
+  const taken=takenSet(d),oppUsed=d.usedOpp||[];
+  let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
+  if(!cand.length)cand=HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0}));
+  cand.forEach(h=>{
+   const pw=playerPower(p,h.n);
+   let score=pw+(heroOf(h.n).hot?1.2:0)+(h.n===p.sig?Math.max(0.4,1.6*(brain-0.4)):0)+Math.random()*noise;
+   if(behind&&heroOf(h.n)&&heroOf(h.n).hot)score+=behindBoost*0.5;
+   if(score>bs){bs=score;bestPos=pos;bestHero=h.n;}
+  });
  });
  if(bestPos){d.oppPicks[bestPos]=bestHero;ensureHeroInPool((d.oppRoster||[]).find(x=>x.pos===bestPos&&x.injury<=0),bestHero);}
 }
