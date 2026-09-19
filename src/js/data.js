@@ -407,7 +407,7 @@ const AI_TEAMS=[
  {name:'成都AG超玩会',icon:'焰',power:640},
 ];
 /* KPL 2025 官方赛制常量 */
-const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）
+const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7,CARD:5}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）；CARD=卡位赛总局数（2026 公开报道为 BO5，旧版误按 BO7）
 
 /* ================= 教练池（真实 KPL 主教练） =================
  bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费

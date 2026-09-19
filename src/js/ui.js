@@ -435,7 +435,7 @@ function clubLeaguePhasePanel(){
 }
 function clubCardPanel(){
  const myCard=S.card&&S.card.matches&&S.card.matches.find(m=>m.a===S.teamName||m.b===S.teamName);
- return `<div class="panel"><h3>卡位赛 <span class="tag">BO7 · 含巅峰对决</span></h3>
+ return `<div class="panel"><h3>卡位赛 <span class="tag">BO${KPL.CARD} · 含巅峰对决</span></h3>
  ${((S.card&&S.card.matches)||[]).map(m=>{
  const done=!!m.r;
  const me=m.a===S.teamName||m.b===S.teamName;
@@ -875,7 +875,7 @@ function renderLeague(){
  const groups=phaseGroups(S);
  const myG=myGroup(S);
  let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
- <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO7 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
+ <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
  // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
  const rank=annualRank(S);
@@ -926,7 +926,7 @@ function renderLeague(){
  }
  // 卡位赛对阵（联赛页）
  if(S.phase==='card'&&S.card){
- html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO7 · 含巅峰对决</span></h3>
+ html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO${KPL.CARD} · 含巅峰对决</span></h3>
  ${S.card.matches.map(m=>{
  const me=m.a===S.teamName||m.b===S.teamName;
  return `<div class="match" style="margin-bottom:6px">

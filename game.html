@@ -440,7 +440,7 @@ const AI_TEAMS=[
  {name:'成都AG超玩会',icon:'焰',power:640},
 ];
 
-const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）
+const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7,CARD:5}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）；CARD=卡位赛总局数（2026 公开报道为 BO5，旧版误按 BO7）
 
 const COACH_POOL=[
  {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
@@ -3895,16 +3895,16 @@ function setupCard(s){
  s.phase='eliminated';
  logEvent(s,' 第二轮 B 组排名 3-6，无缘本赛季后续比赛');
 
- s.card.matches.forEach(m=>{if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.BO7);m.r=r.win?m.a:m.b;}});
+ s.card.matches.forEach(m=>{if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.CARD);m.r=r.win?m.a:m.b;}});
  s.card.idx=s.card.matches.length;
  finishCard(s);
  save();renderAll();
  return;
  }
  const playerIn=s.card.matches.some(m=>m.a===s.teamName||m.b===s.teamName);
- logEvent(s,' 卡位赛（BO7·含巅峰对决）即将开始！');
+ logEvent(s,' 卡位赛（BO5·含巅峰对决）即将开始！');
  if(!playerIn){
- s.card.matches.forEach(m=>{const r=simSeriesResult(s,m.a,m.b,KPL.BO7);m.r=r.win?m.a:m.b;});
+ s.card.matches.forEach(m=>{const r=simSeriesResult(s,m.a,m.b,KPL.CARD);m.r=r.win?m.a:m.b;});
  s.card.idx=s.card.matches.length;
  finishCard(s);
  return;
@@ -3917,13 +3917,13 @@ function playCardNext(s){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打卡位赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,KPL.BO7,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
+ playerPlayAndFinish(s,opName,KPL.CARD,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
  return;
  }
 
  if(s.series&&s.series.stage==='card'){
  if(!s.series.mid||s.series.mid==='card_'+s.card.idx){
- showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
+ showPreMatch('卡位赛（BO5·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
  }
  logEvent(s,'⚠ 赛程修复：废弃未同步的卡位赛残影（'+s.series.mid+'），本场重新开打');
@@ -3932,11 +3932,11 @@ function playCardNext(s){
  }
  tagMatch(s,m,'card_'+s.card.idx);
 
- s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
+ s.series={used:[],usedOpp:[],mw:0,ow:0,max:KPL.CARD,stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
  resetOppEnergy(s,opName);
- showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第1局');
+ showPreMatch('卡位赛（BO5·含巅峰对决）vs '+opName+' · 第1局');
  }else{
- const r=simSeriesResult(s,m.a,m.b,KPL.BO7);
+ const r=simSeriesResult(s,m.a,m.b,KPL.CARD);
  m.r=r.win?m.a:m.b;
  logEvent(s,' 卡位赛：'+m.a+' vs '+m.b+'，'+m.r+' 晋级');
  s.card.idx++;
@@ -3949,7 +3949,7 @@ function finishCard(s){
  const sNew=[sRank[0],sRank[1],sRank[2],sRank[3]];
  const aNew=[aRank[2],aRank[3]];
  (s.card.matches||[]).forEach(m=>{
- if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.BO7);m.r=r.win?m.a:m.b;}
+ if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.CARD);m.r=r.win?m.a:m.b;}
  if(m.winTo==='S'){sNew.push(m.r);aNew.push(m.r===m.a?m.b:m.a);}
  else aNew.push(m.r);
  });
@@ -5796,11 +5796,11 @@ function finishEWC(s){
  const runner=loserOf(e.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'EWC',champ:e.champ}]).slice(-48);
  logEvent(s,' EWC 总决赛落幕：'+e.champ+' 捧杯！'+(e.champ===s.teamName?'中国赛区的世界之巅！':''));
- let prize=0; // 奖金（美元折算，真实对齐 ÷6）：冠军90万$≈900 / 亚军55万$≈550 / 四强24万$≈242 / 八强15.5万$≈155
- if(e.champ===s.teamName)prize=900;
- else if(runner===s.teamName)prize=550;
- else if(e.sf.some(m=>m.r&&loserOf(m)===s.teamName))prize=242;
- else if(e.qf.some(m=>m.r&&loserOf(m)===s.teamName))prize=155;
+ let prize=0; // 奖金（美元折算，真实对齐 ÷6）：冠军60万$≈600 / 亚军30万$≈300 / 四强15万$≈150 / 八强9万$≈90
+ if(e.champ===s.teamName)prize=600;
+ else if(runner===s.teamName)prize=300;
+ else if(e.sf.some(m=>m.r&&loserOf(m)===s.teamName))prize=150;
+ else if(e.qf.some(m=>m.r&&loserOf(m)===s.teamName))prize=90;
  if(prize)grantPrize(s,prize,'EWC 赛事奖金');
  if(e.champ===s.teamName||runner===s.teamName){
  s.honors=s.honors||[];
@@ -9029,7 +9029,7 @@ function clubLeaguePhasePanel(){
 }
 function clubCardPanel(){
  const myCard=S.card&&S.card.matches&&S.card.matches.find(m=>m.a===S.teamName||m.b===S.teamName);
- return `<div class="panel"><h3>卡位赛 <span class="tag">BO7 · 含巅峰对决</span></h3>
+ return `<div class="panel"><h3>卡位赛 <span class="tag">BO${KPL.CARD} · 含巅峰对决</span></h3>
  ${((S.card&&S.card.matches)||[]).map(m=>{
  const done=!!m.r;
  const me=m.a===S.teamName||m.b===S.teamName;
@@ -9468,7 +9468,7 @@ function renderLeague(){
  const groups=phaseGroups(S);
  const myG=myGroup(S);
  let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
- <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO7 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
+ <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
 
  {
  const rank=annualRank(S);
@@ -9519,7 +9519,7 @@ function renderLeague(){
  }
 
  if(S.phase==='card'&&S.card){
- html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO7 · 含巅峰对决</span></h3>
+ html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO${KPL.CARD} · 含巅峰对决</span></h3>
  ${S.card.matches.map(m=>{
  const me=m.a===S.teamName||m.b===S.teamName;
  return `<div class="match" style="margin-bottom:6px">
@@ -10378,7 +10378,7 @@ function playerRest(){
 <script>
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 
-const KM_BUILD='2026-09-19e';
+const KM_BUILD='2026-09-19f';
 
 const _foldCache=new Map();
 function foldCls(key,def){
@@ -11186,7 +11186,7 @@ function createTeam(){
  logEvent(S,` 开局直签 ${S.players.length} 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容`);
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
- logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
+ logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');
@@ -11223,7 +11223,7 @@ function applyClub(){
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税，转会期可卖人减负');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
- else logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
+ else logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');

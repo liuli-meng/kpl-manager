@@ -32,6 +32,7 @@ const SUITES = [
   { id: 'verify-migrate', file: 'tests/verify-migrate.js', label: '迁移矩阵' },
   { id: 'verify-legend-price', file: 'tests/verify-legend-price.js', label: '名宿教练定价' },
   { id: 'verify-market-refresh', file: 'tests/verify-market-refresh.js', label: '市场刷新免费额度' },
+  { id: 'verify-card-bo', file: 'tests/verify-card-bo.js', label: '卡位赛 BO 数' },
   { id: 'verify-logcat', file: 'tests/verify-logcat.js', label: '日志分类' },
   { id: 'verify-names', file: 'tests/verify-names.js', label: '命名生成' },
   { id: 'verify-board', file: 'tests/verify-board.js', label: '董事会' },

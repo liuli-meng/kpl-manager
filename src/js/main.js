@@ -1,6 +1,6 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-19e';
+const KM_BUILD='2026-09-19f';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
    pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
@@ -833,7 +833,7 @@ function createTeam(){
  logEvent(S,` 开局直签 ${S.players.length} 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容`);
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
- logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
+ logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');
@@ -870,7 +870,7 @@ function applyClub(){
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税，转会期可卖人减负');
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
- else logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
+ else logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');

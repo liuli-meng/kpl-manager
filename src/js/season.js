@@ -1,7 +1,7 @@
 /* 联赛核心：赛程/赛段/季后赛/日结/工资/王朝/最佳阵容/年度轮换/积分/赛历（season.js 机械拆出） */
 
 /* ================= 比赛与联赛（KPL 2025 官方赛制） =================
- 常规赛4阶段：第一轮(3组单循环BO5)→第二轮(S/A/B)→卡位赛(BO7含巅峰对决)→第三轮(S/A单循环BO5)
+ 常规赛4阶段：第一轮(3组单循环BO5)→第二轮(S/A/B)→卡位赛(BO5含巅峰对决)→第三轮(S/A单循环BO5)
  季后赛：S组6队(前4进胜者组)+A组前4 → 10队 BO7 双败淘汰，总决赛第7局巅峰对决
  常规赛胜者积1分；2026起奖金按胜小局数结算 */
 const PHASE_NAME={r1:'常规赛·第一轮',r2:'常规赛·第二轮',card:'卡位赛',r3:'常规赛·第三轮',playoff:'季后赛',champion:'赛季结束',eliminated:'赛季结束',challenger:'挑战者杯',ewc:'EWC 电竞世界杯',asiad:'亚运会',annual:'KPL 年度总决赛'};
@@ -206,7 +206,9 @@ function advancePhase(s){
  }
  save();renderAll();
 }
-/* ===== 卡位赛（BO7 含巅峰对决） ===== */
+/* ===== 卡位赛（BO5 含巅峰对决）=====
+   2026 春季赛公开报道口径：卡位赛在常规赛第二轮进行、BO5，胜者进第三轮 S 组、负者淘汰。
+   旧版按 BO7 打（生死战给了 7 局），BO 数现收进 KPL.CARD 单点，为按年代切换赛制留好口子。 ===== */
 function setupCard(s){
  const sRank=sortGroup(s,'S'),aRank=sortGroup(s,'A'),bRank=sortGroup(s,'B');
  s.card={matches:[
@@ -221,16 +223,16 @@ function setupCard(s){
  s.phase='eliminated';
  logEvent(s,' 第二轮 B 组排名 3-6，无缘本赛季后续比赛');
  // 联盟照常打完本赛季：补完卡位赛与季后赛，产生冠军（王朝统计/连冠反制需要）
- s.card.matches.forEach(m=>{if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.BO7);m.r=r.win?m.a:m.b;}});
+ s.card.matches.forEach(m=>{if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.CARD);m.r=r.win?m.a:m.b;}});
  s.card.idx=s.card.matches.length;
  finishCard(s);
  save();renderAll();
  return;
  }
  const playerIn=s.card.matches.some(m=>m.a===s.teamName||m.b===s.teamName);
- logEvent(s,' 卡位赛（BO7·含巅峰对决）即将开始！');
+ logEvent(s,' 卡位赛（BO5·含巅峰对决）即将开始！');
  if(!playerIn){
- s.card.matches.forEach(m=>{const r=simSeriesResult(s,m.a,m.b,KPL.BO7);m.r=r.win?m.a:m.b;});
+ s.card.matches.forEach(m=>{const r=simSeriesResult(s,m.a,m.b,KPL.CARD);m.r=r.win?m.a:m.b;});
  s.card.idx=s.card.matches.length;
  finishCard(s);
  return;
@@ -243,14 +245,14 @@ function playCardNext(s){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打卡位赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,KPL.BO7,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
+ playerPlayAndFinish(s,opName,KPL.CARD,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
  return;
  }
  // 系列赛中断恢复（P2-7 校验身份）：mid 不属于当前卡位场次 = 僵尸系列赛——
  // 续打它会用旧比分把结果写进错误对阵，必须废弃重开
  if(s.series&&s.series.stage==='card'){
  if(!s.series.mid||s.series.mid==='card_'+s.card.idx){
- showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
+ showPreMatch('卡位赛（BO5·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
  }
  logEvent(s,'⚠ 赛程修复：废弃未同步的卡位赛残影（'+s.series.mid+'），本场重新开打');
@@ -259,11 +261,11 @@ function playCardNext(s){
  }
  tagMatch(s,m,'card_'+s.card.idx);
  // L2：series 只留 mid（权威键），不再挂 cardMatch 对象引用——写结果一律 resolveSeriesMatch
- s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
+ s.series={used:[],usedOpp:[],mw:0,ow:0,max:KPL.CARD,stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'card',opName)};s.seriesAuto=false;
  resetOppEnergy(s,opName);
- showPreMatch('卡位赛（BO7·含巅峰对决）vs '+opName+' · 第1局');
+ showPreMatch('卡位赛（BO5·含巅峰对决）vs '+opName+' · 第1局');
  }else{
- const r=simSeriesResult(s,m.a,m.b,KPL.BO7);
+ const r=simSeriesResult(s,m.a,m.b,KPL.CARD);
  m.r=r.win?m.a:m.b;
  logEvent(s,' 卡位赛：'+m.a+' vs '+m.b+'，'+m.r+' 晋级');
  s.card.idx++;
@@ -276,7 +278,7 @@ function finishCard(s){
  const sNew=[sRank[0],sRank[1],sRank[2],sRank[3]];
  const aNew=[aRank[2],aRank[3]];
  (s.card.matches||[]).forEach(m=>{
- if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.BO7);m.r=r.win?m.a:m.b;}
+ if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.CARD);m.r=r.win?m.a:m.b;}
  if(m.winTo==='S'){sNew.push(m.r);aNew.push(m.r===m.a?m.b:m.a);}
  else aNew.push(m.r);
  });

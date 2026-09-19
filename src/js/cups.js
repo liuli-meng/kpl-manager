@@ -141,9 +141,11 @@ function finishChallenger(s){
  try{gcDefs(s);}catch(e){}
  setupEWC(s); // 挑杯收官 → EWC 电竞世界杯（夏季休赛）
 }
-/* ================= EWC 电竞世界杯（年中国际杯赛） =================
- 真实赛制简化建模：春季赛冠军（KPL直邀）+ 亚军（英雄亚冠ACL直邀）+ 6 支海外强队
- → 8 强 BO7 单败淘汰（小组赛/突围赛合并简化）。冠军奖金 540 万（75万美元），另评 FMVP。 */
+/* ================= 电竞世俱杯（EWC 王者荣耀项目，年中国际杯赛） =================
+ 真实口径（2026）：赛事名「电竞世俱杯」，7/30–8/8，**20 队**参赛（KPL 与 KML/PKL/RPL 等各赛区联赛名额），
+ 赛制为分组 + 淘汰，奖金池 300 万美元、冠军 60 万美元。
+ 游戏化简化：春季赛冠军（KPL 直邀）+ 亚军（英雄亚冠 ACL 直邀）+ 6 支海外强队 → 8 强 BO7 单败
+ （把 20 队分组+淘汰压成一轮定胜负，避免一年多打 3 轮赛程）。奖金按 60/30/15/9 万美元档折算。 */
 const EWC_OVERSEAS=['NOVA Esports','Blacklist International','Twisted Minds','Alpha7 Esports','Team Vitality','Gen.G Esports','Nongshim RedForce','PAWS Gaming','BOOM Esports','KAGENDRA'];
 const EWC_NAMES=['Niap','Dani','Fury','Cr7','Vilao1','Freaks','ABH','0ne','Vento','Xuan','Cy','Wendy','Muci','Weipit','Switch','Flukeyo','Shy','Miggie','Karlll','Tatsurii','Chammy1','Juschie','Dragon','Ihanss','Wiraww','Senkoo','Tufzzz','Zhanq','Wawa','Ray','Inua','Nighty','Clean','Snow','Myosotis','Keke','Daodao','Ran','Zoe','Sheng','Haku','Illusion','Musangking','Zhihong','Dian','Niel','Zaan','Guilv','Tianx','Fenrir'];
 /* 海外选手名兜底：EWC_NAMES 只有 50 个，而每年要出 6 队 ×5 = 30 人，第二年就撞满 →
@@ -210,11 +212,11 @@ function finishEWC(s){
  const runner=loserOf(e.final);
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split,event:'EWC',champ:e.champ}]).slice(-48);
  logEvent(s,' EWC 总决赛落幕：'+e.champ+' 捧杯！'+(e.champ===s.teamName?'中国赛区的世界之巅！':''));
- let prize=0; // 奖金（美元折算，真实对齐 ÷6）：冠军90万$≈900 / 亚军55万$≈550 / 四强24万$≈242 / 八强15.5万$≈155
- if(e.champ===s.teamName)prize=900;
- else if(runner===s.teamName)prize=550;
- else if(e.sf.some(m=>m.r&&loserOf(m)===s.teamName))prize=242;
- else if(e.qf.some(m=>m.r&&loserOf(m)===s.teamName))prize=155;
+ let prize=0; // 奖金（美元折算，真实对齐 ÷6）：冠军60万$≈600 / 亚军30万$≈300 / 四强15万$≈150 / 八强9万$≈90
+ if(e.champ===s.teamName)prize=600;
+ else if(runner===s.teamName)prize=300;
+ else if(e.sf.some(m=>m.r&&loserOf(m)===s.teamName))prize=150;
+ else if(e.qf.some(m=>m.r&&loserOf(m)===s.teamName))prize=90;
  if(prize)grantPrize(s,prize,'EWC 赛事奖金');
  if(e.champ===s.teamName||runner===s.teamName){
  s.honors=s.honors||[];
