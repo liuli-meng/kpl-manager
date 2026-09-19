@@ -819,6 +819,7 @@ function migrateSave(){
  migrateSeasonShape(S);
  migratePlayerFields(S);
  migrateFreeAgents(S);
+ migrateLegendPrice(S); // 名宿/回流旧帅缺 cost/wage 的旧档修复（须在两条货币缩放之后）
  // 年总卡死恢复：决赛已打完/冠军已出但 newSeason 未完成 → 读档自动补完年度轮换
  try{
  if(typeof yearRollPending==='function'&&yearRollPending(S)&&typeof finishAnnual==='function')finishAnnual(S,true);
@@ -926,6 +927,20 @@ function migrateFreeAgents(s){
  if(typeof p.signCost!=='number'||!isFinite(p.signCost))p.signCost=Math.round(valueOf(overall(p))*0.58);
  if(typeof p.willingness!=='number'||!isFinite(p.willingness))p.willingness=rnd(70,100);
  });
+}
+/* 名宿教练定价修复：AI 换帅回流（transfer.js）与早期退役转型写进 retiredCoaches 的对象
+   可能只有执教字段、没有 cost/wage——转会页会渲染 "undefined万"，而玩家真点「聘为教练」
+   就是 s.fund-=undefined → 资金 NaN。这里按 legendPrice 补出当前刻度的价码。
+   与 migrateFreeAgents 同理，必须排在两条货币迁移之后，否则补出来的数会被再 ÷6。 */
+function migrateLegendPrice(s){
+ const fix=o=>{
+ if(!o||typeof o!=='object')return;
+ if(typeof o.cost!=='number'||!isFinite(o.cost)||!(o.cost>0)){const p=legendPrice(o.rating,o.bonus);o.cost=p.cost;}
+ if(o.type!=='host'&&(typeof o.wage!=='number'||!isFinite(o.wage)||!(o.wage>0))){const p=legendPrice(o.rating,o.bonus);o.wage=p.wage;}
+ };
+ (s.retiredCoaches||[]).forEach(fix);
+ (s.assistants||[]).forEach(fix);
+ if(s.coach)fix(s.coach);
 }
 function ensureSeason(s){
  // 启动/读档后确保赛制状态完整（新档 initGroups 在 createTeam 调用）

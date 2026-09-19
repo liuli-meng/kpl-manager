@@ -1204,7 +1204,7 @@ function crestBuilderHTML(previewName){
  }).join('');
  const swBtns=CREST_SWATCHES.map((x,i)=>`<button type="button" class="cr-sw ${i===_crSw?'on':''}" data-i="${i}" onclick="crSw(${i})" title="配色${i+1}（主色 ${x[0]}）" style="background:${x[0]}"></button>`).join('');
  return `<div class="cr-top">
- <div id="cr-preview">${crestOf(_crBrandFor(previewName),64)}</div>
+ <div class="cr-preview">${crestOf(_crBrandFor(previewName),64)}</div>
  <div class="cr-tip dim">你的战队与 18 支真实 KPL 俱乐部同用一套队徽引擎<br>执教原版俱乐部保留官方主色（AG 红金 / 狼队黑金 / eStar 星空蓝…）</div>
  </div>
  <div class="dim" style="font-size:11px;margin:2px 0 6px">徽章外形</div>
@@ -1212,17 +1212,25 @@ function crestBuilderHTML(previewName){
  <div class="dim" style="font-size:11px;margin:4px 0 6px">主队配色</div>
  <div class="cr-row">${swBtns}</div>
  <div class="center dim" style="font-size:11px;margin:8px 0 6px">队徽缩写（≤4 字符，留空自动取队名）</div>
- <div class="center"><input id="cr-txt" maxlength="4" value="${_escTxt(_crTxt)}" placeholder="如 AG / WOLF / 无名" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:170px;text-align:center" oninput="crTxt(this.value)"></div>`;
+ <div class="center"><input class="cr-txt" maxlength="4" value="${_escTxt(_crTxt)}" placeholder="如 AG / WOLF / 无名" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:170px;text-align:center" oninput="crTxt(this.value)"></div>`;
+}
+/* 队徽编辑器同时可能有两份：开局页那份 + 「自定义队徽」弹窗那份（closeModal 不清 innerHTML，
+   弹窗关掉后旧副本仍留在 DOM 里，且文档顺序更靠前）。所以一律取「可见的那一份」并把查询
+   限定在它内部，不能用 document.getElementById——否则开局页敲队名/点配色全打到隐藏副本上。 */
+function crRoot(){
+ const list=[...document.querySelectorAll('.cr-builder')];
+ return list.find(b=>b.offsetParent)||list[0]||null;
 }
 function refreshCrUI(){
- const b=document.getElementById('cr-builder');
+ const b=crRoot();
  if(!b)return;
+ const host=b.parentElement||b; // 队名输入只在开局页那一份的容器里，弹窗那份读不到 → 回落 S.teamName
  const name=function(){
-  const i=document.getElementById('new-team-name');
+  const i=host.querySelector('#new-team-name');
   if(i&&String(i.value||'').trim())return i.value.trim();
   return (typeof S!=='undefined'&&S&&S.teamName)?S.teamName:'';
  }();
- const p=document.getElementById('cr-preview');
+ const p=b.querySelector('.cr-preview');
  if(p)p.innerHTML=crestOf(_crBrandFor(name),64);
  b.querySelectorAll('.cr-shape').forEach(x=>x.classList.toggle('primary',x.dataset.sh===_crShape));
  b.querySelectorAll('.cr-sw').forEach(x=>x.classList.toggle('on',parseInt(x.dataset.i,10)===_crSw));
@@ -1240,7 +1248,7 @@ function openCrestEdit(){
  _crTxt=(cur.txt&&cur.txt!==shortMark(S.teamName))?String(cur.txt).slice(0,4):'';
  $('#app-modal-body').innerHTML=`
  <h2>${crest(S.icon,S.teamName,24)} ${S.teamName} · 自定义队徽</h2>
- <div id="cr-builder">${crestBuilderHTML(S.teamName)}</div>
+ <div class="cr-builder">${crestBuilderHTML(S.teamName)}</div>
  <div class="center mt16" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn sm" onclick="closeModal('app-modal')">取消</button>
  ${TEAM_BRAND[S.teamName]?`<button class="btn sm" onclick="resetCrest()">恢复官方原版队徽</button>`:''}

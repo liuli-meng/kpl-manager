@@ -1,6 +1,6 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-19d';
+const KM_BUILD='2026-09-19e';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
    pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
@@ -238,7 +238,12 @@ function importSave(){
 }
 /* 存档文件导出：下载 .json（含版本号与导出时间，跨设备备份推荐方式）
   手机端加固：iOS/微信对 a.download 支持差，优先 Web Share，失败再回落下载+文本框兜底 */
-function pickSaveFile(){$('#save-file').click();}
+function pickSaveFile(){
+ // 弹窗内容会被其它面板复用同一个容器覆盖掉（#save-file 随之消失），此时先重开存档管理再触发选择
+ const f=$('#save-file');
+ if(!f){openSaveMgmt();const f2=$('#save-file');if(!f2)return;f2.click();return;}
+ f.click();
+}
 function fallbackDownload(blob,fname,onFail){
  try{
   const url=URL.createObjectURL(blob);
@@ -503,7 +508,7 @@ function initStart(){
  <div class="center" style="margin-bottom:12px">
  <span class="dim">战队名称：</span><input id="new-team-name" maxlength="8" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:180px" placeholder="输入队名" oninput="refreshCrUI()">
  </div>
- <div id="cr-builder">${crestBuilderHTML('')}</div>
+ <div class="cr-builder">${crestBuilderHTML('')}</div>
  <div class="hint" style="margin:6px 0 14px;text-align:center">初始资金 1300万 · 工资帽 150万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
  <div class="center"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
  </div>

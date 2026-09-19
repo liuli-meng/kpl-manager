@@ -311,6 +311,13 @@ function buildYearReview(s){
  return review;
 }
 
+/* 名宿教练定价（评分/加成 → 周薪与签约费）：三处创建"名宿/回流旧帅"的对象都走这里。
+   漏一个字段的后果不是显示难看，而是 signRetired/hireAssistant 里 `s.fund-=r.cost` 把资金
+   算成 NaN、`weeklyWage` 丢一个工资项——转会页那一行 "undefined万" 只是最先露出来的表象。 */
+function legendPrice(rating,bonus){
+ const star=(rating||70)>=80||(bonus||0)>=6;
+ return star?{wage:rnd(20,30),cost:rnd(200,300)}:{wage:rnd(13,18),cost:rnd(117,167)};
+}
 /* 选手退役去向：转教练（战力加成）或转型主播（人气收入），进入"退役名宿"市场 */
 function retireToCoach(s,p){
  s.retiredCoaches=s.retiredCoaches||[];
@@ -319,8 +326,9 @@ function retireToCoach(s,p){
  // 转教练：实力越强加成越高
  const bonus=isStar?rnd(5,8):rnd(3,5);
  const style=pick(['lane','farm','team','mind']);
+ const price=legendPrice(isStar?80:70,bonus);
  const coach={id:'rc'+Date.now()+'_'+rnd(100,999),name:p.name,rating:isStar?80:70,style,bonus,styleBonus:isStar?rnd(3,5):2,
- wage:isStar?rnd(20,30):rnd(13,18),cost:isStar?rnd(200,300):rnd(117,167),
+ wage:price.wage,cost:price.cost,
  skill:{n:'名宿执教',d:'全队战力+'+bonus+'% · 退役选手转型教练'},type:'coach',origin:p.name};
  s.retiredCoaches.push(coach);
  logEvent(s,''+p.name+'（'+p.age+'岁）退役转型主教练！执教能力已进入教练市场');

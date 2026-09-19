@@ -809,6 +809,28 @@ v5.1 之后用户仍反馈「颜色太暗」。这次先量再改——`ladder-c
 - 无头截图 桌面 1280 × 10 页 + 移动 390 × 4 页：零 console 报错、零横向溢出，**各页高度与 v5.1 完全一致**（只动颜色，没动版式）
 - 方向决策记录：`E:\sex\视觉方案\配色方向对照.html` —— A 现状 / B 石墨亮板 / C 海军蓝转播台 / D 纸白控制台，四套都注入真实 game.html 实拍，用户选 B
 
+## 2026-09 运行时全站扫雷：构建产物漂移 + 三个真 bug
+
+### 起因与发现通道
+
+`npm test` 53/53 全绿、fuzz 三个种子全绿、对比度/明度审计全过——但线上和真实存档仍然有问题。补了一条不依赖断言口径的发现通道：`tests/playthrough/sweep-all.js`（无头 Chrome，三种身份 × 10 页 × 纯 UI 按钮），一次扫五类问题：渲染脏文本、`onclick` 断链、**重复 DOM id**、console/pageerror、点一下就把全局 `S` 清空的按钮。支持 `--save=<存档.json>` 用玩家真实存档跑（合成造档走不到的分支全靠它兜出来）。配套静态扫描 `scan-dup-ids.js`（一个 id 被多处发出 + 又被按 id 取用 = 会互相遮蔽）。
+
+### 修了什么
+
+1. **构建产物漂移（CI 门禁必红）**：`d78ed50` 视觉 v6 的 `game.html` 是用 `build.ps1` 生成的——那份实现把 `style.css` 与各 JS 模块**原样**拼进产物不做压缩，于是提交里的产物比 CI 用 `npm run build` 重建的结果大 107KB（778596 → 668952），CI 最后一步 `git diff --exit-code game.html` 必然失败。归一化对比（`.workbuddy/tmp/diff-built.js`）确认 CSS/JS **内容与 src 完全一致**，纯属构建器漂移，没丢代码。现在：`build.ps1` 改成转发 `node build.js` 的 shim（保留文件名兼容旧习惯），kpl-dev 技能第 6 步从 `build.ps1` 改口 `npm run build`，`KM_BUILD` → `2026-09-19e`。
+2. **队徽编辑器自我遮蔽（开局页必现）**：`closeModal()` 只摘 `.on` 类、不清 `#app-modal-body`，所以「自定义队徽」弹窗关掉后那份 HTML 仍留在文档里，且 `#app-modal` 在文档顺序上**排在开局页之前**——`refreshCrUI()` 用 `document.getElementById('cr-builder'/'cr-preview')` 就永远打到那份隐藏副本。表现：玩家敲队名/点配色**毫无反应**，但选择其实已静默写进 `_crSw`（下次打开就"见了鬼"）。修法：三份 id 全改 class（`.cr-builder`/`.cr-preview`/`.cr-txt`，含 `style.css` 两处选择器），`crRoot()` 取**可见的那一份**并把查询限定在其内部；队名输入改为只在同一容器内找（弹窗那份不再误读开局页输入）。
+3. **AI 旧帅回流名宿市场没有价码（资金会变 NaN）**：`aiCoachState()` 里的 AI 教练只存执教字段（`id/name/rating/bonus/style`），而 `aiTransferWindow()` 换帅时直接 `{...cur,type:'coach'}` 推进 `retiredCoaches`——于是转会页名宿行渲染 **`undefined万`**，而玩家真点「聘为教练」：`signRetired` 的 `if(s.fund<r.cost)` 因 `undefined` 比较恒为 false 而放行，`s.fund-=undefined` **把资金算成 NaN**；转助教分支 `Math.round(r.cost*0.6)` 同理。修法：定价口径收敛成 `career.js` 的 `legendPrice(rating,bonus)`（明星 20-30万周薪/200-300万签约费，普通 13-18/117-167，与退役转型原区间一致），回流处补 `wage/cost`，并加 `migrateLegendPrice()` 修复已写坏的旧档（挂在 `migrateFreeAgents` 之后，避开两条货币迁移的 ÷6）。
+4. `pickSaveFile()` 加空引用兜底：`#save-file` 随弹窗内容被复用容器覆盖而消失时，先重开存档管理再触发文件选择。
+
+### 验收
+
+- 新增 `tests/verify-legend-price.js`（已挂进 `tests/run.js`，54/54 绿）：`legendPrice` 两档区间、AI 换帅回流入册即带价码、签约/转助教后资金与周薪有限、脏档经 `migrateSave` 修复。**断言可报红已实测**：临时把 `transfer.js` 退回修复前一行，用例 exit=1；恢复后全绿。
+- `tests/probe-fund-nan.js` 扩到教练/助教/赞助这条花钱链（新增 `signRetired/hireAssistant/fireAssistant/upgradeSponsor` 包装 + 每步 `unpriced()` 体检），15 赛季零命中。
+- 真实存档（第 2 季 · 转会期）扫雷：修复前 `dirty=1`（`undefined万`），修复后 **errors/dirty/deadHandlers/dupIds/uiClickFail 全 0**；三种身份合成档扫雷同样 0 命中（`setSlot` 切到空槽回开局页属设计行为，已在扫雷里排除）。
+- 开局页队徽编辑器浏览器实测（390×780）：敲「星河」→ 预览出字、切外形高亮跟到第 3 项、点配色跟到第 6 项，出图 `gui-test-screenshots/start-crest-live.png`。
+- 静态 id 遮蔽扫描：修完 0 可疑项；`npm run build` → game.html 654KB；无头截图 桌面 10 页 + 移动 4 页零 console 报错、零横向溢出。
+- **仍未解决（外部条件）**：本地 `main` 领先 `origin/main` 5 个提交，视觉 v5/v6 至今没进 GitHub Pages——线上 `index.html` 与 `origin/main:game.html` 逐字节一致（661622B，`theme-color #141416`）。当前这台机器 `github.com:443` 直连被重置（`git fetch` 超时、`curl` 空响应），而 `github.io`/`api.github.com` 可达，代理 `127.0.0.1:10808` 未启动，所以推送要等网络或代理可用。
+
 ## 相比旧版的改动
 
 - **稀有度退场，FC26 式总值（OVR）**：删除 R/SR/SSR 标签与整张查表定价——选手唯一评价是 `overall()` 按位置加权四维实时计算的总值（0-99），训练/年龄/表现即时反映在数字上；身价、周薪、签约费、市场档位、意向俱乐部数全部由总值曲线出（顶星≈260万 / 主力≈130万 / 轮换≈55万锚位不变）；选手池手写的 `base` 成为选手真实评级（清融 92、一诺 92 一目了然），青训生练出来总值自然涨、自然卖上价；退役转教练/主播改看生涯成就与总值。卡面色阶保留但按实时总值映射，旧存档免迁移（选手总值即时补算，教练 rarity→rating 自动升级）

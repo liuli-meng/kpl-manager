@@ -424,7 +424,12 @@ function aiTransferWindow(s){
  const c=s.retiredCoaches.filter(r=>r.type!=='host'&&r.bonus>cur.bonus).sort((a,b)=>b.bonus-a.bonus)[0];
  if(!c)return;
  s.retiredCoaches=s.retiredCoaches.filter(r=>r.id!==c.id);
- if(cur.name)s.retiredCoaches.push({...cur,type:'coach'}); // 旧帅回流名宿市场，玩家可签
+ // AI 教练状态里只存执教字段（id/name/rating/bonus/style…），回流成可签约名宿前必须补上价码，
+ // 否则转会页渲染 "undefined万"，且玩家真签下来时 s.fund-=undefined 会把资金算成 NaN。
+ if(cur.name){
+  const price=legendPrice(cur.rating,cur.bonus);
+  s.retiredCoaches.push({...cur,type:'coach',wage:(typeof cur.wage==='number'?cur.wage:price.wage),cost:(typeof cur.cost==='number'?cur.cost:price.cost)});
+ }
  aiCoachState(s)[tn]={id:c.id,name:c.name,rating:c.rating,bonus:c.bonus,styleBonus:c.styleBonus,style:c.style};
  coachMoved=true;
  logEvent(s,'换帅！'+c.name+'（全队战力+'+c.bonus+'%）执教 '+tn+(cur.name?'，'+cur.name+' 回流名宿市场':''));
