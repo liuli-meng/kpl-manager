@@ -876,6 +876,7 @@ function renderTrain(){
 }
 function renderLeague(){
  try{if(typeof markMissionSeen==='function')markMissionSeen('seenLeague');}catch(_){}
+ try{if(typeof markSeasonQuestSeen==='function')markSeasonQuestSeen('seenLeague_'+((S&&S.season)||1));}catch(_){}
  const groups=phaseGroups(S);
  const myG=myGroup(S);
  let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>

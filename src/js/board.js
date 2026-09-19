@@ -80,6 +80,7 @@ function boardApplyEffect(s){
   const cut=Math.max(1,Math.round((s.wageCap||150)*0.1));
   s.wageCap=Math.max(50,(s.wageCap||150)-cut);
   logEvent(s,' 董事会介入：对战绩不满，压缩工资帽 '+cut+'万（本赛季上限 '+s.wageCap+'万/周）——请用更低的成本打出成绩');
+  try{if(typeof playMoment==='function'&&t<40)playMoment(2,'董事会警告','信任度 '+t+' · 工资帽已压缩','alert');}catch(e){}
  }else if(t>=BOARD_FAVOR_TRUST){
   s.fund+=130;
   logEvent(s,' 董事会放权：追加运营预算 +130万（信任度 '+t+'）');

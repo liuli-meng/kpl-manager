@@ -471,7 +471,16 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
  .cc-confetti i{display:none}
  .cc-cup{animation:none}
  #champion-overlay{animation:none}
+ .km-moment{animation:none}
 }
+/* 关键时刻横幅（playMoment L2）：夺冠走全屏典礼，这里管巅峰对决/以下克上等 */
+.km-moment{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:190;min-width:220px;max-width:92vw;
+ padding:14px 22px;border-radius:12px;background:rgba(14,16,22,.94);border:1px solid rgba(92,138,245,.55);
+ box-shadow:0 12px 40px rgba(0,0,0,.45);text-align:center;pointer-events:none;animation:kmMoment .45s ease}
+.km-moment-hot{border-color:rgba(242,196,21,.75);box-shadow:0 0 0 1px rgba(242,196,21,.25),0 14px 44px rgba(0,0,0,.5)}
+.km-moment-t{font-size:20px;font-weight:800;color:var(--gold,#F2C41B);letter-spacing:2px}
+.km-moment-s{font-size:12px;color:var(--txt,#E8ECF4);opacity:.85;margin-top:6px}
+@keyframes kmMoment{from{opacity:0;transform:translateX(-50%) translateY(-12px) scale(.96)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
 
 /* ============================================================
    v5.1 「去简陋」层：v5 把层级修对了，但版式与质感仍像未完成的原型。

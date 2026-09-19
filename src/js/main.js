@@ -908,12 +908,38 @@ const SFX={
  win:()=>{sfx(523,.11);setTimeout(()=>sfx(784,.15),95);},
  lose:()=>sfx(311,.16,'triangle',.045),
  gold:()=>{sfx(880,.07);setTimeout(()=>sfx(1174,.09),70);},
+ // 关键时刻分级音效（可关；与 playMoment 演出配套）
+ peak:()=>{sfx(392,.08,'sawtooth',.03);setTimeout(()=>sfx(523,.08,'sawtooth',.03),70);setTimeout(()=>sfx(784,.2,'sawtooth',.04),140);},
+ comeback:()=>{sfx(220,.07,'triangle',.035);setTimeout(()=>sfx(330,.07),60);setTimeout(()=>sfx(440,.07),120);setTimeout(()=>sfx(659,.22),180);},
+ fmvp:()=>{sfx(880,.06);setTimeout(()=>sfx(1046,.06),55);setTimeout(()=>sfx(1318,.2),110);},
+ title:()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>sfx(f,.12),i*90));},
+ dynasty:()=>{sfx(196,.12,'triangle',.04);setTimeout(()=>sfx(294,.12),100);setTimeout(()=>sfx(392,.25),200);},
+ alert:()=>{sfx(196,.2,'square',.03);setTimeout(()=>sfx(165,.22,'square',.03),160);},
 };
 function toggleSfx(){
  _sfxOn=!_sfxOn;
  try{localStorage.setItem('km_sfx',_sfxOn?'1':'0');}catch(_){}
  toast(_sfxOn?' 音效已开启':' 音效已关闭');
- renderHeader();
+ try{if(S)renderHeader();}catch(_){}
+}
+/* ================= 分级关键时刻演出 =================
+ L1=toast  L2=横幅闪光  L3=全屏典礼（冠军/FMVP）
+ 减弱动效时只保留 toast，音效仍按开关走。 */
+function playMoment(level,title,sub,sfxKey){
+ try{
+ if(sfxKey&&SFX[sfxKey])SFX[sfxKey]();
+ }catch(_){}
+ try{toast((level>=2?' ':'')+title+(sub?' · '+sub:''));}catch(_){}
+ if(level<2)return;
+ try{if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(_){}
+ try{
+ if(level>=3){playChampionCeremony(title);return;}
+ const bar=document.createElement('div');
+ bar.className='km-moment'+(level>=2?' km-moment-hot':'');
+ bar.innerHTML='<div class="km-moment-t">'+_escTxt(title)+'</div>'+(sub?'<div class="km-moment-s">'+_escTxt(sub)+'</div>':'');
+ document.body.appendChild(bar);
+ setTimeout(()=>{if(bar.parentNode)bar.parentNode.removeChild(bar);},level>=2?2800:1600);
+ }catch(_){}
 }
 /* 点击轻反馈（按钮/卡/BAN 位） */
 document.addEventListener('click',e=>{
@@ -965,6 +991,7 @@ function playChampionCeremony(title){
  +'<div class="cc-team">'+_escTxt(S.teamName)+' · 捧杯时刻</div>'
  +'<div class="cc-confetti">'+confetti+'</div></div>';
  document.body.appendChild(ov);
+ try{if(SFX.title)SFX.title();}catch(_){}
  ov.addEventListener('click',()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);});
  setTimeout(()=>{if(ov.parentNode)ov.parentNode.removeChild(ov);},6000);
  }catch(_){}

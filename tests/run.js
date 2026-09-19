@@ -63,6 +63,7 @@ const SUITES = [
   { id: 'verify-prevent', file: 'tests/verify-prevent.js', label: '防呆确认' },
   { id: 'verify-prefs', file: 'tests/verify-prefs.js', label: '本机偏好' },
   { id: 'verify-guide', file: 'tests/verify-guide.js', label: '新手引导' },
+  { id: 'verify-moment', file: 'tests/verify-moment.js', label: '演出与赛季主线' },
   { id: 'verify-sort', file: 'tests/verify-sort.js', label: '市场排序' },
   { id: 'verify-render-size', file: 'tests/verify-render-size.js', label: '渲染规模门禁' },
   { id: 'smoke', file: 'smoke.js', label: '冒烟' },

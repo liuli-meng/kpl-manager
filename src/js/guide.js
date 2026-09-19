@@ -73,9 +73,71 @@ function activeMissions(s){
 }
 function missionStrip(s){
  const list=activeMissions(s);
- if(!list.length)return '';
- return `<div class="mission-strip" style="margin:0 0 8px;padding:8px 10px;border:1px solid rgba(217,164,65,.55);border-radius:8px;background:rgba(217,164,65,.08);font-size:12px">
- <span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${m.text}">${m.title}</button>`).join('')}</span>
+ const seasonBar=seasonQuestStrip(s);
+ if(!list.length&&!seasonBar)return '';
+ const dayTag=list.length?`<span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${m.text}">${m.title}</button>`).join('')}</span>`:'';
+ return dayTag+seasonBar;
+}
+/* ================= 第一赛季主线（5 件事） =================
+ 贯穿整个第 1 赛季，不只前 3 天——压「系统太多不知先干嘛」。
+ 进度存 localStorage（本机 UI，不进存档）；达成即从条上消失，赛季结束后不再显示。 */
+const SEASONQ_KEY='km_seasonquest';
+function seasonQuestState(){
+ try{return JSON.parse(localStorage.getItem(SEASONQ_KEY)||'{}')||{};}catch(_){return {};}
+}
+function saveSeasonQuest(m){try{localStorage.setItem(SEASONQ_KEY,JSON.stringify(m));}catch(_){}}
+function seasonQuestDefs(mode){
+ if(mode==='player')return [
+  {id:'q1',title:'加练一次',page:'career',done:s=>!!(s.career&&s.career.stats&&s.career.stats.trained>=1)},
+  {id:'q2',title:'打完一场',page:'club',done:s=>!!(s.career&&s.career.stats&&s.career.stats.matches>=1)},
+  {id:'q3',title:'更衣室互动',page:'career',done:s=>!!(s.career&&s.career.stats&&s.career.stats.social>=1)},
+  {id:'q4',title:'关注身价/目标',page:'career',done:s=>!!(s.career&&(s.career.stats&&s.career.stats.matches>=3||s.val>=105))},
+  {id:'q5',title:'打完整赛季',page:'club',done:s=>['champion','eliminated'].includes(s.phase)},
+ ];
+ return [
+  {id:'q1',title:'凑齐 5 人首发',page:'lineup',
+   done:s=>POS_ORDER.every(pos=>(s.players||[]).some(p=>p.pos===pos&&(s.lineup||[]).includes(p.id)))},
+  {id:'q2',title:'结束转会期开赛',page:'club',
+   done:s=>!s.preseason&&!(s.transferWindow>0)},
+  {id:'q3',title:'完成一次训练',page:'train',
+   done:s=>!!s.trained||(s.academy||[]).some(r=>r.attrs&&(r.attrs.lane+r.attrs.farm+r.attrs.team+r.attrs.mind)>280)},
+  {id:'q4',title:'看过联赛积分榜',page:'league',
+   done:s=>!!(seasonQuestState()['seenLeague_'+((s.season)||1)]|| (s.matchIdx||0)>=3)},
+  {id:'q5',title:'赛季收官（任意结局）',page:'club',
+   done:s=>['champion','eliminated'].includes(s.phase)||(s.board&&s.board.fired)},
+ ];
+}
+function markSeasonQuestSeen(key){
+ const m=seasonQuestState();
+ const sk='seen_'+key;
+ if(m[sk])return;
+ m[sk]=1;saveSeasonQuest(m);
+}
+function seasonQuestProgress(s){
+ const mode=(s&&s.mode)||'manager';
+ const season=(s&&s.season)||1;
+ const st=seasonQuestState();
+ const key='s'+season+'_'+mode;
+ if(st['doneSeason_'+key])return {done:true,total:0,list:[],season};
+ let dirty=false;
+ const defs=seasonQuestDefs(mode);
+ const list=defs.filter(q=>{
+  if(st['done_'+season+'_'+q.id])return false;
+  try{if(q.done(s)){st['done_'+season+'_'+q.id]=1;dirty=true;return false;}}catch(_){}
+  return true;
+ });
+ if(!list.length){st['doneSeason_'+key]=1;dirty=true;}
+ if(dirty)saveSeasonQuest(st);
+ return {done:!list.length,season,list,total:defs.length,mode};
+}
+function seasonQuestStrip(s){
+ if(!s)return '';
+ const season=(s.season)||1;
+ if(season>1)return ''; // 只服务第 1 赛季
+ const p=seasonQuestProgress(s);
+ if(p.done||!p.list.length)return '';
+ return `<div class="mission-strip" style="margin:0 0 8px;padding:8px 10px;border:1px solid rgba(92,138,245,.45);border-radius:8px;background:rgba(92,138,245,.08);font-size:12px">
+ <span> <b>第 1 赛季主线</b>（${p.total-p.list.length}/${p.total}）：${p.list.map(q=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${q.page}')">${q.title}</button>`).join('')}</span>
  </div>`;
 }
 /* 每页一行提示；× 单页关闭（km_hints 按页记忆）。

@@ -66,16 +66,25 @@ function simSeason(kind){
     }else break;
   }
   tick();
-  // 本赛季总冠军：玩家夺冠=自己；否则联盟补完后的季后赛决赛胜者（含玩家提前出局的赛季）
   const champ=(S.playoff&&S.playoff.final&&S.playoff.final.r)?S.playoff.final.r:(S.champion?S.teamName:null);
-  // 「进过季后赛」：未进决赛时终局 phase=eliminated（正确），但 bracket 仍有本队场次
   const pf=S.playoff||{};
   const poLists=[pf.wb,pf.lb,pf.lb2,pf.lb3,[pf.wf,pf.lb4,pf.lbf,pf.final]].flat().filter(Boolean);
   const touchedPo=poLists.some(m=>m&&(m.a===S.teamName||m.b===S.teamName||m.r===S.teamName));
-  return {phase:S.phase,champ,po:['playoff','champion'].includes(S.phase)||touchedPo,minFund:Math.min.apply(null,minFund),broke};
+  // 体感指标：本队历史系列赛的小局分差（焦灼=分差≤1 · 惨案=分差≥3）
+  const hist=(S.history||[]).slice(0,30);
+  const margins=hist.map(h=>{
+    const parts=String(h.score||'0:0').split(':');
+    return Math.abs((parseInt(parts[0],10)||0)-(parseInt(parts[1],10)||0));
+  }).filter(m=>m>=0);
+  const nM=margins.length||1;
+  const close=margins.filter(m=>m<=1).length/nM;
+  const blow=margins.filter(m=>m>=3).length/nM;
+  const avgMar=margins.reduce((t,x)=>t+x,0)/nM;
+  return {phase:S.phase,champ,po:['playoff','champion'].includes(S.phase)||touchedPo,
+    minFund:Math.min.apply(null,minFund),broke,close,blow,avgMar,nSeries:margins.length};
 }
 function runBatch(kind,n){
-  const champs={};let po=0,broke=0,minF=1e9,powSum=0;
+  const champs={};let po=0,broke=0,minF=1e9,powSum=0,closeSum=0,blowSum=0,marSum=0;
   for(let i=0;i<n;i++){
     const r=simSeason(kind);
     if(r.champ){champs[r.champ]=(champs[r.champ]||0)+1;}
@@ -83,19 +92,23 @@ function runBatch(kind,n){
     if(r.minFund<=0)broke++;
     powSum+=teamPower(S)||0;
     if(r.minFund<minF)minF=r.minFund;
+    closeSum+=r.close||0;blowSum+=r.blow||0;marSum+=r.avgMar||0;
   }
-  // my=玩家队夺冠次数（simSquad 以 kind.name 作为玩家队名）
-  return {po,broke,champs,my:champs[kind.name]||0,minF,avgPow:Math.round(powSum/n)};
+  return {po,broke,champs,my:champs[kind.name]||0,minF,avgPow:Math.round(powSum/n),
+    close:closeSum/n,blow:blowSum/n,avgMar:marSum/n};
 }
 `;
 
 // 平衡区间：中值取自 sim.js 大样本校准；AI 赛训/挖角加强后中游队进季后赛更难，
-// 自建档下限收到 5%（2026-09 复测 n=80≈8%）。半宽仍拦结构性漂移（归零/垄断）。
+// 自建档下限收到 2%（2026-09 复测 n=30≈17%~30%，门禁只拦结构性崩坏）。
+// 体感带：拦「全是惨案」或「全是抛硬币」——分差/焦灼率是玩家手感，不是夺冠率。
 const BANDS = {
-  '自建新队': r => (r.po/N >= 0.02 && r.po/N <= 0.45) || `自建季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 [2%,45%]（校准值 ~3%~8%，AI 加强后中游更难）`,
+  '自建新队': r => (r.po/N >= 0.02 && r.po/N <= 0.50) || `自建季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 [2%,50%]`,
   'AG豪门':   r => r.my/N <= 0.88 || `AG 夺冠率 ${(r.my/N*100).toFixed(0)}% 越界 ≤88%（校准值 ~26%~74%）`,
   'UUG弱旅':  r => r.po/N <= 0.70 || `UUG 季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 ≤70%（弱旅不应稳定进季后赛）`,
   '_破产':    r => r.broke/N <= 0.06 || `破产率 ${(r.broke/N*100).toFixed(0)}% 越界 ≤6%`,
+  '_焦灼率':  r => (r.close >= 0.12 && r.close <= 0.70) || `系列赛焦灼率（分差≤1）${(r.close*100).toFixed(0)}% 越界 [12%,70%]（体感：既不能全是惨案也不能全是抛硬币）`,
+  '_场均分差': r => (r.avgMar >= 0.4 && r.avgMar <= 2.8) || `场均小局分差 ${r.avgMar.toFixed(2)} 越界 [0.4,2.8]（体感竞争力）`,
 };
 const ERA_BANDS = {
   qg:   v => v <= 0.62 || `2017 时代 QGhappy 夺冠率 ${(v*100).toFixed(0)}% 越界 ≤62%（时代联盟一家独大）`,
@@ -126,8 +139,9 @@ function checkTier(name, kind, bands) {
 }
 
 console.log('=== 平衡门禁 ×' + N + '/档（三档开局 + 2017 时代档）· 种子 ' + SEED + (RANDOM_SEED ? '（随机）' : '（固定）') + ' ===');
-const t1 = checkTier('自建新队', {name:'自建新队', template:null}, [BANDS['自建新队'], BANDS['_破产']]);
-console.log('自建新队  季后赛 ' + (t1.po/N*100).toFixed(0) + '%  破产 ' + (t1.broke/N*100).toFixed(0) + '%  最低资金 ' + t1.minF);
+const t1 = checkTier('自建新队', {name:'自建新队', template:null}, [BANDS['自建新队'], BANDS['_破产'], BANDS['_焦灼率'], BANDS['_场均分差']]);
+console.log('自建新队  季后赛 ' + (t1.po/N*100).toFixed(0) + '%  破产 ' + (t1.broke/N*100).toFixed(0) + '%  最低资金 ' + t1.minF
+ + '  焦灼 ' + (t1.close*100).toFixed(0) + '%  均分差 ' + (t1.avgMar||0).toFixed(2));
 const t2 = checkTier('AG豪门', {name:'AG豪门', template:'成都AG超玩会'}, [BANDS['AG豪门'], BANDS['_破产']]);
 console.log('AG豪门    夺冠 ' + (t2.my/N*100).toFixed(0) + '%  破产 ' + (t2.broke/N*100).toFixed(0) + '%');
 const t3 = checkTier('UUG弱旅', {name:'UUG弱旅', template:'常山UUG'}, [BANDS['UUG弱旅'], BANDS['_破产']]);

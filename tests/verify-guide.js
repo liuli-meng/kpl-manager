@@ -86,17 +86,19 @@ const out = vm.runInContext(`
 
   // ⑨ 前 3 日任务条：day<=3 且未完成时 club/career 出现 mission-strip
   localStorage.removeItem('km_missions');
-  S.day=1;S.trained=false;
+  localStorage.removeItem('km_seasonquest');
+  S.day=1;S.trained=false;S.season=1;
   const strip=missionStrip(S);
   if(!strip.includes('新手任务')||!strip.includes('mission-strip'))fail('missionStrip 未渲染');
   else{
     S.day=5;
-    if(missionStrip(S))fail('day>3 不应再显示任务条');
+    const late=missionStrip(S);
+    if(late.includes('新手任务'))fail('day>3 不应再显示新手任务');
     else{
       S.day=1;S.trained=true;markMissionSeen('done_m1');
       const after=missionStrip(S);
       if(after.includes('完成一次训练'))fail('已完成的 m1 不应再出现');
-      else log('⑨ 任务条：前 3 日显示 · 完成即消失 · 超过第 3 天自动隐藏');
+      else log('⑨ 任务条：前 3 日显示新手任务 · 完成即消失 · day>3 隐藏新手任务（赛季主线可独立显示）');
     }
   }
 

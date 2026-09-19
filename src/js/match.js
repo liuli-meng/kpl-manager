@@ -543,7 +543,8 @@ function finishSeries(finalWin){
  else if(S.streak<=-3)logEvent(S,' '+(-S.streak)+'连败，士气低迷（全队战力'+clamp(S.streak,-5,5)*2+'%）');
  }
  // 以下克上 / 阴沟翻船：任何系列赛（常规/卡位/季后/杯赛）按纸面差结算
- if(finalWin)try{maybeUpsetWin(S,true,sr.opName);}catch(e){}
+ let upsetHit=false;
+ if(finalWin)try{upsetHit=!!maybeUpsetWin(S,true,sr.opName);}catch(e){}
  else try{maybeUpsetLoss(S,false,sr.opName);}catch(e){}
  let title='';
  if(sr.stage==='regular'){
@@ -622,10 +623,22 @@ function finishSeries(finalWin){
  mvps:(sr.mvpIds||[]).map((id,i)=>{const p=S.players.find(x=>x.id===id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
  };
  // 夺冠仪式感：总决赛/各杯赛决赛赢下时全屏庆典（一次性覆盖层，点按或 6 秒自动消失）
- if(finalWin&&(sr.stage==='po'&&sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot))){
+ const isTitle=finalWin&&(sr.stage==='po'&&sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot));
+ const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max;
+ if(isTitle){
  playChampionCeremony(sr.stage==='po'?splitLabel(S)+' 总冠军':
  sr.cupSlot==='ch_final'?gameYear(S)+' 挑战者杯冠军':
  sr.cupSlot==='ewc_final'?gameYear(S)+' EWC 电竞世界杯冠军':gameYear(S)+' KPL 年度总冠军');
+ }else if(finalWin&&isPeak){
+ playMoment(2,'巅峰对决！','打满'+sr.max+'局 · '+sr.mw+':'+sr.ow+' vs '+sr.opName,'peak');
+ }else if(upsetHit){
+ playMoment(2,'以下克上！','击败 '+sr.opName+'（纸面更弱的一方）','comeback');
+ }else if(finalWin&&sr.stage==='po'&&(sr.poSlot==='总决赛'||/决赛/.test(sr.poSlot||''))){
+ playMoment(2,'挺进决赛席位',sr.poSlot+' 胜 '+sr.opName,'win');
+ }else if(finalWin&&S.streak>=3){
+ playMoment(1,S.streak+' 连胜','手感火热 · 战力加成已生效','win');
+ }else if(!finalWin&&(sr.stage==='po'||sr.stage==='cup')&&(sr.poSlot==='总决赛'||/决赛|半决赛/.test(sr.poSlot||'')||/final|sf/.test(sr.cupSlot||''))){
+ playMoment(2,'关键战失利',sr.opName+' '+sr.ow+':'+sr.mw,'lose');
  }
  // 比赛复盘记录（含巅峰对决名场面标记）
  S.history=S.history||[];
@@ -633,7 +646,7 @@ function finishSeries(finalWin){
  yr:gameYear(S), // 年度归属（赛季回顾·关键战役按年筛选用）
  opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
  score:sr.mw+':'+sr.ow,win:finalWin,logs:sr.logs,
- peak:sr.max>=7&&sr.mw+sr.ow===sr.max // 打满最后一局（BO7 4:3 / BO9 5:4）= 巅峰对决名场面
+ peak:isPeak // 打满最后一局（BO7 4:3 / BO9 5:4）= 巅峰对决名场面
  });
  S.history=S.history.slice(0,20);
  r.hist=S.history[0]; // AI 战报异步回写绑到本场复盘（勿用 history[0]：并发/重放会串台）
