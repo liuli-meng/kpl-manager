@@ -4,6 +4,11 @@
 //    对这两条身份路径有副作用（丢 undefined/函数型字段 + 激活页顺序变化），驱动因此原地打转。
 //    真正钉住这轮两个 bug 的是 tests/verify-playoff-entry.js（8 项断言，已做反向验证）。
 //    要修的方向：还原时改用逐字段 diff 或直接每轮重建沙箱，而不是 JSON.parse 回写 S。
+//    2026-09-19 追记：本探针报的「亚运推进赛程前两次点击静默无反馈」是**它自己的假红**——
+//    签名里的 eventLog.length 被 slice(0,200) 封顶，长局里恒为 200，而这两次点击只结算 QF/SF
+//    （只写日志与对阵表，day/phase 都不动）。签名现已补上「最新日志文本 + 四类杯赛对阵进度」；
+//    实测正常点击为 6→10→12 条日志、对阵逐轮补齐。真正会静默的只有一种：S.ag 结构丢失
+//    （现在 uiAsiadStep 会 toast 说明，由 tests/verify-coach-mode.js ⑧ 钉住）。
 // 「游戏状态必须持续推进」不变量门禁
 // ─────────────────────────────────────────────────────────────
 // 为什么要它：这轮之前的门禁全是"引擎能不能跑完"，而玩家真正遇到的是
@@ -58,10 +63,17 @@ function makeSandbox() {
 // 只看游戏状态：日期/赛段/轮次/系列赛进度/阵容/资金/荣誉…（刻意不含弹窗内容长度）
 // 必须包含 window._draft：BP 选人在"确定出战"之前只写 _draft，不碰 S——
 // 早先版本没算它，导致在 BP 面板里正常点 12 步被判成空转（假红）。
+// 也必须包含杯赛对阵进度：亚运「推进赛程」前两次点击只结算 QF/SF（phase 仍是 asiad、day 不动），
+// 而 eventLog 用 unshift+slice(0,200) 封顶——长局里长度恒为 200，早先版本因此把两次正常点击报成
+// 「静默无反馈」的假红（2026-09-19 实测：6→10→12 条日志、对阵表逐轮补齐，只是签名看不见）。
+// 顺带把 eventLog 换成「长度 + 最新一条前 30 字」，封顶后仍能分辨「真推进」与「真原地不动」。
 const stateSig = dom => vm.runInContext(`JSON.stringify([S.day,S.season,S.phase,S.stage,S.split,
   Math.round(S.fund),S.players.length,S.lineup.length,S.series?1:0,S.series?S.series.mw:0,S.series?S.series.ow:0,
   S.matchIdx,(S.playoff&&S.playoff.final&&S.playoff.final.r)||'',S.champion?1:0,S.eliminated?S.eliminated.length:0,
-  Object.keys(S.achieved||{}).length,(S.eventLog||[]).length,S.board&&S.board.fired?1:0,
+  Object.keys(S.achieved||{}).length,(S.eventLog||[]).length,((S.eventLog||[])[0]||{}).txt?String(((S.eventLog||[])[0]||{}).txt).slice(0,30):'',S.board&&S.board.fired?1:0,
+  (function(){const c=[];['challenger','ewc','ag','annual'].forEach(k=>{const o=S[k];if(o)c.push(k+(o.champ?'!'+o.champ:
+    ':'+['qf','sf','wb1','lb1','wf','final','rounds','brk'].reduce((n,rr)=>{const v=o[rr];
+      return n+(Array.isArray(v)?v.filter(x=>x&&x.r).length:(v&&v.r)?1:0);},0)));});return c.join('/');})(),
   window._draft?['d'+window._draft.idx,'p'+Object.keys(window._draft.myPicks||{}).length,'b'+(window._draft.myBans||[]).length].join('_'):'nodraft'])`, dom);
 const modalState = dom => vm.runInContext(`(function(){
   const ids=['app-modal','start-modal'].filter(id=>document.getElementById(id).classList.contains('on'));
