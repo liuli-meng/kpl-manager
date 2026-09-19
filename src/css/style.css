@@ -529,28 +529,30 @@ header{background:linear-gradient(90deg,rgba(109,157,255,.12),rgba(109,157,255,.
 }
 
 /* 桌面端两栏面板流：单列满宽 + 右侧大片死白，是「没排过版」观感的第一主因。
-   俱乐部/经营/荣誉馆/生涯/联盟这类「面板堆叠页」在宽屏自动排成两栏；
-   含宽表格的联赛/训练/二队页保持单列，转会页已有自己的 .page-cols 双栏结构。 */
+   哪些页参与由 index.html 上的 .flow2 类决定（转会页自带 .page-cols，不参与）。
+   ⚠ 选择器必须带 .on：section.page 靠 display:none 隐藏未激活页，
+   裸 id 选择器（1,0,0）会盖过它（0,0,2）导致 10 个页面同时显示。 */
 @media(min-width:960px){
-  /* ⚠ 必须带 .on：section.page 靠 display:none 隐藏未激活页，
-     裸 id 选择器（1,0,0）会盖过它（0,0,2）导致 10 个页面同时显示 */
-  section.page.on#page-club,section.page.on#page-biz,section.page.on#page-hall,
-  section.page.on#page-career,section.page.on#page-union{
-    column-count:2;column-gap:12px;column-fill:balance}
-  /* 面板不被折断到两栏；跨栏元素（横幅/提示条/任务条/自带双栏容器/网格卡）占满整行 */
-  section.page.on#page-club .panel,section.page.on#page-biz .panel,section.page.on#page-hall .panel,
-  section.page.on#page-career .panel,section.page.on#page-union .panel{break-inside:avoid}
-  section.page.on#page-club>.banner,section.page.on#page-biz>.banner,section.page.on#page-hall>.banner,
-  section.page.on#page-career>.banner,section.page.on#page-union>.banner,
-  section.page.on#page-club>.page-hint,section.page.on#page-biz>.page-hint,section.page.on#page-hall>.page-hint,
-  section.page.on#page-career>.page-hint,section.page.on#page-union>.page-hint,
-  section.page.on#page-club>.mission-strip,section.page.on#page-biz>.mission-strip,section.page.on#page-hall>.mission-strip,
-  section.page.on#page-career>.mission-strip,section.page.on#page-union>.mission-strip,
-  section.page.on#page-club>.page-cols,section.page.on#page-biz>.page-cols,section.page.on#page-hall>.page-cols,
-  section.page.on#page-career>.page-cols,section.page.on#page-union>.page-cols,
-  section.page.on#page-club>.grid,section.page.on#page-biz>.grid,section.page.on#page-hall>.grid,
-  section.page.on#page-career>.grid,section.page.on#page-union>.grid{column-span:all}
+  section.page.on.flow2{column-count:2;column-gap:12px;column-fill:balance}
+  section.page.on.flow2 .panel{break-inside:avoid}
+  /* 非面板的直接子元素（横幅/提示条/任务条/自带双栏容器/卡片网格）一律占满整行 */
+  section.page.on.flow2>*:not(.panel){column-span:all}
+  /* 含宽表格的面板由 decoratePanelMarks() 打 data-wide，同样跨栏，
+     不用 :has()：老 webview 不支持时整条规则会被丢弃，宁可降级也不要漏 */
+  section.page.on.flow2 .panel[data-wide]{column-span:all}
 }
+
+/* 事件动态：按分类最多 30 条仍能把整栏撑爆、把同页其他面板挤下去 → 限高内滚 */
+.log-scroll{max-height:268px;overflow-y:auto;padding-right:5px}
+.log-row{font-size:12px;line-height:1.55;padding:5px 0;border-bottom:1px solid var(--line)}
+.log-row:last-child{border-bottom:none}
+
+/* 信任度仪表：原来是一根没有读数的色条，看着像装饰线 */
+.meter{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.m-label{font-size:11px;color:var(--faint);letter-spacing:.04em;flex:none}
+.m-track{flex:1;height:8px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.m-track>div{height:100%;border-radius:999px;transition:width .25s}
+.m-val{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
 
 /* 主行动按钮给一点材质（渐变 + 内高光），其余保持哑光，避免回到「发光大屏」 */
 .btn.primary{box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 16px -8px rgba(109,157,255,.55)}

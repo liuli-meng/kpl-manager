@@ -195,6 +195,12 @@ function decoratePanelMarks(root){
   const t=(h.textContent||'').slice(0,28);
   for(const [re,k] of MAP){if(re.test(t)){h.dataset.ic=k;break;}}
  });
+ // 含宽表格或卡片网格（g3/g4/g5 里的 pcard）的面板必须跨栏，否则表格被挤成半宽、
+ // 卡内文字竖排成一条。CSS 用 [data-wide] 处理；不用 :has()——老 webview 不支持时
+ // 整条规则会被丢弃，宁可降级也不要漏。
+ root.querySelectorAll('.panel').forEach(p=>{
+  if(p.querySelector('.tbl')||p.querySelector('.g3 .pcard,.g4 .pcard,.g5 .pcard'))p.dataset.wide='1';
+ });
 }
 function renderHeader(){
  const spLv=clamp((S&&S.sponsorLv)||0,0,Math.max(0,SPONSORS.length-1));
@@ -267,7 +273,7 @@ function clubBoardPanel(){
  return `<div class="panel">
  <h3>董事会 <span class="tag" style="color:${col}">信任度 ${t} · ${boardTierText(S)}</span>${t<=BOARD_WARN_TRUST?'<span class="tag" style="color:var(--red)">最后通牒</span>':''}</h3>
  ${S.career&&S.career.legacy?`<div class="hint" style="margin-bottom:6px">名宿出身：${S.career.legacy.name} 由选手生涯转型（${S.career.legacy.seasons||0} 赛季 · ${S.career.legacy.titles||0} 冠 · 生涯总值峰值 ${S.career.legacy.ovr||'—'}）</div>`:''}
- <div style="height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:${clamp(t,0,100)}%;background:${col}"></div></div>
+ <div class="meter"><span class="m-label">信任度</span><div class="m-track"><div style="width:${clamp(t,0,100)}%;background:${col}"></div></div><b class="m-val" style="color:${col}">${clamp(t,0,100)}</b></div>
  <div style="font-size:13px">本赛季目标：<b>${kpiText(kpi)}</b>
  <span class="hint">（${kpi&&kpi.from?'依据上年第 '+kpi.from+' 名':(S.selfBuilt?'首年按自建阵容档位':'首年按执教班底档位')}）</span></div>
  ${last?`<div class="hint" style="margin-top:6px">上季结算：年度积分第 ${last.rank||'—'} 名 · 信任度 ${last.delta>=0?'+':''}${last.delta}${last.note?' · '+last.note:''}</div>`:''}
@@ -661,7 +667,7 @@ function clubFooterPanels(){
  const clr={win:'var(--green)',lose:'var(--red)',gold:'var(--gold)',info:'var(--dim)'};
  html+=`<div class="panel"><h3>事件动态 <span class="tag">共 ${(S.eventLog||[]).length} 条 · 按分类查看</span></h3>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${cats.map(c=>`<button class="btn sm ${fl===c.k?'primary':''}" onclick="window._logFilter='${c.k}';renderClub()">${c.n}${c.k==='all'?'':' '+(cnt[c.k]||0)}</button>`).join('')}</div>
- ${logs.length?logs.map(e=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--line);color:${clr[e.level]||'var(--dim)'}">${_escTxt(e.txt)}</div>`).join(''):'<div class="hint">该分类暂无事件</div>'}
+ <div class="log-scroll">${logs.length?logs.map(e=>`<div class="log-row" style="color:${clr[e.level]||'var(--dim)'}">${_escTxt(e.txt)}</div>`).join(''):'<div class="hint">该分类暂无事件</div>'}</div>
  </div>`;
  }
  return html;

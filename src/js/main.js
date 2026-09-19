@@ -1,6 +1,6 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-19b';
+const KM_BUILD='2026-09-19c';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
    pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
