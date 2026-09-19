@@ -1190,7 +1190,7 @@ function endTransferWindow(s){
  s.transferList=[];
 }
 /* ================= 赛前转会期（开局/新赛季先组队，再开赛） =================
- 转会期内：转会市场全开放（买断/挂牌/自由市场刷新免费/顶星供给增加），
+ 转会期内：转会市场全开放（买断/挂牌/自由市场每日首刷免费·再刷 5 万/次/顶星供给增加），
  不能打比赛；天数用完自动结束，也可随时提前结束。 */
 function endPreseason(s){
  if(!confirm('确定结束转会期？剩余天数作废，阵容锁定后联赛正式开始'))return;
@@ -1253,12 +1253,15 @@ function autoTrainRookie(s){
  if(!r)return;
  trainRookie(s,r.id);
 }
-/* 刷新自由市场：转会窗内每日首次免费（可重复刷但按 5 万/次收费） */
+/* 刷新自由市场：转会窗内「每日首次」免费，之后 5 万/次（nextDay 重置 marketRefreshed）。
+   判定只留 marketRefreshFree() 一处——扣费、面板 tag、按钮文案、toast 全读它，
+   以前各写一份导致窗内第二次刷新照样扣 5 万，而按钮还挂着「转会期内免费」。 */
 const MARKET_REFRESH_COST=5;
-function refreshMarket(s){
- const inWindow=s.transferWindow>0;
- const free=inWindow&&!s.marketRefreshed;
- if(!free){
+function marketRefreshFree(s){return !!(s&&s.transferWindow>0&&!s.marketRefreshed);}
+function refreshMarket(s,opts){
+ const seed=!!(opts&&opts.seed); // 开局播种货架：不是玩家主动刷的，不该吃掉他的当日免费额度
+ const free=marketRefreshFree(s);
+ if(!seed&&!free){
  if(s.fund<MARKET_REFRESH_COST){toast('资金不足（刷新需 '+MARKET_REFRESH_COST+' 万）');return;}
  s.fund-=MARKET_REFRESH_COST;
  }
@@ -1266,12 +1269,12 @@ function refreshMarket(s){
  s.market=[];
  for(let i=0;i<6;i++){
  const roll=Math.random();
- const band=inWindow?(roll<0.2?'star':roll<0.6?'mid':'low'):(roll<0.1?'star':roll<0.5?'mid':'low'); // 转会窗内顶星供给增加
+ const band=s.transferWindow>0?(roll<0.2?'star':roll<0.6?'mid':'low'):(roll<0.1?'star':roll<0.5?'mid':'low'); // 转会窗内顶星供给增加
  const np=genPlayer(genFreeAgentDef(pick(POS_ORDER),band,usedNames));
  if(Math.random()<0.15)np.discount=0.8; // 特惠上架（15% 概率 8 折，对应市场页划线价/特惠标签）
  s.market.push(np);
  }
- s.marketRefreshed=true;
+ if(!seed)s.marketRefreshed=true; // 播种不占用玩家的当日免费额度
  // 教练市场：随机 3 名候选教练（与现任不重复）
  s.coachMarket=s.coachMarket||[];
  const coachSeen=new Set();
@@ -1283,8 +1286,11 @@ function refreshMarket(s){
  coachSeen.add(c.id);s.coachMarket.push({...c});
  }
  s.coachMarket.sort((a,b)=>(b.rating||0)-(a.rating||0));
+ if(seed){ // 开局播种在建队流程内部：此时 S 尚未落盘，不该 save/renderAll/toast
+ return;
+ }
  save();renderAll();
- toast(free?'转会窗内免费刷新（每日首次）':'市场已刷新（-'+MARKET_REFRESH_COST+'万）');
+ toast(free?'转会窗内今日首刷：免费':'市场已刷新（-'+MARKET_REFRESH_COST+'万）');
 }
 /* 签约主教练：已有教练时直接换帅（旧帅离任） */
 function signCoach(s,c){

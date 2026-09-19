@@ -3220,10 +3220,11 @@ function autoTrainRookie(s){
 }
 
 const MARKET_REFRESH_COST=5;
-function refreshMarket(s){
- const inWindow=s.transferWindow>0;
- const free=inWindow&&!s.marketRefreshed;
- if(!free){
+function marketRefreshFree(s){return !!(s&&s.transferWindow>0&&!s.marketRefreshed);}
+function refreshMarket(s,opts){
+ const seed=!!(opts&&opts.seed); // 开局播种货架：不是玩家主动刷的，不该吃掉他的当日免费额度
+ const free=marketRefreshFree(s);
+ if(!seed&&!free){
  if(s.fund<MARKET_REFRESH_COST){toast('资金不足（刷新需 '+MARKET_REFRESH_COST+' 万）');return;}
  s.fund-=MARKET_REFRESH_COST;
  }
@@ -3231,12 +3232,12 @@ function refreshMarket(s){
  s.market=[];
  for(let i=0;i<6;i++){
  const roll=Math.random();
- const band=inWindow?(roll<0.2?'star':roll<0.6?'mid':'low'):(roll<0.1?'star':roll<0.5?'mid':'low'); // 转会窗内顶星供给增加
+ const band=s.transferWindow>0?(roll<0.2?'star':roll<0.6?'mid':'low'):(roll<0.1?'star':roll<0.5?'mid':'low'); // 转会窗内顶星供给增加
  const np=genPlayer(genFreeAgentDef(pick(POS_ORDER),band,usedNames));
  if(Math.random()<0.15)np.discount=0.8; // 特惠上架（15% 概率 8 折，对应市场页划线价/特惠标签）
  s.market.push(np);
  }
- s.marketRefreshed=true;
+ if(!seed)s.marketRefreshed=true; // 播种不占用玩家的当日免费额度
 
  s.coachMarket=s.coachMarket||[];
  const coachSeen=new Set();
@@ -3248,8 +3249,11 @@ function refreshMarket(s){
  coachSeen.add(c.id);s.coachMarket.push({...c});
  }
  s.coachMarket.sort((a,b)=>(b.rating||0)-(a.rating||0));
+ if(seed){ // 开局播种在建队流程内部：此时 S 尚未落盘，不该 save/renderAll/toast
+ return;
+ }
  save();renderAll();
- toast(free?'转会窗内免费刷新（每日首次）':'市场已刷新（-'+MARKET_REFRESH_COST+'万）');
+ toast(free?'转会窗内今日首刷：免费':'市场已刷新（-'+MARKET_REFRESH_COST+'万）');
 }
 
 function signCoach(s,c){
@@ -4396,7 +4400,7 @@ function startSplit(s,split){
  initKjia(s); // 二队 K甲联赛：每个赛段重开一届（独立赛程+积分榜，二队页可查）
  try{if(typeof initDraft==='function')initDraft(s);}catch(e){} // 选秀大会：新秀池 + 倒序点名
  if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s); // 亚运年夏季：先宣布国家队征召（集训缺席整季）
- logEvent(s,' '+splitLabel(s)+' 赛前转会期开启（7天）：可买断/挂牌/直签选手与教练，市场刷新免费；结束转会期后联赛开打');
+ logEvent(s,' '+splitLabel(s)+' 赛前转会期开启（7天）：可买断/挂牌/直签选手与教练，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
  logEvent(s,' '+splitLabel(s)+' 开始！18队 S/A/B 赛制，目标：'+SPLIT_NAME[split]+'总冠军（年度积分 +'+ANNUAL_PTS[split].p1+'）！');
  save();renderAll();
 }
@@ -8985,7 +8989,7 @@ function clubLeaguePhasePanel(){
  <b>开档三步</b>　${steps.map(s=>s.ok?'<span style="color:var(--green)">✓ '+s.n+'</span>':'<span style="color:var(--gold)">□ '+s.n+'</span>').join('　→　')}
  <div class="hint" style="margin-top:4px">阵容就绪后点下方「结束转会期 · 开始赛季」即可开打；天数用完也会自动开赛</div>
  </div>
- <div class="hint" style="margin-bottom:8px">先把阵容组好再打比赛：转会市场可<b>买断其他俱乐部选手、直签自由球员、挂牌出售</b>；转会期内市场刷新免费、顶星供给增加。天数用完自动开始联赛，也可随时提前结束。</div>
+ <div class="hint" style="margin-bottom:8px">先把阵容组好再打比赛：转会市场可<b>买断其他俱乐部选手、直签自由球员、挂牌出售</b>；转会期内市场每日首刷免费（再刷 5 万/次）、顶星供给增加。天数用完自动开始联赛，也可随时提前结束。</div>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${POS_ORDER.map(pos=>{
  const p=lsP.find(x=>x.pos===pos);
  return p?`<span class="tag">${POS[pos][1]} ${p.name} · 战力${playerPower(p,p.sig)}</span>`:`<span class="tag" style="color:var(--red)"> ${POS[pos][1]} 空缺！</span>`;
@@ -10194,14 +10198,14 @@ function renderMarket(){
  <button class="btn sm gold" style="margin:0" onclick="signRetired(S,'${r.id}')">签约主播</button></div>`).join('')||'<div class="hint">暂无退役名宿</div>'}
  ${(S.hosts||[]).length?`<div class="hint" style="margin-top:8px">已签约主播：${S.hosts.map(h=>h.name+'（日'+h.income+'万）').join('、')}</div>`:''}
  </div>`;
- const marketPanel=`<div class="panel ${foldCls('mmarket')}" data-fold="mmarket"><h3>自由市场 <span class="tag">${S.transferWindow>0?'转会窗开启·刷新免费·顶星增加':'刷新需5万/次'} · 每日特惠</span></h3>
- <div class="hint" style="margin-bottom:10px">签约费按总值实时定价：总值 90+ ≈ 260万 / 80 ≈ 140万 / 70 ≈ 70万，特惠选手 8 折。${S.marketRefreshed?'本日已刷新过（次日自动重置）':'今日尚未刷新'}</div>
+ const marketPanel=`<div class="panel ${foldCls('mmarket')}" data-fold="mmarket"><h3>自由市场 <span class="tag">${marketRefreshFree(S)?'转会窗开启·今日首刷免费·顶星增加':(S.transferWindow>0?'转会窗开启·今日已刷·再刷 '+MARKET_REFRESH_COST+'万':'刷新需 '+MARKET_REFRESH_COST+'万/次')} · 每日特惠</span></h3>
+ <div class="hint" style="margin-bottom:10px">签约费按总值实时定价：总值 90+ ≈ 260万 / 80 ≈ 140万 / 70 ≈ 70万，特惠选手 8 折。${S.transferWindow>0?(S.marketRefreshed?'转会窗内<b>每日首刷</b>免费，今日额度已用过——再刷 '+MARKET_REFRESH_COST+' 万/次（次日自动重置）':'转会窗内今日首刷免费，之后 '+MARKET_REFRESH_COST+' 万/次'):'非转会期刷新 '+MARKET_REFRESH_COST+' 万/次'}</div>
  ${sortChips('sign')}
  <div class="g2">${applySortPref('sign',S.market).map(p=>{
  const c=costOf(p);
  return pcard(p,`<button class="btn sm primary" onclick="buyPlayer(S,S.market.find(x=>x.id==='${p.id}'))">签约 ${p.discount?`<s>${valueOf(overall(p))}万</s> ${c}万`:c+'万'}</button>`);
  }).join('')||'<div class="hint">市场空空如也，刷新一下吧</div>'}</div>
- <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${S.transferWindow>0?'（转会期内免费）':'（5万）'}</button>
+ <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${marketRefreshFree(S)?'（今日免费）':'（'+MARKET_REFRESH_COST+'万）'}</button>
  </div>`;
  const minePanel=`<div class="panel ${foldCls('mine')}" data-fold="mine"><h3>我的队员</h3>
  ${S.players.length?`${sortChips('mine')}<div class="grid g4">${applySortPref('mine',S.players.filter(p=>!S.lineup.includes(p.id))).map(p=>{const listed=(S.listed||[]).some(x=>x.id===p.id);
@@ -11177,11 +11181,11 @@ function createTeam(){
  S.preseason=true;S.transferWindow=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
- buildTransferMarket(S);refreshMarket(S);
+ buildTransferMarket(S);refreshMarket(S,{seed:true}); // 播种：不吃玩家的「每日首刷免费」额度
  logEvent(S,`战队 ${name} 成立！初始资金${S.fund}万，目标：KPL 总冠军！`);
  logEvent(S,` 开局直签 ${S.players.length} 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容`);
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税');
- logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
+ logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
  logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
  goPage('market');
@@ -11210,14 +11214,14 @@ function applyClub(){
  S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
- buildTransferMarket(S);refreshMarket(S);
+ buildTransferMarket(S);refreshMarket(S,{seed:true}); // 播种：不吃玩家的「每日首刷免费」额度
  try{if(typeof initTempSeats==='function')initTempSeats(S);}catch(e){}
  try{if(typeof youthDirectEntry==='function')youthDirectEntry(S);}catch(e){}
  try{if(typeof initDraft==='function')initDraft(S);}catch(e){} // 首赛季选秀大会
  logEvent(S,`你正式执教 ${tmpl.name}！预算 ${tmpl.budget}万，工资帽 ${tmpl.cap}万/周`);
  logEvent(S,`主教练 ${S.coach.name} 已就位，首发：${S.lineup.map(id=>(S.players.find(p=>p.id===id)||{name:'?'}).name).join(' / ')}`);
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发周薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税，转会期可卖人减负');
- logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场刷新免费；结束转会期后联赛开打');
+ logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
  else logEvent(S,' KPL 2025 赛制：第一轮3组单循环 → S/A/B → 卡位赛 → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');

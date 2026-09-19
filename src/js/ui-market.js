@@ -175,14 +175,14 @@ function renderMarket(){
  <button class="btn sm gold" style="margin:0" onclick="signRetired(S,'${r.id}')">签约主播</button></div>`).join('')||'<div class="hint">暂无退役名宿</div>'}
  ${(S.hosts||[]).length?`<div class="hint" style="margin-top:8px">已签约主播：${S.hosts.map(h=>h.name+'（日'+h.income+'万）').join('、')}</div>`:''}
  </div>`;
- const marketPanel=`<div class="panel ${foldCls('mmarket')}" data-fold="mmarket"><h3>自由市场 <span class="tag">${S.transferWindow>0?'转会窗开启·刷新免费·顶星增加':'刷新需5万/次'} · 每日特惠</span></h3>
- <div class="hint" style="margin-bottom:10px">签约费按总值实时定价：总值 90+ ≈ 260万 / 80 ≈ 140万 / 70 ≈ 70万，特惠选手 8 折。${S.marketRefreshed?'本日已刷新过（次日自动重置）':'今日尚未刷新'}</div>
+ const marketPanel=`<div class="panel ${foldCls('mmarket')}" data-fold="mmarket"><h3>自由市场 <span class="tag">${marketRefreshFree(S)?'转会窗开启·今日首刷免费·顶星增加':(S.transferWindow>0?'转会窗开启·今日已刷·再刷 '+MARKET_REFRESH_COST+'万':'刷新需 '+MARKET_REFRESH_COST+'万/次')} · 每日特惠</span></h3>
+ <div class="hint" style="margin-bottom:10px">签约费按总值实时定价：总值 90+ ≈ 260万 / 80 ≈ 140万 / 70 ≈ 70万，特惠选手 8 折。${S.transferWindow>0?(S.marketRefreshed?'转会窗内<b>每日首刷</b>免费，今日额度已用过——再刷 '+MARKET_REFRESH_COST+' 万/次（次日自动重置）':'转会窗内今日首刷免费，之后 '+MARKET_REFRESH_COST+' 万/次'):'非转会期刷新 '+MARKET_REFRESH_COST+' 万/次'}</div>
  ${sortChips('sign')}
  <div class="g2">${applySortPref('sign',S.market).map(p=>{
  const c=costOf(p);
  return pcard(p,`<button class="btn sm primary" onclick="buyPlayer(S,S.market.find(x=>x.id==='${p.id}'))">签约 ${p.discount?`<s>${valueOf(overall(p))}万</s> ${c}万`:c+'万'}</button>`);
  }).join('')||'<div class="hint">市场空空如也，刷新一下吧</div>'}</div>
- <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${S.transferWindow>0?'（转会期内免费）':'（5万）'}</button>
+ <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${marketRefreshFree(S)?'（今日免费）':'（'+MARKET_REFRESH_COST+'万）'}</button>
  </div>`;
  const minePanel=`<div class="panel ${foldCls('mine')}" data-fold="mine"><h3>我的队员</h3>
  ${S.players.length?`${sortChips('mine')}<div class="grid g4">${applySortPref('mine',S.players.filter(p=>!S.lineup.includes(p.id))).map(p=>{const listed=(S.listed||[]).some(x=>x.id===p.id);

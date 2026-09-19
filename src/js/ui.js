@@ -395,7 +395,7 @@ function clubLeaguePhasePanel(){
  <b>开档三步</b>　${steps.map(s=>s.ok?'<span style="color:var(--green)">✓ '+s.n+'</span>':'<span style="color:var(--gold)">□ '+s.n+'</span>').join('　→　')}
  <div class="hint" style="margin-top:4px">阵容就绪后点下方「结束转会期 · 开始赛季」即可开打；天数用完也会自动开赛</div>
  </div>
- <div class="hint" style="margin-bottom:8px">先把阵容组好再打比赛：转会市场可<b>买断其他俱乐部选手、直签自由球员、挂牌出售</b>；转会期内市场刷新免费、顶星供给增加。天数用完自动开始联赛，也可随时提前结束。</div>
+ <div class="hint" style="margin-bottom:8px">先把阵容组好再打比赛：转会市场可<b>买断其他俱乐部选手、直签自由球员、挂牌出售</b>；转会期内市场每日首刷免费（再刷 5 万/次）、顶星供给增加。天数用完自动开始联赛，也可随时提前结束。</div>
  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${POS_ORDER.map(pos=>{
  const p=lsP.find(x=>x.pos===pos);
  return p?`<span class="tag">${POS[pos][1]} ${p.name} · 战力${playerPower(p,p.sig)}</span>`:`<span class="tag" style="color:var(--red)"> ${POS[pos][1]} 空缺！</span>`;
