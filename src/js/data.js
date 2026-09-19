@@ -178,7 +178,9 @@ function overall(p){
  const a=(p&&p.attrs)||{lane:70,farm:70,team:70,mind:70};
  return clamp(Math.round((a.lane||70)*w.lane+(a.farm||70)*w.farm+(a.team||70)*w.team+(a.mind||70)*w.mind),1,99);
 }
-function ovrColor(o){return o>=90?'#ffb84d':o>=80?'#5aa7ff':'#7d93b8';}
+// 总值三档色：v6 石墨亮板把行卡底提到 #2f3644，旧的低档灰 #7d93b8 掉到 3.89:1（11.5px 小字要 4.5）
+// 三档整体上提，仍保持「金>蓝>灰」的读序：7.74 / 5.47 / 5.73:1
+function ovrColor(o){return o>=90?'#f5c877':o>=80?'#7ab0ff':'#a9b3c4';}
 function ovrCls(o){return o>=90?'ssr':o>=80?'sr':'r';} // 复用旧卡面色阶样式
 const _curve=(pts,o)=>{
  if(o<=pts[0][0])return pts[0][1];

@@ -1,35 +1,39 @@
 /* ============================================================
-   王者电竞经理 · 设计系统 v5 「TOUCHLINE PRO」FM 经理模式风
-   v4 的方向（像经营工具、不像转播大屏）是对的，问题在执行：
-   所有表面同一个明度、数字和标签一样大、位置标签全蓝 —— 层级被抹平了。
-   v5 只做四件事：表面分三层 · 数字当主角 · 五位置有色 · 对比度到 AA。
+   王者电竞经理 · 设计系统 v6 「GRAPHITE PRO」= v5 语言 + 石墨亮板底
+   v5 的方向（表面分三层 · 数字当主角 · 五位置有色 · 对比到 AA）是对的，
+   但用户仍反馈"太暗"。实测病灶不是用了深色，而是深得太保守：
+     页底 #0e0f12 的 L* 只有 4.3（纯黑为 0），bg→raise 整条层级只跨 9.0 L*，
+     且所有表面 chroma ≤10 —— 明度没拉开、色相为零，于是又暗又糊成一片。
+   v6 只做一件事：把整条明度曲线抬高（页底相对亮度 2.84×、层级 9.0→10.8），
+   然后按新底色把每一处小字色重算一遍 WCAG —— 见下面逐条注释。
    蓝=主色/信息 · 金=金钱与荣誉 · 红=负面 · 绿=正面 · 位置色=语义编码
    ============================================================ */
 :root{
   /* 三层表面：页底最深 → 面板 → 行/卡最亮。靠明度拉开层级，不再只靠 1px 边框 */
-  --bg:#0e0f12; --surface:#17181c; --surface2:#1b1d22; --raise:#20222a; --sunken:#0b0c0e;
-  --line:#26282e; --line2:#3a3d45;
-  /* 文字三级：正文与次级都提到 AA 以上（v4 的 --dim 在深灰上只有约 5:1）。
-     --faint 由 #7e838f 提到 #8b9099：程序化对比度审计发现它在行卡底 #20222a 上只有 4.18:1，
-     而它正用在 9.5-12px 的小字上（页头标签 / .power / .hint），小字门槛是 4.5:1 */
-  --txt:#f4f5f7; --dim:#b0b4bd; --faint:#8b9099;
-  --accent:#6d9dff; --accent-deep:#4d7fe0; --accent2:#6d9dff;
-  --gold:#e2ae52; --red:#e06c6c; --green:#54b077;
-  --r:#9a9aa2; --sr:#6d9dff; --ssr:#e2ae52;
-  --card2:#1b1d22; --cyan:var(--accent);
+  --bg:#1b1f27; --surface:#232833; --surface2:#282e3a; --raise:#2f3644; --sunken:#161a21;
+  --line:#3a4150; --line2:#4e5768;
+  /* 文字三级：底色提亮后每一级都要重测，否则"亮是亮了，字糊了"。
+     --faint 用在 9.5-12px 小字上：#9ba5b5 在新行卡底 #2f3644 上只有 4.87:1，余量太薄，
+     提到 #a6b0bf = 5.53:1 */
+  --txt:#f3f6fb; --dim:#c5cdd9; --faint:#a6b0bf;
+  /* 主色 #6d9dff→#79aaff：旧值作 10.5-13px 标签文字时，在提亮一档的行卡底上只剩 4.3:1 */
+  --accent:#79aaff; --accent-deep:#5b9cff; --accent2:#79aaff;
+  --gold:#f0bb60; --red:#ff8f92; --green:#5cc486;
+  /* 稀有度三级：普通灰 #9a9aa2 在亮一档的底上基本读不出来，重排为 5.73 / 5.47 / 7.74:1 */
+  --r:#a9b3c4; --sr:#7ab0ff; --ssr:#f5c877;
+  --card2:#282e3a; --cyan:var(--accent);
   --grad-a:none; --grad-btn:none; --grad-gold:none;
-  /* KPL 五位置色：让阵容/转会列表一眼可扫（v4 里位置标签一律蓝）。
-     打野紫从 #9a6be0 提到 #b189f5：作为 10.5px 标签文字时合成对比只有 3.53:1，
-     提亮后 4.69:1 过 AA，仍是紫。其余四色实测 4.79~5.61:1 无需动 */
-  --pos-top:#e8863a; --pos-jg:#b189f5; --pos-mid:#38b6e8; --pos-ad:#4cbf6b; --pos-sup:#d9a93b;
+  /* KPL 五位置色：让阵容/转会列表一眼可扫。底色提亮会吃掉小字对比，
+     对抗路橙与打野紫各再提一档（4.25→4.74:1 / 4.23→4.79:1），其余实测 4.68~4.98:1 */
+  --pos-top:#ffa45c; --pos-jg:#cfadff; --pos-mid:#4cc6f2; --pos-ad:#5ad07a; --pos-sup:#e8b948;
   /* 圆角/阴影成对，避免每处手写数值 */
   --r1:5px; --r2:8px; --r3:12px;
-  --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 6px 18px rgba(0,0,0,.28);
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 6px 18px rgba(0,0,0,.32);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{color-scheme:dark}
 body{
-  background:radial-gradient(1100px 480px at 50% -8%,rgba(109,157,255,.07),transparent 62%),var(--bg);
+  background:radial-gradient(1100px 480px at 50% -8%,rgba(121,170,255,.07),transparent 62%),var(--bg);
   color:var(--txt);
   font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
   font-size:14px;line-height:1.6;min-height:100vh;padding-bottom:20px;
@@ -38,7 +42,7 @@ body{
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::selection{background:rgba(109,157,255,.3)}
+::selection{background:rgba(121,170,255,.3)}
 .wrap{max-width:1060px;margin:0 auto;padding:14px 16px 20px}
 .ic{flex:none;vertical-align:-2px}
 svg.ic{display:inline-block}
@@ -62,7 +66,7 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:11px
 .stat.gold .ic{color:var(--gold)} .stat.red .ic{color:var(--red)} .stat.green .ic{color:var(--green)}
 .hd-btn{display:inline-flex;align-items:center;gap:4px;background:var(--raise);border:1px solid var(--line2);
   color:var(--dim);border-radius:var(--r1);padding:6px 11px;cursor:pointer;font-size:12px;transition:.15s}
-.hd-btn:hover{color:var(--txt);border-color:var(--accent);background:rgba(109,157,255,.09)}
+.hd-btn:hover{color:var(--txt);border-color:var(--accent);background:rgba(121,170,255,.09)}
 
 /* ===== Nav（桌面：顶部页签；移动：底部标签栏） ===== */
 nav{display:flex;gap:3px;margin:12px 0;padding:4px;background:var(--surface);border:1px solid var(--line);
@@ -117,14 +121,14 @@ section.page.on{display:block;animation:fadein .18s ease}
 .pcard .p-top{display:flex;justify-content:flex-start;align-items:center;gap:8px;margin-bottom:7px}
 .pcard .p-name{font-weight:800;font-size:15px;letter-spacing:-.1px}
 .pcard .p-pos{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:3px;margin-left:auto;
-  background:rgba(109,157,255,.14);color:var(--accent)}
+  background:rgba(121,170,255,.08);color:var(--accent)}
 .pcard .p-rarity{font-size:11.5px;font-weight:400;color:var(--dim)}
 .pcard .p-rarity b{font-size:18px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
 .pcard .p-tag{font-size:10px;margin-left:3px;background:var(--sunken);color:var(--dim);padding:1px 5px;border-radius:2px}
 .pcard .p-hero{font-size:11px;color:var(--dim);margin-bottom:3px}
 .pcard .p-hero b{color:var(--txt)}
-.pcard .p-disc{float:right;font-size:10px;background:rgba(224,108,108,.14);color:#e88282;padding:1px 6px;border-radius:2px}
-.pcard .p-hero-pick{border-color:var(--accent);background:rgba(109,157,255,.06)}
+.pcard .p-disc{float:right;font-size:10px;background:rgba(255,143,146,.10);color:#ff9fa2;padding:1px 6px;border-radius:2px}
+.pcard .p-hero-pick{border-color:var(--accent);background:rgba(121,170,255,.06)}
 .pcard .p-skill{font-size:11.5px;color:var(--dim);margin:5px 0;line-height:1.55;min-height:32px}
 .pcard .p-skill b{color:var(--dim)}
 .pcard .attr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11px;color:var(--faint);margin-bottom:7px}
@@ -134,39 +138,39 @@ section.page.on{display:block;animation:fadein .18s ease}
 .pcard.r{--rc:var(--r)} .pcard.r .p-rarity{color:var(--r)}
 .pcard.sr{--rc:var(--sr)} .pcard.sr .p-rarity{color:var(--sr)}
 .pcard.ssr{--rc:var(--ssr)} .pcard.ssr .p-rarity{color:var(--ssr)}
-.pcard.ssr{border-color:rgba(226,174,82,.45)}
+.pcard.ssr{border-color:rgba(240,187,96,.45)}
 .pcard .p-hp{position:absolute;top:7px;right:8px;font-size:10px;color:var(--red)}
 .pcard .p-salary{color:var(--gold)}
 .pcard .bench-mark{position:absolute;top:7px;left:8px;font-size:10px;background:var(--sunken);color:var(--dim);padding:1px 7px;border-radius:2px}
 .pcard button{margin-top:7px;width:100%;padding:7px;border:1px solid var(--line2);
   background:transparent;color:var(--txt);cursor:pointer;font-size:12px;font-weight:600;transition:.15s;border-radius:var(--r1)}
 .pcard button:hover{border-color:var(--accent);color:var(--accent)}
-.pcard button.primary{background:var(--accent);border-color:var(--accent);color:#0b1020}
-.pcard button.primary:hover{background:var(--accent-deep);color:#0b1020}
+.pcard button.primary{background:var(--accent);border-color:var(--accent);color:#10141c}
+.pcard button.primary:hover{background:var(--accent-deep);color:#10141c}
 .pcard button.danger{color:var(--red)}
-.pcard button.danger:hover{border-color:var(--red);background:rgba(224,108,108,.08);color:var(--red)}
+.pcard button.danger:hover{border-color:var(--red);background:rgba(255,143,146,.08);color:var(--red)}
 .pcard button:disabled{opacity:.4;cursor:not-allowed}
 /* 位置色：卡片左竖杠 + 位置标签同色（data-pos 由 ui.js 的 pcard/青训卡写入） */
 .pcard[data-pos=top]{border-left-color:var(--pos-top)} .pcard[data-pos=jg]{border-left-color:var(--pos-jg)}
 .pcard[data-pos=mid]{border-left-color:var(--pos-mid)} .pcard[data-pos=ad]{border-left-color:var(--pos-ad)}
 .pcard[data-pos=sup]{border-left-color:var(--pos-sup)}
-.p-pos[data-pos=top]{background:rgba(232,134,58,.14);color:var(--pos-top)}
-.p-pos[data-pos=jg]{background:rgba(177,137,245,.14);color:var(--pos-jg)}
-.p-pos[data-pos=mid]{background:rgba(56,182,232,.14);color:var(--pos-mid)}
-.p-pos[data-pos=ad]{background:rgba(76,191,107,.14);color:var(--pos-ad)}
-.p-pos[data-pos=sup]{background:rgba(217,169,59,.14);color:var(--pos-sup)}
+.p-pos[data-pos=top]{background:rgba(255,164,92,.14);color:var(--pos-top)}
+.p-pos[data-pos=jg]{background:rgba(207,173,255,.14);color:var(--pos-jg)}
+.p-pos[data-pos=mid]{background:rgba(76,198,242,.14);color:var(--pos-mid)}
+.p-pos[data-pos=ad]{background:rgba(90,208,122,.14);color:var(--pos-ad)}
+.p-pos[data-pos=sup]{background:rgba(232,185,72,.14);color:var(--pos-sup)}
 
 /* ===== Buttons ===== */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 18px;
   border:1px solid var(--line2);background:var(--raise);color:var(--txt);
   cursor:pointer;font-size:13px;font-weight:600;transition:.15s;border-radius:3px}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.primary{background:linear-gradient(180deg,#7fa9ff,#5f92f0);border-color:#7fa9ff;color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(109,157,255,.22)}
-.btn.primary:hover{background:linear-gradient(180deg,#8db4ff,#6d9dff);border-color:#8db4ff;color:#fff}
-.btn.gold{background:linear-gradient(180deg,#eebc63,#e2ae52);border-color:#e8b65c;color:#1d1505;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(226,174,82,.18)}
-.btn.gold:hover{background:#cf9c3f;border-color:#cf9c3f;color:#1d1505}
-.btn.danger{color:var(--red);border-color:rgba(224,108,108,.5)}
-.btn.danger:hover{border-color:var(--red);background:rgba(224,108,108,.08);color:var(--red)}
+.btn.primary{background:linear-gradient(180deg,#a3c6ff,#5b9cff);border-color:#8dbaff;color:#10141c;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(121,170,255,.22)}
+.btn.primary:hover{background:linear-gradient(180deg,#b3d3ff,#79aaff);border-color:#a3c6ff;color:#10141c}
+.btn.gold{background:linear-gradient(180deg,#f7c86e,#f0bb60);border-color:#f2c25f;color:#221806;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(240,187,96,.18)}
+.btn.gold:hover{background:#dcae4f;border-color:#dcae4f;color:#221806}
+.btn.danger{color:var(--red);border-color:rgba(255,143,146,.5)}
+.btn.danger:hover{border-color:var(--red);background:rgba(255,143,146,.08);color:var(--red)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .btn.sm{padding:5px 12px;font-size:12px}
 /* 划线原价：实心蓝/金按钮上的亮灰文字实测只有 1.0~1.3:1（基本看不见）。
@@ -191,7 +195,7 @@ section.page.on{display:block;animation:fadein .18s ease}
 .tbl td{padding:9px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tbody tr:hover td,.tbl tr:hover td{background:rgba(255,255,255,.022)}
-.tbl tr.me td{background:rgba(109,157,255,.09);font-weight:600}
+.tbl tr.me td{background:rgba(121,170,255,.09);font-weight:600}
 .tbl tr.me td:first-child{border-left:2px solid var(--accent)}
 .logbox{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r1);padding:6px 13px;max-height:320px;
   overflow-y:auto;font-size:12.5px;line-height:1.9}
@@ -220,7 +224,7 @@ section.page.on{display:block;animation:fadein .18s ease}
 .sort-row::-webkit-scrollbar{display:none}
 .s-chip{flex:none;min-height:28px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);color:var(--dim);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}
 .s-chip:hover{border-color:var(--line2);color:var(--txt)}
-.s-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(226,174,82,.1);font-weight:700}
+.s-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(240,187,96,.1);font-weight:700}
 .s-div{flex:none;width:1px;height:18px;background:var(--line);margin:0 3px}
 /* 进度条：v4 的 4px 无边框条在深底上几乎看不见 */
 .progress{height:6px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:4px}
@@ -242,9 +246,9 @@ section.page.on{display:block;animation:fadein .18s ease}
   white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;border-radius:var(--r1);box-shadow:var(--shadow)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}
 .league-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;margin-top:10px;
-  border:1px solid var(--gold);background:rgba(226,174,82,.1);color:var(--gold);
+  border:1px solid var(--gold);background:rgba(240,187,96,.1);color:var(--gold);
   cursor:pointer;font-size:14px;font-weight:700;transition:.15s;border-radius:var(--r1)}
-.league-btn:hover{background:rgba(226,174,82,.18)}
+.league-btn:hover{background:rgba(240,187,96,.18)}
 .banner{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:13px 16px;margin-bottom:12px;
   display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .banner::before{content:none}
@@ -284,7 +288,7 @@ footer{background:transparent;border-top:1px solid var(--line);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
 .bp-slot small{font-size:9px;color:var(--faint)}
 .bp-slot.ban{min-height:32px;border-style:dashed}
-.bp-slot.ban.filled{border-style:solid;background:rgba(224,108,108,.1);border-color:rgba(224,108,108,.45)}
+.bp-slot.ban.filled{border-style:solid;background:rgba(255,143,146,.1);border-color:rgba(255,143,146,.45)}
 .bp-slot.ban.filled b{color:var(--red);text-decoration:line-through}
 .bp-slot.pick.filled{border-color:var(--line2);background:var(--raise)}
 .bp-slot.pick.filled b{color:var(--txt)}
@@ -302,9 +306,9 @@ footer{background:transparent;border-top:1px solid var(--line);
 .bp-hero small{display:block;font-size:9px;color:var(--faint);font-weight:400;margin-top:2px}
 .bp-hero:hover{border-color:var(--accent)}
 .bp-hero.pos{flex:1 1 108px;display:flex;flex-direction:column;align-items:center;gap:1px}
-.bp-hero.rec{border-color:var(--accent);background:rgba(109,157,255,.08)}
+.bp-hero.rec{border-color:var(--accent);background:rgba(121,170,255,.08)}
 .bp-hero.rec small{color:var(--accent)}
-.bp-hero.sel{border-color:var(--gold);background:rgba(226,174,82,.1)}
+.bp-hero.sel{border-color:var(--gold);background:rgba(240,187,96,.1)}
 .bp-hero.sel small{color:var(--gold)}
 .bp-hero:active{transform:scale(.97)}
 .bp-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin:6px 0 2px}
@@ -418,7 +422,7 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 .cr-shape{min-width:54px;padding:7px 8px;border-radius:4px}
 .cr-sw{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0;flex:none}
 .cr-sw:hover{border-color:var(--accent);transform:scale(1.08)}
-.cr-sw.on{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 2px rgba(226,174,82,.25)}
+.cr-sw.on{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 2px rgba(240,187,96,.25)}
 @media (max-width:640px){
   .cr-top #cr-preview{width:96px;height:auto}
 }
@@ -428,7 +432,7 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 /* ===== 2026-09 质感升级组件：头像 / VS 海报 / MVP 高光卡 / 积分条 / 夺冠庆典 ===== */
 .pcard .p-top{gap:8px;justify-content:flex-start}
 .pcard .p-top .p-pos{margin-left:auto}
-.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(109,157,255,.09),rgba(109,157,255,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}
+.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(121,170,255,.09),rgba(121,170,255,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}
 .vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
 .vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
@@ -441,14 +445,14 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 .result-band{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-radius:6px;margin-bottom:10px;font-weight:700;border:1px solid var(--line)}
 .result-band span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}
 .result-band b{font-size:26px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}
-.result-band.win{background:linear-gradient(180deg,rgba(84,176,119,.16),rgba(84,176,119,.05));border-color:rgba(84,176,119,.45)}
-.result-band.lose{background:linear-gradient(180deg,rgba(224,108,108,.12),rgba(224,108,108,.04));border-color:rgba(224,108,108,.35)}
+.result-band.win{background:linear-gradient(180deg,rgba(92,196,134,.16),rgba(92,196,134,.05));border-color:rgba(92,196,134,.45)}
+.result-band.lose{background:linear-gradient(180deg,rgba(255,143,146,.12),rgba(255,143,146,.04));border-color:rgba(255,143,146,.35)}
 .mvp-card{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(242,196,27,.13),rgba(242,196,27,.03));border:1px solid rgba(242,196,27,.42);border-radius:8px;padding:10px 14px;margin-bottom:10px}
 .mvp-tag{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2.5px}
 .mvp-name{font-size:16px;font-weight:800}
 .mvp-kda{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 .pts-bar{height:4px;background:var(--sunken);border-radius:2px;margin-top:4px;overflow:hidden;max-width:150px}
-.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#8a6a24,var(--gold));border-radius:2px}
+.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#a97d1f,var(--gold));border-radius:2px}
 .bp-slot{gap:3px}
 .bp-slot b{margin-top:1px}
 .bp-slot.pick.filled b{font-size:12px}
@@ -476,18 +480,18 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 
 /* 页底加第二层暖光：单一冷光让整页显得「只上了一个色」 */
 body{background:
-  radial-gradient(1100px 480px at 50% -8%,rgba(109,157,255,.10),transparent 62%),
-  radial-gradient(760px 420px at 100% 0%,rgba(226,174,82,.05),transparent 60%),
+  radial-gradient(1100px 480px at 50% -8%,rgba(121,170,255,.10),transparent 62%),
+  radial-gradient(760px 420px at 100% 0%,rgba(240,187,96,.05),transparent 60%),
   var(--bg);background-attachment:fixed}
 
 /* .tag 此前只在 h3/h2 内有样式，正文里全是裸文字（俱乐部页「对 轩染·战力103」那行）
    —— 现在全局成芯片，一处修好多页 */
 .tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;line-height:1.55;
   color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:1px 8px;vertical-align:1px}
-.tag.gold{color:var(--gold);border-color:rgba(226,174,82,.38);background:rgba(226,174,82,.08)}
-.tag.red{color:var(--red);border-color:rgba(224,108,108,.38);background:rgba(224,108,108,.08)}
-.tag.green{color:var(--green);border-color:rgba(84,176,119,.38);background:rgba(84,176,119,.08)}
-.tag.cyan{color:var(--accent);border-color:rgba(109,157,255,.38);background:rgba(109,157,255,.08)}
+.tag.gold{color:var(--gold);border-color:rgba(240,187,96,.38);background:rgba(240,187,96,.08)}
+.tag.red{color:var(--red);border-color:rgba(255,143,146,.38);background:rgba(255,143,146,.08)}
+.tag.green{color:var(--green);border-color:rgba(92,196,134,.38);background:rgba(92,196,134,.08)}
+.tag.cyan{color:var(--accent);border-color:rgba(121,170,255,.38);background:rgba(121,170,255,.08)}
 .panel h3 .tag,.modal h2 .tag{background:var(--surface2)}
 
 /* 面板：一条语义色标 + 真实投影（原来只有 1px 边框，整页像线框图） */
@@ -510,10 +514,10 @@ body{background:
 .match:hover{background:var(--surface2)}
 
 /* 页头：品牌带 + KPI 分主次（六个等大的灰盒子是「简陋感」的最大来源） */
-header{background:linear-gradient(90deg,rgba(109,157,255,.12),rgba(109,157,255,.025) 32%,transparent 55%),var(--surface)}
+header{background:linear-gradient(90deg,rgba(121,170,255,.12),rgba(121,170,255,.025) 32%,transparent 55%),var(--surface)}
 .logo{width:38px;height:38px;border-radius:var(--r1);overflow:hidden;flex:none}
 .stat.k-money b{color:var(--gold);font-size:21px}
-.stat.k-money{border-color:rgba(226,174,82,.34);background:linear-gradient(180deg,rgba(226,174,82,.10),rgba(226,174,82,.02)),var(--raise)}
+.stat.k-money{border-color:rgba(240,187,96,.34);background:linear-gradient(180deg,rgba(240,187,96,.10),rgba(240,187,96,.02)),var(--raise)}
 .stat.k-power b{color:var(--accent)}
 .stat.k-day b{font-size:16px}
 .stat.k-wage b{font-size:16px}
@@ -555,15 +559,15 @@ header{background:linear-gradient(90deg,rgba(109,157,255,.12),rgba(109,157,255,.
 .m-val{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
 
 /* 主行动按钮给一点材质（渐变 + 内高光），其余保持哑光，避免回到「发光大屏」 */
-.btn.primary{box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 16px -8px rgba(109,157,255,.55)}
-.btn.gold{box-shadow:0 1px 0 rgba(255,255,255,.24) inset,0 6px 16px -8px rgba(226,174,82,.5)}
+.btn.primary{box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 16px -8px rgba(121,170,255,.55)}
+.btn.gold{box-shadow:0 1px 0 rgba(255,255,255,.24) inset,0 6px 16px -8px rgba(240,187,96,.5)}
 .btn:active{transform:translateY(1px)}
 
 /* ===== 本机偏好：高对比 / 简化模式辅助 ===== */
 /* 高对比：拉高正文与描边对比度；胜负不只靠色相（边框加粗 + 胜负角标） */
 html.hc{
- --line:#4a4a52; --line2:#6a6a74; --txt:#f2f2f5; --dim:#c4c4cc; --faint:#9a9aa4;
- --accent:#7aa4ff; --gold:#f0c35a; --red:#ff7a7a; --green:#6fd48a;
+ --line:#59616f; --line2:#8a93a3; --txt:#ffffff; --dim:#d8dfea; --faint:#bcc5d3;
+ --accent:#9cc0ff; --gold:#f5c877; --red:#ff9fa2; --green:#7fdcaa;
 }
 html.hc body{background:var(--bg)}
 html.hc .panel,html.hc header,html.hc nav{border-color:var(--line2)}
