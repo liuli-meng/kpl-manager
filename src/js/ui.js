@@ -371,6 +371,11 @@ function nextAction(s){
 }
 function uiDoNextAction(s){
  if(uiGuard())return;
+ // 参数归一化：面板按钮历史上把「动作名字符串」（'startPlayoff'/'startCard'）当状态传进来，
+ // 而 nextAction 第一行就是 `if(!s||!s.players…)return null` —— 字符串没有 .players，
+ // 于是永远返回 null，玩家看到的就是「季后赛/卡位赛按钮点了没反应」，只弹一句误导的
+ // 「当前没有可进行的比赛」。真人实测：连点 10 次，状态/界面/存档零变化。
+ if(typeof s==='string')s=S;
  const a=nextAction(s||S);
  if(!a){toast('当前没有可进行的比赛');return;}
  if(a.fn==='uiEndPreseason')uiEndPreseason(s||S);
@@ -460,7 +465,7 @@ function clubCardPanel(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname">${m.b}</span></div>
  ${me?'<div class="hint" style="margin-left:8px">本队</div>':''}</div>`;
  }).join('')}
- ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startCard')"> 进行卡位赛</button>`:''}
+ ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)"> 进行卡位赛</button>`:''}
  <div class="hint mt8">S5 vs A2、S6 vs A1（胜者升S）；A5 vs B2、A6 vs B1（胜者进A）· 败者进低组或淘汰</div>
  </div>`;
 }
@@ -472,8 +477,8 @@ function clubPlayoffPanel(){
  const bracket=(pf.wb||[]).map(m=>cupMatchRow(m,'胜者组')).join('')
  +(pf.lb||[]).map(m=>cupMatchRow(m,'败者组')).join('');
  return `<div class="panel"><h3>季后赛 <span class="tag">10强 BO7 双败淘汰</span></h3>${bracket}
- ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startPlayoff')">${myPending?'进行下一场':'快进季后赛'}</button>`
- :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%" onclick="uiDoNextAction('startPlayoff')"> 季后赛结算 · 推进赛历</button>`:'')}
+ ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)">${myPending?'进行下一场':'快进季后赛'}</button>`
+ :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%" onclick="uiDoNextAction(S)"> 季后赛结算 · 推进赛历</button>`:'')}
  ${pf.final.r?`<div class="hint mt8">总决赛：${pf.final.a} vs ${pf.final.b} · 冠军：${pf.final.r}</div>`:`<div class="hint mt8">总决赛：${pf.final.a?pf.final.a:'胜者组冠军'} vs ${pf.final.b?pf.final.b:'败者组冠军'}</div>`}
  </div>`;
 }
