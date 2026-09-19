@@ -316,26 +316,31 @@ function uiAdvanceCalendar(s){
 /* 当前唯一「该点的比赛动作」：UI 按钮一律从这里派生，避免赛段面板漏按钮导致打不了。
    引擎可直接调 startMatch/startCup；这里只回答「玩家下一步该点什么」。 */
 function nextAction(s){
- if(!s||!s.players||!s.players.length)return null;
+ if(!s)return null;
  if(playerRetired(s))return null;
  if(s.board&&s.board.fired)return null;
  if(s.preseason)return {type:'endPreseason',label:' 结束转会期 · 开始赛季',fn:'uiEndPreseason'};
+ // 空名单残缺档：给可恢复入口，而不是 null
+ if(!s.players||!s.players.length)return {type:'gotoMarket',label:'名单为空 · 去转会市场签人',fn:'uiGoMarket'};
  const p=s.phase;
  if(p==='r1'||p==='r2'||p==='r3'){
- if(!(s.schedule||[])[s.matchIdx])return null;
+ if(!(s.schedule||[])[s.matchIdx]){
+  return {type:'gotoMarket',label:'赛程缺失 · 去转会市场补人',fn:'uiGoMarket'};
+ }
  return s.mode==='player'
  ?{type:'startPlayerMatch',label:' 出战比赛 · 教练指挥',fn:'startPlayerMatch'}
  :{type:'startMatch',label:' 赛前准备 · 调整阵容 / BP 开赛',fn:'uiStartMatch'};
  }
  if(p==='card'){
- const matches=(s.card&&s.card.matches)||[];
+ if(!s.card||!s.card.matches)return {type:'advanceCalendar',label:'卡位赛数据缺失 · 推进赛历',fn:'uiAdvanceCalendar'};
+ const matches=(s.card.matches)||[];
  const myPending=matches.some(m=>m&&!m.r&&(m.a===s.teamName||m.b===s.teamName));
- if(myPending||(s.card&&s.card.idx<matches.length))return {type:'startCard',label:' 进行卡位赛',fn:'startCard'};
+ if(myPending||(s.card.idx<matches.length))return {type:'startCard',label:' 进行卡位赛',fn:'startCard'};
  return null;
  }
  if(p==='playoff'){
  const pf=s.playoff;
- if(!pf||!pf.final)return null;
+ if(!pf||!pf.final)return {type:'advanceCalendar',label:'季后赛数据缺失 · 推进赛历',fn:'uiAdvanceCalendar'};
  // 决赛已打完但年度结算未跑（读档丢 _afterMatch）：仍给收尾入口
  if(pf.final.r&&!pf.champ)return {type:'startPlayoff',label:' 季后赛结算 · 推进赛历',fn:'startPlayoff'};
  if(pf.final.r)return null;
@@ -343,25 +348,27 @@ function nextAction(s){
  }
  if(p==='challenger'){
  const c=s.challenger;
- if(!c||c.champ)return null;
+ if(!c||!c.teams||!c.r1)return {type:'advanceCalendar',label:'挑战者杯数据缺失 · 重建赛程',fn:'uiAdvanceCalendar'};
+ if(c.champ)return null;
  return {type:'startCup',label:' 进行挑战者杯',fn:'uiStartCup'};
  }
  if(p==='ewc'){
  const e=s.ewc;
- if(!e||e.champ)return null;
+ if(!e||!e.qf)return {type:'advanceCalendar',label:'EWC 数据缺失 · 重建赛程',fn:'uiAdvanceCalendar'};
+ if(e.champ)return null;
  return {type:'startCup',label:' 进行 EWC',fn:'uiStartCup'};
  }
  if(p==='asiad'){
  const a=s.ag;
- if(!a||a.champ)return null;
+ if(!a||!a.squad)return {type:'advanceCalendar',label:'亚运数据缺失 · 推进赛历',fn:'uiAdvanceCalendar'};
+ if(a.champ)return null;
  return {type:'asiadStep',label:' 推进亚运会',fn:'uiAsiadStep'};
  }
  if(p==='annual'){
  const a=s.annual;
- if(!a)return null;
- // 冠军已出但轮换未完成：给恢复入口，而不是 null（null 会让兜底按钮消失 → 卡死）
+ if(!a)return {type:'advanceCalendar',label:'年总数据缺失 · 推进赛历',fn:'uiAdvanceCalendar'};
  if(yearRollPending(s))return {type:'finishAnnual',label:' 进入新赛季 · 年度轮换',fn:'uiFinishAnnual'};
- if(a.po&&a.po.champ)return null; // 已轮换但 phase 残留：无需动作
+ if(a.po&&a.po.champ)return null;
  return {type:'startCup',label:' 进行年度总决赛',fn:'uiStartCup'};
  }
  if(p==='champion'||p==='eliminated'){
@@ -371,6 +378,11 @@ function nextAction(s){
 }
 function uiDoNextAction(s){
  if(uiGuard())return;
+ // 参数归一化：面板按钮历史上把「动作名字符串」（'startPlayoff'/'startCard'）当状态传进来，
+ // 而 nextAction 第一行就是 `if(!s||!s.players…)return null` —— 字符串没有 .players，
+ // 于是永远返回 null，玩家看到的就是「季后赛/卡位赛按钮点了没反应」，只弹一句误导的
+ // 「当前没有可进行的比赛」。真人实测：连点 10 次，状态/界面/存档零变化。
+ if(typeof s==='string')s=S;
  const a=nextAction(s||S);
  if(!a){toast('当前没有可进行的比赛');return;}
  if(a.fn==='uiEndPreseason')uiEndPreseason(s||S);
@@ -382,6 +394,10 @@ function uiDoNextAction(s){
  else if(a.fn==='uiFinishAnnual')uiFinishAnnual(s||S);
  else if(a.fn==='uiAsiadStep')uiAsiadStep(s||S);
  else if(a.fn==='uiAdvanceCalendar')uiAdvanceCalendar(s||S);
+ else if(a.fn==='uiGoMarket'){
+  goPage(S&&S.mode==='player'?'career':'market');
+  toast('请先在转会/阵容页补齐名单，再回来推进比赛');
+ }
 }
 function uiFinishAnnual(s){
  if(uiGuard())return;
@@ -460,7 +476,7 @@ function clubCardPanel(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname">${m.b}</span></div>
  ${me?'<div class="hint" style="margin-left:8px">本队</div>':''}</div>`;
  }).join('')}
- ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startCard')"> 进行卡位赛</button>`:''}
+ ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)"> 进行卡位赛</button>`:''}
  <div class="hint mt8">S5 vs A2、S6 vs A1（胜者升S）；A5 vs B2、A6 vs B1（胜者进A）· 败者进低组或淘汰</div>
  </div>`;
 }
@@ -472,8 +488,8 @@ function clubPlayoffPanel(){
  const bracket=(pf.wb||[]).map(m=>cupMatchRow(m,'胜者组')).join('')
  +(pf.lb||[]).map(m=>cupMatchRow(m,'败者组')).join('');
  return `<div class="panel"><h3>季后赛 <span class="tag">10强 BO7 双败淘汰</span></h3>${bracket}
- ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startPlayoff')">${myPending?'进行下一场':'快进季后赛'}</button>`
- :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%" onclick="uiDoNextAction('startPlayoff')"> 季后赛结算 · 推进赛历</button>`:'')}
+ ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)">${myPending?'进行下一场':'快进季后赛'}</button>`
+ :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%" onclick="uiDoNextAction(S)"> 季后赛结算 · 推进赛历</button>`:'')}
  ${pf.final.r?`<div class="hint mt8">总决赛：${pf.final.a} vs ${pf.final.b} · 冠军：${pf.final.r}</div>`:`<div class="hint mt8">总决赛：${pf.final.a?pf.final.a:'胜者组冠军'} vs ${pf.final.b?pf.final.b:'败者组冠军'}</div>`}
  </div>`;
 }
@@ -601,7 +617,9 @@ function clubPhasePanel(){
  else if(p==='champion'||p==='eliminated')html=clubResultPanel();
  // 兜底：nextAction 认为可推进、但赛段面板漏了按钮时补一条，消灭「打不了比赛」
  const act=nextAction(S);
- if(act&&html.indexOf(act.fn)<0&&html.indexOf('uiDoNextAction')<0){
+ // 只认可执行入口：uiDoNextAction(S) / act.fn( —— 旧死键字面量（动作名字符串入参）不能算“已有按钮”
+ const hasEntry=!!act&&(html.indexOf('uiDoNextAction(S)')>=0||html.indexOf(act.fn+'(')>=0);
+ if(act&&!hasEntry){
  html+=`<div class="panel"><button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)">${act.label}</button>
  <div class="hint mt8">赛段入口由 nextAction 统一给出（防止面板漏渲染）</div></div>`;
  }
@@ -957,13 +975,16 @@ function renderLeague(){
  // 季后赛 bracket
  if(S.phase==='playoff'&&S.playoff){
  const pf=S.playoff;
- const pMatch=(m,label)=>`<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:12px">${label}：${m.a||'?'} vs ${m.b||'?'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+ const pMatch=(m,label)=>{
+  if(!m||typeof m!=='object')return '';
+  return `<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:12px">${label}：${m.a||'?'} vs ${m.b||'?'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+ };
  html+=`<div class="panel"><h3>季后赛对阵（BO7 双败 · 第7局巅峰对决）</h3>
- ${pf.wb.map((m,i)=>pMatch(m,'胜者组R'+(i+1))).join('')}
+ ${(pf.wb||[]).map((m,i)=>pMatch(m,'胜者组R'+(i+1))).join('')}
  ${pMatch(pf.wf,'胜者组决赛')}
- ${pf.lb.map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
- ${pf.lb2.map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
- ${pf.lb3.map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
+ ${(pf.lb||[]).map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
+ ${(pf.lb2||[]).map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
+ ${(pf.lb3||[]).map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
  ${pMatch(pf.lb4,'败者组半决赛')}
  ${pMatch(pf.lbf,'败者组决赛')}
  ${pMatch(pf.final,' 总决赛')}
@@ -982,7 +1003,9 @@ function renderKjia(){
  const done=k.rd>=k.rounds.length;
  const next=done?null:k.rounds[k.rd].find(m=>m.a===my||m.b===my);
  let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
- <div class="hint">次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。</div></div>`;
+ <div class="hint">${S.mode==='player'
+  ?'选手生涯可在此查看二队赛况与自己的练级数据；下放/提拔/召回由俱乐部运作（「生涯」页可申请租借或 K甲）。'
+  :'次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。'}</div></div>`;
  // 二队概况 + 下一场
  const demoted=(S.players||[]).filter(p=>p.kjia>0);
  html+=`<div class="panel"><h3>二队概况 <span class="tag">${crest(S.icon,my,18)} ${my} · 战力 ${fmt(kjiaTeamPower(S))} · 联赛第${myRank||'—'}名 · 下放选手 ${demoted.length} 人</span></h3>`;
@@ -1033,15 +1056,22 @@ function renderKjia(){
  return `<tr><td><b>${p.name}</b></td><td>${POS[p.pos][1]}</td><td>${st.apps}</td><td>${avg}</td><td>${st.mvp||0}</td><td>${wr}</td><td class="gold">+${p.kjiaGain||0}</td></tr>`;
  }).join('')}</table>
   <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">已练 ${kjiaDaysServed(p)}/${KJIA_DAYS} 天 · 剩 ${p.kjia} 天<br>${(p.kjiaLog||[]).slice(0,2).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>
-  <button class="btn sm primary mt8" style="width:100%" onclick="recallKjia('${p.id}')" title="提前召回一队：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`)).join('')}</div>`;
+  ${S.mode==='player'?'<div class="hint mt8">召回由俱乐部运作</div>':`<button class="btn sm primary mt8" style="width:100%" onclick="recallKjia('${p.id}')" title="提前召回一队：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`}`)).join('')}</div>`;
  }else{
- html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 ${KJIA_DAYS} 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长；练满 ${KJIA_MIN_RECALL} 天后可在本页或阵容页「提前召回」。</div>`;
+ html+=`<div class="hint">${S.mode==='player'
+  ?'暂无下放中的自己——选手可在「生涯」页申请 K甲/租借练级。'
+  :'暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 '+KJIA_DAYS+' 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长；练满 '+KJIA_MIN_RECALL+' 天后可在本页或阵容页「提前召回」。'}</div>`;
  }
  html+=`</div>`;
  // 二队班底（K甲注册选手）
- html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段重建 · 可提拔一线队</span></h3>
- <div class="hint" style="margin-bottom:8px">每赛段自动补充的次级联赛注册选手。年龄达标且大名单未满时，可直接「提拔一线队」——适合伤停缺人时应急，或低价补深度。</div>
- <div class="grid g4">${k.squad.map(p=>pcard(p,`<button class="btn sm primary mt8" style="width:100%" onclick="promoteKjiaPlayer('${p.id}')" title="提拔进一队：占用大名单名额（≤${ROSTER_MAX}），满 ${MATCH_MIN_AGE} 岁">↑ 提拔一线队</button>`)).join('')}</div></div>`;
+ const isPlayerMode=S.mode==='player';
+ html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段重建${isPlayerMode?'':' · 可提拔一线队'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">${isPlayerMode
+  ?'俱乐部运作的次级联赛注册选手，选手身份只读查看。'
+  :'每赛段自动补充的次级联赛注册选手。年龄达标且大名单未满时，可直接「提拔一线队」——适合伤停缺人时应急，或低价补深度。'}</div>
+ <div class="grid g4">${k.squad.map(p=>pcard(p,isPlayerMode
+  ?'<div class="hint mt8">俱乐部人事权</div>'
+  :`<button class="btn sm primary mt8" style="width:100%" onclick="promoteKjiaPlayer('${p.id}')" title="提拔进一队：占用大名单名额（≤${ROSTER_MAX}），满 ${MATCH_MIN_AGE} 岁">↑ 提拔一线队</button>`)).join('')}</div></div>`;
  $('#page-kjia').innerHTML=html;
 }
 /* ================= 联盟页（战队总览 / 阵容浏览 / 选手榜单） ================= */

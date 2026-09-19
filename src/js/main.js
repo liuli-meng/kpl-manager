@@ -1,6 +1,6 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-19g';
+const KM_BUILD='2026-09-19h';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
    pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
@@ -70,6 +70,14 @@ function renderPage(name){
  else if(name==='biz')renderBiz();
  // 面板标题语义标记：一处覆盖 10 页 88 个面板的色标/图标，不必逐个渲染函数改
  if(typeof decoratePanelMarks==='function'){try{decoratePanelMarks(document.getElementById('page-'+name));}catch(e){}}
+ // 排序 chip：横滑容器里保证「当前选中」可见（手机 train/market 等页）
+ try{
+  const row=document.querySelector('#page-'+name+' .sort-row');
+  const on=row&&row.querySelector('.s-chip.on');
+  if(row&&on&&row.scrollWidth>row.clientWidth){
+   row.scrollLeft=Math.max(0,on.offsetLeft-8);
+  }
+ }catch(e){}
 }
 function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
 
@@ -403,7 +411,11 @@ function respondCoachOffer(accept){
  const d=S.coachDeal=S.coachDeal||{years:0,honors:[],log:[]};
  if(accept){
  const tmpl=CLUB_TEMPLATES.find(c=>c.name===o.team);
- if(!tmpl){S.coachOffer=null;return;}
+ if(!tmpl){
+  logEvent(S,'豪门邀约失效：'+o.team+' 不在当前联盟阵容中，无法就任');
+  toast(' 邀约失效：'+o.team+' 不在当前联盟，已取消该邀约');
+  S.coachOffer=null;save();renderAll();return;
+ }
  d.log.unshift({year:gameYear(S),note:'离任 '+S.teamName+'，转投 '+tmpl.name});
  d.log=d.log.slice(0,8);
  const myCoach=S.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
@@ -845,6 +857,7 @@ function createTeam(){
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
  logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
+ applyModeNav(); // 身份页签：manager 不应残留「生涯」等无关入口
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');
  save();
@@ -882,6 +895,7 @@ function applyClub(){
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
  else logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
+ applyModeNav();
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');
  save();

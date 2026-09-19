@@ -65,6 +65,7 @@ const SUITES = [
   { id: 'verify-guide', file: 'tests/verify-guide.js', label: '新手引导' },
   { id: 'verify-moment', file: 'tests/verify-moment.js', label: '演出与赛季主线' },
   { id: 'verify-idle', file: 'tests/verify-idle.js', label: '怠政经济门禁' },
+  { id: 'verify-playoff-entry', file: 'tests/verify-playoff-entry.js', label: '季后赛/卡位赛入口' },
   { id: 'verify-coachloan', file: 'tests/verify-coachloan.js', label: '教练租借与引援' },
   { id: 'verify-relations', file: 'tests/verify-relations.js', label: '战队关系事件' },
   { id: 'verify-sort', file: 'tests/verify-sort.js', label: '市场排序' },
@@ -75,6 +76,7 @@ const SUITES = [
   { id: 'sim-yearend', file: 'tests/sim-yearend.js', label: '年终全链路门禁' },
   { id: 'late-game-probe', file: 'tests/late-game-probe.js', label: '长局压测15年' },
   { id: 'verify-built', file: 'tests/verify-built.js', label: '构建产物校验' },
+  { id: 'verify-bughunt-regress', file: 'tests/verify-bughunt-regress.js', label: '实机bug回归' },
 ];
 
 const argv = process.argv.slice(2);
