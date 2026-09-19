@@ -398,7 +398,12 @@ function autoPlayNext(){
  if(!sr)return;
  const isPeak=sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1;
  autoFillLineup(S); // 伤员自动换下/缺位递补
- const noGo=lineupNoGo(S);
+ let noGo=lineupNoGo(S);
+ if(noGo.length&&typeof emergencyFillRoster==='function'){
+  emergencyFillRoster(S); // 无替补可顶时紧急签人，避免整段赛程卡死
+  autoFillLineup(S);
+  noGo=lineupNoGo(S);
+ }
  if(noGo.length){
  toast(' '+noGoDetail(S,noGo)+' 无法出战（伤停/无人/集训）——自动BP暂停，请补齐阵容');
  S.seriesAuto=false;

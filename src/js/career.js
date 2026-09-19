@@ -42,7 +42,7 @@ function playerYearSettle(s){ // 选手模式年度结算：本赛季个人数�
  s.career.seasons.unshift(rec);
  s.career.seasons=s.career.seasons.slice(0,15);
  s.career.titles+=rec.titles;
- me.kTotal=0;me.dTotal=0;me.aTotal=0;me.caps=0;me.mvp=0; // 本赛季计数清零（生涯履历已快照）
+ me.kTotal=0;me.dTotal=0;me.aTotal=0;me.caps=0;me.mvp=0;me.apps=0; // 本赛季计数清零（生涯履历已快照）
  logEvent(s,'【赛季结算】'+rec.year+'：'+rec.team+' · 出场 '+rec.apps+' 次'+(rec.kda?' · 场均 '+rec.kda:'')+' · 总值 '+rec.ovr+' · '+(rec.titles?rec.titles+' 冠':'无冠'));
 }
 function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地为新东家阵容

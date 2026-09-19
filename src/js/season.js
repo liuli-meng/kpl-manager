@@ -245,7 +245,8 @@ function playCardNext(s){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打卡位赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,KPL.CARD,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
+ tagMatch(s,m,'card_'+s.card.idx);
+ playerPlayAndFinish(s,opName,KPL.CARD,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx,_match:m});
  return;
  }
  // 系列赛中断恢复（P2-7 校验身份）：mid 不属于当前卡位场次 = 僵尸系列赛——
@@ -335,8 +336,10 @@ function ensureLeagueChampion(s){
   p.final.b=p.final.b||runner;
   p.final.r=p.final.r||champ;
   p.champ=p.final.r;
-  if(s.phase!=='eliminated')s.phase='champion';
   s.champion=p.final.r===s.teamName;
+  const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
+  if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
+  else s.phase='eliminated';
   try{logEvent(s,' 季后赛残局补完：'+p.final.r+' 夺得 '+splitLabel(s)+' 冠军'+(s._poError?'（推进异常：'+s._poError+'）':''));}catch(e){}
  }
  return (p&&p.final&&p.final.r)?p:null;
@@ -394,9 +397,12 @@ function playoffStep(s){
  if(p.final.r){
  p.champ=p.final.r;
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split||'spring',event:SPLIT_NAME[s.split]||'春季赛',champ:p.final.r}]).slice(-48); // 王朝统计（连冠反制用，一年两冠按时间序）
- if(s.phase!=='eliminated')s.phase='champion'; // 玩家提前出局时：补完的联盟赛季不覆盖"止步"状态
  s.champion=p.final.r===s.teamName;
- if(s.champion||p.final.a===s.teamName||p.final.b===s.teamName)recordSeason(s); // 冠军/亚军均入册荣誉室
+ const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
+ // 玩家未进决赛=赛季止步；打进决赛无论冠亚都是「赛季结束」
+ if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
+ else s.phase='eliminated';
+ if(s.champion||ourFinal)recordSeason(s); // 冠军/亚军均入册荣誉室
  if(s.champion){
  // 夺冠人气暴涨：全队商业价值提升（代言收入增加）
  s.players.forEach(p=>p.popularity=Math.min(99,(p.popularity||0)+5));
@@ -417,7 +423,8 @@ function playPoMatch(s,m,slot){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打季后赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,KPL.BO7,{stage:'po',mid:'po_'+slot,poSlot:slot});
+ tagMatch(s,m,'po_'+slot);
+ playerPlayAndFinish(s,opName,KPL.BO7,{stage:'po',mid:'po_'+slot,poSlot:slot,_match:m});
  return;
  }
  // 系列赛中断恢复（P2-7 校验身份）：poSlot 不属于当前场次 = 僵尸系列赛，废弃重开
@@ -701,6 +708,12 @@ function newSeason(s){
  logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
+ s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过
+ s._afterMatch=null; // 挂起推进是函数，本就不进存档；内存里也清干净
+ if(s.mode==='coach'&&s.coachDeal){
+ s.coachDeal.years=Math.max(0,(s.coachDeal.years||0)-1); // 执教合同年数递减
+ if(s.coachDeal.years===0)s.coachDeal.log.unshift({year:gameYear(s),note:'合同到期，待续约或自由身'});
+ }
  applySeasonPatch(s); // 赛季版本大改：两名英雄一增一削，持有者属性微调（自写 s.patch）
  dressingRoomCheck(s); // 更衣室年检：坐穿板凳的高战力替补不满/要求离队；队长离队自动摘袖标
  mentorSeasonSettle(s); // 老将带新：新人属性成长 + 老将人气（更衣室关系）
@@ -721,6 +734,7 @@ function startSplit(s,split){
  applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
  coachAutoSquad(s); // 俱乐部同样自动续约/补缺——选手只管自己，班底不能散架
  }
+ try{autoFillLineup(s);}catch(e){} // 自动运营后立刻补齐首发空位（教练/选手退役空位不能拖到开赛）
  s.pick={};
  // 亚运征召必须与经理模式同规则：夏赛开打前宣布并自动换下集训选手，否则选手/教练档永远打满夏季赛
  if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s);

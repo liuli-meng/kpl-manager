@@ -323,7 +323,10 @@ function nextAction(s){
  }
  if(p==='playoff'){
  const pf=s.playoff;
- if(!pf||!pf.final||pf.final.r)return null;
+ if(!pf||!pf.final)return null;
+ // 决赛已打完但年度结算未跑（读档丢 _afterMatch）：仍给收尾入口
+ if(pf.final.r&&!pf.champ)return {type:'startPlayoff',label:' 季后赛结算 · 推进赛历',fn:'startPlayoff'};
+ if(pf.final.r)return null;
  return {type:'startPlayoff',label:' 进行季后赛 / 快进',fn:'startPlayoff'};
  }
  if(p==='challenger'){
@@ -445,7 +448,7 @@ function clubCardPanel(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname">${m.b}</span></div>
  ${me?'<div class="hint" style="margin-left:8px">本队</div>':''}</div>`;
  }).join('')}
- ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="startCard()"> 进行卡位赛</button>`:''}
+ ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startCard')"> 进行卡位赛</button>`:''}
  <div class="hint mt8">S5 vs A2、S6 vs A1（胜者升S）；A5 vs B2、A6 vs B1（胜者进A）· 败者进低组或淘汰</div>
  </div>`;
 }
@@ -457,7 +460,8 @@ function clubPlayoffPanel(){
  const bracket=(pf.wb||[]).map(m=>cupMatchRow(m,'胜者组')).join('')
  +(pf.lb||[]).map(m=>cupMatchRow(m,'败者组')).join('');
  return `<div class="panel"><h3>季后赛 <span class="tag">10强 BO7 双败淘汰</span></h3>${bracket}
- ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="startPlayoff()">${myPending?'进行下一场':'快进季后赛'}</button>`:''}
+ ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startPlayoff')">${myPending?'进行下一场':'快进季后赛'}</button>`
+ :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%" onclick="uiDoNextAction('startPlayoff')"> 季后赛结算 · 推进赛历</button>`:'')}
  ${pf.final.r?`<div class="hint mt8">总决赛：${pf.final.a} vs ${pf.final.b} · 冠军：${pf.final.r}</div>`:`<div class="hint mt8">总决赛：${pf.final.a?pf.final.a:'胜者组冠军'} vs ${pf.final.b?pf.final.b:'败者组冠军'}</div>`}
  </div>`;
 }
@@ -654,7 +658,7 @@ function clubFooterPanels(){
  html+=`<div class="panel"><h3>主教练 <span class="tag">${c.rating||80}评分 · ${COACH_STYLE[c.style]||c.style||'—'}型</span></h3>
  <div class="sponsor"><span class="s-icon">教</span>
  <div><div class="s-name">${c.name} <span class="gold">(全队战力+${c.bonus||0}%)</span></div>
- <div class="s-desc"> ${sk.n||'—'}：${sk.d||'—'} · 周薪 ${c.wage||0}万 · 转会页可换帅</div></div></div></div>`;
+ <div class="s-desc"> ${sk.n||'—'}：${sk.d||'—'} · 周薪 ${c.wage||0}万 · ${S.mode==='coach'?'俱乐部自动运作':'转会页可换帅'}</div></div></div></div>`;
  }
  {
  const cats=[{k:'all',n:'全部'}].concat(LOG_CATS.map(c=>({k:c.k,n:c.n}))).concat([{k:'other',n:'其他动态'}]);

@@ -73,6 +73,7 @@ function boardApplyEffect(s){
  /* 下赛季生效的董事会态度：低信任砍帽（干预）、高信任追加预算（放权）。金额刻意保守，
     避免撼动平衡门禁的校准区间（门禁不模拟下课，但会吃到这里的经济效果） */
  if(s.mode==='player')return; // 选手不管工资帽
+ if(s.mode==='coach')return; // 教练无市场/卖人权，砍帽只会被自动续约抽干资金 → 只走信任/解约
  s.board=s.board||{};
  const t=s.board.trust==null?60:s.board.trust;
  if(t<=BOARD_WARN_TRUST){

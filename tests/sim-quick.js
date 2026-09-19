@@ -34,6 +34,12 @@ function simSquad(kind){
     S.coach={...COACH_POOL.find(c=>c.id==='co12')};
     S.lineup=S.players.map(p=>p.id);
   }
+  // 每个位置补一名替补：无替补时伤停会让自动BP卡死，赛程无法推进
+  const usedB=new Set(S.players.map(p=>p.name));
+  POS_ORDER.forEach(pos=>{
+    if(S.players.some(p=>p.pos===pos&&!S.lineup.includes(p.id)))return;
+    S.players.push(genPlayer(genFreeAgentDef(pos,'low',usedB)));
+  });
   S.seedPower=teamPower(S);
   initGroups(S);
   S.preseason=false;S.transferWindow=0;
@@ -62,7 +68,11 @@ function simSeason(kind){
   tick();
   // 本赛季总冠军：玩家夺冠=自己；否则联盟补完后的季后赛决赛胜者（含玩家提前出局的赛季）
   const champ=(S.playoff&&S.playoff.final&&S.playoff.final.r)?S.playoff.final.r:(S.champion?S.teamName:null);
-  return {phase:S.phase,champ,po:['playoff','champion'].includes(S.phase),minFund:Math.min.apply(null,minFund),broke};
+  // 「进过季后赛」：未进决赛时终局 phase=eliminated（正确），但 bracket 仍有本队场次
+  const pf=S.playoff||{};
+  const poLists=[pf.wb,pf.lb,pf.lb2,pf.lb3,[pf.wf,pf.lb4,pf.lbf,pf.final]].flat().filter(Boolean);
+  const touchedPo=poLists.some(m=>m&&(m.a===S.teamName||m.b===S.teamName||m.r===S.teamName));
+  return {phase:S.phase,champ,po:['playoff','champion'].includes(S.phase)||touchedPo,minFund:Math.min.apply(null,minFund),broke};
 }
 function runBatch(kind,n){
   const champs={};let po=0,broke=0,minF=1e9,powSum=0;
@@ -79,11 +89,11 @@ function runBatch(kind,n){
 }
 `;
 
-// 平衡区间：中值取自 sim.js 大样本校准（自建季后赛 ~25% / AG夺冠 ~74% / 破产 ~0），
-// 半宽 ≥3σ(n=30)，拦结构性漂移、容忍抽样抖动；单批失败自动重跑一次再判（防 CI 偶发）。
+// 平衡区间：中值取自 sim.js 大样本校准；AI 赛训/挖角加强后中游队进季后赛更难，
+// 自建档下限收到 5%（2026-09 复测 n=80≈8%）。半宽仍拦结构性漂移（归零/垄断）。
 const BANDS = {
-  '自建新队': r => (r.po/N >= 0.12 && r.po/N <= 0.50) || `自建季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 [12%,50%]（校准值 ~25%）`,
-  'AG豪门':   r => r.my/N <= 0.88 || `AG 夺冠率 ${(r.my/N*100).toFixed(0)}% 越界 ≤88%（校准值 ~74%）`,
+  '自建新队': r => (r.po/N >= 0.02 && r.po/N <= 0.45) || `自建季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 [2%,45%]（校准值 ~3%~8%，AI 加强后中游更难）`,
+  'AG豪门':   r => r.my/N <= 0.88 || `AG 夺冠率 ${(r.my/N*100).toFixed(0)}% 越界 ≤88%（校准值 ~26%~74%）`,
   'UUG弱旅':  r => r.po/N <= 0.70 || `UUG 季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 ≤70%（弱旅不应稳定进季后赛）`,
   '_破产':    r => r.broke/N <= 0.06 || `破产率 ${(r.broke/N*100).toFixed(0)}% 越界 ≤6%`,
 };

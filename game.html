@@ -1523,10 +1523,11 @@ function scrubWages(s){
 
 function serializeForSave(s){
  if(!s)return 'null';
- const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList};
+ const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList,_afterMatch:s._afterMatch};
  s.aiRosters={};
  s.matches={};
  s.transferList=[]; // 可重建缓存：buildTransferMarket 开窗重建，落盘可占全文 1/3+
+ s._afterMatch=null; // 函数无法 JSON 化
  try{return JSON.stringify(s);}
  finally{Object.assign(s,cache);} // 原样还原（含 undefined 情形），只影响序列化产物
 }
@@ -1567,40 +1568,42 @@ function rebuildMatchStore(s){
  ensureMatchStore(s);
  s.matches={};
  const reg=(m,mid)=>{if(m&&mid)tagMatch(s,m,mid);};
- const regList=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+i));};
+
+ const regList0=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+i));};
+ const regList1=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+(i+1)));};
  const regCup8=(p,prefix)=>{
  if(!p)return;
- regList(p.wb1,prefix+'wb1_');regList(p.lb1,prefix+'lb1_');
- regList(p.wb2,prefix+'wb2_');regList(p.lb2,prefix+'lb2_');
+ regList1(p.wb1,prefix+'wb1_');regList1(p.lb1,prefix+'lb1_');
+ regList1(p.wb2,prefix+'wb2_');regList1(p.lb2,prefix+'lb2_');
  reg(p.wf,prefix+'wf');reg(p.lbs,prefix+'lbs');reg(p.lbf,prefix+'lbf');reg(p.final,prefix+'final');
  };
- if(s.card&&s.card.matches)regList(s.card.matches,'card_');
+ if(s.card&&s.card.matches)regList0(s.card.matches,'card_');
 
  (s.schedule||[]).forEach((m,i)=>reg(m,m.mid||('reg_'+(s.phase||'r1')+'_'+(i+1))));
  if(s.playoff){
  const p=s.playoff;
- regList(p.wb,'po_wb');regList(p.lb,'po_lb');regList(p.lb2,'po_lb2');regList(p.lb3,'po_lb3');
+ regList1(p.wb,'po_wb');regList1(p.lb,'po_lb');regList1(p.lb2,'po_lb2');regList1(p.lb3,'po_lb3');
  reg(p.wf,'po_胜者组决赛');reg(p.lb4,'po_败者组半决赛');reg(p.lbf,'po_败者组决赛');reg(p.final,'po_总决赛');
  }
  if(s.annual){
  if(s.annual.rounds)s.annual.rounds.forEach((rd,ri)=>{
  (rd||[]).forEach((m,mi)=>{
- reg(m,'arena_r'+(ri+1)+'_'+mi);
+ reg(m,'arena_r'+(ri+1)+'_'+(mi+1));
  if(m&&(m.a===s.teamName||m.b===s.teamName))reg(m,'arena_r'+(ri+1)); // cupSlot 轮级别名
  });
  });
- regList(s.annual.brk,'brk');
+ regList1(s.annual.brk,'brk');
  regCup8(s.annual.po,'apo_');
  }
  if(s.challenger){
  const c=s.challenger;
- regList(c.r1,'ch_r1_');regList(c.r2,'ch_r2_');
+ regList1(c.r1,'ch_r1_');regList1(c.r2,'ch_r2_');
  regCup8(c.po,'chpo_');
  reg(c.final,'ch_final');
  }
  if(s.ewc){
  const e=s.ewc;
- regList(e.qf,'ewc_qf');regList(e.sf,'ewc_sf');reg(e.final,'ewc_final');
+ regList1(e.qf,'ewc_qf');regList1(e.sf,'ewc_sf');reg(e.final,'ewc_final');
  }
  if(s.series){
  const sr=s.series;
@@ -2114,6 +2117,25 @@ function ensureSeasonRoster(s){
   logEvent(s,' 转会窗关闭前自动补签自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）');
  });
  try{autoFillLineup(s);}catch(e){}
+}
+
+function emergencyFillRoster(s){
+ if(!s)return false;
+ let signed=false;
+ const used=new Set((s.players||[]).map(p=>p.name));
+ POS_ORDER.forEach(pos=>{
+  const ok=(s.players||[]).some(p=>p.pos===pos&&matchEligible(s,p));
+  if(ok)return;
+  const def=genFreeAgentDef(pos,'low',used);
+  used.add(def.name);
+  const p=genPlayer(def);
+  p.contract=1;
+  s.players.push(p);
+  signed=true;
+  logEvent(s,' 紧急补签自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）——原主力无法出战且无替补可顶');
+ });
+ if(signed){try{autoFillLineup(s);}catch(e){}}
+ return signed;
 }
 
 function ageDrift(p){
@@ -3932,7 +3954,8 @@ function playCardNext(s){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打卡位赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,KPL.CARD,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx});
+ tagMatch(s,m,'card_'+s.card.idx);
+ playerPlayAndFinish(s,opName,KPL.CARD,{stage:'card',mid:'card_'+s.card.idx,cardIdx:s.card.idx,_match:m});
  return;
  }
 
@@ -4018,8 +4041,10 @@ function ensureLeagueChampion(s){
   p.final.b=p.final.b||runner;
   p.final.r=p.final.r||champ;
   p.champ=p.final.r;
-  if(s.phase!=='eliminated')s.phase='champion';
   s.champion=p.final.r===s.teamName;
+  const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
+  if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
+  else s.phase='eliminated';
   try{logEvent(s,' 季后赛残局补完：'+p.final.r+' 夺得 '+splitLabel(s)+' 冠军'+(s._poError?'（推进异常：'+s._poError+'）':''));}catch(e){}
  }
  return (p&&p.final&&p.final.r)?p:null;
@@ -4077,9 +4102,12 @@ function playoffStep(s){
  if(p.final.r){
  p.champ=p.final.r;
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split||'spring',event:SPLIT_NAME[s.split]||'春季赛',champ:p.final.r}]).slice(-48); // 王朝统计（连冠反制用，一年两冠按时间序）
- if(s.phase!=='eliminated')s.phase='champion'; // 玩家提前出局时：补完的联盟赛季不覆盖"止步"状态
  s.champion=p.final.r===s.teamName;
- if(s.champion||p.final.a===s.teamName||p.final.b===s.teamName)recordSeason(s); // 冠军/亚军均入册荣誉室
+ const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
+
+ if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
+ else s.phase='eliminated';
+ if(s.champion||ourFinal)recordSeason(s); // 冠军/亚军均入册荣誉室
  if(s.champion){
 
  s.players.forEach(p=>p.popularity=Math.min(99,(p.popularity||0)+5));
@@ -4100,7 +4128,8 @@ function playPoMatch(s,m,slot){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打季后赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,KPL.BO7,{stage:'po',mid:'po_'+slot,poSlot:slot});
+ tagMatch(s,m,'po_'+slot);
+ playerPlayAndFinish(s,opName,KPL.BO7,{stage:'po',mid:'po_'+slot,poSlot:slot,_match:m});
  return;
  }
 
@@ -4371,6 +4400,12 @@ function newSeason(s){
  logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
+ s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过
+ s._afterMatch=null; // 挂起推进是函数，本就不进存档；内存里也清干净
+ if(s.mode==='coach'&&s.coachDeal){
+ s.coachDeal.years=Math.max(0,(s.coachDeal.years||0)-1); // 执教合同年数递减
+ if(s.coachDeal.years===0)s.coachDeal.log.unshift({year:gameYear(s),note:'合同到期，待续约或自由身'});
+ }
  applySeasonPatch(s); // 赛季版本大改：两名英雄一增一削，持有者属性微调（自写 s.patch）
  dressingRoomCheck(s); // 更衣室年检：坐穿板凳的高战力替补不满/要求离队；队长离队自动摘袖标
  mentorSeasonSettle(s); // 老将带新：新人属性成长 + 老将人气（更衣室关系）
@@ -4389,6 +4424,7 @@ function startSplit(s,split){
  applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
  coachAutoSquad(s); // 俱乐部同样自动续约/补缺——选手只管自己，班底不能散架
  }
+ try{autoFillLineup(s);}catch(e){} // 自动运营后立刻补齐首发空位（教练/选手退役空位不能拖到开赛）
  s.pick={};
 
  if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s);
@@ -4602,6 +4638,7 @@ function boardSettle(s){
 function boardApplyEffect(s){
 
  if(s.mode==='player')return; // 选手不管工资帽
+ if(s.mode==='coach')return; // 教练无市场/卖人权，砍帽只会被自动续约抽干资金 → 只走信任/解约
  s.board=s.board||{};
  const t=s.board.trust==null?60:s.board.trust;
  if(t<=BOARD_WARN_TRUST){
@@ -5731,6 +5768,7 @@ function finishChallenger(s){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' 挑战者杯 '+(c.champ===s.teamName?'冠军':'亚军'),champion:c.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,gameYear(s)+' 挑战者杯 冠军',c.champ===s.teamName);
  }
  if(c.champ===s.teamName)registerChampCore(s,gameYear(s)+' 挑战者杯'); // 冠军班底羁绊
  else if(c.champ)registerAiChampCore(s,c.champ);
@@ -5821,6 +5859,7 @@ function finishEWC(s){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' EWC 电竞世界杯 '+(e.champ===s.teamName?'冠军':'亚军'),champion:e.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,gameYear(s)+' EWC 冠军',e.champ===s.teamName);
  }
  if(e.champ===s.teamName)registerChampCore(s,gameYear(s)+' EWC 电竞世界杯'); // 冠军班底羁绊
  else if(e.champ)registerAiChampCore(s,e.champ);
@@ -6089,6 +6128,7 @@ function finishAnnual(s,silent){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' KPL年度总决赛 '+(p.champ===s.teamName?'冠军':'亚军'),champion:p.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,gameYear(s)+' KPL年度总冠军',p.champ===s.teamName);
  }
  if(p.champ===s.teamName)registerChampCore(s,gameYear(s)+' KPL 年度总决赛'); // 冠军班底羁绊
  else if(p.champ)registerAiChampCore(s,p.champ);
@@ -6136,7 +6176,8 @@ function playCupMatch(s,m,slot,label,bo){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打完整场杯赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label});
+ tagMatch(s,m,slot);
+ playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,_match:m});
  return;
  }
  if(s.series&&s.series.stage==='cup'&&s.series.cupSlot===slot){
@@ -6219,7 +6260,7 @@ function playerYearSettle(s){ // 选手模式年度结算：本赛季个人数�
  s.career.seasons.unshift(rec);
  s.career.seasons=s.career.seasons.slice(0,15);
  s.career.titles+=rec.titles;
- me.kTotal=0;me.dTotal=0;me.aTotal=0;me.caps=0;me.mvp=0; // 本赛季计数清零（生涯履历已快照）
+ me.kTotal=0;me.dTotal=0;me.aTotal=0;me.caps=0;me.mvp=0;me.apps=0; // 本赛季计数清零（生涯履历已快照）
  logEvent(s,'【赛季结算】'+rec.year+'：'+rec.team+' · 出场 '+rec.apps+' 次'+(rec.kda?' · 场均 '+rec.kda:'')+' · 总值 '+rec.ovr+' · '+(rec.titles?rec.titles+' 冠':'无冠'));
 }
 function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地为新东家阵容
@@ -6824,11 +6865,12 @@ function benchMoraleDelta(role,base){
   return base;
 }
 
-function playerAfterMatch(s,finalWin){
+function playerAfterMatch(s,finalWin,sr){
  if(!s||s.mode!=='player')return;
  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
  s.career.stats.matches++;
- if(finalWin&&s.phase==='champion')maybeOpenMedia(s,'title');
+ const isTitle=finalWin&&(s.phase==='champion'||(sr&&(sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot))));
+ if(isTitle)maybeOpenMedia(s,'title');
  else maybeOpenMedia(s,'match');
 }
 
@@ -7672,7 +7714,12 @@ function autoPlayNext(){
  if(!sr)return;
  const isPeak=sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1;
  autoFillLineup(S); // 伤员自动换下/缺位递补
- const noGo=lineupNoGo(S);
+ let noGo=lineupNoGo(S);
+ if(noGo.length&&typeof emergencyFillRoster==='function'){
+  emergencyFillRoster(S); // 无替补可顶时紧急签人，避免整段赛程卡死
+  autoFillLineup(S);
+  noGo=lineupNoGo(S);
+ }
  if(noGo.length){
  toast(' '+noGoDetail(S,noGo)+' 无法出战（伤停/无人/集训）——自动BP暂停，请补齐阵容');
  S.seriesAuto=false;
@@ -8156,11 +8203,14 @@ function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 
 }
 
 function playerPlayAndFinish(s,opName,bo,meta){
- const sr=playerAutoSeries(s,opName,bo);
+ const st=s||S;
+ const sr=playerAutoSeries(st,opName,bo);
  Object.assign(sr,meta||{});
- s.series=sr;
+
+ if(meta&&meta.mid&&meta._match&&typeof tagMatch==='function')tagMatch(st,meta._match,meta.mid);
+ st.series=sr;
+ if(st!==S)S.series=sr; // finishSeries 读全局 S
  finishSeries(sr.mw>sr.ow);
- tickPlayerBench(s);
 }
 function startPlayerMatch(){ // 常规赛入口（选手模式：代替 startMatch 的赛前准备+BP）
  if(S.preseason){toast(' 转会期中，联赛尚未开始');return;}
@@ -8358,9 +8408,18 @@ function playGame(){
 function recordSeason(s){
  try{
  s.honors=s.honors||[];
- s.honors.push({season:s.season,title:(s.champion?(splitLabel(s)+' 总冠军'):(splitLabel(s)+' 亚军')),champion:!!s.champion,roster:titleRoster(s)});
+ const title=(s.champion?(splitLabel(s)+' 总冠军'):(splitLabel(s)+' 亚军'));
+ s.honors.push({season:s.season,title,champion:!!s.champion,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,title,!!s.champion);
  }catch(e){}
+}
+
+function noteCoachHonor(s,title,champion){
+ if(!s||s.mode!=='coach'||!s.coachDeal||!champion)return;
+ s.coachDeal.honors=s.coachDeal.honors||[];
+ s.coachDeal.honors.push({season:s.season,year:gameYear(s),title,team:s.teamName});
+ s.coachDeal.honors=s.coachDeal.honors.slice(-20);
 }
 
 function maybeUpsetWin(s,finalWin,opName){
@@ -8390,8 +8449,11 @@ function maybeUpsetLoss(s,finalWin,opName){
 }
 
 function queueMatchAdvance(s,fn){
- if(s&&s.mode==='player'){s._afterMatch=fn;return;}
- fn();
+ if(!s||typeof fn!=='function')return;
+ s._afterMatch=fn;
+ try{
+  if(typeof window!=='undefined'&&window.kmAutoAdvance){s._afterMatch=null;fn();}
+ }catch(e){}
 }
 function finishSeries(finalWin){
  const sr=S.series;
@@ -8441,7 +8503,6 @@ function finishSeries(finalWin){
  simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
- if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
  }else if(sr.stage==='card'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
@@ -8460,14 +8521,13 @@ function finishSeries(finalWin){
  const bonus=winGames*BONUS_PER_WIN_GAME.po;
  S.fund+=bonus;
  if(finalWin&&sr.poSlot==='总决赛')S.fund+=PO_CHAMPION_BONUS;
- if(!finalWin&&sr.poSlot!=='总决赛'){
 
- const place=poPlace(sr.poSlot,false);
- leaguePayout(S,place);
- }
+ const place=!finalWin&&sr.poSlot!=='总决赛'?poPlace(sr.poSlot,false):null;
+ if(place)leaguePayout(S,place);
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
- logEvent(S,' 季后赛（'+sr.poSlot+'）：'+S.teamName+' '+(finalWin?'晋级':'出局')+' '+sr.mw+':'+sr.ow+(sr.poSlot==='总决赛'&&finalWin?'——夺得总冠军！':'')+'（奖金 '+bonus+'万）');
- title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':'出局');
+ const dropOnly=!finalWin&&place===null;
+ logEvent(S,' 季后赛（'+sr.poSlot+'）：'+S.teamName+' '+(finalWin?'晋级':(dropOnly?'落入败者组':'出局'))+' '+sr.mw+':'+sr.ow+(sr.poSlot==='总决赛'&&finalWin?'——夺得总冠军！':'')+'（奖金 '+bonus+'万）');
+ title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':(dropOnly?'掉入败者组':'出局'));
  queueMatchAdvance(S,()=>playoffStep(S));
  }else if(sr.stage==='cup'){
 
@@ -8508,18 +8568,21 @@ function finishSeries(finalWin){
  });
  S.history=S.history.slice(0,20);
  r.hist=S.history[0]; // AI 战报异步回写绑到本场复盘（勿用 history[0]：并发/重放会串台）
+ if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin,sr); // 选手赛后媒体/出场统计（全 stage）
  save();renderAll();
  showMatchModal(r,title||S.teamName+' vs '+sr.opName);
 }
-function startPlayoff(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}playoffStep(S);}
-function startCard(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}playCardNext(S);}
+function startPlayoff(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}if(S.board&&S.board.fired){toast('已被董事会解约，无法再指挥比赛');return;}playoffStep(S);}
+function startCard(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}if(S.board&&S.board.fired){toast('已被董事会解约，无法再指挥比赛');return;}playCardNext(S);}
 
 function closeMatchContinue(){
  closeModal('app-modal');
  const after=S&&S._afterMatch;
  if(S)S._afterMatch=null;
  if(typeof after==='function'){after();return;}
- if(S&&S.preseason){goPage('market');return;}
+
+ if(S&&S.playoff&&S.playoff.final&&S.playoff.final.r&&!S.playoff.champ){playoffStep(S);return;}
+ if(S&&S.preseason){goPage(S.mode==='player'?'club':'market');return;}
  if(S&&(S.phase==='champion'||S.phase==='eliminated')){advanceCalendar(S);return;}
  nextDay(S);
  goPage(S&&S.mode==='player'?'career':'club');
@@ -8935,7 +8998,10 @@ function nextAction(s){
  }
  if(p==='playoff'){
  const pf=s.playoff;
- if(!pf||!pf.final||pf.final.r)return null;
+ if(!pf||!pf.final)return null;
+
+ if(pf.final.r&&!pf.champ)return {type:'startPlayoff',label:' 季后赛结算 · 推进赛历',fn:'startPlayoff'};
+ if(pf.final.r)return null;
  return {type:'startPlayoff',label:' 进行季后赛 / 快进',fn:'startPlayoff'};
  }
  if(p==='challenger'){
@@ -9057,7 +9123,7 @@ function clubCardPanel(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname">${m.b}</span></div>
  ${me?'<div class="hint" style="margin-left:8px">本队</div>':''}</div>`;
  }).join('')}
- ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="startCard()"> 进行卡位赛</button>`:''}
+ ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startCard')"> 进行卡位赛</button>`:''}
  <div class="hint mt8">S5 vs A2、S6 vs A1（胜者升S）；A5 vs B2、A6 vs B1（胜者进A）· 败者进低组或淘汰</div>
  </div>`;
 }
@@ -9069,7 +9135,8 @@ function clubPlayoffPanel(){
  const bracket=(pf.wb||[]).map(m=>cupMatchRow(m,'胜者组')).join('')
  +(pf.lb||[]).map(m=>cupMatchRow(m,'败者组')).join('');
  return `<div class="panel"><h3>季后赛 <span class="tag">10强 BO7 双败淘汰</span></h3>${bracket}
- ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="startPlayoff()">${myPending?'进行下一场':'快进季后赛'}</button>`:''}
+ ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction('startPlayoff')">${myPending?'进行下一场':'快进季后赛'}</button>`
+ :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%" onclick="uiDoNextAction('startPlayoff')"> 季后赛结算 · 推进赛历</button>`:'')}
  ${pf.final.r?`<div class="hint mt8">总决赛：${pf.final.a} vs ${pf.final.b} · 冠军：${pf.final.r}</div>`:`<div class="hint mt8">总决赛：${pf.final.a?pf.final.a:'胜者组冠军'} vs ${pf.final.b?pf.final.b:'败者组冠军'}</div>`}
  </div>`;
 }
@@ -9266,7 +9333,7 @@ function clubFooterPanels(){
  html+=`<div class="panel"><h3>主教练 <span class="tag">${c.rating||80}评分 · ${COACH_STYLE[c.style]||c.style||'—'}型</span></h3>
  <div class="sponsor"><span class="s-icon">教</span>
  <div><div class="s-name">${c.name} <span class="gold">(全队战力+${c.bonus||0}%)</span></div>
- <div class="s-desc"> ${sk.n||'—'}：${sk.d||'—'} · 周薪 ${c.wage||0}万 · 转会页可换帅</div></div></div></div>`;
+ <div class="s-desc"> ${sk.n||'—'}：${sk.d||'—'} · 周薪 ${c.wage||0}万 · ${S.mode==='coach'?'俱乐部自动运作':'转会页可换帅'}</div></div></div></div>`;
  }
  {
  const cats=[{k:'all',n:'全部'}].concat(LOG_CATS.map(c=>({k:c.k,n:c.n}))).concat([{k:'other',n:'其他动态'}]);
@@ -10781,15 +10848,24 @@ function respondCoachOffer(accept){
  if(!tmpl){S.coachOffer=null;return;}
  d.log.unshift({year:gameYear(S),note:'离任 '+S.teamName+'，转投 '+tmpl.name});
  d.log=d.log.slice(0,8);
+ const myCoach=S.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
  S.teamName=tmpl.name;S.icon=tmpl.icon;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
  S.players=[];
  tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
  S.lineup=buildBestLineup(S);
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ if(myCoach)S.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
+ else S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
  S.seedPower=teamPower(S)||tmpl.seed;
  S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
  S.board.warn=0;
+
+ S.aiRosters={};S.aiInj={};S.series=null;S._afterMatch=null;
+ try{if(typeof setBoardKpi==='function')setBoardKpi(S);}catch(e){}
+ try{initGroups(S);}catch(e){}
+ if(!S.preseason&&(S.phase==='r1'||S.phase==='r2'||S.phase==='r3')){
+ try{genRoundSchedule(S);}catch(e){} // 当前轮赛程按新队名重生成（积分表 initGroups 已重置）
+ }
  logEvent(S,' 你接受 '+tmpl.name+' 的邀约：新班底战力 '+fmt(teamPower(S))+'——用成绩证明他们的选择');
  }else{
  d.log.unshift({year:gameYear(S),note:'婉拒 '+o.team+' 邀约，留任 '+S.teamName});

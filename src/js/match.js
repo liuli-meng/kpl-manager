@@ -262,11 +262,14 @@ function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 
 /* 选手模式统一入口：自动打完系列赛 → 补齐 finishSeries 所需字段 → 走完整结算（积分/复盘/弹窗）。
  卡位/季后/杯赛原先各写一份「打完就立刻下一步」的旁路，导致无结算弹窗且可能连场跳过。 */
 function playerPlayAndFinish(s,opName,bo,meta){
- const sr=playerAutoSeries(s,opName,bo);
+ const st=s||S;
+ const sr=playerAutoSeries(st,opName,bo);
  Object.assign(sr,meta||{});
- s.series=sr;
+ // 对阵登记进扁平表：与经理路径一致，读档 rebuild 后 resolveSeriesMatch 能命中本场
+ if(meta&&meta.mid&&meta._match&&typeof tagMatch==='function')tagMatch(st,meta._match,meta.mid);
+ st.series=sr;
+ if(st!==S)S.series=sr; // finishSeries 读全局 S
  finishSeries(sr.mw>sr.ow);
- tickPlayerBench(s);
 }
 function startPlayerMatch(){ // 常规赛入口（选手模式：代替 startMatch 的赛前准备+BP）
  if(S.preseason){toast(' 转会期中，联赛尚未开始');return;}
@@ -466,9 +469,18 @@ function playGame(){
 function recordSeason(s){
  try{
  s.honors=s.honors||[];
- s.honors.push({season:s.season,title:(s.champion?(splitLabel(s)+' 总冠军'):(splitLabel(s)+' 亚军')),champion:!!s.champion,roster:titleRoster(s)});
+ const title=(s.champion?(splitLabel(s)+' 总冠军'):(splitLabel(s)+' 亚军'));
+ s.honors.push({season:s.season,title,champion:!!s.champion,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,title,!!s.champion);
  }catch(e){}
+}
+/* 教练履历：夺冠时同步写入 coachDeal.honors（UI「X 冠」此前恒为 0） */
+function noteCoachHonor(s,title,champion){
+ if(!s||s.mode!=='coach'||!s.coachDeal||!champion)return;
+ s.coachDeal.honors=s.coachDeal.honors||[];
+ s.coachDeal.honors.push({season:s.season,year:gameYear(s),title,team:s.teamName});
+ s.coachDeal.honors=s.coachDeal.honors.slice(-20);
 }
 /* 以下克上：击败纸面明显更强的对手（战力高出 ≥15%）→ 士气/涨粉/本赛段战力加成 + 成就 */
 function maybeUpsetWin(s,finalWin,opName){
@@ -496,11 +508,14 @@ function maybeUpsetLoss(s,finalWin,opName){
  logEvent(s,' 阴沟翻船！'+s.teamName+' 竟负于纸面更弱的 '+opName+'（战力 '+Math.round(my)+' vs '+Math.round(op)+'）——全队士气-6、粉丝流失，本赛段战力 '+s.fumbleBoost+'%');
  return true;
 }
-/* 选手模式：结算弹窗点「继续」后再推进下一阶段，避免卡位/季后/杯赛连场静默跳过。
- 经理模式仍立即推进（赛前准备/BP 弹窗本身会接管下一步）。 */
+/* 结算推进：卡位/季后/杯赛一律先弹结算，点「继续」再走下一步。
+ 无头门禁/测试沙箱设 window.kmAutoAdvance=true：结算后立刻推进（无人点弹窗）。 */
 function queueMatchAdvance(s,fn){
- if(s&&s.mode==='player'){s._afterMatch=fn;return;}
- fn();
+ if(!s||typeof fn!=='function')return;
+ s._afterMatch=fn;
+ try{
+  if(typeof window!=='undefined'&&window.kmAutoAdvance){s._afterMatch=null;fn();}
+ }catch(e){}
 }
 function finishSeries(finalWin){
  const sr=S.series;
@@ -552,7 +567,6 @@ function finishSeries(finalWin){
  simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
- if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin); // 选手模式：赛后可能被邀采访
  }else if(sr.stage==='card'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
  if(m)m.r=finalWin?sr.myName:sr.opName;
@@ -571,14 +585,13 @@ function finishSeries(finalWin){
  const bonus=winGames*BONUS_PER_WIN_GAME.po;
  S.fund+=bonus;
  if(finalWin&&sr.poSlot==='总决赛')S.fund+=PO_CHAMPION_BONUS;
- if(!finalWin&&sr.poSlot!=='总决赛'){
- // 联盟分润：按出局名次（总决赛败者的亚军分润由 playoffStep 冠军分支统一发放，此处不再发，避免双倍）
- const place=poPlace(sr.poSlot,false);
- leaguePayout(S,place);
- }
+ // 胜者组失利只掉败者组，不是真出局：文案/分润按 poPlace（null=仍在树内）
+ const place=!finalWin&&sr.poSlot!=='总决赛'?poPlace(sr.poSlot,false):null;
+ if(place)leaguePayout(S,place);
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
- logEvent(S,' 季后赛（'+sr.poSlot+'）：'+S.teamName+' '+(finalWin?'晋级':'出局')+' '+sr.mw+':'+sr.ow+(sr.poSlot==='总决赛'&&finalWin?'——夺得总冠军！':'')+'（奖金 '+bonus+'万）');
- title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':'出局');
+ const dropOnly=!finalWin&&place===null;
+ logEvent(S,' 季后赛（'+sr.poSlot+'）：'+S.teamName+' '+(finalWin?'晋级':(dropOnly?'落入败者组':'出局'))+' '+sr.mw+':'+sr.ow+(sr.poSlot==='总决赛'&&finalWin?'——夺得总冠军！':'')+'（奖金 '+bonus+'万）');
+ title=sr.poSlot==='总决赛'?(finalWin?'我们是冠军！':'总决赛落幕'):'季后赛'+(finalWin?'晋级':(dropOnly?'掉入败者组':'出局'));
  queueMatchAdvance(S,()=>playoffStep(S));
  }else if(sr.stage==='cup'){
  // 杯赛系列赛（EWC / 年度总决赛）——按 mid/cupSlot 解析，不信对象缓存
@@ -619,18 +632,21 @@ function finishSeries(finalWin){
  });
  S.history=S.history.slice(0,20);
  r.hist=S.history[0]; // AI 战报异步回写绑到本场复盘（勿用 history[0]：并发/重放会串台）
+ if(typeof playerAfterMatch==='function')playerAfterMatch(S,finalWin,sr); // 选手赛后媒体/出场统计（全 stage）
  save();renderAll();
  showMatchModal(r,title||S.teamName+' vs '+sr.opName);
 }
-function startPlayoff(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}playoffStep(S);}
-function startCard(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}playCardNext(S);}
-/* 结算弹窗「继续」：有挂起的下一阶段（选手模式卡位/季后/杯赛）就走它；否则按赛段推进一天/赛历 */
+function startPlayoff(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}if(S.board&&S.board.fired){toast('已被董事会解约，无法再指挥比赛');return;}playoffStep(S);}
+function startCard(){if(S.preseason){toast(' 转会期进行中，联赛尚未开始');return;}if(S.board&&S.board.fired){toast('已被董事会解约，无法再指挥比赛');return;}playCardNext(S);}
+/* 结算弹窗「继续」：优先执行挂起的下一阶段；读档丢失 _afterMatch 时按赛段恢复 */
 function closeMatchContinue(){
  closeModal('app-modal');
  const after=S&&S._afterMatch;
  if(S)S._afterMatch=null;
  if(typeof after==='function'){after();return;}
- if(S&&S.preseason){goPage('market');return;}
+ // 读档恢复：决赛已打完但 champion 未结算（函数无法进 JSON）
+ if(S&&S.playoff&&S.playoff.final&&S.playoff.final.r&&!S.playoff.champ){playoffStep(S);return;}
+ if(S&&S.preseason){goPage(S.mode==='player'?'club':'market');return;}
  if(S&&(S.phase==='champion'||S.phase==='eliminated')){advanceCalendar(S);return;}
  nextDay(S);
  goPage(S&&S.mode==='player'?'career':'club');

@@ -126,6 +126,7 @@ function finishChallenger(s){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' 挑战者杯 '+(c.champ===s.teamName?'冠军':'亚军'),champion:c.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,gameYear(s)+' 挑战者杯 冠军',c.champ===s.teamName);
  }
  if(c.champ===s.teamName)registerChampCore(s,gameYear(s)+' 挑战者杯'); // 冠军班底羁绊
  else if(c.champ)registerAiChampCore(s,c.champ);
@@ -222,6 +223,7 @@ function finishEWC(s){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' EWC 电竞世界杯 '+(e.champ===s.teamName?'冠军':'亚军'),champion:e.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,gameYear(s)+' EWC 冠军',e.champ===s.teamName);
  }
  if(e.champ===s.teamName)registerChampCore(s,gameYear(s)+' EWC 电竞世界杯'); // 冠军班底羁绊
  else if(e.champ)registerAiChampCore(s,e.champ);
@@ -498,6 +500,7 @@ function finishAnnual(s,silent){
  s.honors=s.honors||[];
  s.honors.push({season:s.season,title:gameYear(s)+' KPL年度总决赛 '+(p.champ===s.teamName?'冠军':'亚军'),champion:p.champ===s.teamName,roster:titleRoster(s)});
  s.honors=s.honors.slice(-20);
+ noteCoachHonor(s,gameYear(s)+' KPL年度总冠军',p.champ===s.teamName);
  }
  if(p.champ===s.teamName)registerChampCore(s,gameYear(s)+' KPL 年度总决赛'); // 冠军班底羁绊
  else if(p.champ)registerAiChampCore(s,p.champ);
@@ -546,7 +549,8 @@ function playCupMatch(s,m,slot,label,bo){
  if(m.a===s.teamName||m.b===s.teamName){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打完整场杯赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
- playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label});
+ tagMatch(s,m,slot);
+ playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,_match:m});
  return;
  }
  if(s.series&&s.series.stage==='cup'&&s.series.cupSlot===slot){

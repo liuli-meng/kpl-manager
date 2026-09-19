@@ -88,6 +88,25 @@ function ensureSeasonRoster(s){
  });
  try{autoFillLineup(s);}catch(e){}
 }
+/* 赛中紧急补签：某位置无人可出战（伤停/集训且无替补）时签低档自由球员，避免系列赛/整季软锁死 */
+function emergencyFillRoster(s){
+ if(!s)return false;
+ let signed=false;
+ const used=new Set((s.players||[]).map(p=>p.name));
+ POS_ORDER.forEach(pos=>{
+  const ok=(s.players||[]).some(p=>p.pos===pos&&matchEligible(s,p));
+  if(ok)return;
+  const def=genFreeAgentDef(pos,'low',used);
+  used.add(def.name);
+  const p=genPlayer(def);
+  p.contract=1;
+  s.players.push(p);
+  signed=true;
+  logEvent(s,' 紧急补签自由球员 '+p.name+'（'+POS[pos][0]+' · 总值 '+overall(p)+'）——原主力无法出战且无替补可顶');
+ });
+ if(signed){try{autoFillLineup(s);}catch(e){}}
+ return signed;
+}
 /* AI 选手随赛季年龄成长/衰减（与玩家 newSeason 同规则），联赛会随赛季演化
  黄金期每年 +1~2 点（原固定 +1 追不上玩家的训练速度，AI 会原地踏步） */
 function ageDrift(p){

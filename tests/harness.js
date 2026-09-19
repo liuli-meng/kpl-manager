@@ -72,6 +72,8 @@ function makeDom(opts) {
     performance: { now: () => Date.now() },
   };
   dom.window = dom;
+  // 无头门禁：结算弹窗无人点「继续」，季后/杯赛挂起推进会卡死——沙箱内自动 flush
+  dom.kmAutoAdvance = true;
   vm.createContext(dom);
   const code = (opts && opts.code != null) ? opts.code : loadCode();
   vm.runInContext(code, dom);

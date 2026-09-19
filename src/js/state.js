@@ -546,10 +546,11 @@ function scrubWages(s){
   _achAt/_asCache 等是节流缓存。导出/备份同样走这里。 */
 function serializeForSave(s){
  if(!s)return 'null';
- const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList};
+ const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList,_afterMatch:s._afterMatch};
  s.aiRosters={};
  s.matches={};
  s.transferList=[]; // 可重建缓存：buildTransferMarket 开窗重建，落盘可占全文 1/3+
+ s._afterMatch=null; // 函数无法 JSON 化
  try{return JSON.stringify(s);}
  finally{Object.assign(s,cache);} // 原样还原（含 undefined 情形），只影响序列化产物
 }
@@ -594,40 +595,42 @@ function rebuildMatchStore(s){
  ensureMatchStore(s);
  s.matches={};
  const reg=(m,mid)=>{if(m&&mid)tagMatch(s,m,mid);};
- const regList=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+i));};
+ // 运行时槽位大多 1 基（playoffStep: po_wb1 / cups: ewc_qf1 / ch_r1_1 / brk1）；卡位 matches 下标 0 基
+ const regList0=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+i));};
+ const regList1=(list,prefix)=>{(list||[]).forEach((m,i)=>reg(m,prefix+(i+1)));};
  const regCup8=(p,prefix)=>{
  if(!p)return;
- regList(p.wb1,prefix+'wb1_');regList(p.lb1,prefix+'lb1_');
- regList(p.wb2,prefix+'wb2_');regList(p.lb2,prefix+'lb2_');
+ regList1(p.wb1,prefix+'wb1_');regList1(p.lb1,prefix+'lb1_');
+ regList1(p.wb2,prefix+'wb2_');regList1(p.lb2,prefix+'lb2_');
  reg(p.wf,prefix+'wf');reg(p.lbs,prefix+'lbs');reg(p.lbf,prefix+'lbf');reg(p.final,prefix+'final');
  };
- if(s.card&&s.card.matches)regList(s.card.matches,'card_');
+ if(s.card&&s.card.matches)regList0(s.card.matches,'card_');
  // 常规赛赛程也登记进扁平表（L2b）；旧档对阵缺 mid 时按相位+序号补写（与 genRoundSchedule 同构），读档迁移在此完成
  (s.schedule||[]).forEach((m,i)=>reg(m,m.mid||('reg_'+(s.phase||'r1')+'_'+(i+1))));
  if(s.playoff){
  const p=s.playoff;
- regList(p.wb,'po_wb');regList(p.lb,'po_lb');regList(p.lb2,'po_lb2');regList(p.lb3,'po_lb3');
+ regList1(p.wb,'po_wb');regList1(p.lb,'po_lb');regList1(p.lb2,'po_lb2');regList1(p.lb3,'po_lb3');
  reg(p.wf,'po_胜者组决赛');reg(p.lb4,'po_败者组半决赛');reg(p.lbf,'po_败者组决赛');reg(p.final,'po_总决赛');
  }
  if(s.annual){
  if(s.annual.rounds)s.annual.rounds.forEach((rd,ri)=>{
  (rd||[]).forEach((m,mi)=>{
- reg(m,'arena_r'+(ri+1)+'_'+mi);
+ reg(m,'arena_r'+(ri+1)+'_'+(mi+1));
  if(m&&(m.a===s.teamName||m.b===s.teamName))reg(m,'arena_r'+(ri+1)); // cupSlot 轮级别名
  });
  });
- regList(s.annual.brk,'brk');
+ regList1(s.annual.brk,'brk');
  regCup8(s.annual.po,'apo_');
  }
  if(s.challenger){
  const c=s.challenger;
- regList(c.r1,'ch_r1_');regList(c.r2,'ch_r2_');
+ regList1(c.r1,'ch_r1_');regList1(c.r2,'ch_r2_');
  regCup8(c.po,'chpo_');
  reg(c.final,'ch_final');
  }
  if(s.ewc){
  const e=s.ewc;
- regList(e.qf,'ewc_qf');regList(e.sf,'ewc_sf');reg(e.final,'ewc_final');
+ regList1(e.qf,'ewc_qf');regList1(e.sf,'ewc_sf');reg(e.final,'ewc_final');
  }
  if(s.series){
  const sr=s.series;

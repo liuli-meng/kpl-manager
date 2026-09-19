@@ -44,7 +44,10 @@ function simSeason(kind){
     }else break;
   }
   tick();
-  return {myPow,phase:S.phase,champ:S.phase==='champion'&&S.champion,po:['playoff','champion'].includes(S.phase),minFund:Math.min.apply(null,minFund),broke};
+  const pf=S.playoff||{};
+  const poLists=[pf.wb,pf.lb,pf.lb2,pf.lb3,[pf.wf,pf.lb4,pf.lbf,pf.final]].flat().filter(Boolean);
+  const touchedPo=poLists.some(m=>m&&(m.a===S.teamName||m.b===S.teamName||m.r===S.teamName));
+  return {myPow,phase:S.phase,champ:S.phase==='champion'&&S.champion,po:['playoff','champion'].includes(S.phase)||touchedPo,minFund:Math.min.apply(null,minFund),broke};
 }
 function runBatch(kind,n){
   let po=0,champ=0,elim=0,broke=0,minF=1e9,powSum=0;
