@@ -5,7 +5,7 @@ description: kpl-manager（王者电竞经理·KPL 篇，E:\sex\kpl-manager）�
 
 # kpl-manager 开发工作流
 
-纯前端单文件同人游戏：`src/`（10 个 JS 模块 + CSS + index.html）经 `build.ps1` 拼接成 `game.html` 分发；无后端、无网络请求、存档在 localStorage（3 槽）。**所有改动必须走完整闭环**：改 src → `npm test` 全绿 → `build.ps1` 重建 → 浏览器实测 → 提交推送。
+纯前端单文件同人游戏：`src/`（JS 模块 + CSS + index.html）经 `node build.js` 拼接压缩成 `game.html` 分发；无后端、无网络请求、存档在 localStorage（3 槽）。**所有改动必须走完整闭环**：改 src → `npm test` 全绿 → `npm run build` 重建 → 浏览器实测 → 提交推送。
 
 ## 架构地图（改动该去哪个文件）
 
@@ -33,7 +33,7 @@ description: kpl-manager（王者电竞经理·KPL 篇，E:\sex\kpl-manager）�
 3. **UI**：渲染函数 + `renderPage` 映射 + `index.html`（nav 按钮与 `<section>`）+ `MODE_PAGES`（main.js）按模式收放
 4. **测试**：新建 `tests/verify-<name>.js`（vm 沙箱，见下）并挂进 package.json 的 test 链（放在 smoke.js 之前）
 5. **回归**：`npm test` 全绿（含 audit-static 的 onclick 回调存在性、重复函数定义、页面往返渲染——renderPage 清单在 audit-static.js 有两处硬编码，加新页面要同步加）
-6. **构建**：`powershell -ExecutionPolicy Bypass -File build.ps1`（CI 会校验 game.html 与 src 一致）
+6. **构建**：`npm run build`（等价 `node build.js`，**唯一实现**）。别用 `build.ps1` 的旧拼接逻辑：它曾把 style.css/js 原样塞进产物不做压缩，产物比 CI 重建结果大 100KB+，CI 最后一步 `git diff --exit-code game.html` 必红——视觉 v6（d78ed50）就是这么中招的，现已改成转发 `node build.js` 的 shim。改完源码若 `git status` 里 `game.html` 没变，说明构建根本没跑
 7. **浏览器实测**：见下方配方
 8. **README**：按 `## 2026-09 <功能名>` 格式补一节（含设计动机与回归用例说明）
 9. **提交推送**：中文功能摘要 commit；推送用 `GIT_TERMINAL_PROMPT=0 git -C . -c credential.helper= -c credential.helper=wincred -c http.proxy= -c https.proxy= push origin main`（**必须挂 wincred 绕过损坏的 GCM**——PortableGit 的 git-credential-manager.exe 已段错误，默认 helper 必报 could not read Username；全局代理 127.0.0.1:10808 常没开，直连 GitHub 是通的）
