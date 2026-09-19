@@ -468,6 +468,95 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
  #champion-overlay{animation:none}
 }
 
+/* ============================================================
+   v5.1 「去简陋」层：v5 把层级修对了，但版式与质感仍像未完成的原型。
+   这一层只加东西不改语义：全局 tag 芯片、面板语义色标、深度与纹理、
+   页头品牌带、桌面端按钮不再拉成满宽色块。
+   ============================================================ */
+
+/* 页底加第二层暖光：单一冷光让整页显得「只上了一个色」 */
+body{background:
+  radial-gradient(1100px 480px at 50% -8%,rgba(109,157,255,.10),transparent 62%),
+  radial-gradient(760px 420px at 100% 0%,rgba(226,174,82,.05),transparent 60%),
+  var(--bg);background-attachment:fixed}
+
+/* .tag 此前只在 h3/h2 内有样式，正文里全是裸文字（俱乐部页「对 轩染·战力103」那行）
+   —— 现在全局成芯片，一处修好多页 */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;line-height:1.55;
+  color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:1px 8px;vertical-align:1px}
+.tag.gold{color:var(--gold);border-color:rgba(226,174,82,.38);background:rgba(226,174,82,.08)}
+.tag.red{color:var(--red);border-color:rgba(224,108,108,.38);background:rgba(224,108,108,.08)}
+.tag.green{color:var(--green);border-color:rgba(84,176,119,.38);background:rgba(84,176,119,.08)}
+.tag.cyan{color:var(--accent);border-color:rgba(109,157,255,.38);background:rgba(109,157,255,.08)}
+.panel h3 .tag,.modal h2 .tag{background:var(--surface2)}
+
+/* 面板：一条语义色标 + 真实投影（原来只有 1px 边框，整页像线框图） */
+.panel{box-shadow:0 1px 0 rgba(255,255,255,.028) inset,0 12px 28px -20px rgba(0,0,0,.9)}
+.panel>h3::before{content:"";flex:none;width:3px;height:13px;border-radius:2px;background:var(--accent);opacity:.92}
+.panel>h3[data-ic=money]::before,.panel>h3[data-ic=cup]::before,.panel>h3[data-ic=honor]::before{background:var(--gold)}
+.panel>h3[data-ic=train]::before{background:var(--green)}
+.panel>h3[data-ic=board]::before{background:var(--pos-jg)}
+.panel>h3[data-ic=room]::before{background:var(--red)}
+.panel>h3[data-ic=lineup]::before{background:var(--pos-mid)}
+.panel>h3[data-ic=union]::before{background:var(--dim)}
+.panel>h3[data-ic=kjia]::before{background:var(--pos-top)}
+.panel>h3[data-ic=nat]::before{background:var(--pos-sup)}
+.panel>h3[data-ic=info]::before{background:var(--faint)}
+
+/* 交互面有反馈层次（原来 hover 只换边框色，几乎看不出来） */
+.pcard:hover{transform:translateY(-1px);box-shadow:0 8px 20px -14px rgba(0,0,0,.9)}
+.club-card:hover,.pack-btn:hover{transform:translateY(-1px)}
+.match{transition:border-color .15s,background .15s,transform .15s}
+.match:hover{background:var(--surface2)}
+
+/* 页头：品牌带 + KPI 分主次（六个等大的灰盒子是「简陋感」的最大来源） */
+header{background:linear-gradient(90deg,rgba(109,157,255,.12),rgba(109,157,255,.025) 32%,transparent 55%),var(--surface)}
+.logo{width:38px;height:38px;border-radius:var(--r1);overflow:hidden;flex:none}
+.stat.k-money b{color:var(--gold);font-size:21px}
+.stat.k-money{border-color:rgba(226,174,82,.34);background:linear-gradient(180deg,rgba(226,174,82,.10),rgba(226,174,82,.02)),var(--raise)}
+.stat.k-power b{color:var(--accent)}
+.stat.k-day b{font-size:16px}
+.stat.k-wage b{font-size:16px}
+.stat.k-sponsor b{font-size:16px}
+.stat.k-sponsor,.stat.k-day,.stat.k-wage{background:var(--surface2)}
+
+/* 桌面端：满宽按钮收成有宽度的动作块，成对排；移动端仍保持满宽易点 */
+@media(min-width:641px){
+  .btn[style*="width:100%"],.league-btn[style*="width:100%"]{width:auto !important;min-width:min(100%,330px)}
+  .league-btn{width:auto !important;min-width:min(100%,430px);padding-left:22px;padding-right:22px}
+  .center.mt8,.center.mt12,.center.mt16{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .center.mt8>*,.center.mt12>*,.center.mt16>*{margin-top:0}
+}
+
+/* 桌面端两栏面板流：单列满宽 + 右侧大片死白，是「没排过版」观感的第一主因。
+   俱乐部/经营/荣誉馆/生涯/联盟这类「面板堆叠页」在宽屏自动排成两栏；
+   含宽表格的联赛/训练/二队页保持单列，转会页已有自己的 .page-cols 双栏结构。 */
+@media(min-width:960px){
+  /* ⚠ 必须带 .on：section.page 靠 display:none 隐藏未激活页，
+     裸 id 选择器（1,0,0）会盖过它（0,0,2）导致 10 个页面同时显示 */
+  section.page.on#page-club,section.page.on#page-biz,section.page.on#page-hall,
+  section.page.on#page-career,section.page.on#page-union{
+    column-count:2;column-gap:12px;column-fill:balance}
+  /* 面板不被折断到两栏；跨栏元素（横幅/提示条/任务条/自带双栏容器/网格卡）占满整行 */
+  section.page.on#page-club .panel,section.page.on#page-biz .panel,section.page.on#page-hall .panel,
+  section.page.on#page-career .panel,section.page.on#page-union .panel{break-inside:avoid}
+  section.page.on#page-club>.banner,section.page.on#page-biz>.banner,section.page.on#page-hall>.banner,
+  section.page.on#page-career>.banner,section.page.on#page-union>.banner,
+  section.page.on#page-club>.page-hint,section.page.on#page-biz>.page-hint,section.page.on#page-hall>.page-hint,
+  section.page.on#page-career>.page-hint,section.page.on#page-union>.page-hint,
+  section.page.on#page-club>.mission-strip,section.page.on#page-biz>.mission-strip,section.page.on#page-hall>.mission-strip,
+  section.page.on#page-career>.mission-strip,section.page.on#page-union>.mission-strip,
+  section.page.on#page-club>.page-cols,section.page.on#page-biz>.page-cols,section.page.on#page-hall>.page-cols,
+  section.page.on#page-career>.page-cols,section.page.on#page-union>.page-cols,
+  section.page.on#page-club>.grid,section.page.on#page-biz>.grid,section.page.on#page-hall>.grid,
+  section.page.on#page-career>.grid,section.page.on#page-union>.grid{column-span:all}
+}
+
+/* 主行动按钮给一点材质（渐变 + 内高光），其余保持哑光，避免回到「发光大屏」 */
+.btn.primary{box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 16px -8px rgba(109,157,255,.55)}
+.btn.gold{box-shadow:0 1px 0 rgba(255,255,255,.24) inset,0 6px 16px -8px rgba(226,174,82,.5)}
+.btn:active{transform:translateY(1px)}
+
 /* ===== 本机偏好：高对比 / 简化模式辅助 ===== */
 /* 高对比：拉高正文与描边对比度；胜负不只靠色相（边框加粗 + 胜负角标） */
 html.hc{

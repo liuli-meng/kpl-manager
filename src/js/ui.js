@@ -180,6 +180,22 @@ function energyBar(p){
 }
 
 /* ================= 页面渲染 ================= */
+/* 面板标题语义标记：按标题文字归类，CSS 用 [data-ic] 上色标。
+   只做装饰、不碰数值（引擎⇄UI 分离约定）。标题取前 28 字避免长动态文案误判。 */
+function decoratePanelMarks(root){
+ if(!root||!root.querySelectorAll)return;
+ const MAP=[[/资金|经营|财务|预算|分润|赞助|收入/,'money'],[/转会|签约|挂牌|出售|报价|自由|选秀/,'deal'],
+  [/董事会|信任|目标|合同|执教|教练/,'board'],[/赛程|联赛|分组|积分|排名|卡位|季后|杯|赛段|冠军/,'cup'],
+  [/训练|青训|赛训|战训|加练|培养|特训/,'train'],[/荣誉|名人|回顾|历史|成就|纪念/,'honor'],
+  [/阵容|首发|替补|英雄|BP|站位/,'lineup'],[/联盟|规则|工资帽|制度|战队/,'union'],
+  [/二队|K甲|锻炼|租借/,'kjia'],[/国家队|集训|征召|亚运/,'nat'],
+  [/更衣室|士气|心态|社交|媒体|人气|粉丝|代言/,'room'],[/任务|引导|帮助|说明/,'info']];
+ root.querySelectorAll('.panel>h3').forEach(h=>{
+  if(h.dataset.ic)return;
+  const t=(h.textContent||'').slice(0,28);
+  for(const [re,k] of MAP){if(re.test(t)){h.dataset.ic=k;break;}}
+ });
+}
 function renderHeader(){
  const spLv=clamp((S&&S.sponsorLv)||0,0,Math.max(0,SPONSORS.length-1));
  const sp=SPONSORS[spLv]||SPONSORS[0];
@@ -189,12 +205,12 @@ function renderHeader(){
  <div class="logo">${crest(S.icon,S.teamName,32)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>
  <div class="stats">
- <div class="stat"><b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
- <div class="stat"><b data-num="power">${fmt(hdPower)}</b><small>总战力</small></div>
- <div class="stat"><b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
- <div class="stat ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>周薪/帽</small></div>
+ <div class="stat k-money"><b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
+ <div class="stat k-power"><b data-num="power">${fmt(hdPower)}</b><small>总战力</small></div>
+ <div class="stat k-day"><b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
+ <div class="stat k-wage ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>周薪/帽</small></div>
  ${S.streak>=3?`<div class="stat gold"><b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red"><b>${-S.streak}连败</b><small>低迷</small></div>`:''}
- <div class="stat"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
+ <div class="stat k-sponsor"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
  ${S.coach?`<div class="stat gold"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
  </div>
  <button class="hd-btn" onclick="uiSave()">存档</button>

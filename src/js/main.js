@@ -1,6 +1,6 @@
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-19a';
+const KM_BUILD='2026-09-19b';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
    pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
@@ -67,6 +67,8 @@ function renderPage(name){
  else if(name==='union')renderUnion();
  else if(name==='hall')renderHall();
  else if(name==='biz')renderBiz();
+ // 面板标题语义标记：一处覆盖 10 页 88 个面板的色标/图标，不必逐个渲染函数改
+ if(typeof decoratePanelMarks==='function'){try{decoratePanelMarks(document.getElementById('page-'+name));}catch(e){}}
 }
 function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
 
