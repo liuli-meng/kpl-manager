@@ -825,7 +825,7 @@ function createTeam(){
  S.seedPower=teamPower(S)||280; // 种子=开局真实战力（决定分组落位）
  initGroups(S); // KPL 2025 官方赛制：18队 S/A/B 分组
  // 赛前转会期：先组队再开赛
- S.preseason=true;S.transferWindow=7;
+ S.preseason=true;S.transferWindow=fmtOf(S).transferDays;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S,{seed:true}); // 播种：不吃玩家的「每日首刷免费」额度
@@ -858,7 +858,7 @@ function applyClub(){
  S.seedPower=teamPower(S)||tmpl.seed; // 种子=执教班底真实战力（决定分组落位）
  initGroups(S);
  // 赛前转会期：先组队再开赛
- S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
+ S.preseason=true;S.transferWindow=fmtOf(S).transferDays;S.transferWindowStart=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S,{seed:true}); // 播种：不吃玩家的「每日首刷免费」额度

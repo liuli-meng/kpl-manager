@@ -409,6 +409,30 @@ const AI_TEAMS=[
 /* KPL 2025 官方赛制常量 */
 const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7,CARD:5}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）；CARD=卡位赛总局数（2026 公开报道为 BO5，旧版误按 BO7）
 
+/* ================= 赛制旋钮（按年代可覆盖） =================
+   "哪一年怎么打"里**可按年代开关**的部分收在这张表，引擎一律走 fmtOf(s) 读，不许再各处写死。
+   默认值 = 2026 现行口径（逐条出处见 E:\sex\KPL赛制对照_2026-09-19.md）。
+   时代档要改哪一年，只往 KPL_ERAS[年].rules 里塞同名键，installEra 记下覆盖项、fmtOf 合并进 S._fmt。
+
+   仍未表驱动（要改年代得动代码，别假装这张表能表达）：
+   - 常规赛三轮的推进链与 S/A/B 再分组（season.js advancePhase 是字面流程）
+   - 卡位赛是否存在及其 4 场形状、B 组 3-6 名直接淘汰（season.js setupCard）
+   - 季后赛括号形状（buildPlayoff 的 wb/lb/lb2/lb3/wf/lb4/lbf/final 是写死的 10 队双败）
+   - 杯赛轮次形状（cups.js 挑杯 32→16→8 双败→BO9 决赛 / 年总 擂台→突围→淘汰）
+   卡位赛 BO 数暂留 KPL.CARD（它和"卡位赛这个阶段有没有"绑在一起，等流程表驱动时一起搬）。 */
+const KPL_FORMAT={
+ globalBp:true,   // 全局 BP：己方本系列赛用过的英雄后续小局不能再选。真实是 2019 才引入
+ peakBoMin:7,     // 巅峰对决只在总局数 ≥ 此值的系列赛出现。BO5 算不算，两源相抵（见对照文档），暂按 7
+ transferDays:7,  // 赛前转会期天数
+};
+let _fmtActive=null; // installEra 写入的当前时代覆盖（无时代=null）
+function fmtOf(s){
+ if(s&&s._fmt)return s._fmt;
+ const f=_fmtActive?Object.assign({},KPL_FORMAT,_fmtActive):KPL_FORMAT;
+ if(s)s._fmt=f;
+ return f;
+}
+
 /* ================= 教练池（真实 KPL 主教练） =================
  bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费
  经济刻度：与工资帽 150 同步 ÷6——顶帅周薪 ~53（约帽的 1/3），中坚 22~27，助教位 12 */
@@ -992,6 +1016,8 @@ function installEra(id){
  Object.keys(TEAM_BONDS).forEach(k=>delete TEAM_BONDS[k]);
  Object.assign(TEAM_BONDS,JSON.parse(JSON.stringify(_ERA_BASE.bonds)));
  _eraActive=null;
+ // 时代赛制覆盖：KPL_ERAS[年].rules 写了哪些键就盖掉 KPL_FORMAT 的同名键；无时代=现行默认
+ _fmtActive=(id&&KPL_ERAS[id]&&KPL_ERAS[id].rules)?Object.assign({},KPL_ERAS[id].rules):null;
  const era=id&&KPL_ERAS[id];
  if(!era)return;
  // ① 选手池整体替换为时代选手（现代传奇不同框，避免重名；现代池由 installEra(null) 还原）

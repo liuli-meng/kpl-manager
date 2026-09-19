@@ -733,7 +733,7 @@ function startSplit(s,split){
  return;
  }
  if(split==='summer')s.fund+=133; // 夏季赛启动金（春季 220 万在年度轮换时发放）
- s.transferWindow=7;s.transferWindowStart=7;s.preseason=true;s.windowSold=0; // 赛前转会期 7 天：前4自由交易+后3挂牌期
+ s.transferWindow=fmtOf(s).transferDays;s.transferWindowStart=s.transferWindow;s.preseason=true;s.windowSold=0; // 赛前转会期 7 天：前4自由交易+后3挂牌期
  s.reserveUsed=0; // 自留签每季刷新
  if(s.reserveSlots==null)s.reserveSlots=2;
  try{if(typeof initTempSeats==='function')initTempSeats(s);}catch(e){}

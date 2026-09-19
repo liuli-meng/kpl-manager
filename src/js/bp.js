@@ -237,7 +237,7 @@ function openBP(title,onConfirm){
  return;
  }
  const sr=S.series;
- const isPeak=sr&&sr.max>=7&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：BO7 3:3 / BO9 4:4
+ const isPeak=sr&&sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：BO7 3:3 / BO9 4:4
  window._draft={
  onConfirm,sr,ls,title,isPeak,
  used:(sr&&!isPeak&&sr.used)?sr.used.slice():[],
@@ -396,7 +396,7 @@ function bpAutoAll(){
 function autoPlayNext(){
  const sr=S.series;
  if(!sr)return;
- const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
+ const isPeak=sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1;
  autoFillLineup(S); // 伤员自动换下/缺位递补
  const noGo=lineupNoGo(S);
  if(noGo.length){
@@ -445,11 +445,15 @@ function applyBp(sels){
  S.pick=sels;
  if(S.series){
  const sr=S.series;
+ // 全局 BP 的累积入口只有一个：年代关掉它（2019 之前）就整段不执行，
+ // 下游所有 used/usedOpp 判定自然退化为"每局独立 BAN/PICK"，不必逐处加判断
+ if(fmtOf(S).globalBp){
  sr.used=sr.used||[];
  POS_ORDER.forEach(pos=>{const h=sels[pos];if(h&&!sr.used.includes(h))sr.used.push(h);});
  // 全局 BP 分队记账：对方本局所选英雄同样入册——己方用过的本系列赛不能再选，按队分开算
  sr.usedOpp=sr.usedOpp||[];
  POS_ORDER.forEach(pos=>{const h=(sr.oppPicks||{})[pos];if(h&&!sr.usedOpp.includes(h))sr.usedOpp.push(h);});
+ }
  }
 }
 /* ---------- BP 内换替补（不打断 BP 进度，已选英雄保留给该位置） ---------- */

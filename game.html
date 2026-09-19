@@ -442,6 +442,19 @@ const AI_TEAMS=[
 
 const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7,CARD:5}; // BO5/BO7：系列赛总局数（AI 赛果模拟用）；CARD=卡位赛总局数（2026 公开报道为 BO5，旧版误按 BO7）
 
+const KPL_FORMAT={
+ globalBp:true,   // 全局 BP：己方本系列赛用过的英雄后续小局不能再选。真实是 2019 才引入
+ peakBoMin:7,     // 巅峰对决只在总局数 ≥ 此值的系列赛出现。BO5 算不算，两源相抵（见对照文档），暂按 7
+ transferDays:7,  // 赛前转会期天数
+};
+let _fmtActive=null; // installEra 写入的当前时代覆盖（无时代=null）
+function fmtOf(s){
+ if(s&&s._fmt)return s._fmt;
+ const f=_fmtActive?Object.assign({},KPL_FORMAT,_fmtActive):KPL_FORMAT;
+ if(s)s._fmt=f;
+ return f;
+}
+
 const COACH_POOL=[
  {id:'co1',name:'Zwy',rating:90,style:'farm',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'四冠教父',d:'全队战力+9%，运营属性额外+6%（2025三冠+最佳教练）'}},
  {id:'co2',name:'SK',rating:90,style:'team',bonus:9,styleBonus:6,wage:53,cost:533,skill:{n:'六冠王朝',d:'全队战力+9%，团战属性额外+6%（KPL六冠教头）'}},
@@ -984,6 +997,8 @@ function installEra(id){
  Object.keys(TEAM_BONDS).forEach(k=>delete TEAM_BONDS[k]);
  Object.assign(TEAM_BONDS,JSON.parse(JSON.stringify(_ERA_BASE.bonds)));
  _eraActive=null;
+
+ _fmtActive=(id&&KPL_ERAS[id]&&KPL_ERAS[id].rules)?Object.assign({},KPL_ERAS[id].rules):null;
  const era=id&&KPL_ERAS[id];
  if(!era)return;
 
@@ -4386,7 +4401,7 @@ function startSplit(s,split){
  return;
  }
  if(split==='summer')s.fund+=133; // 夏季赛启动金（春季 220 万在年度轮换时发放）
- s.transferWindow=7;s.transferWindowStart=7;s.preseason=true;s.windowSold=0; // 赛前转会期 7 天：前4自由交易+后3挂牌期
+ s.transferWindow=fmtOf(s).transferDays;s.transferWindowStart=s.transferWindow;s.preseason=true;s.windowSold=0; // 赛前转会期 7 天：前4自由交易+后3挂牌期
  s.reserveUsed=0; // 自留签每季刷新
  if(s.reserveSlots==null)s.reserveSlots=2;
  try{if(typeof initTempSeats==='function')initTempSeats(s);}catch(e){}
@@ -7497,7 +7512,7 @@ function openBP(title,onConfirm){
  return;
  }
  const sr=S.series;
- const isPeak=sr&&sr.max>=7&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：BO7 3:3 / BO9 4:4
+ const isPeak=sr&&sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：BO7 3:3 / BO9 4:4
  window._draft={
  onConfirm,sr,ls,title,isPeak,
  used:(sr&&!isPeak&&sr.used)?sr.used.slice():[],
@@ -7655,7 +7670,7 @@ function bpAutoAll(){
 function autoPlayNext(){
  const sr=S.series;
  if(!sr)return;
- const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
+ const isPeak=sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1;
  autoFillLineup(S); // 伤员自动换下/缺位递补
  const noGo=lineupNoGo(S);
  if(noGo.length){
@@ -7704,11 +7719,14 @@ function applyBp(sels){
  S.pick=sels;
  if(S.series){
  const sr=S.series;
+
+ if(fmtOf(S).globalBp){
  sr.used=sr.used||[];
  POS_ORDER.forEach(pos=>{const h=sels[pos];if(h&&!sr.used.includes(h))sr.used.push(h);});
 
  sr.usedOpp=sr.usedOpp||[];
  POS_ORDER.forEach(pos=>{const h=(sr.oppPicks||{})[pos];if(h&&!sr.usedOpp.includes(h))sr.usedOpp.push(h);});
+ }
  }
 }
 
@@ -11178,7 +11196,7 @@ function createTeam(){
  S.seedPower=teamPower(S)||280; // 种子=开局真实战力（决定分组落位）
  initGroups(S); // KPL 2025 官方赛制：18队 S/A/B 分组
 
- S.preseason=true;S.transferWindow=7;
+ S.preseason=true;S.transferWindow=fmtOf(S).transferDays;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S,{seed:true}); // 播种：不吃玩家的「每日首刷免费」额度
@@ -11211,7 +11229,7 @@ function applyClub(){
  S.seedPower=teamPower(S)||tmpl.seed; // 种子=执教班底真实战力（决定分组落位）
  initGroups(S);
 
- S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
+ S.preseason=true;S.transferWindow=fmtOf(S).transferDays;S.transferWindowStart=7;
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S,{seed:true}); // 播种：不吃玩家的「每日首刷免费」额度
