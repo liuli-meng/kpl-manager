@@ -121,6 +121,23 @@ const scored = p => [p.wb, p.lb, p.lb2, p.lb3].flat().concat([p.wf, p.lb4, p.lbf
   check(!defer.series, '⑦ 推迟后应清掉未开打的系列赛，让赛程可重开');
 }
 
+// ── ⑧ 换赛段必须清掉挂起推进闭包，否则「继续」按钮会跑上一赛段的杯赛步骤、白丢一天 ──
+{
+  const { dom } = makeDom();
+  const r = vm.runInContext(`(function(){
+    S=newState('换段队','换'); S.crest={sh:'shield',c1:'#1',c2:'#2',c3:'#3',txt:'换'};
+    fillRoster(S,'mid');
+    S._afterMatch=function(){ throw new Error('旧赛段的挂起推进被误执行'); };
+    startSplit(S,'summer');
+    let ran=false;
+    if(typeof S._afterMatch==='function'){ try{ S._afterMatch(); }catch(e){ ran=e.message; } }
+    return {残留:typeof S._afterMatch, ran:ran, split:S.split};
+  })()`, dom);
+  check(r.残留 !== 'function',
+    `⑧ startSplit 后 _afterMatch 仍是函数（残留 ${r.残留}），点「继续」会执行上一赛段闭包：${r.ran || ''}`);
+  check(r.split === 'summer', `⑧ startSplit 未切到夏季赛（split=${r.split}）`);
+}
+
 if (errors.length) {
   console.log('[FAIL] 季后赛/卡位赛入口回归:\n  ' + errors.join('\n  '));
   process.exitCode = 1;
