@@ -9,22 +9,14 @@ const out = vm.runInContext(`
 (function(){
   const res=[];const fail=m=>{res.push('[FAIL] '+m);hadFail=true;};let hadFail=false;
   const log=t=>res.push('[INFO] '+t);
-  // 入口断言：渲染俱乐部页，检查「带正确文案、且真的绑定了处理函数」的按钮存在。
-  // 口径升级：以前是 grep 动作名字符串（如 startPlayoff），但面板按钮的 onclick 现在统一
-  // 传状态对象 uiDoNextAction(S)——动作名不再出现在 HTML 里。改成匹配「绑定 + 按钮文案」，
-  // 比原来更强：既要求有 uiDoNextAction(S) 的绑定，也要求文案对得上。
+  // 入口断言：渲染俱乐部页，检查指定 onclick 处理函数出现在 HTML 里
   const checked={};
-  const checkEntry=(label,re)=>{
+  const checkEntry=(label,needle)=>{
     renderClub();
     const html=document.getElementById('page-club').innerHTML;
-    const hit=typeof re==='string'?html.indexOf(re)>=0:re.test(html); // 字符串=处理函数名直查；正则=匹配「绑定+按钮文案」
-    if(!hit){fail(label+'：俱乐部页缺比赛入口（需匹配 '+re+'）');}
-    else{checked[label]=true;log(label+'：入口 OK');}
+    if(html.indexOf(needle)<0){fail(label+'：俱乐部页缺比赛入口（未渲染 '+needle+'）');}
+    else{checked[label]=true;log(label+'：入口 '+needle+' OK');}
   };
-  // 注意：本文件整体是 vm.runInContext 的模板字符串，单反斜杠会被模板字面量吃掉，
-  // 所以正则里的转义括号必须写双反斜杠（落到沙箱里才是 \( \)）。
-  const CARD_RE=/uiDoNextAction\\(S\\)[^>]*>[^<]*进行卡位赛/;
-  const PO_RE=/uiDoNextAction\\(S\\)[^>]*>[^<]*(进行下一场|快进季后赛|季后赛结算)/;
   try{
     // ===== 开局 =====
     S=newState('测试队','⚔️');
@@ -51,14 +43,14 @@ const out = vm.runInContext(`
           S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',logs:[],myName:S.teamName,opName:m.opp,side:'blue'};
           S.series.mw=3;S.series.ow=1;finishSeries(true);
         }else if(S.phase==='card'){
-          if(!cardUiChecked){cardUiChecked=true;checkEntry('卡位赛',CARD_RE);}
+          if(!cardUiChecked){cardUiChecked=true;checkEntry('卡位赛','startCard');}
           if(S.series){closeSeries();continue;}
           const myCard=S.card&&S.card.matches.find(x=>!x.r&&(x.a===S.teamName||x.b===S.teamName));
           if(!myCard){startCard();continue;}
           S.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'card',cardMatch:myCard,logs:[],myName:S.teamName,opName:myCard.a===S.teamName?myCard.b:myCard.a,side:'blue'};
           S.series.mw=4;S.series.ow=1;finishSeries(true);
         }else if(S.phase==='playoff'){
-          if(!poUiChecked){poUiChecked=true;checkEntry('季后赛开幕',PO_RE);}
+          if(!poUiChecked){poUiChecked=true;checkEntry('季后赛开幕','startPlayoff');}
           if(S.series){closeSeries();continue;}
           startPlayoff();
           if(!S.series)break;
@@ -156,7 +148,7 @@ const out = vm.runInContext(`
     // 卡位赛：我队在 S5 位待打
     S.phase='card';
     S.card={matches:[{a:S.teamName,b:'广州TTG',r:null,winTo:'S'},{a:'重庆狼队',b:'武汉eStarPro',r:null,winTo:'S'},{a:'佛山DRG',b:'北京WB',r:null,winTo:'A'},{a:'成都AG超玩会',b:'深圳DYG',r:null,winTo:'A'}],idx:0};
-    checkEntry('卡位赛（构造：我队待打）',CARD_RE);
+    checkEntry('卡位赛（构造：我队待打）','startCard');
     // 卡位赛：我队已打完（r 已定）但引擎同步推进不停留——若停留属 bug，此时无按钮属预期，不设断言
     // 年总淘汰赛中盘：wb1 打完（我队胜者组晋级）、wb2/lb 待定——修复 bug 的核心场景
     const eight2=['测试队','广州TTG','武汉eStarPro','佛山DRG','重庆狼队','成都AG超玩会','北京WB','深圳DYG'];

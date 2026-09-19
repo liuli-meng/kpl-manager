@@ -953,46 +953,6 @@ n=120 下比例的抽样标准差约 4.6pt，**最大差 9pt 落在噪声与弱�
 
 `build.ps1`（技能第 6 步的入口）在无 BOM 的 UTF-8 下被 Windows PowerShell 5.1 按 ANSI/GBK 解码，第 9 行 `throw "build.js 失败（exit …）"` 里的**全角右括号尾字节吞掉了半角引号**，整个脚本 `ParserError: TerminatorExpectedAtEndOfString`——即 `powershell -File build.ps1` 从那次"shim 化"之后就是坏的（`npm run build` 不受影响，所以 CI 一直是绿的）。改成 ASCII 文案并在文件里写清约束。
 
-## 2026-09 修「季后赛打不了」：面板按钮把动作名当状态传
-
-用户报告"季后赛打不了"。真人浏览器实测（无头 Chrome，造一个玩家已出局的季后赛局面，点俱乐部页那颗「快进季后赛」）：**连点 10 次，状态零变化、界面零重渲染、存档零写入**，只弹一句误导的「当前没有可进行的比赛」。
-
-### 根因：实参类型错，不是逻辑错
-
-`src/js/ui.js` 的俱乐部页面板把**动作名字符串**当状态传了进去：
-
-```js
-onclick="uiDoNextAction('startPlayoff')"   // 卡位赛同理：uiDoNextAction('startCard')
-```
-
-而 `uiDoNextAction(s)` 的形参是**状态对象**，第一句就是 `nextAction(s||S)`；`nextAction` 开头 `if(!s||!s.players||!s.players.length)return null` —— 字符串没有 `.players`，于是永远返回 null → 走 `toast('当前没有可进行的比赛');return`。三处调用点全在季后赛/卡位赛面板上，所以症状精确对应"季后赛和卡位赛都打不了"。
-
-**为什么是硬卡死而不是优雅降级**：`ui.js` 的主行动兜底判据是 `html.indexOf(act.fn)<0 && html.indexOf('uiDoNextAction')<0`——那颗死按钮的 onclick 文本里**同时含**动作名和 `uiDoNextAction`，所以兜底永远不渲染，玩家没有任何替代入口。读档后"决赛打完未结算"的恢复按钮也挂在同一条死 onclick 上。
-
-**为什么只有赢家受害**：没进季后赛 → `phase='eliminated'` → 走的是「前往挑战者杯」`uiAdvanceCalendar(S)`，实参正确、真点能走。所以线上表现是"**输的能玩，赢的卡死**"。
-
-### 修法
-
-- 三处调用点改成 `uiDoNextAction(S)`
-- `uiDoNextAction` 开头加参数归一化 `if(typeof s==='string')s=S;`，并把这段历史写进注释——防止以后又有人传动作名
-
-### 为什么 61 项门禁全绿却漏了它（口径教训）
-
-- `tests/sim-yearend.js` / `tests/probe-annual-stuck.js` 是**直调 `startPlayoff()`**，绕过 UI 层
-- `tests/audit-static.js` 只校验 onclick 里的回调函数**存在性**，不校验实参类型
-- 沙箱 `kmAutoAdvance=true` 会自动 flush 结算弹窗，UI 级卡死在引擎口径下根本不复现
-
-### 验收（新增 `tests/verify-playoff-entry.js`，已挂进 `npm test`）
-
-- ① 静态：`src/js` 里不得再有 `uiDoNextAction(字符串)` 调用点
-- ② 行为：故意保留旧的字符串写法点「快进季后赛」→ 必须推进场次**且写存档**（归一化的直接证据）
-- ③ 行为：`uiDoNextAction(S)` 形式同样推进
-- ④ 卡位赛：玩家在该轮有对阵时 `nextAction` 必须给出 `startCard`，点击后状态有变化
-- **反向验证**：临时摘掉归一化那一行，② ④ 立刻报红（"0 → 0 没推进场次 / 未写存档 / 按钮是死的"）——确认它不是永远绿的测试
-- `tests/verify-entrypoints.js` 的入口断言口径同步升级：从"grep 动作名字符串"改成"匹配 `uiDoNextAction(S)` 绑定 + 按钮文案"，比原来更强（既要求绑定存在，也要求文案对得上）。踩到的坑：该文件整体是 `vm.runInContext` 的模板字符串，正则里的 `\(` 会被模板字面量吃掉单反斜杠，必须写 `\\(`
-- 真人浏览器复验（`repro-playoff3.js`）：点一次「快进季后赛」→ 已出结果场次 **0 → 5**、界面重渲染 ✓、存档写入 ✓、零报错
-- 全量回归 `npm test` **63/63**
-
 ## 相比旧版的改动
 
 - **稀有度退场，FC26 式总值（OVR）**：删除 R/SR/SSR 标签与整张查表定价——选手唯一评价是 `overall()` 按位置加权四维实时计算的总值（0-99），训练/年龄/表现即时反映在数字上；身价、周薪、签约费、市场档位、意向俱乐部数全部由总值曲线出（顶星≈260万 / 主力≈130万 / 轮换≈55万锚位不变）；选手池手写的 `base` 成为选手真实评级（清融 92、一诺 92 一目了然），青训生练出来总值自然涨、自然卖上价；退役转教练/主播改看生涯成就与总值。卡面色阶保留但按实时总值映射，旧存档免迁移（选手总值即时补算，教练 rarity→rating 自动升级）
