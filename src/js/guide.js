@@ -74,6 +74,9 @@ function activeMissions(s){
 function missionStrip(s){
  const list=activeMissions(s);
  const seasonBar=seasonQuestStrip(s);
+ // 下课是软终局：任务条先算后弃（本机任务进度照常落盘），但页面上不再给「推进一场比赛」这类
+ // 指引——此时俱乐部页已收回全部推进按钮，留着它只会让人以为还能点
+ if(s&&s.board&&s.board.fired)return '';
  if(!list.length&&!seasonBar)return '';
  const dayTag=list.length?`<span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${m.text}">${m.title}</button>`).join('')}</span>`:'';
  return dayTag+seasonBar;

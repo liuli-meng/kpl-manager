@@ -394,7 +394,12 @@ function uiFinishAnnual(s){
  catch(e){toast('年度轮换失败：'+(e&&e.message||e));return;}
  save();renderAll();
 }
-function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
+function uiAsiadStep(s){if(uiGuard())return;s=s||S;
+ // 对阵表缺失时 asiadStep 第一行就 return（不抛错、不写日志），玩家连点几下界面纹丝不动。
+ // 成因是存档 phase='asiad' 而 S.ag 丢了（老档/异常写入）：读档侧若有重建最好，
+ // 但 UI 至少要说清「为什么点了没反应」，别把静默零反馈留给玩家自己猜。
+ if(!s.ag||!(s.ag.qf||[]).length){toast(' 亚运会对阵表数据缺失：点「推进赛历」重开本届，或导出存档反馈');return;}
+ asiadStep(s);}
 /* ================= 俱乐部页：赛段入口面板（renderClub 按 phase 分发） ================= */
 function clubLeaguePhasePanel(){
  const m=(S.schedule||[])[S.matchIdx]; // 缺赛程时走下方 !m，不能整页 TypeError
@@ -595,6 +600,14 @@ function clubResultPanel(){
 }
 function clubPhasePanel(){
  const p=S.phase;
+ // 下课是「软终局」：引擎照跑，只有 UI 拦。但赛段面板此前照旧渲染「赛前准备 · 开赛」，
+ // 点下去只回一句 toast——真人看到的是「按钮还在、我还能指挥」。董事会面板此时已给出
+ // 「结束执教 · 重新开始」，所以这里不再留任何推进入口（nextAction 在 fired 时本就返回 null，
+ // 兜底按钮也不会再加）。
+ if(boardLocked())return `<div class="panel" style="border-color:var(--red)"><h3>执教已终止 <span class="tag" style="color:var(--red)">董事会已解约</span></h3>
+ <div class="hint">${PHASE_NAME[p]||p}仍在日程上，但指挥席已不属于你：本赛段剩下的比赛由俱乐部代管，页面不再提供开赛/推进按钮。</div>
+ <div class="hint mt8">在上方「董事会」面板点<b>结束执教 · 重新开始</b>另起一份生涯，或去「联盟」「荣誉馆」回看这份班底的数据。</div>
+ </div>`;
  let html='';
  if(p==='r1'||p==='r2'||p==='r3')html=clubLeaguePhasePanel();
  else if(p==='card')html=clubCardPanel();

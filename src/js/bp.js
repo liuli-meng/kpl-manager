@@ -243,17 +243,19 @@ function resetOppEnergy(s,opName){
 /* 阵容缺位时 BP 开不出来。原来只 toast 一句「签约替补顶位 / 青训晋升 / 休息等伤愈」就 return，
    但常规赛里**时间只能靠打完比赛推进**（「推进一天」按钮只存在于转会期面板），所以第三条路不存在：
    实测 day 停住、S.series 挂着、nextAction 恒为 startMatch、页面零出口 → 伤停永远好不了。
-   教练模式更狠：自由市场恒空（season.js 的 coach 分支提前 return，跳过了 buildTransferMarket），
-   连第一条路都没有。这里把三条路做成真能点的按钮，并补上缺失的第四条「推迟休息」。 */
+   教练模式当时更狠：自由市场恒空（season.js 的 coach 分支提前 return，跳过了 buildTransferMarket），
+   连第一条路都没有——那条恒空已在 startSplit 里补上（教练档现在也建市场）。
+   这里把三条路做成真能点的按钮，并补上缺失的第四条「推迟休息」。 */
 function showNoGoModal(title,onConfirm,noGo){
  _noGoRetry={title,onConfirm};
  const canDefer=!!(S.series&&S.series.mw+S.series.ow===0); // 一局没打才允许推迟，避免白丢系列赛进度
+ const coachMode=S.mode==='coach'; // 教练档的市场页是工作台：能租借/提交引援申请，不能自己直签挂牌
  $('#app-modal-body').innerHTML=`
  <h2>无法出战 · 阵容缺位 <span class="tag">${noGo.map(pos=>POS[pos][1]).join(' / ')}</span></h2>
  <div class="hint" style="margin-bottom:10px">${noGoDetail(S,noGo)} 无法出战。挑一条处理完就能继续打本场。</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap">
  <button class="btn primary" onclick="uiNoGoEmergency()">紧急补签自由球员并继续</button>
- <button class="btn" onclick="closeModal('app-modal');goPage('market')">前往转会市场签约</button>
+ <button class="btn" onclick="closeModal('app-modal');goPage('market')">${coachMode?'前往转会市场 · 应急租借 / 申请直签':'前往转会市场签约'}</button>
  <button class="btn" onclick="closeModal('app-modal');goPage('train')">前往训练 · 青训晋升</button>
  ${canDefer?`<button class="btn" onclick="uiNoGoDefer()">推迟本场 · 休息一天等伤愈</button>`:''}
  </div>

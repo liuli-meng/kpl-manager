@@ -4,8 +4,14 @@ function renderMarket(){
  if(S.mode==='coach'){renderCoachMarket();return;}
  const costOf=p=>Math.round(valueOf(overall(p))*(p.discount||1));
  // 转会期提示条：开局落在市场页，结束转会期按钮在俱乐部页——这里补回跳，避免找不到怎么开赛
+ // 下课态必须收掉「跳过转会期 / 结束转会期」：结算后引擎照常开新赛季，经理档会带着
+ // board.fired 落进转会期，这两颗按钮此时点了只有 toast（同 俱乐部页 的开赛残留一类）
  let windowBanner='';
- if(S.preseason&&(S.transferWindow||0)>0){
+ if(S.preseason&&(S.transferWindow||0)>0&&boardLocked()){
+  windowBanner=`<div class="panel" style="margin:0 0 10px;border-color:var(--red)">
+  <div><b style="color:var(--red)">已解约 · 转会期由俱乐部接管</b>
+  <span class="hint">　剩余 ${S.transferWindow} 天的买卖/续约/开赛决定都不再经你的手；回俱乐部页点「结束执教 · 重新开始」另起一份生涯。</span></div></div>`;
+ } else if(S.preseason&&(S.transferWindow||0)>0){
   const ph=(typeof transferPhaseLabel==='function')?transferPhaseLabel(S):'';
   const free=(typeof canFreeSign==='function')?canFreeSign(S):true;
   windowBanner=`<div class="panel" style="margin:0 0 10px;border-color:rgba(217,164,65,.45)">
@@ -36,26 +42,8 @@ function renderMarket(){
  }else{
  coachHtml+=`<div class="hint" style="margin-bottom:10px">暂无主教练！签约一名教练提升全队战力（无教练全队战力打折扣）</div>`;
  }
- // 助教席（上限2人，加成与主教练叠加；退役名宿可 6 折转任）
- const asCnt=(S.assistants||[]).length;
- coachHtml+=`<div style="margin:12px 0 6px;font-weight:800;font-size:12px">助教席 <span class="tag">${asCnt}/2 · 与主教练叠加</span></div>`;
- coachHtml+=asCnt?`<div class="g2">${S.assistants.map(a=>`
- <div class="sponsor"><span class="s-icon">助</span>
- <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]||'—'}型 · ${(a.skill&&a.skill.d)||'—'} · 周薪 ${a.wage||0}万</div></div>
- <button class="btn sm danger" onclick="fireAssistant(S,'${a.id}')">解约</button>
- </div>`).join('')}</div>`
- :`<div class="hint" style="margin-bottom:8px">未聘助教——每名助教提供小额全队加成，与主教练叠加（买替补工资帽之外的第二处长期开销）</div>`;
- coachHtml+=`<div class="g3">${ASSISTANT_POOL.filter(a=>!(S.assistants||[]).some(x=>x.id===a.id)).map(a=>{
- const oc=ovrColor(a.rating||75);
- return `<div class="pcard ${ovrCls(a.rating||75)}" style="text-align:center">
- <div style="margin:6px 0;color:var(--faint)"></div>
- <div class="p-name" style="font-weight:800">${a.name}</div>
- <div class="p-rarity" style="color:${oc};letter-spacing:0">${a.rating}评分 · ${COACH_STYLE[a.style]||'—'}型</div>
- <div class="p-skill"> ${(a.skill&&a.skill.d)||'—'}</div>
- <div class="p-foot"><span>签约费 <b>${a.cost}万</b></span><span>周薪 <b>${a.wage}万</b></span></div>
- <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
- </div>`;
- }).join('')}</div>`;
+ // 助教席（上限2人，加成与主教练叠加；退役名宿可 6 折转任）——经理/教练两档共用同一份卡面
+ coachHtml+=assistantStaffHtml('与主教练叠加');
  if(S.coachMarket.length){
  coachHtml+=`<div class="g3">${S.coachMarket.map(c=>{
  const oc=ovrColor(c.rating||80);
@@ -194,6 +182,43 @@ function renderMarket(){
  </div>`;
  $('#page-market').innerHTML=windowBanner+pageHint('market')+tempHtml+draftHtml+'<div class="page-cols"><div class="col">'+coachHtml+transferHtml+minePanel+'</div><div class="col">'+sideHtml+marketPanel+'</div></div>';
 }
+/* 助教席卡面（经理/教练两档共用一份，避免两处复制后又漂移）
+   —— 教练档历史上根本没有这个入口：s.assistants 与 teamPower 里的助教加成于是成了死字段
+      （加成写好了，玩家永远看不到、也点不到）。 */
+function assistantStaffHtml(tag){
+ const asCnt=(S.assistants||[]).length;
+ let h=`<div style="margin:12px 0 6px;font-weight:800;font-size:12px">助教席 <span class="tag">${asCnt}/2 · ${tag||'与主教练叠加'}</span></div>`;
+ h+=asCnt?`<div class="g2">${S.assistants.map(a=>`
+ <div class="sponsor"><span class="s-icon">助</span>
+ <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]||'—'}型 · ${(a.skill&&a.skill.d)||'—'} · 周薪 ${a.wage||0}万</div></div>
+ <button class="btn sm danger" onclick="fireAssistant(S,'${a.id}')">解约</button>
+ </div>`).join('')}</div>`
+ :`<div class="hint" style="margin-bottom:8px">未聘助教——每名助教提供小额全队加成，与主教练叠加（买替补工资帽之外的第二处长期开销）</div>`;
+ h+=`<div class="g3">${ASSISTANT_POOL.filter(a=>!(S.assistants||[]).some(x=>x.id===a.id)).map(a=>{
+ const oc=ovrColor(a.rating||75);
+ const poor=(S.fund||0)<a.cost;
+ return `<div class="pcard ${ovrCls(a.rating||75)}" style="text-align:center">
+ <div style="margin:6px 0;color:var(--faint)"></div>
+ <div class="p-name" style="font-weight:800">${a.name}</div>
+ <div class="p-rarity" style="color:${oc};letter-spacing:0">${a.rating}评分 · ${COACH_STYLE[a.style]||'—'}型</div>
+ <div class="p-skill"> ${(a.skill&&a.skill.d)||'—'}</div>
+ <div class="p-foot"><span>签约费 <b>${a.cost}万</b></span><span>周薪 <b>${a.wage}万</b></span></div>
+ <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':(poor?'资金不足（'+a.cost+'万）':'聘为助教')}</button>
+ </div>`;
+ }).join('')}</div>`;
+ return h;
+}
+/* 退役名宿 → 助教（6 折）：经理档在「退役名宿」面板里已有按钮，教练档要的是同一批人的助教入口 */
+function legendAssistantHtml(){
+ const list=(S.retiredCoaches||[]).filter(r=>r.type==='coach');
+ const asCnt=(S.assistants||[]).length;
+ if(!list.length)return '<div class="hint">暂无可转任助教的名宿——30+ 选手退役后转型教练才会进入名宿市场</div>';
+ return list.map(r=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+ <div class="vs"><span class="tname" style="font-size:13px">${r.name} <span style="color:var(--dim);font-size:10px">(名宿教练 · +${r.bonus||0}% · ${r.origin?('由 '+r.origin+' 转型'):'退役'})</span></span></div>
+ <div class="score" style="font-size:12px;min-width:0">6 折 ${Math.round((r.cost||0)*0.6)}万 <s style="color:var(--faint)">${r.cost||0}万</s></div>
+ <button class="btn sm primary" style="margin:0" onclick="hireAssistant(S,'${r.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
+ </div>`).join('');
+}
 /* 教练模式转会页：应急租借 + 引援建议（申请由俱乐部执行，教练不能挂牌/卖人） */
 function renderCoachMarket(){
  const adv=coachAdvice(S);
@@ -212,6 +237,13 @@ function renderCoachMarket(){
  ${gaps.length?`<div class="hint" style="color:var(--red);margin-bottom:8px">⚠ ${gaps.map(p=>POS[p][0]).join('、')} 位置当前无人可打——建议立刻租借补位</div>`:''}
  ${injured.length?`<div class="hint" style="margin-bottom:8px">非健康名单：${injured.map(p=>{const st=playerStatus(p,S);return p.name+'（'+(st.injury?st.injuryDays+'天伤停':st.kjia?'K甲':st.loanOut?'外租':'集训')+'）';}).join(' · ')}</div>`:''}
  ${recs.length?`<div class="hint" style="margin-bottom:8px"><b>待处理申请：</b>${recs.map(r=>(r.type==='loan'?'租借 ':(r.type==='sign'?'直签 ':'补位 '))+(r.name||(r.pos?POS[r.pos][0]:'—'))).join(' · ')}</div>`:''}
+ </div>`;
+ // 教练组：主教练就是你本人（教练档没有换帅/教练市场，那是经理档的权力），助教席与名宿转任才是你能直接点定的班底
+ html+=`<div class="panel"><h3>教练组 · 助教席 <span class="tag">${(S.assistants||[]).length}/2 · 全队战力加成与你的执教叠加</span></h3>
+ <div class="hint" style="margin-bottom:8px">助教由你点定，签约费与周薪走俱乐部账（每名约 +2~4% 全队战力）。<b>主教练是你本人</b>，所以教练档没有换帅与教练市场——那两样属于经理档。</div>
+ ${assistantStaffHtml('与你（主教练）叠加')}
+ <div style="margin:12px 0 6px;font-weight:800;font-size:12px">退役名宿 · 转任助教 <span class="tag">签约费 6 折</span></div>
+ ${legendAssistantHtml()}
  </div>`;
  // 应急租借
  html+=`<div class="panel"><h3>应急租借市场 <span class="tag">${LOAN_DAYS} 天 · 名额 ${myLoans.length}/${cap}${cap>LOAN_CAP_BASE?' · 伤停应急':''}</span></h3>

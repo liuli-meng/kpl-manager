@@ -237,6 +237,9 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
     }
     if(rec.type==='sign'&&rec.pid){
      const fa=(s.freeAgents||[]).find(p=>p.id===rec.pid);
+     // 归属守卫：freeAgents 是建市时点排除本队的快照，申请排队期间这个人可能已被
+     // 自动引援/换队带进阵中——下面的 push 不查归属，点两次就是名单里两个同 id 选手
+     if(fa&&s.players.some(x=>x.id===fa.id))return; // 已在阵中：申请视为办结，不再排队
      if(fa&&s.fund>(fa.signCost||0)&&!rosterFull(s)){
       const cost=Math.max(0,Math.round(fa.signCost||valueOf(overall(fa))));
       if(s.fund>=cost){
@@ -254,7 +257,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
      // 纯缺位申请：自动签该位置自由人/新援
      const need=rec.pos;
      if(s.players.some(p=>p.pos===need&&matchEligible(s,p)))return;
-     const fa=(s.freeAgents||[]).filter(p=>p.pos===need).sort((a,b)=>overall(b)-overall(a))[0];
+     const fa=(s.freeAgents||[]).filter(p=>p.pos===need&&!s.players.some(x=>x.id===p.id)).sort((a,b)=>overall(b)-overall(a))[0];
      if(fa&&s.fund>=(fa.signCost||80)&&!rosterFull(s)){
       const cost=Math.max(0,Math.round(fa.signCost||80));
       s.fund-=cost;fa.acqCost=cost;fa.contract=2;

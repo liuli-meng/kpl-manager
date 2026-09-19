@@ -425,6 +425,9 @@ function respondCoachOffer(accept){
  try{genRoundSchedule(S);}catch(e){} // 当前轮赛程按新队名重生成（积分表 initGroups 已重置）
  }
  logEvent(S,' 你接受 '+tmpl.name+' 的邀约：新班底战力 '+fmt(teamPower(S))+'——用成绩证明他们的选择');
+ // 自由市场是按「旧东家」排除构建的：换队后 transferList/freeAgents 里可能正躺着新班底的人，
+ // 而 coachAutoSquad 的直签路径不查归属——会把已属自己的选手再签一遍（名单翻倍），故必须重建
+ try{buildTransferMarket(S);}catch(e){}
  }else{
  d.log.unshift({year:gameYear(S),note:'婉拒 '+o.team+' 邀约，留任 '+S.teamName});
  d.log=d.log.slice(0,8);
@@ -687,6 +690,7 @@ function applyCoachClub(){
  S.preseason=false;S.transferWindow=0; // 俱乐部引援自动处理，无需转会期
  setBoardKpi(S);initFans(S);
  initKjia(S);
+ buildTransferMarket(S); // 教练档开局就要有自由球员池：引援建议/申请直签/缺位签约全读 s.freeAgents
  logEvent(S,' 教练生涯开启：你出任 '+tmpl.name+' 主教练（合同 2 年）——竞技全权负责，转会资金由俱乐部打理');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'（'+gameYear(S)+' 起）：联盟与阵容回到当年，赛制沿用现行年度赛历');
  logEvent(S,' 目标：带队出成绩。连续未达标会被解约；打出名气会有豪门来挖你');

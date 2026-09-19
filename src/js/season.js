@@ -754,16 +754,20 @@ function startSplit(s,split){
  // 夏季赛点「继续」会执行 challengerStep 而不是推进当天（match.js 的 closeMatchContinue 优先跑 after），白丢一天
  s._afterMatch=null;
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
- if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
- if(s.mode==='player'){
- applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
- coachAutoSquad(s); // 俱乐部同样自动续约/补缺——选手只管自己，班底不能散架
- }
+ if(s.mode==='player')applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队（归属先定，后面征召/引援才按新队算）
+ aiTransferWindow(s); // AI 俱乐部生态照常演化（与经理档同一时点：在构建市场之前）
+ // 教练档必须有自由球员池：s.freeAgents 只在 buildTransferMarket 里生成，而这分支历史上跳过了它
+ // → 恒为空。后果不只是「引援建议」永远没有推荐，而是 coachAutoSquad 的直签/补位申请、
+ // 缺位弹窗里的「前往转会市场签约」都只能对着空列表点（bp.js:246 记过这条）。
+ if(s.mode==='coach')buildTransferMarket(s);
+ // 亚运征召必须**赶在俱乐部自动引援之前**宣布：coachAutoSquad 以 matchEligible 判缺位，
+ // 而集训选手正属不可出战。旧顺序是先补班底、后征召——刚签来的/仅有的主力被抽走，
+ // 该位置当场无人，而教练/选手档没有经理那 7 天转会窗（本分支提前 return），
+ // 于是「亚运年夏季赛开幕即锁」：第一场 BP 就开不出来。
+ if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s);
+ coachAutoSquad(s); // 俱乐部自动续约与引援：此时集训缺席已登记，缺位会被真补上（选手档同样保住班底）
  try{autoFillLineup(s);}catch(e){} // 自动运营后立刻补齐首发空位（教练/选手退役空位不能拖到开赛）
  s.pick={};
- // 亚运征召必须与经理模式同规则：夏赛开打前宣布并自动换下集训选手，否则选手/教练档永远打满夏季赛
- if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s);
- aiTransferWindow(s); // AI 俱乐部生态照常演化
  s.aiRosters={};s.aiInj={};
  initGroups(s);
  initKjia(s);
