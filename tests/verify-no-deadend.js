@@ -1,14 +1,23 @@
-// ⚠ 诊断脚本，**未挂进 npm test**：它现在会产生假红，别把它的结论当门禁用。
-//    已确认可信：player 模式（2 赛季 · 覆盖 r1/r2/r3/card/playoff/champion/挑杯/EWC/亚运/年总，无死锁）。
-//    已知假红：manager / coach 会在 3001 步内跑不满 2 赛季——审计阶段用 JSON 往返还原 S，
-//    对这两条身份路径有副作用（丢 undefined/函数型字段 + 激活页顺序变化），驱动因此原地打转。
-//    真正钉住这轮两个 bug 的是 tests/verify-playoff-entry.js（8 项断言，已做反向验证）。
-//    要修的方向：还原时改用逐字段 diff 或直接每轮重建沙箱，而不是 JSON.parse 回写 S。
-//    2026-09-19 追记：本探针报的「亚运推进赛程前两次点击静默无反馈」是**它自己的假红**——
-//    签名里的 eventLog.length 被 slice(0,200) 封顶，长局里恒为 200，而这两次点击只结算 QF/SF
-//    （只写日志与对阵表，day/phase 都不动）。签名现已补上「最新日志文本 + 四类杯赛对阵进度」；
-//    实测正常点击为 6→10→12 条日志、对阵逐轮补齐。真正会静默的只有一种：S.ag 结构丢失
-//    （现在 uiAsiadStep 会 toast 说明，由 tests/verify-coach-mode.js ⑧ 钉住）。
+// 三身份状态推进不变量探针 —— **诊断脚本，未挂进 npm test**（它会假红，别把它的结论当门禁）
+//
+// 2026-09-20 用 --trace 重开这条探针，发现它上一版报的「manager/coach 空转=JSON 还原副作用」
+// 是错的归因。三条自己的缺陷（都会造成"红/绿都不可信"）：
+//   ① 推进类白名单 ADV 原先写在传给 vm 的模板字面量里 → 反斜杠-b 被模板解析成退格符，
+//      正则永远匹配不到 → adv 恒为空 → 「每颗推进按钮都要留下可观察后果」的审计一次都没跑过。
+//   ② 驱动把「只是开了个装饰弹窗」当成推进：manager/coach 的 club 页有 openCrestEdit()
+//      （改队徽，选手档按 renderClub 的条件没有这颗），于是与弹窗里的 resetCrest() 来回弹。
+//   ③ observable() 看不见「同一个 app-modal 容器换了面板」：点「进入 BP」把面板从
+//      「赛前准备」换成「无法出战 · 阵容缺位」（ids 没变、状态签名没变）被判成空转。
+// 三条都修了。现在的实测口径（种子不固定，跑的是当轮真随机）：
+//   ✅ manager 可信：442 步跨 2 赛季，走过 r1,r2,card,eliminated,challenger,r3,asiad
+//   ✅ player 可信：138 步跨 2 赛季，走过 r1,r2,r3,eliminated,challenger,asiad,playoff,champion,ewc,annual
+//   ❌ coach 仍会 FAIL，但**不是探针的毛病**：4001 步卡在 season1 春季季后赛（day 366→367 慢爬，
+//      对阵表恒为「我待打 1 场 / 未赛 6 场」，每场 0:1→0:3 打完又原样回来）。
+//      已排除的假设：强制写系列赛结果时对阵正常收敛（12→6→1→0 并夺冠），所以不是简单漏记账；
+//      根因未定位，别照着"探针说没跑满 2 赛季"去改教练档。
+// 真正钉住本轮四条教练欠账的是 tests/verify-coach-mode.js（①–⑧，逐条退回修复都验过会报红）
+// 与 tests/sim-yearend.js 的教练档两档 ×8 年。
+
 // 「游戏状态必须持续推进」不变量门禁
 // ─────────────────────────────────────────────────────────────
 // 为什么要它：这轮之前的门禁全是"引擎能不能跑完"，而玩家真正遇到的是
@@ -31,10 +40,18 @@ const ONLY = arg('mode');
 const SEASONS = +(arg('seasons') || 2);
 const MAX = +(arg('max') || 4000);
 const STUCK = +(arg('stuck') || 12);          // 连续多少步状态纹丝不动判死
+// --trace：逐轮打「这一轮看到了哪些出口、哪个真的动了、状态简报」。
+// 空转类问题只能这样看轨迹——光看末态会误判（探针自己就因签名饱和报过两次假红）。
+const TRACE = process.argv.includes('--trace');
 const PAGES = ['club', 'league', 'market', 'lineup', 'train', 'kjia', 'union', 'hall', 'biz', 'career'];
 // 纯装饰/导航噪声：点了不改变任何竞技状态。名单要**尽量窄**——
 // 宽了会把真出口误杀：'setSide' 曾被当噪声，而它是 KPL「败方选边」的必经一步，
 // 结果把正常流程误报成死锁（假红）。BP 相关（bpPickPos/bpBackToTo/bpAuto…）一律不算噪声。
+// 「推进类」出口白名单。⚠ 必须像 NOISE 一样以「值」传进沙箱：原先它直接写在传给 vm 的模板
+// 字面量里，模板会先把反斜杠-b 解析成退格控制符（charCode 8），沙箱收到的正则永远匹配不到——
+// 后果不是报错而是静默失效：adv 恒为空，「每颗推进类按钮都要留下可观察后果」的审计整轮没跑过，
+// 驱动也没法优先走推进类出口（2026-09-20 --trace 实测：club 页候选里明明有 uiStartMatch()，adv数=0）。
+const ADV = /\b(uiNextDay|uiDoNextAction|uiStartMatch|uiEndPreseason|uiSkipTransfer|startCard|startPlayoff|uiStartCup|uiAdvanceCalendar|uiFinishAnnual|uiAsiadStep|startPlayerMatch|closeMatchContinue|uiNoGoEmergency|uiNoGoDefer|openBP|setSide|playGame|bpConfirm)\b/;
 const NOISE = /^(goPage|closeModal|shareHonorCard|shareCareerCard|copySave|exportSave|togglePanel|pfold|setSort|sortMarket|setTab|dismissHint|hideHint|setPanelCollapsed|renderEraBtns|noop)\b/;
 
 function makeSandbox() {
@@ -79,16 +96,30 @@ const modalState = dom => vm.runInContext(`(function(){
   const ids=['app-modal','start-modal'].filter(id=>document.getElementById(id).classList.contains('on'));
   return {ids, body:id=>document.getElementById(id+'-body').innerHTML||''};
 })()`, dom);
+// 弹窗身份：同一个 #app-modal 容器会从「赛前准备」换成「无法出战 · 阵容缺位」——
+// ids 不变、状态签名也不变，早先的 observable() 因此看不见这一步正常推进，
+// 把「点进入 BP 弹出缺位四条出口」连续 12 轮报成空转（2026-09-20 取证：手动点确实换了面板）。
+// 判据用「标题 + 排序后的按钮集合」而不是内容长度：反复重开同一个面板 → 身份不变 → 仍算空转，
+// 这正是上一版「拿长度当进度」把「反复重开赛前面板」误判成推进的那个坑的镜像。
+// 正则一律写在 Node 侧：模板字面量会把 \s 吃成 s、\b 吃成退格（本项目已因此静默失效过一次）。
+const modalSig = dom => {
+  const ms = modalState(dom);
+  if (!ms.ids.length) return 'none';
+  const body = ms.body(ms.ids[0]) || '';
+  const h2 = (body.match(/<h2[^>]*>([一-龥A-Za-z0-9 ·\s]*?)<\/h2>/) || [, ''])[1]
+    .replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 48);
+  const btns = (body.match(/onclick="([^"]+)"/g) || []).map(x => x.slice(9, -1)).sort().join('|').slice(0, 400);
+  return ms.ids.join(',') + '#' + h2 + '#' + btns;
+};
 
 // 收集"此刻真能点"的 onclick：弹窗开着就只看弹窗（真人被模态挡住），否则逐页强制重渲染后再看
 function candidates(dom) {
   return vm.runInContext(`(function(){
-    const PAGES=${JSON.stringify(PAGES)}, NOISE=${NOISE.toString()};
+    const PAGES=${JSON.stringify(PAGES)}, NOISE=${NOISE.toString()}, ADV=${ADV.toString()};
     const re=/onclick="([^"]+)"/g;
     const grab=html=>{const o=[];let m;while((m=re.exec(html)))o.push(m[1]);return o;};
     // 噪声判定要看**整条语句**：'closeModal(...);openBP(...)' 以 closeModal 开头，
     // 但它才是真正的推进入口（赛前面板的「进入 BP」）——按前缀滤会把它误杀（踩过）。
-    const ADV=/\b(uiNextDay|uiDoNextAction|uiStartMatch|uiEndPreseason|uiSkipTransfer|startCard|startPlayoff|uiStartCup|uiAdvanceCalendar|uiFinishAnnual|uiAsiadStep|startPlayerMatch|closeMatchContinue|uiNoGoEmergency|uiNoGoDefer|openBP|setSide|playGame|bpConfirm)\b/;
     const isAdv=c=>ADV.test(c);
     const isNoise=c=>c.split(';').map(x=>x.trim()).filter(Boolean).every(seg=>NOISE.test(seg));
     const keep=a=>[...new Set(a)].filter(c=>c.indexOf('(')>=0&&!isNoise(c));
@@ -124,10 +155,17 @@ function startMode(dom, mode) {
   })()`, dom);
 }
 
+// ── trace 用的一行简报（--trace 时逐轮打出来）：空转的真相全在 day/phase/系列赛进度三元组里
+const brief = dom => vm.runInContext(`[S.day,S.season,S.split,S.phase,S.preseason?1:0,S.matchIdx,
+  (S.series?S.series.stage+' '+(S.series.mw||0)+':'+(S.series.ow||0)+' max'+(S.series.max||0):'-'),
+  S.lineup.length,(S.playoff&&S.playoff.final&&S.playoff.final.r)||'',S.challenger?1:0,S.ewc?1:0,
+  S.ag&&!S.ag.champ?1:0,S.annual&&S.annual.po&&S.annual.po.champ?1:0].join(' ')`, dom);
+
 const results = [];
 for (const mode of (ONLY ? [ONLY] : ['manager', 'player', 'coach'])) {
   const { dom } = makeSandbox();
   let dead = null, iter = 0, lastSig = null, stuck = 0, closed = 0;
+  const banned = new Set();   // 只开装饰弹窗的按钮：拉黑，避免驱动在页面↔弹窗之间来回弹
   const visited = new Set();   // 覆盖率凭据：这一局真的走过哪些赛段
   try { startMode(dom, mode); } catch (e) { results.push({ mode, iters: 0, seasons: 0, dead: { kind: '开局即失败', err: e.message } }); continue; }
   const s0 = vm.runInContext('S.season', dom);
@@ -151,8 +189,8 @@ for (const mode of (ONLY ? [ONLY] : ['manager', 'player', 'coach'])) {
     }
     if (!c.calls.length) { dead = { kind: '当前状态没有任何可点的推进入口（死锁）', iter, 来源: c.from, 原始onclick: (c.raw||[]).slice(0,10), 弹窗正文: c.弹窗正文, 状态: JSON.parse(stateSig(dom)) }; break; }
 
-    const before = stateSig(dom), beforeModal = modalState(dom).ids.join(',');
-    const observable = () => stateSig(dom) !== before || modalState(dom).ids.join(',') !== beforeModal;
+    const before = stateSig(dom), beforeModal = modalState(dom).ids.join(','), beforeSigM = modalSig(dom);
+    const observable = () => stateSig(dom) !== before || modalState(dom).ids.join(',') !== beforeModal || modalSig(dom) !== beforeSigM;
 
     // ── 审计（与驱动分离）：此刻屏幕上每个「推进类」按钮都必须留下可观察后果。
     //    逐个试之前先快照 S、试完立刻还原——否则一轮里连点多个推进按钮会把节奏打乱
@@ -162,6 +200,7 @@ for (const mode of (ONLY ? [ONLY] : ['manager', 'player', 'coach'])) {
     //    而那颗按钮在真人手里确实是死的。
     // 只在没有弹窗时做按钮审计：BP/赛前弹窗开着时点一下再还原，会把 _draft 与弹窗 HTML 弄成
     // 不一致的状态，驱动就困在"弹窗里全是失效按钮"里出不来（manager/coach 因此 3001 步跑不满赛季）
+    let deadBtns2 = 0;
     if (!modalState(dom).ids.length) {
     const snap = vm.runInContext('JSON.stringify(S)', dom);
     const deadBtns = [];
@@ -176,14 +215,35 @@ for (const mode of (ONLY ? [ONLY] : ['manager', 'player', 'coach'])) {
         el.classList[${want}.indexOf(id)>=0?'add':'remove']('on');});`, dom);
       vm.runInContext('try{renderAll()}catch(e){}', dom);
     }
+    deadBtns2 = deadBtns.length;
     if (deadBtns.length) { dead = { kind: '推进类按钮点了毫无反应（死按钮）', iter, 死按钮: deadBtns.slice(0, 6), 状态: JSON.parse(stateSig(dom)), 来源: c.from }; break; }
     }
 
-    // ── 驱动：挑一条真的改变状态的出口往前走
-    let moved = false;
-    for (const call of c.calls) {
+    // ── 驱动：先试推进类出口，再试其余。「只是开了一个不含任何推进出口的弹窗」不算推进——
+    //    真人关掉就继续玩，探针却记成动了一步，于是 manager/coach 在 club 页那颗 openCrestEdit()
+    //    （改队徽）与弹窗里的 resetCrest() 之间来回弹，4001 步跑不满一个赛季（--trace 实测）。
+    //    player 档不空转纯属偶然：renderClub 只在非选手档渲染改队徽按钮。
+    let moved = false, movedTo = '';
+    const order = (c.adv || []).concat(c.calls.filter(x => (c.adv || []).indexOf(x) < 0));
+    for (const call of order) {
+      if (banned.has(call)) continue;
       try { vm.runInContext('try{' + call + '}catch(e){}', dom); } catch (e) { }
-      if (observable()) { moved = true; break; }
+      if (!observable()) continue;
+      const ms = modalState(dom);
+      if (ms.ids.length) {
+        const inner = candidates(dom);          // 弹窗开着 → 只看弹窗里的出口
+        if (!inner.adv.length) {                // 装饰弹窗：关掉、记名，本轮不算推进
+          vm.runInContext(`['app-modal','start-modal'].forEach(id=>{try{closeModal(id);}catch(e){}});try{renderAll()}catch(e){}`, dom);
+          banned.add(call);
+          continue;
+        }
+      }
+      moved = true; movedTo = call.slice(0, 40); break;
+    }
+    if (TRACE) {
+      const tried = c.calls.length, adv = (c.adv || []).length;
+      console.log(`  r${String(iter).padStart(4)} ${brief(dom)} | 出口 ${tried}(推进类 ${adv}) 来源 ${c.from.slice(0, 22)} | ${moved ? '动: ' + movedTo : '不动'}` +
+        (deadBtns2 ? ` | 死按钮 ${deadBtns2}` : ''));
     }
     if (!moved) {
       stuck = stateSig(dom) === lastSig ? stuck + 1 : 0;
