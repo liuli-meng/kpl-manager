@@ -213,7 +213,12 @@ for (const mode of (ONLY ? [ONLY] : ['manager', 'player', 'coach'])) {
       if (!observable()) deadBtns.push(call);
       // 还原时必须把弹窗开合也复原：S 是数据、弹窗是 UI 状态，只还原 S 会把审计点开的弹窗
       // 留在原地，下一轮 candidates 就困在弹窗里追按钮（manager/coach 因此 3001 步跑不满赛季）
-      vm.runInContext('S=JSON.parse(' + JSON.stringify(snap) + ');window._draft=null;', dom);
+      // 还原后必须重建 mid 索引：JSON 往返会把「同一对象的两个引用」拆成两份独立副本
+      //   —— 快照里 S.matches['po_胜者组决赛'] 与 S.playoff.wf 本是同一个对象，stringify 写两遍、
+      //   parse 回来就是两个东西。此后 finishSeries 按 getMatch(mid) 找到的那份写 m.r，
+      //   活着的对阵表条目永远是 null ⇒ 同一场永远重开（coach 卡 4001 步的真因）。
+      vm.runInContext('S=JSON.parse(' + JSON.stringify(snap) + ');window._draft=null;'
+        + 'try{rebuildMatchStore(S);}catch(e){}', dom);
       const want = JSON.stringify(beforeModal ? beforeModal.split(',') : []);
       vm.runInContext(`['app-modal','start-modal'].forEach(id=>{const el=document.getElementById(id);
         el.classList[${want}.indexOf(id)>=0?'add':'remove']('on');});`, dom);
