@@ -1,26 +1,28 @@
-// 三身份状态推进不变量探针 —— **诊断脚本，未挂进 npm test**（它会假红，别把它的结论当门禁）
+// 三身份状态推进不变量门禁 —— **已挂进 npm test**（默认固定种子 424242 · 三身份各 2 赛季）
 //
 // 2026-09-20 用 --trace 重开这条探针，发现它上一版报的「manager/coach 空转=JSON 还原副作用」
-// 是错的归因。三条自己的缺陷（都会造成"红/绿都不可信"）：
+// 是被四条自身缺陷挡住的错归因——每一条都足以让"红和绿都不能信"：
 //   ① 推进类白名单 ADV 原先写在传给 vm 的模板字面量里 → 反斜杠-b 被模板解析成退格符，
 //      正则永远匹配不到 → adv 恒为空 → 「每颗推进按钮都要留下可观察后果」的审计一次都没跑过。
 //   ② 驱动把「只是开了个装饰弹窗」当成推进：manager/coach 的 club 页有 openCrestEdit()
 //      （改队徽，选手档按 renderClub 的条件没有这颗），于是与弹窗里的 resetCrest() 来回弹。
 //   ③ observable() 看不见「同一个 app-modal 容器换了面板」：点「进入 BP」把面板从
 //      「赛前准备」换成「无法出战 · 阵容缺位」（ids 没变、状态签名没变）被判成空转。
-// 三条都修了。现在的实测口径（种子不固定，跑的是当轮真随机）：
-//   ✅ manager 可信：442 步跨 2 赛季，走过 r1,r2,card,eliminated,challenger,r3,asiad
-//   ✅ player 可信：138 步跨 2 赛季，走过 r1,r2,r3,eliminated,challenger,asiad,playoff,champion,ewc,annual
-//   ❌ coach 仍 FAIL：4001 步卡在 season1 春季季后赛，对阵表恒为「我待打 1 场 / 未赛 6 场」，
-//      同一场（如胜者组决赛）打完又原样派下来。**这条红是探针自己的，别照着它去改教练档**：
-//      同一局完全按玩家路径打（不跑审计）三轮就收敛——wf 待赛 → wf 记上胜者 → 总决赛 → 夺冠，
-//      写回正常。差异只剩审计那一步：它点完 ADV 按钮后用 S=JSON.parse(snap) 整体还原，
-//      系列赛与对阵表之间的对象身份被换掉，之后的 m.r 写回落在副本上 →  bracket 永不推进。
-//      也就是说原文件头那句"JSON 往返还原有副作用"的归因是对的，只是先前被上面①②③三条
-//      挡着看不见（adv 恒空 ⇒ 审计根本没跑 ⇒ 还原也就没跑）。剩下的活是把它换成
-//      逐字段原地还原、或每轮在还原后重建 aiRosters/mid 索引，不是改引擎。
-// 真正钉住本轮四条教练欠账的是 tests/verify-coach-mode.js（①–⑧，逐条退回修复都验过会报红）
-// 与 tests/sim-yearend.js 的教练档两档 ×8 年。
+//   ④ 审计用 S=JSON.parse(snap) 整体还原会切断别名：快照里 S.matches['po_胜者组决赛'] 与
+//      S.playoff.wf 本是同一对象，往返后成两份 → m.r 写在副本上 → 对阵表永不推进，
+//      coach 因此在 4001 轮里原地重派同一场（还原后补 rebuildMatchStore 才断根）。
+//      注：当时"coach 卡季后赛"我一度判成引擎 bug，是拿同一局按玩家路径（不跑审计）打了一遍
+//      才排除的——wf 待赛 → 记上胜者 → 总决赛 → 夺冠，三轮收敛、写回正常。
+//
+// 挂进门禁的资格（三条都要过，缺一条就还是诊断脚本）：
+//   确定性：同种子连跑三次逐字节一致；
+//   不是碰巧绿：另扫 12 个种子（1/42/999/777/31337/8080…）三身份均跑满 2 赛季无死锁；
+//   能报红：把 uiStartMatch 掏空成"按钮还在、点了什么都不做"→ manager 第 9 轮、coach 第 1 轮
+//            必报「推进类按钮点了毫无反应（死按钮）」，且固定种子下轮号可复现。
+// 它抓不到的（不是漏判）：撤掉 uiDoNextAction 的字符串入参归一化仍全绿——现存调用点传的都是 S，
+// 那行只是旧调用形式的防御，没有按钮会因此变死。排查偶发用 --seed=random / --seed=N / --trace。
+// 另外别只靠它：本轮四条教练欠账是被 tests/verify-coach-mode.js（8 项，逐条退回都验过报红）
+// 与 tests/sim-yearend.js 的教练档两档 ×8 年钉住的。
 
 // 「游戏状态必须持续推进」不变量门禁
 // ─────────────────────────────────────────────────────────────
@@ -37,13 +39,19 @@
 //   · 把"弹窗内容长度变了"当进度，会让"反复重开赛前面板"看起来像在推进（空转）
 // 运行：node tests/verify-no-deadend.js [--mode=manager|player|coach] [--seasons=2] [--max=4000]
 const vm = require('vm');
-const { makeDom } = require('./harness');
+const { makeDom, seedMath } = require('./harness');
 
 const arg = k => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a && a.split('=')[1]; };
 const ONLY = arg('mode');
 const SEASONS = +(arg('seasons') || 2);
 const MAX = +(arg('max') || 4000);
 const STUCK = +(arg('stuck') || 12);          // 连续多少步状态纹丝不动判死
+// 种子：默认固定 ⇒ 同一份代码必得同一条轨迹（这是把它挂进 npm test 的前提——
+// 不带种子的探针当门禁只会带来偶发红）。排查偶发问题时用 --seed=random 或 --seed=<整数>。
+const DEFAULT_SEED = 424242;
+const SEED_ARG = arg('seed');
+const RANDOM_SEED = SEED_ARG === 'random';
+const SEED = RANDOM_SEED ? (Math.floor(Math.random() * 1e9) || 1) : (parseInt(SEED_ARG, 10) || DEFAULT_SEED);
 // --trace：逐轮打「这一轮看到了哪些出口、哪个真的动了、状态简报」。
 // 空转类问题只能这样看轨迹——光看末态会误判（探针自己就因签名饱和报过两次假红）。
 const TRACE = process.argv.includes('--trace');
@@ -60,6 +68,9 @@ const NOISE = /^(goPage|closeModal|shareHonorCard|shareCareerCard|copySave|expor
 
 function makeSandbox() {
   const { dom } = makeDom();
+  // 每个身份都用同一个种子重新起：这样 --mode=coach 单独跑出来的轨迹，与三身份连跑时
+  // 那条 coach 轨迹逐轮一致（否则"复现 coach 第 617 轮"这件事要靠前面两个身份跑没跑过）
+  seedMath(dom, SEED);
   // 桩元素按选择器**懒创建**，patch 时缓存还是空的：必须包住取值函数，在元素第一次
   // 被取出的一刻把 classList 换成有状态的，否则后创建的元素仍是空壳（踩过）。
   const upgrade = el => {
@@ -274,4 +285,4 @@ for (const r of results) {
   else console.log(`[PASS] ${r.mode}: ${r.iters} 步 · 跨 ${r.seasons} 赛季 · 走过赛段 ${r.走过赛段}`);
 }
 if (bad) { console.log('[FAIL] 不变量门禁未通过'); process.exitCode = 1; }
-else console.log('[PASS] 三身份状态推进不变量全部通过');
+else console.log('[PASS] 三身份状态推进不变量全部通过' + (RANDOM_SEED ? '（种子 ' + SEED + ' 随机）' : '（种子 ' + SEED + ' 固定，重跑必得同一轨迹）'));

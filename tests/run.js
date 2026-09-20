@@ -67,6 +67,7 @@ const SUITES = [
   { id: 'verify-idle', file: 'tests/verify-idle.js', label: '怠政经济门禁' },
   { id: 'verify-playoff-entry', file: 'tests/verify-playoff-entry.js', label: '季后赛/卡位赛入口' },
   { id: 'verify-coach-mode', file: 'tests/verify-coach-mode.js', label: '教练身份回归' },
+  { id: 'verify-no-deadend', file: 'tests/verify-no-deadend.js', label: '三身份状态推进不变量' },
   { id: 'verify-coachloan', file: 'tests/verify-coachloan.js', label: '教练租借与引援' },
   { id: 'verify-relations', file: 'tests/verify-relations.js', label: '战队关系事件' },
   { id: 'verify-sort', file: 'tests/verify-sort.js', label: '市场排序' },

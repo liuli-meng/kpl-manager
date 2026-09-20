@@ -81,6 +81,14 @@ function makeDom(opts) {
   return { dom, elCache };
 }
 
+// 种子化沙箱随机（mulberry32）：与 sim-quick/fuzz 内联的那份同一实现，这里给需要
+// "整轮可复现"的探针/门禁当共用出口——固定种子 ⇒ 同代码必得同一条轨迹，才能挂进 npm test
+// 而不带来偶发红。Math 用 Object.create 包一层：round/imul/max 等原语照常可用。
+function seedMath(dom, seed) {
+  vm.runInContext('this.Math=(function(a){var f=function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};var M=Object.create(Math);M.random=f;return M;})(' + (seed | 0) + ')', dom);
+  return dom;
+}
+
 // 断言工具：失败记入 errors，全部跑完再汇总（每个用例可独立失败）
 function makeTester(name) {
   const errors = [];
@@ -99,4 +107,4 @@ function makeTester(name) {
   };
 }
 
-module.exports = { makeDom, makeTester, loadCode, injectHelpers, FILES };
+module.exports = { makeDom, makeTester, loadCode, injectHelpers, seedMath, FILES };
