@@ -9,34 +9,47 @@ description: kpl-manager（王者电竞经理·KPL 篇，E:\sex\kpl-manager）�
 
 ## 架构地图（改动该去哪个文件）
 
-| 模块 | 职责 |
-|---|---|
-| data.js | 常量与数据表（HEROES/AI_TEAMS/CLUB_TEMPLATES/SCENARIOS）、SVG 生成器（`crest`/`avatar`/`heroIcon`/`radarSvg`）、成就表、事件池 |
-| state.js | `newState`/存档 3 槽/`migrateSave` 迁移链/`playerPower`/`teamPower`/`myPlayer`/AGE_MODEL |
-| players.js | `genPlayer`（def→选手对象）、市场买入 |
-| transfer.js | 转会谈判/挂牌竞价/租借/`completeSale`（出售单点）/赛中报价 `inSeasonOfferTick`+`respondOffer`/转会台账 `recordTransfer` |
-| train.js | 训练/青训营/位置改造 |
-| season.js | **最大模块**：赛程与赛段推进（r1/r2/卡位/季后赛）、年度赛历（挑战者杯/EWC/亚运/年总）、董事会、粉丝、更衣室、战术/版本/K甲联赛、选手/教练生涯结算（`playerYearSettle`/`coachAutoSquad`/`coachPoach`） |
-| bp.js | KPL 两段式 BP 引擎与 BP 台 UI |
-| match.js | 比赛模拟（`singleGame`/`gamePerform`/`genMatchStory` 文案池）、赛前准备、`finishSeries` 收尾链、AI 赛后战报（默认关闭） |
-| ui.js | 各页渲染（`renderClub/Lineup/Market/Train/League/Kjia/Career/Union/Biz`）+ 生涯页动作（`playerTrain` 等） |
-| playerops.js | 选手日决策：媒体采访 / 更衣室社交 / 合同角色 / 国家队专注 |
-| guide.js | 3 步上手 + 完整 tour + 前 3 日任务条 + 每页提示 |
-| main.js | 开局（`createTeam`/`applyClub`/`createPlayerCareer`/`applyCoachClub`）、导航 `MODE_PAGES` 按身份适配、音效、启动 |
+**隐性规则文档**：总索引 [`docs/RULES.md`](../../../docs/RULES.md) → 模块单篇 [`docs/rules/<模块>.md`](../../../docs/rules/)。加系统/改常量前先读对应单篇；改完数字要回写文档。
+
+| 模块 | 职责 | 规则文档 |
+|---|---|---|
+| data.js | 常量与数据表（HEROES/AI_TEAMS/CLUB_TEMPLATES/SCENARIOS）、SVG 生成器、成就表、事件池 | docs/rules/data.md |
+| state.js | `newState`/存档 3 槽/`migrateSave`/`playerStatus`/`weeklyWage`/AGE_MODEL | docs/rules/state.md |
+| players.js | `genPlayer`（def→选手对象）、市场买入 | docs/rules/players.md |
+| transfer.js | 转会谈判/挂牌/`completeSale`/赛中报价/AI 转会生态 | docs/rules/transfer.md |
+| train.js | 训练/青训营/位置改造 | docs/rules/train.md |
+| season.js | 赛程/年度赛历/日结/王朝/选手与教练生涯结算 | docs/rules/season.md |
+| rules.js | 转会窗分段/临时席/**canSign/canRelease/auditSave** | docs/rules/rules.md |
+| career.js | 选手申请转会/租借/K甲/退役/转教练 | docs/rules/career.md |
+| playerops.js | 媒体/社交/合同角色/状态成长/国家队专注 | docs/rules/playerops.md |
+| bp.js | KPL 两段式 BP 引擎与 BP 台 UI | docs/rules/bp.md |
+| match.js | 比赛模拟/`finishSeries`/文案池/AI 战报 | docs/rules/match.md |
+| cups.js | 挑战者杯/EWC/亚运/年总 | docs/rules/cups.md |
+| draft.js | 选秀竞拍/点名 | docs/rules/draft.md |
+| clubops.js | 粉丝商业/更衣室/战术/版本 | docs/rules/clubops.md |
+| kjia.js | K甲二队 | docs/rules/kjia.md |
+| board.js | 董事会信任度 | docs/rules/board.md |
+| natcamp.js | 亚运征召 | docs/rules/natcamp.md |
+| hall.js | 荣誉馆/王朝/FMVP | docs/rules/hall.md |
+| guide.js | 3 步上手 + 完整 tour + 任务条 + 每页提示 | docs/rules/guide.md |
+| main.js | 开局/导航 `MODE_PAGES`/音效/导入清洗 | docs/rules/main.md |
+| ui*.js | 只渲染 + onclick 转发，**不得改数值** | docs/rules/ui.md |
+| （横切）AI 双模型 | def 名册 vs 玩家经济 | docs/rules/ai-model.md |
 
 三种身份 `s.mode`：manager（全权）/ player（选手生涯，导航精简、比赛走 `playerAutoSeries` 自动模拟）/ coach（竞技全权，俱乐部自动引援）。加新功能先想清楚它对三种模式分别意味着什么。
 
 ## 加新系统的固定清单（按序执行，跳步必返工）
 
-1. **状态**：`newState` 加字段 + `migrateSave` 加旧档兜底（`S.x = S.x || 默认`）——不改 SAVE_VERSION 除非结构破坏性变更；存储键名永不改
-2. **引擎**：核心逻辑放对应模块；注意模式守卫（`s.mode==='player'` 时董事会/转会资金等经理专属系统要让路）
-3. **UI**：渲染函数 + `renderPage` 映射 + `index.html`（nav 按钮与 `<section>`）+ `MODE_PAGES`（main.js）按模式收放
-4. **测试**：新建 `tests/verify-<name>.js`（vm 沙箱，见下）并挂进 package.json 的 test 链（放在 smoke.js 之前）
-5. **回归**：`npm test` 全绿（含 audit-static 的 onclick 回调存在性、重复函数定义、页面往返渲染——renderPage 清单在 audit-static.js 有两处硬编码，加新页面要同步加）
-6. **构建**：`npm run build`（等价 `node build.js`，**唯一实现**）。别用 `build.ps1` 的旧拼接逻辑：它曾把 style.css/js 原样塞进产物不做压缩，产物比 CI 重建结果大 100KB+，CI 最后一步 `git diff --exit-code game.html` 必红——视觉 v6（d78ed50）就是这么中招的，现已改成转发 `node build.js` 的 shim。改完源码若 `git status` 里 `game.html` 没变，说明构建根本没跑
-7. **浏览器实测**：见下方配方
-8. **README**：按 `## 2026-09 <功能名>` 格式补一节（含设计动机与回归用例说明）
-9. **提交推送**：中文功能摘要 commit；推送用 `GIT_TERMINAL_PROMPT=0 git -C . -c credential.helper= -c credential.helper=wincred -c http.proxy= -c https.proxy= push origin main`（**必须挂 wincred 绕过损坏的 GCM**——PortableGit 的 git-credential-manager.exe 已段错误，默认 helper 必报 could not read Username；全局代理 127.0.0.1:10808 常没开，直连 GitHub 是通的）
+1. **状态**：`newState` 加字段 + `migrateSave`/`SAVE_DEFAULTS` 旧档兜底——不改 SAVE_VERSION 除非结构破坏性变更；存储键名永不改
+2. **规则文档**：在 `docs/rules/<主责模块>.md` 写清硬数值/守卫/易踩坑，并在 `docs/RULES.md` 总索引登记关键词
+3. **引擎**：核心逻辑放对应模块；模式守卫；签约/放行走 `canSign`/`canRelease`，不要 UI 另写一套
+4. **UI**：渲染函数 + `renderPage` 映射 + `index.html`（nav 与 section）+ `MODE_PAGES` 按模式收放；ui*.js 不得改数值
+5. **测试**：新建 `tests/verify-<name>.js` 并挂进 tests/run.js（放在 smoke.js 之前）
+6. **回归**：`npm test` 全绿（含 audit-static：状态旗走 playerStatus、ui/引擎分离、renderPage 清单）
+7. **构建**：按仓库当前 `package.json` 的 build 脚本（以 SKILL 与 CI 为准）重建 `game.html`，产物与 src 一致
+8. **浏览器实测**：见下方配方
+9. **README**：按 `## 2026-09 <功能名>` 补一节；隐性规则写 docs/rules，不必在 README 重复常量表
+10. **提交推送**：用户明确要求才 commit/push；完整清单与本机命令见 [`docs/PUSH.md`](../../../docs/PUSH.md)（wincred + 清代理；不主动 push）
 
 ## 测试规范（tests/）
 

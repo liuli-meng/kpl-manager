@@ -2,11 +2,18 @@
 
 LOL 电竞经理式的 KPL 俱乐部经营游戏：签约/转会谈判、训练青训、联赛征程、真实 KPL 两段式 BP。
 
+![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-market.png)
+![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-bp.png)
+![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-league.png)
+
 > **声明**：本项目为粉丝自制的**非官方同人作品**，仅供学习交流，与腾讯《王者荣耀》、KPL 联盟及各俱乐部官方均无关联。游戏内选手/战队信息基于公开赛事资料整理，数值、玩法与文案均为原创虚构设计。请勿用于任何商业用途；如内容涉及侵权，联系即删。
 
-## 在线仓库
+## 📊 技术亮点
 
-GitHub: <https://github.com/liuli-meng/kpl-manager>
+- **纯前端单文件**：0 依赖，双击即玩，GitHub Pages 一键部署
+- **全量测试门禁**：65+ 项回归/平衡/冒烟测试，CI 自动运行
+- **实时渲染优化**：长列表截断 + 脏文本守卫，手机也能丝滑
+- **程序化音效**：SFX+BGM 全部 WebAudio 合成，零资源占用
 
 ## 🎮 在线试玩（GitHub Pages）
 
@@ -16,6 +23,29 @@ GitHub: <https://github.com/liuli-meng/kpl-manager>
 - 本地玩：仓库页 `Code → Download ZIP` → 解压后**双击 `game.html`** 即可
 
 存档都存浏览器 localStorage，在线/本地互不影响，各玩各的。
+
+## 欢迎试玩反馈
+
+本项目是同人向电竞经营游戏，**最缺的就是真人试玩意见**。玩过 1–2 个赛季后，欢迎通过下面任一方式反馈（GitHub Issues 优先）：
+
+- **在线试玩**：<https://liuli-meng.github.io/kpl-manager/>（手机浏览器也可以）
+- **提 Issue**：仓库 [Issues](https://github.com/liuli-meng/kpl-manager/issues)（若暂时无法创建，请先开 Discussions 或站内联系仓库作者）
+- **开 Discussions**：适合闲聊式建议、玩后感、想加什么玩法
+- **提 PR**：修 bug / 补文案 / 加测试都可以，见 [docs/PUSH.md](docs/PUSH.md)
+
+反馈时若能带上这些信息会更有用：
+
+| 信息 | 为什么重要 |
+|---|---|
+| 玩的是**经理 / 教练 / 选手**哪种身份 | 三套规则，问题可能只在某一身份 |
+| 大约第几个赛季、哪个赛段 | 中期无聊 vs 后期爆炸是不同问题 |
+| 在线页还是本地 `game.html` | 存档/缓存问题只在某一边出现 |
+| **卡在哪一步** 或 **觉得哪条路过强/过弱** | 比「有 bug」具体一个数量级 |
+| 浏览器与设备（Chrome/手机等） | UI/性能类问题 |
+
+**不接受什么**：与官方王者荣耀/KPL 数值完全一致的要求（同人向已声明为虚构演绎）；要求联机/账号/云端存档（见上方「项目定位与边界」）。
+
+开发向文档：隐性规则 [docs/RULES.md](docs/RULES.md) · 模块单篇 [docs/rules/](docs/rules/) · 推送流程 [docs/PUSH.md](docs/PUSH.md)
 
 ## 项目定位与边界
 
@@ -1032,6 +1062,44 @@ onclick="uiDoNextAction('startPlayoff')"   // 卡位赛同理：uiDoNextAction('
 ### 为什么门禁全绿却漏了它
 
 `kmAutoAdvance=true` 的沙箱会自动 flush 结算弹窗，且模拟器直调 `startPlayoff()`/`playoffStep()` 绕过 UI 层；`audit-static` 只验 onclick 回调存在性。这一类"UI 层无出口"的死锁，只有真人点击路径能暴露——已记入口径教训。
+
+## 隐性规则文档
+
+各模块里埋着的硬数值、守卫与易踩坑已拆成单篇：
+
+- **总索引**：[`docs/RULES.md`](docs/RULES.md)（模块↔文档表 + 关键词检索）
+- **模块单篇**：[`docs/rules/<模块>.md`](docs/rules/) — 与 `src/js` 主模块一一对应
+- **Git 推送**：[`docs/PUSH.md`](docs/PUSH.md) — 推送前检查、commit 风格、代理/GCM 绕过、CI/Pages
+- **Commit 拆分**：[`docs/COMMIT-PLAN.md`](docs/COMMIT-PLAN.md) — 未推送变更的主题拆分（执行前需确认）
+- 开发工作流：`.agents/skills/kpl-dev/SKILL.md`（架构地图已链到上述文档）
+
+改常量/加系统前先读对应单篇；代码与文档冲突时以代码与测试为准，并回写文档。
+
+## 2026-09 规则中心 + 存档不变量巡检
+
+针对「玩家 UI 有校验、AI 另走分支、migrate 只修字段」的架构债：
+
+### `canSign` / `canRelease`（rules.js）
+
+- 玩家签约（`buyPlayer`）、出售入口（`openSellNego`）、选秀点名（`draftPick`/`draftAiPick`）
+- AI 入册（`aiAttachDef`）与转会窗自由签（`aiBidTick`）共用同一闸门
+- 玩家侧：身份/转会窗分段/大名单/已在册/租借与 K甲状态
+- AI 侧：名册 ≤5、同位置占用、已在该队册
+
+### `auditSave`（业务不变量，与 migrate 字段修复互补）
+
+- 双挂（玩家名单 ∩ AI 名册、同一 def 两队）→ 玩家优先，AI 侧除名
+- 首发/队长/报价幽灵 → 清除
+- 状态旗冲突（loan×loanOut、租借×K甲、挂牌但 busy）→ 修复
+- 玩家名单超编 → 保留总值前 10，其余转自由市场
+- 触发点：`migrateSave` 读档后 + `newSeason` 赛季末
+- 状态旗读写走 `playerStatus()`（静态审计门禁）
+
+### 回归
+
+- `verify-rules` ⑤–⑦：canSign/canRelease/auditSave
+- `late-game-probe` 15 年：名单膨胀已收敛
+- `npm test` 全绿 + `game.html` 重建
 
 ## 相比旧版的改动
 
