@@ -1,8 +1,24 @@
-# 推送前 Commit 拆分方案（待你确认后执行）
+# 推送前 Commit 拆分方案
+
+**状态：已执行（用户确认「全部」）** · 2026-09-20 推上 `origin/main` `b70ef4d..63f796e`
+
+实际落地 3 个 commit（工作区混杂时按大主题收拢）：
+
+| Commit | 内容 |
+|---|---|
+| `da9fdea` | docs：隐性规则总索引 + 模块单篇 + PUSH/COMMIT-PLAN + README 试玩反馈 |
+| `e60e00c` | 玩法与规则中心：canSign/auditSave、选手日决策与状态成长、引擎修复、BGM/perf、测试、`game.html` |
+| `63f796e` | chore：性能审计笔记、2026 路线图、`.bug-hunt/` 诊断与截图留档 |
+
+推送命令见 [PUSH.md](PUSH.md)（wincred + 清代理）。
+
+---
+
+# 历史方案（执行前草案，保留备查）
 
 总索引：[RULES.md](RULES.md) · 推送操作：[PUSH.md](PUSH.md)
 
-**状态**：仅方案，**未 commit / 未 push**。远端 `origin/main` 停在 `b70ef4d`（2026-09-19 探针提交）。本地约 **70+** 条未提交变更。
+**曾状态**：仅方案，**未 commit / 未 push**。远端 `origin/main` 停在 `b70ef4d`（2026-09-19 探针提交）。本地约 **70+** 条未提交变更。
 
 ---
 
