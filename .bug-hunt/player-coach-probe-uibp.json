@@ -1,0 +1,581 @@
+{
+  "summary": {
+    "findingsCount": 1,
+    "failCount": 1,
+    "engineOut": "[PASS] coach mode 重庆狼队 pages=[\"club\",\"lineup\",\"market\",\"train\",\"league\",\"kjia\",\"union\",\"hall\"]\n[PASS] coach MODE_PAGES includes market\n[PASS] player MODE_PAGES excludes market\n[PASS] player pages exact\n[PASS] startMatch creates series op=武汉eStarPro\n[PASS] openBP ok\n[PASS] series already finished by auto BP (history=1)\n[PASS] accept moved 重庆狼队 -> 成都AG超玩会 coachKept=true\n[WARN] bad-name accept silent: no toast captured in harness, no deal log\n[PASS] player mode 无名小将 age=19\n[PASS] startPlayerMatch ok matchIdx=1 history=1\n[FAIL] train note weak: {\"ok\":true,\"gain\":0,\"note\":\"低迷\"}\n[PASS] transfer offer {\"pid\":\"me_mu8h33sh\",\"name\":\"无名小将\",\"team\":\"成都AG超玩会\",\"fee\":631,\"expire\":4,\"status\":\"open\"}\n[PASS] core fns present\n[PASS] train blocked after retire {\"ok\":false,\"reason\":\"今天已经练过了，明天再来\"}",
+    "stepsCount": 4
+  },
+  "findings": [
+    {
+      "id": "P1-ENGINE-FAIL",
+      "severity": "FAIL",
+      "title": "[FAIL] train note weak: {\"ok\":true,\"gain\":0,\"note\":\"低迷\"}",
+      "detail": null
+    }
+  ],
+  "steps": [
+    {
+      "step": "click-start",
+      "data": {
+        "ok": true,
+        "onclick": "uiStartMatch()",
+        "after": {
+          "series": true,
+          "appModalOn": true,
+          "modalText": "赛前准备\nBO5 · 全局BP\n常规赛·第一轮 第1/5轮 vs 武汉eStarPro · 第1局（BO5 全局BP）\nAG\n成都AG超玩会\n542\nVS\n赛前预估 71% · 战力差 85\neStar\n武汉eStarPro\n457\n成都AG超玩会\n542\n赛前预估\n71%\n武汉eStarPro\n457\n我方首发（可调整）\n对\n轩染\n战力 101 · 姬小满\n体力100 士气92\n换人\n野\n钟意\n战力 101 · 澜\n体力100 士气89\n换人\n中\n长生\n战力 100 · 沈梦溪\n体力100 士气88\n换人\n发\n一诺\n战力 105 · 公孙离\n体力100 士气83\n换人\n游\n大帅\n战力 100",
+          "hasEnterBp": true
+        }
+      }
+    },
+    {
+      "step": "click-bp",
+      "data": {
+        "ok": true,
+        "onclick": "closeModal('app-modal');openBP(window._prepTitle,playGame)",
+        "after": {
+          "appModalOn": true,
+          "modalText": "BP · 两段式征召\n全局BP · 绝活+8%\n常规赛·第一轮 第1/5轮 vs 武汉eStarPro · 第1局（BO5 全局BP）　·　我方红方 · 第二轮后手 counter\n成都AG超玩会\n红方\n \nBAN\n \nBAN\n \nBAN\n \nBAN\n \n轩染\n \n钟意\n \n长生\n \n一诺\n \n大帅\n第一轮 BAN\n2 / 18 手\n武汉eStarPro\n蓝方\n公\n公孙离\nBAN\n \nBAN\n \nBAN\n \nBAN\n \n坦然\n \n花海\n \n清融\n \n易峥\n \n子阳\n我方有效战力\n543\n预测胜率\n71%\nBP 结算·含预估\n武汉eStarPro 有效战力\n457\n对方 BAN×1 我方-1%　红方counter+2%\n轮到我方 BAN · 第 1/4 个（BAN 对方池内英雄每个 -2% 战力 · 为推荐 · 别浪费在对方已用的英雄上）\n姬\n 姬小满\n对方威胁 99\n花\n 花木兰\n对方威胁",
+          "hasBpUi": true,
+          "seriesPick": {},
+          "seriesUsed": []
+        }
+      }
+    },
+    {
+      "step": "bp-autoplay",
+      "data": {
+        "autoPlay2": {
+          "stepsArr": [
+            "clickAuto:一键推荐"
+          ],
+          "before": {
+            "series": true,
+            "mw": 0,
+            "ow": 0,
+            "history": 0,
+            "matchIdx": 0
+          },
+          "btns": [
+            {
+              "text": "姬 姬小满对方威胁 99",
+              "onclick": "bpBanPick('姬小满')",
+              "disabled": false
+            },
+            {
+              "text": "花 花木兰对方威胁 97",
+              "onclick": "bpBanPick('花木兰')",
+              "disabled": false
+            },
+            {
+              "text": "关 关羽对方威胁 99",
+              "onclick": "bpBanPick('关羽')",
+              "disabled": false
+            },
+            {
+              "text": "马 马超对方威胁 97",
+              "onclick": "bpBanPick('马超')",
+              "disabled": false
+            },
+            {
+              "text": "吕 吕布对方威胁 101",
+              "onclick": "bpBanPick('吕布')",
+              "disabled": false
+            },
+            {
+              "text": "狂 狂铁对方威胁 97",
+              "onclick": "bpBanPick('狂铁')",
+              "disabled": false
+            },
+            {
+              "text": "廉 廉颇对方威胁 97",
+              "onclick": "bpBanPick('廉颇')",
+              "disabled": false
+            },
+            {
+              "text": "猪 猪八戒对方威胁 99",
+              "onclick": "bpBanPick('猪八戒')",
+              "disabled": false
+            },
+            {
+              "text": "孙 孙策对方威胁 97",
+              "onclick": "bpBanPick('孙策')",
+              "disabled": false
+            },
+            {
+              "text": "白 白起对方威胁 97",
+              "onclick": "bpBanPick('白起')",
+              "disabled": false
+            },
+            {
+              "text": "蒙 蒙恬对方威胁 97",
+              "onclick": "bpBanPick('蒙恬')",
+              "disabled": false
+            },
+            {
+              "text": "达 达摩对方威胁 97",
+              "onclick": "bpBanPick('达摩')",
+              "disabled": false
+            },
+            {
+              "text": "夏 夏洛特对方威胁 97",
+              "onclick": "bpBanPick('夏洛特')",
+              "disabled": false
+            },
+            {
+              "text": "老 老夫子对方威胁 97",
+              "onclick": "bpBanPick('老夫子')",
+              "disabled": false
+            },
+            {
+              "text": "夏 夏侯惇对方威胁 101",
+              "onclick": "bpBanPick('夏侯惇')",
+              "disabled": false
+            },
+            {
+              "text": "司 司空震对方威胁 99",
+              "onclick": "bpBanPick('司空震')",
+              "disabled": false
+            },
+            {
+              "text": "亚 亚连对方威胁 99",
+              "onclick": "bpBanPick('亚连')",
+              "disabled": false
+            },
+            {
+              "text": "刘 刘邦对方威胁 97",
+              "onclick": "bpBanPick('刘邦')",
+              "disabled": false
+            },
+            {
+              "text": "杨 杨戬对方威胁 101",
+              "onclick": "bpBanPick('杨戬')",
+              "disabled": false
+            },
+            {
+              "text": "大 大司命对方威胁 101",
+              "onclick": "bpBanPick('大司命')",
+              "disabled": false
+            },
+            {
+              "text": "镜 镜对方威胁 101",
+              "onclick": "bpBanPick('镜')",
+              "disabled": false
+            },
+            {
+              "text": "澜 澜对方威胁 99",
+              "onclick": "bpBanPick('澜')",
+              "disabled": false
+            },
+            {
+              "text": "娜 娜可露露对方威胁 103",
+              "onclick": "bpBanPick('娜可露露')",
+              "disabled": false
+            },
+            {
+              "text": "兰 兰陵王对方威胁 101",
+              "onclick": "bpBanPick('兰陵王')",
+              "disabled": false
+            },
+            {
+              "text": "裴 裴擒虎对方威胁 99",
+              "onclick": "bpBanPick('裴擒虎')",
+              "disabled": false
+            },
+            {
+              "text": "露 露娜对方威胁 99",
+              "onclick": "bpBanPick('露娜')",
+              "disabled": false
+            },
+            {
+              "text": "李 李白对方威胁 99",
+              "onclick": "bpBanPick('李白')",
+              "disabled": false
+            },
+            {
+              "text": "韩 韩信对方威胁 99",
+              "onclick": "bpBanPick('韩信')",
+              "disabled": false
+            },
+            {
+              "text": "云 云缨对方威胁 99",
+              "onclick": "bpBanPick('云缨')",
+              "disabled": false
+            },
+            {
+              "text": "梦 梦奇对方威胁 99",
+              "onclick": "bpBanPick('梦奇')",
+              "disabled": false
+            },
+            {
+              "text": "曜 曜对方威胁 99",
+              "onclick": "bpBanPick('曜')",
+              "disabled": false
+            },
+            {
+              "text": "阿 阿古朵对方威胁 99",
+              "onclick": "bpBanPick('阿古朵')",
+              "disabled": false
+            },
+            {
+              "text": "铠 铠对方威胁 99",
+              "onclick": "bpBanPick('铠')",
+              "disabled": false
+            },
+            {
+              "text": "宫 宫本武藏对方威胁 99",
+              "onclick": "bpBanPick('宫本武藏')",
+              "disabled": false
+            },
+            {
+              "text": "盘 盘古对方威胁 99",
+              "onclick": "bpBanPick('盘古')",
+              "disabled": false
+            },
+            {
+              "text": "嫦 嫦娥对方威胁 99",
+              "onclick": "bpBanPick('嫦娥')",
+              "disabled": false
+            },
+            {
+              "text": "西 西施对方威胁 102",
+              "onclick": "bpBanPick('西施')",
+              "disabled": false
+            },
+            {
+              "text": "干 干将莫邪对方威胁 99",
+              "onclick": "bpBanPick('干将莫邪')",
+              "disabled": false
+            },
+            {
+              "text": "不 不知火舞对方威胁 99",
+              "onclick": "bpBanPick('不知火舞')",
+              "disabled": false
+            },
+            {
+              "text": "沈 沈梦溪对方威胁 99",
+              "onclick": "bpBanPick('沈梦溪')",
+              "disabled": false
+            },
+            {
+              "text": "王 王昭君对方威胁 99",
+              "onclick": "bpBanPick('王昭君')",
+              "disabled": false
+            },
+            {
+              "text": "安 安琪拉对方威胁 99",
+              "onclick": "bpBanPick('安琪拉')",
+              "disabled": false
+            },
+            {
+              "text": "姜 姜子牙对方威胁 99",
+              "onclick": "bpBanPick('姜子牙')",
+              "disabled": false
+            },
+            {
+              "text": "弈 弈星对方威胁 99",
+              "onclick": "bpBanPick('弈星')",
+              "disabled": false
+            },
+            {
+              "text": "张 张良对方威胁 99",
+              "onclick": "bpBanPick('张良')",
+              "disabled": false
+            },
+            {
+              "text": "女 女娲对方威胁 99",
+              "onclick": "bpBanPick('女娲')",
+              "disabled": false
+            },
+            {
+              "text": "貂 貂蝉对方威胁 99",
+              "onclick": "bpBanPick('貂蝉')",
+              "disabled": false
+            },
+            {
+              "text": "上 上官婉儿对方威胁 99",
+              "onclick": "bpBanPick('上官婉儿')",
+              "disabled": false
+            },
+            {
+              "text": "百 百里守约对方威胁 101",
+              "onclick": "bpBanPick('百里守约')",
+              "disabled": false
+            },
+            {
+              "text": "海 海月对方威胁 101",
+              "onclick": "bpBanPick('海月')",
+              "disabled": false
+            },
+            {
+              "text": "金 金蝉对方威胁 99",
+              "onclick": "bpBanPick('金蝉')",
+              "disabled": false
+            },
+            {
+              "text": "周 周瑜对方威胁 99",
+              "onclick": "bpBanPick('周瑜')",
+              "disabled": false
+            },
+            {
+              "text": "嬴 嬴政对方威胁 99",
+              "onclick": "bpBanPick('嬴政')",
+              "disabled": false
+            },
+            {
+              "text": "孙 孙尚香对方威胁 97",
+              "onclick": "bpBanPick('孙尚香')",
+              "disabled": false
+            },
+            {
+              "text": "马 马可波罗对方威胁 100",
+              "onclick": "bpBanPick('马可波罗')",
+              "disabled": false
+            },
+            {
+              "text": "虞 虞姬对方威胁 97",
+              "onclick": "bpBanPick('虞姬')",
+              "disabled": false
+            },
+            {
+              "text": "鲁 鲁班七号对方威胁 97",
+              "onclick": "bpBanPick('鲁班七号')",
+              "disabled": false
+            },
+            {
+              "text": "伽 伽罗对方威胁 97",
+              "onclick": "bpBanPick('伽罗')",
+              "disabled": false
+            },
+            {
+              "text": "后 后羿对方威胁 97",
+              "onclick": "bpBanPick('后羿')",
+              "disabled": false
+            },
+            {
+              "text": "狄 狄仁杰对方威胁 97",
+              "onclick": "bpBanPick('狄仁杰')",
+              "disabled": false
+            },
+            {
+              "text": "李 李元芳对方威胁 99",
+              "onclick": "bpBanPick('李元芳')",
+              "disabled": false
+            },
+            {
+              "text": "艾 艾琳对方威胁 97",
+              "onclick": "bpBanPick('艾琳')",
+              "disabled": false
+            },
+            {
+              "text": "黄 黄忠对方威胁 97",
+              "onclick": "bpBanPick('黄忠')",
+              "disabled": false
+            },
+            {
+              "text": "莱 莱西奥对方威胁 97",
+              "onclick": "bpBanPick('莱西奥')",
+              "disabled": false
+            },
+            {
+              "text": "戈 戈娅对方威胁 99",
+              "onclick": "bpBanPick('戈娅')",
+              "disabled": false
+            },
+            {
+              "text": "蒙 蒙犽对方威胁 97",
+              "onclick": "bpBanPick('蒙犽')",
+              "disabled": false
+            },
+            {
+              "text": "鬼 鬼谷子对方威胁 101",
+              "onclick": "bpBanPick('鬼谷子')",
+              "disabled": false
+            },
+            {
+              "text": "张 张飞对方威胁 99",
+              "onclick": "bpBanPick('张飞')",
+              "disabled": false
+            },
+            {
+              "text": "大 大乔对方威胁 99",
+              "onclick": "bpBanPick('大乔')",
+              "disabled": false
+            },
+            {
+              "text": "盾 盾山对方威胁 97",
+              "onclick": "bpBanPick('盾山')",
+              "disabled": false
+            },
+            {
+              "text": "太 太乙真人对方威胁 97",
+              "onclick": "bpBanPick('太乙真人')",
+              "disabled": false
+            },
+            {
+              "text": "牛 牛魔对方威胁 97",
+              "onclick": "bpBanPick('牛魔')",
+              "disabled": false
+            },
+            {
+              "text": "苏 苏烈对方威胁 97",
+              "onclick": "bpBanPick('苏烈')",
+              "disabled": false
+            },
+            {
+              "text": "明 明世隐对方威胁 97",
+              "onclick": "bpBanPick('明世隐')",
+              "disabled": false
+            },
+            {
+              "text": "孙 孙膑对方威胁 99",
+              "onclick": "bpBanPick('孙膑')",
+              "disabled": false
+            },
+            {
+              "text": "鲁 鲁班大师对方威胁 97",
+              "onclick": "bpBanPick('鲁班大师')",
+              "disabled": false
+            },
+            {
+              "text": "桑 桑启对方威胁 97",
+              "onclick": "bpBanPick('桑启')",
+              "disabled": false
+            },
+            {
+              "text": "墨 墨子对方威胁 99",
+              "onclick": "bpBanPick('墨子')",
+              "disabled": false
+            },
+            {
+              "text": "东 东皇太一对方威胁 97",
+              "onclick": "bpBanPick('东皇太一')",
+              "disabled": false
+            },
+            {
+              "text": "庄 庄周对方威胁 97",
+              "onclick": "bpBanPick('庄周')",
+              "disabled": false
+            },
+            {
+              "text": "刘 刘禅对方威胁 97",
+              "onclick": "bpBanPick('刘禅')",
+              "disabled": false
+            },
+            {
+              "text": "取消",
+              "onclick": "closeModal('app-modal')",
+              "disabled": false
+            },
+            {
+              "text": "换替补",
+              "onclick": "bpOpenSwap()",
+              "disabled": false
+            },
+            {
+              "text": "一键推荐",
+              "onclick": "bpSuggest()",
+              "disabled": false
+            },
+            {
+              "text": "自动本局",
+              "onclick": "bpAuto()",
+              "disabled": false
+            },
+            {
+              "text": "本系列赛自动",
+              "onclick": "bpAutoAll()",
+              "disabled": false
+            },
+            {
+              "text": "确定出战",
+              "onclick": "bpConfirm()",
+              "disabled": true
+            }
+          ],
+          "modalTextNow": "BP · 两段式征召\n全局BP · 绝活+8%\n常规赛·第一轮 第1/5轮 vs 武汉eStarPro · 第1局（BO5 全局BP）　·　我方红方 · 第二轮后手 counter\n成都AG超玩会\n红方\n夏\n夏侯惇\nBAN\n杨\n杨戬\nBAN\n大\n大司命\nBAN\n镜\n镜\nBAN\n关\n关羽\n轩染\n澜\n澜\n钟意\n沈\n沈梦溪\n长生\n百\n百里守约\n一诺\n猪\n猪八戒\n大帅\nBP 完成\n18 / 18 手\n武汉eStarPro\n蓝方\n公\n公孙离\nBAN\n姬\n姬小满\nBAN\n戈\n戈娅\nBAN\n大\n大乔\nBAN\n",
+          "appModalOn": true
+        },
+        "confirm2": {
+          "stepsArr": [
+            "bpConfirm",
+            "playGame"
+          ],
+          "btns": [
+            {
+              "text": "取消",
+              "onclick": "closeModal('app-modal')",
+              "disabled": false
+            },
+            {
+              "text": "换替补",
+              "onclick": "bpOpenSwap()",
+              "disabled": false
+            },
+            {
+              "text": "一键推荐",
+              "onclick": "bpSuggest()",
+              "disabled": false
+            },
+            {
+              "text": "自动本局",
+              "onclick": "bpAuto()",
+              "disabled": false
+            },
+            {
+              "text": "本系列赛自动",
+              "onclick": "bpAutoAll()",
+              "disabled": false
+            },
+            {
+              "text": "确定出战",
+              "onclick": "bpConfirm()",
+              "disabled": false
+            }
+          ],
+          "after": {
+            "series": true,
+            "mw": 2,
+            "ow": 0,
+            "logs": [
+              "第1局  我方 10-13 击败 武汉eStarPro ｜ 总比分 1:0 红方 反手就是一记大招！ ｜ MVP：钟意（8/1/5）",
+              " 第3分钟，对方双人越塔强抓，长生 交出一血，节奏被动。"
+            ],
+            "history": 0,
+            "matchIdx": 0,
+            "appModalOn": true,
+            "modalText": "BP · 两段式征召\n全局BP · 绝活+8%\n常规赛·第一轮 · 第3局（当前 2:0）　·　我方红方 · 第二轮后手 counter\n成都AG超玩会\n红方\n \nBAN\n \nBAN\n \nBAN\n \nBAN\n \n轩染\n \n钟意\n \n长生\n \n一诺\n \n大帅\n第一轮 BAN\n2 / 18 手\n全局BP已用 · 我方 5 个 ｜ 对方 5 个 · 悬停看明细\n武汉eStarPro\n蓝方\n公\n公孙离\nBAN\n \nBAN\n \nBAN\n \nBAN\n \n坦然\n \n花海\n \n清融\n \n易峥\n \n子阳\n我方有效战力\n539\n预测胜率\n59%\nBP 结算·含预估\n武汉eStarPro 有效战力\n503\n对方 B"
+          }
+        }
+      }
+    },
+    {
+      "step": "player-quick",
+      "data": {
+        "mode": "player",
+        "me": "发育路",
+        "age": 19,
+        "starter": false,
+        "nav": [
+          "career",
+          "club",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ],
+        "careerHas": {
+          "train": true,
+          "rest": true,
+          "social": true,
+          "transfer": true,
+          "hero": true
+        },
+        "clubHasMatch": true,
+        "match": "ok",
+        "matchIdx": 1,
+        "history": 1
+      }
+    }
+  ],
+  "engineOut": "[PASS] coach mode 重庆狼队 pages=[\"club\",\"lineup\",\"market\",\"train\",\"league\",\"kjia\",\"union\",\"hall\"]\n[PASS] coach MODE_PAGES includes market\n[PASS] player MODE_PAGES excludes market\n[PASS] player pages exact\n[PASS] startMatch creates series op=武汉eStarPro\n[PASS] openBP ok\n[PASS] series already finished by auto BP (history=1)\n[PASS] accept moved 重庆狼队 -> 成都AG超玩会 coachKept=true\n[WARN] bad-name accept silent: no toast captured in harness, no deal log\n[PASS] player mode 无名小将 age=19\n[PASS] startPlayerMatch ok matchIdx=1 history=1\n[FAIL] train note weak: {\"ok\":true,\"gain\":0,\"note\":\"低迷\"}\n[PASS] transfer offer {\"pid\":\"me_mu8h33sh\",\"name\":\"无名小将\",\"team\":\"成都AG超玩会\",\"fee\":631,\"expire\":4,\"status\":\"open\"}\n[PASS] core fns present\n[PASS] train blocked after retire {\"ok\":false,\"reason\":\"今天已经练过了，明天再来\"}"
+}

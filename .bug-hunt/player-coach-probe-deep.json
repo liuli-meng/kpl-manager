@@ -1,0 +1,595 @@
+{
+  "summary": {
+    "findingsCount": 6,
+    "failCount": 6,
+    "pageErrors": [],
+    "stepsCount": 10
+  },
+  "findings": [
+    {
+      "id": "P1-ACCEPT-SILENT",
+      "severity": "FAIL",
+      "title": "豪门邀约队名非法时接受=静默清空 offer，无 toast/无日志/未换队",
+      "detail": "{\"silent\":{\"r\":\"ok\",\"teamAfter\":\"重庆狼队\",\"coachOffer\":null,\"dealLog\":[{\"year\":2026,\"note\":\"离任 成都AG超玩会，转投 重庆狼队\"}],\"toasts\":[]},\"tS\":[]}"
+    },
+    {
+      "id": "P0-PLAYGAME-THROW",
+      "severity": "FAIL",
+      "title": "playGame 抛异常",
+      "detail": "[\"applyBp:throw:Cannot read properties of undefined (reading 'top')\",\"bpAutoAll:ok\",\"bpConfirm:ok\",\"playGame:throw:Cannot read properties of null (reading 'max')\"]"
+    },
+    {
+      "id": "P2-TRAIN-NOTE",
+      "severity": "FAIL",
+      "title": "加练 0 收益 note 过短/不说明结果",
+      "detail": "[{\"ok\":true,\"gain\":0,\"note\":\"低迷\"},{\"ok\":true,\"gain\":0,\"note\":\"低迷\"},{\"ok\":true,\"gain\":0,\"note\":\"低迷\"}]"
+    },
+    {
+      "id": "P2-TRAIN-TOAST",
+      "severity": "FAIL",
+      "title": "加练无收益时 UI toast 仅显示状态词「低迷」，未说明“今天没有提升”（引擎日志文案更完整）",
+      "detail": "[{\"ok\":true,\"gain\":0,\"note\":\"低迷\"},{\"ok\":true,\"gain\":0,\"note\":\"低迷\"},{\"ok\":true,\"gain\":0,\"note\":\"低迷\"}]"
+    },
+    {
+      "id": "P2-POS-NOVALID",
+      "severity": "FAIL",
+      "title": "pickPlayerPos 不校验非法位置，非法 _pcPos 会在 createPlayerCareer 抛错",
+      "detail": "POS[_pcPos] undefined → createPlayerCareer would throw at POS[_pcPos][0]"
+    },
+    {
+      "id": "P2-MARKET-HINT-COPY",
+      "severity": "FAIL",
+      "title": "教练转会页 pageHint 仍是经理向「买人卖人」文案，与下方教练工作台矛盾",
+      "detail": "买人卖人：赛前转会期自由组队，赛季中留意报价与自由市场。教练模式=应急租借与引援申请\n×\n教练工作台 · 应急与引援\n买断挂牌由俱乐部打理\n伤停/集训缺人时可紧急租借；也可向俱乐部提交引援申请（资金与名单允许时自动办理）。不能挂牌出售选手——那是管理层的事。\n应急租借市场\n21 天 · 名额 0/2\n租金约身价 15%，工资由原队承担；非卖品不外借。缺位位置优先推荐。\n小胖 (重庆狼队 · 打野 "
+    }
+  ],
+  "steps": [
+    {
+      "step": "setup",
+      "data": {
+        "templates": [
+          {
+            "i": 0,
+            "name": "成都AG超玩会",
+            "seed": 640
+          },
+          {
+            "i": 1,
+            "name": "重庆狼队",
+            "seed": 620
+          },
+          {
+            "i": 2,
+            "name": "武汉eStarPro",
+            "seed": 600
+          },
+          {
+            "i": 3,
+            "name": "北京WB",
+            "seed": 580
+          },
+          {
+            "i": 4,
+            "name": "广州TTG",
+            "seed": 540
+          },
+          {
+            "i": 5,
+            "name": "南京Hero久竞",
+            "seed": 460
+          },
+          {
+            "i": 6,
+            "name": "苏州KSG",
+            "seed": 500
+          },
+          {
+            "i": 7,
+            "name": "上海EDG.M",
+            "seed": 440
+          },
+          {
+            "i": 8,
+            "name": "北京JDG",
+            "seed": 570
+          },
+          {
+            "i": 9,
+            "name": "济南RW侠",
+            "seed": 560
+          },
+          {
+            "i": 10,
+            "name": "佛山DRG",
+            "seed": 500
+          },
+          {
+            "i": 11,
+            "name": "深圳DYG",
+            "seed": 480
+          },
+          {
+            "i": 12,
+            "name": "长沙TES.A",
+            "seed": 450
+          },
+          {
+            "i": 13,
+            "name": "杭州LGD.NBW",
+            "seed": 430
+          },
+          {
+            "i": 14,
+            "name": "上海RNG.M",
+            "seed": 420
+          },
+          {
+            "i": 15,
+            "name": "西安WE",
+            "seed": 410
+          },
+          {
+            "i": 16,
+            "name": "桐乡情久",
+            "seed": 400
+          },
+          {
+            "i": 17,
+            "name": "常山UUG",
+            "seed": 390
+          }
+        ],
+        "pickedIdx": 0,
+        "mode": "coach",
+        "teamName": "成都AG超玩会",
+        "coach": "Zwy",
+        "coachId": "co1",
+        "lineup": 5,
+        "players": 5,
+        "phase": "r1",
+        "matchIdx": 0,
+        "scheduleLen": 5
+      }
+    },
+    {
+      "step": "accept-exact",
+      "data": {
+        "acceptExact": {
+          "target": "重庆狼队",
+          "teamBefore": "成都AG超玩会",
+          "teamAfter": "重庆狼队",
+          "moved": true,
+          "playersBefore": [
+            "轩染",
+            "钟意",
+            "长生",
+            "一诺",
+            "大帅"
+          ],
+          "playersAfter": [
+            "归期",
+            "小胖",
+            "向鱼",
+            "妖刀",
+            "帆帆"
+          ],
+          "coachIdBefore": "co1",
+          "coachIdAfter": "co1",
+          "fundBefore": 2500,
+          "fundAfter": 2333,
+          "coachOffer": null,
+          "dealLog": [
+            {
+              "year": 2026,
+              "note": "离任 成都AG超玩会，转投 重庆狼队"
+            }
+          ],
+          "lineupLen": 5,
+          "offerUiHadBtns": [
+            {
+              "text": "接受（换队执教）",
+              "onclick": "respondCoachOffer(true)"
+            },
+            {
+              "text": "婉拒（留任）",
+              "onclick": "respondCoachOffer(false)"
+            }
+          ],
+          "offerTextHit": true,
+          "r": "ok",
+          "seedPower": 504,
+          "scheduleSample": [
+            "北京JDG",
+            "北京WB",
+            "济南RW侠"
+          ],
+          "phase": "r1"
+        },
+        "toasts": []
+      }
+    },
+    {
+      "step": "accept-silent-bad-name",
+      "data": {
+        "silent": {
+          "r": "ok",
+          "teamAfter": "重庆狼队",
+          "coachOffer": null,
+          "dealLog": [
+            {
+              "year": 2026,
+              "note": "离任 成都AG超玩会，转投 重庆狼队"
+            }
+          ],
+          "toasts": []
+        },
+        "toasts": []
+      }
+    },
+    {
+      "step": "bp-deep",
+      "data": {
+        "startTry": "ok",
+        "series": {
+          "op": "北京JDG",
+          "mid": "reg_r1_1",
+          "stage": "regular"
+        },
+        "prepEls": [
+          {
+            "id": "app-modal",
+            "hasOn": true,
+            "textLen": 422,
+            "display": ""
+          },
+          {
+            "id": "app-modal-body",
+            "hasOn": false,
+            "textLen": 422,
+            "display": ""
+          },
+          {
+            "id": "start-modal",
+            "hasOn": false,
+            "textLen": 2893,
+            "display": ""
+          },
+          {
+            "id": "start-modal-body",
+            "hasOn": false,
+            "textLen": 2893,
+            "display": ""
+          }
+        ],
+        "idsSample": [
+          "app-modal",
+          "app-modal-body",
+          "start-modal",
+          "start-modal-body"
+        ],
+        "openBpTry": "ok",
+        "openBpState": {
+          "onModals": [],
+          "hasRenderBP": true,
+          "bodySnippet": "WOLF\n重庆狼队\n教练生涯 · 2026 春季赛\n2333\n资金\n504\n总战力\n第1天\n距发薪6天\n272/242万\n周薪/帽\n15万/天\n社区网吧\nZwy\n教练 +9%\n存档\n管理\n音效 开\n重开\n俱乐部\n阵容\n转会\n训练\n联赛\n二队\n联盟\n荣誉馆\n新手任务（第 1 天）：完成一次训练推进一场比赛\n第 1 赛季主线（2/5）：完成一次训练看过联赛积分榜赛季收官（任意结局）\n推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发\n×\nWOLF\n重庆狼队\n2026 春季赛 · 第1天 · 常规赛·第一轮 · G1组\n改队徽\n2333\n俱乐部资金\n董事会\n信任度 70 · 满意\n信任度\n70\n本赛季目标：赛季末年度积分进前 4 （首年按执教班底档位）\n赛季末按「年度积分排名」结算：达成目标涨信任度；连年不达标会逐步失去董事会的耐心\n执教履历\n现合同 2 年 · 0 冠\n你管竞技：首发/战术/训练/外租练级/K甲；俱乐部管钱与自动引援续约。KPI 是带队成绩——信任度耗尽即解约\n2026 · 离任 成都AG超玩会，转投 重庆狼队\n下一场比赛\n常规赛·第一轮 · G1组 第1/5轮",
+          "prepIds": []
+        },
+        "prepTitle": "常规赛·第一轮 第1/5轮 vs 北京JDG · 第1局（BO5 全局BP）",
+        "bodyHasPrep": true,
+        "bodyHasPrepSnippet": "赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）\nKPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（13万/小局）。赛前可换首发，BP 中也可换替补。\n今日行动\n每天可选择一项\n训练\n选择一名选手专项训练（13万/次，体力-10，属性+1~2）\n前往训练\n休息\n全队体力+55、士气+4，应对密集赛程\n全队休息\n主教练"
+      }
+    },
+    {
+      "step": "play-path",
+      "data": {
+        "playPath": {
+          "steps": [
+            "applyBp:throw:Cannot read properties of undefined (reading 'top')",
+            "bpAutoAll:ok",
+            "bpConfirm:ok",
+            "playGame:throw:Cannot read properties of null (reading 'max')"
+          ],
+          "after": {
+            "hasSeries": false,
+            "mw": null,
+            "ow": null,
+            "logsLen": null,
+            "beforeLogs": null,
+            "beforeMw": null,
+            "historyLen": 1,
+            "onModals": [],
+            "bodySnippet": "WOLF\n重庆狼队\n教练生涯 · 2026 春季赛\n2372\n资金\n533\n总战力\n第1天\n距发薪6天\n272/242万\n周薪/帽\n15万/天\n社区网吧\nZwy\n教练 +9%\n存档\n管理\n音效 开\n重开\n俱乐部\n阵容\n转会\n训练\n联赛\n二队\n联盟\n荣誉馆\n新手任务（第 1 天）：完成一次训练\n第 1 赛季主线（2/5）：完成一次训练看过联赛积分榜赛季收官（任意结局）\n推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发\n×\nWOLF\n重庆狼队\n2026 春季赛 · 第1天 · 常规赛·第一轮 · G1组\n改队徽\n2372\n俱乐部资金\n董事会\n信任度 70 · 满意\n信任度\n70\n本赛季目标：赛季末年度积分进前 4 （首年按执教班底档位）\n赛季末按「年度积分排名」结算：达成目标涨信任度；连年不达标会逐步失去董事会的耐心\n执教履历\n现合同 2 年 · 0 冠\n你管竞技：首发/战术/训"
+          }
+        },
+        "toasts": []
+      }
+    },
+    {
+      "step": "player-edge",
+      "data": {
+        "playerEdge": {
+          "meName": "测试边路",
+          "meAge": 19,
+          "starter": false,
+          "outcome": {
+            "gain": 0,
+            "form": 43,
+            "peak": 81,
+            "note": "低迷"
+          },
+          "notes": [
+            {
+              "ok": true,
+              "gain": 0,
+              "note": "低迷"
+            },
+            {
+              "ok": true,
+              "gain": 0,
+              "note": "低迷"
+            },
+            {
+              "ok": true,
+              "gain": 0,
+              "note": "低迷"
+            }
+          ],
+          "invalidCreate": "POS[_pcPos] undefined → createPlayerCareer would throw at POS[_pcPos][0]",
+          "posKeys": [
+            "top",
+            "jg",
+            "mid",
+            "ad",
+            "sup"
+          ],
+          "posBtnIds": [
+            "pc-pos-top",
+            "pc-pos-jg",
+            "pc-pos-mid",
+            "pc-pos-ad",
+            "pc-pos-sup"
+          ],
+          "careerHasTransferBtn": true,
+          "careerHasLoanBtn": true,
+          "careerHasKjiaBtn": true,
+          "benchSetup": {
+            "hasBenchPanel": true,
+            "loanBtn": {
+              "text": "租借离队（21天）",
+              "onclick": "playerRequestLoanOut(S)",
+              "disabled": false
+            },
+            "kjiaBtn": {
+              "text": "下放 K甲（30天练级）",
+              "onclick": "playerRequestKjia(S)",
+              "disabled": false
+            },
+            "allExitBtns": [
+              {
+                "text": "租借离队（21天）",
+                "onclick": "playerRequestLoanOut(S)",
+                "disabled": false
+              },
+              {
+                "text": "下放 K甲（30天练级）",
+                "onclick": "playerRequestKjia(S)",
+                "disabled": false
+              },
+              {
+                "text": "📣 申请转会（经纪人寻找下家）",
+                "onclick": "playerRequestTransfer(S)",
+                "disabled": false
+              }
+            ]
+          }
+        },
+        "toasts": []
+      }
+    },
+    {
+      "step": "player-pages-final",
+      "data": {
+        "pages": {
+          "career": {
+            "currentPage": "career",
+            "textLen": 980,
+            "buttonCount": 21,
+            "sampleBtns": [
+              "更衣室走一遭",
+              "打完一场",
+              "更衣室互动",
+              "关注身价/目标",
+              "打完整赛季",
+              "×",
+              "练对线",
+              "练运营"
+            ]
+          },
+          "club": {
+            "currentPage": "club",
+            "textLen": 565,
+            "buttonCount": 12,
+            "sampleBtns": [
+              "更衣室走一遭",
+              "打完一场",
+              "更衣室互动",
+              "关注身价/目标",
+              "打完整赛季",
+              "×",
+              "出战比赛 · 教练指挥（自动模拟 BO5）",
+              "全部"
+            ]
+          },
+          "league": {
+            "currentPage": "league",
+            "textLen": 1062,
+            "buttonCount": 1,
+            "sampleBtns": [
+              "×"
+            ]
+          },
+          "kjia": {
+            "currentPage": "kjia",
+            "textLen": 2003,
+            "buttonCount": 11,
+            "sampleBtns": [
+              "×",
+              "选手档案",
+              "↑ 提拔一线队",
+              "选手档案",
+              "↑ 提拔一线队",
+              "选手档案",
+              "↑ 提拔一线队",
+              "选手档案"
+            ]
+          },
+          "union": {
+            "currentPage": "union",
+            "textLen": 1600,
+            "buttonCount": 6,
+            "sampleBtns": [
+              "×",
+              "历代联盟 →",
+              "总值榜",
+              "身价榜",
+              "人气榜",
+              "新星榜 U21"
+            ]
+          },
+          "hall": {
+            "currentPage": "hall",
+            "textLen": 355,
+            "buttonCount": 3,
+            "sampleBtns": [
+              "×",
+              "生成战绩分享图",
+              "选手生涯卡"
+            ]
+          }
+        },
+        "illegal": {
+          "market": {
+            "currentPage": "club",
+            "toasts": [
+              "当前身份没有「转会 · 买卖选手」页，已回到俱乐部 · 比赛主场"
+            ]
+          },
+          "lineup": {
+            "currentPage": "club",
+            "toasts": [
+              "当前身份没有「阵容 · 管理选手」页，已回到俱乐部 · 比赛主场"
+            ]
+          },
+          "biz": {
+            "currentPage": "club",
+            "toasts": [
+              "当前身份没有「经营 · 钱袋子」页，已回到俱乐部 · 比赛主场"
+            ]
+          },
+          "train": {
+            "currentPage": "club",
+            "toasts": [
+              "当前身份没有「训练 · 变强」页，已回到俱乐部 · 比赛主场"
+            ]
+          }
+        },
+        "navVisible": [
+          "career",
+          "club",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ]
+      }
+    },
+    {
+      "step": "poach-natural",
+      "data": {
+        "poach": {
+          "teamBefore": "成都AG超玩会",
+          "offer": {
+            "team": "北京WB"
+          },
+          "r": "ok",
+          "teamAfter": "北京WB",
+          "moved": true,
+          "hasUi": true,
+          "dealLog": [
+            {
+              "year": 2026,
+              "note": "离任 成都AG超玩会，转投 北京WB"
+            }
+          ],
+          "coachStill": "Zwy",
+          "toasts": []
+        },
+        "toasts": []
+      }
+    },
+    {
+      "step": "coach-train-rest",
+      "data": {
+        "trainTextHead": "变强在本页：专项训练/青训营/位置改造，花钱要精打细算\n×\n选手训练\n每天限1次 · 属性13万 / 英雄特训25万\n选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）\n全部\n对抗路\n打野\n中路\n发育路\n游走\n总值\n身价\n年轻\n士气\n暖\n野\n暖阳\n野\n总值 92 · 打野 · WB\n黄金期 · 20岁\n合同2年\n出战 镜 · 池 绝活1/熟练20\n代言 15万/周 · 人气 51\n镜之舞 · 运营属性额外+12%\n对线\n89\n运营\n94\n团战\n93\n心态\n89\n战力 10",
+        "trainHasRest": false,
+        "trainBtnsSample": [
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'jg2','lane')",
+            "disabled": false
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'jg2','farm')",
+            "disabled": false
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'jg2','team')",
+            "disabled": false
+          },
+          {
+            "text": "心态+1~2",
+            "onclick": "doTrain(S,'jg2','mind')",
+            "disabled": false
+          },
+          {
+            "text": "英雄特训 21/80",
+            "onclick": "doHeroTrain(S,'jg2')",
+            "disabled": false
+          },
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'top5','lane')",
+            "disabled": false
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'top5','farm')",
+            "disabled": false
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'top5','team')",
+            "disabled": false
+          }
+        ],
+        "clubHasRest": true,
+        "clubHasStartMatch": true,
+        "clubHasStartBtnText": [
+          "赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）"
+        ]
+      }
+    },
+    {
+      "step": "coach-market-copy",
+      "data": {
+        "head": "买人卖人：赛前转会期自由组队，赛季中留意报价与自由市场。教练模式=应急租借与引援申请\n×\n教练工作台 · 应急与引援\n买断挂牌由俱乐部打理\n伤停/集训缺人时可紧急租借；也可向俱乐部提交引援申请（资金与名单允许时自动办理）。不能挂牌出售选手——那是管理层的事。\n应急租借市场\n21 天 · 名额 0/2\n租金约身价 15%，工资由原队承担；非卖品不外借。缺位位置优先推荐。\n小胖 (重庆狼队 · 打野 ",
+        "hasManagerCopy": true,
+        "hasCoachCopy": true,
+        "hasForbiddenSellUI": true
+      }
+    }
+  ],
+  "pageErrors": []
+}

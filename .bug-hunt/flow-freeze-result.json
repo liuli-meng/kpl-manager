@@ -1,0 +1,399 @@
+{
+  "summary": {
+    "p0Count": 19,
+    "p1Count": 1,
+    "infoCount": 14,
+    "p0": [
+      {
+        "id": "B3-ewc-no-btn",
+        "title": "ewc 阶段无任何推进按钮"
+      },
+      {
+        "id": "B3-asiad-no-btn",
+        "title": "asiad 阶段无任何推进按钮"
+      },
+      {
+        "id": "B3-annual-engine-throw",
+        "title": "annual startCup/asiadStep 抛错"
+      },
+      {
+        "id": "B3-cup-null-stuck",
+        "title": "杯赛结构丢失后无恢复入口"
+      },
+      {
+        "id": "B6-empty-started",
+        "title": "空名单仍能 startMatch 建 series"
+      },
+      {
+        "id": "B7-render-throw-minimal",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-no-players",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-v2-old",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-money-old",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-series-stale",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-yearroll-left",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-empty-obj",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-bad-json",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B7-render-throw-weird-phase",
+        "title": "残缺档 renderAll 抛错"
+      },
+      {
+        "id": "B-bound-startCup(null)",
+        "title": "边界调用抛未捕获异常"
+      },
+      {
+        "id": "B-bound-startMatch-S-null",
+        "title": "边界调用抛未捕获异常"
+      },
+      {
+        "id": "B-bound-finishSeries-S-null",
+        "title": "边界调用抛未捕获异常"
+      },
+      {
+        "id": "B-bound-advanceCalendar(null)",
+        "title": "边界调用抛未捕获异常"
+      },
+      {
+        "id": "B-bound-startCard-empty",
+        "title": "边界调用抛未捕获异常"
+      }
+    ],
+    "p1": [
+      {
+        "id": "B6-openBP-throw",
+        "title": "openBP 对伤停阵容抛错"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "B1-normal",
+      "severity": "INFO",
+      "title": "preseason 正常结束",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"normalAction\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"},\"afterEnd\":{\"preseason\":false,\"phase\":\"r1\",\"sched\":5,\"window\":0},\"actionAfter\":{\"type\":\"startMatch\",\"label\":\" 赛前准备 · 调整阵容 / BP 开赛\",\"fn\":\"uiStartMatch\"},\"seriesAfterStart\":true,\"uiEndPreseasonDefined\":\"function\"}"
+    },
+    {
+      "id": "B1-exhaust",
+      "severity": "INFO",
+      "title": "window 耗尽自动开赛",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"preseason\":false,\"phase\":\"r1\",\"window\":0,\"sched\":5}"
+    },
+    {
+      "id": "B2-path",
+      "severity": "INFO",
+      "title": "联赛推进路径",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"steps\":[\"r1 phase=r1 idx=0 series=false card=false po=null\",\"after-r1-match phase=r1 idx=1 series=false card=false po=null\",\"league-end phase=champion idx=5 series=false card=true po={\\\"champ\\\":\\\"推进探针\\\",\\\"final\\\":\\\"推进探针\\\"}\",\"after-adv phase=challenger idx=5 series=false card=true po={\\\"champ\\\":\\\"推进探针\\\",\\\"final\\\":\\\"推进探针\\\"}\"],\"league\":{\"phase\":\"champion\",\"g\":18,\"series\":false,\"champ\":\"推进探针\"},\"r1Action\":{\"type\":\"startMatch\",\"label\":\" 赛前准备 · 调整阵容 / BP 开赛\",\"fn\":\"uiStartMatch\"},\"endPhaseAction\":{\"type\":\"advanceCalendar\",\"label\":\" 前往挑战者杯（32队 · KPL全员）\",\"fn\":\"uiAdvanceCalendar\"},\"afterAdv\":{\"phase\":\"challenger\",\"split\":\"spring\",\"preseason\":false},\"afterAdvAction\":{\"type\":\"startCup\",\"label\":\" 进行挑战者杯\",\"fn\":\"uiStartCup\"},\"advErr\":null}"
+    },
+    {
+      "id": "B3-challenger",
+      "severity": "INFO",
+      "title": "challenger 入口",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"action\":{\"type\":\"startCup\",\"label\":\" 进行挑战者杯\",\"fn\":\"uiStartCup\"},\"hasBtn\":true,\"engineErr\":null,\"after\":{\"phase\":\"challenger\",\"series\":true,\"ch\":{\"champ\":null},\"ewc\":null,\"annual\":null},\"yearRoll\":false}"
+    },
+    {
+      "id": "B3-ewc",
+      "severity": "INFO",
+      "title": "ewc 入口",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"action\":null,\"hasBtn\":false,\"engineErr\":null,\"after\":{\"phase\":\"ewc\",\"series\":false,\"ch\":null,\"ewc\":null,\"annual\":null},\"yearRoll\":false}"
+    },
+    {
+      "id": "B3-ewc-no-btn",
+      "severity": "P0",
+      "title": "ewc 阶段无任何推进按钮",
+      "steps": "S.phase=ewc renderClub + nextAction",
+      "fn": "nextAction/startCup",
+      "how": "nextAction=null 且面板无 uiStartCup/uiAsiadStep，玩家卡死",
+      "evidence": "{\"action\":null,\"hasBtn\":false,\"engineErr\":null,\"after\":{\"phase\":\"ewc\",\"series\":false,\"ch\":null,\"ewc\":null,\"annual\":null},\"yearRoll\":false}"
+    },
+    {
+      "id": "B3-asiad",
+      "severity": "INFO",
+      "title": "asiad 入口",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"action\":null,\"hasBtn\":false,\"engineErr\":null,\"after\":{\"phase\":\"asiad\",\"series\":false,\"ch\":null,\"ewc\":null,\"annual\":null},\"yearRoll\":false}"
+    },
+    {
+      "id": "B3-asiad-no-btn",
+      "severity": "P0",
+      "title": "asiad 阶段无任何推进按钮",
+      "steps": "S.phase=asiad renderClub + nextAction",
+      "fn": "nextAction/startCup",
+      "how": "nextAction=null 且面板无 uiStartCup/uiAsiadStep，玩家卡死",
+      "evidence": "{\"action\":null,\"hasBtn\":false,\"engineErr\":null,\"after\":{\"phase\":\"asiad\",\"series\":false,\"ch\":null,\"ewc\":null,\"annual\":null},\"yearRoll\":false}"
+    },
+    {
+      "id": "B3-annual",
+      "severity": "INFO",
+      "title": "annual 入口",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"action\":{\"type\":\"startCup\",\"label\":\" 进行年度总决赛\",\"fn\":\"uiStartCup\"},\"hasBtn\":true,\"engineErr\":\"Maximum call stack size exceeded\",\"after\":{\"phase\":\"annual\",\"series\":false,\"ch\":null,\"ewc\":null,\"annual\":{\"stage\":\"breakthrough\"}},\"yearRoll\":false}"
+    },
+    {
+      "id": "B3-annual-engine-throw",
+      "severity": "P0",
+      "title": "annual startCup/asiadStep 抛错",
+      "steps": "S.phase=annual 调引擎",
+      "fn": "startCup",
+      "how": "引擎边界调用抛未捕获异常",
+      "evidence": "Maximum call stack size exceeded"
+    },
+    {
+      "id": "B3-yearRoll",
+      "severity": "INFO",
+      "title": "yearRoll 连点安全",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"phaseBefore\":\"annual\",\"seasonBefore\":1,\"after1\":{\"phase\":\"annual\",\"season\":1,\"preseason\":false,\"yearRoll\":false},\"after2\":{\"phase\":\"annual\",\"season\":1,\"preseason\":false,\"yearRoll\":false},\"after3\":{\"phase\":\"annual\",\"season\":1,\"preseason\":false,\"yearRoll\":false},\"e1\":null,\"e2\":null,\"e3\":null}"
+    },
+    {
+      "id": "B3-afterLoad-po",
+      "severity": "INFO",
+      "title": "读档 playoff 决赛已打完",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"action\":{\"type\":\"startPlayoff\",\"label\":\" 季后赛结算 · 推进赛历\",\"fn\":\"startPlayoff\"},\"hasBtn\":true,\"after\":{\"phase\":\"playoff\",\"champ\":null,\"action\":{\"type\":\"startPlayoff\",\"label\":\" 季后赛结算 · 推进赛历\",\"fn\":\"startPlayoff\"}},\"err\":\"Cannot read properties of undefined (reading 'r')\"}"
+    },
+    {
+      "id": "B3-cup-null",
+      "severity": "INFO",
+      "title": "读档 challenger 对象丢失",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"action\":null,\"err\":null,\"after\":{\"phase\":\"challenger\",\"action\":null},\"hasBtn\":false}"
+    },
+    {
+      "id": "B3-cup-null-stuck",
+      "severity": "P0",
+      "title": "杯赛结构丢失后无恢复入口",
+      "steps": "phase=challenger 且 challenger=null",
+      "fn": "nextAction",
+      "how": "无按钮无说明，永久卡死",
+      "evidence": "{\"phase\":\"challenger\",\"action\":null}"
+    },
+    {
+      "id": "B5",
+      "severity": "INFO",
+      "title": "board.fired 软终局 UI",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"action\":null,\"uiGuardType\":\"function\",\"boardLocked\":true,\"toasts\":[\"你已被董事会解约，执教生涯结束\",\"你已被董事会解约，执教生涯结束\",\"你已被董事会解约，执教生涯结束\",\"你已被董事会解约，执教生涯结束\",\"你已被董事会解约，执教生涯结束\"],\"engineStartMatch\":\"ok series=true\",\"htmlHasFired\":true,\"htmlHasReset\":true,\"htmlHasBoardPanel\":true,\"nextActionNull\":true,\"actionBlocked\":true}"
+    },
+    {
+      "id": "B6",
+      "severity": "INFO",
+      "title": "startMatch 拦截说明",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "{\"cases\":[{\"tag\":\"injury-farm\",\"err\":null,\"series\":true,\"toasts\":[],\"noGo\":[],\"hasExplain\":true,\"prepHasBlock\":false,\"lineupHasWhy\":true,\"sampleToast\":[]},{\"tag\":\"natcamp-all\",\"err\":null,\"series\":true,\"toasts\":[],\"noGo\":[\"top\",\"jg\",\"mid\",\"ad\",\"sup\"],\"hasExplain\":true,\"prepHasBlock\":true,\"lineupHasWhy\":true,\"sampleToast\":[]},{\"tag\":\"roster-2\",\"err\":null,\"series\":true,\"toasts\":[],\"noGo\":[\"mid\",\"ad\",\"sup\"],\"hasExplain\":true,\"prepHasBlock\":true,\"lineupHasWhy\":true,\"sampleToast\":[]},{\"tag\":\"lineup-empty\",\"err\":null,\"series\":true,\"toasts\":[],\"noGo\":[],\"hasExplain\":true,\"prepHasBlock\":false,\"lineupHasWhy\":true,\"sampleToast\":[]},{\"tag\":\"roster-0\",\"err\":null,\"series\":true,\"toasts\":[],\"noGo\":[\"top\",\"jg\",\"mid\",\"ad\",\"sup\"],\"hasExplain\":true,\"prepHasBlock\":true,\"lineupHasWhy\":true,\"sampleToast\":[]}],\"o"
+    },
+    {
+      "id": "B6-empty-started",
+      "severity": "P0",
+      "title": "空名单仍能 startMatch 建 series",
+      "steps": "S.players=[] startMatch",
+      "fn": "startMatch",
+      "how": "无阵容直接开赛，后续 BP/结算必炸",
+      "evidence": "{\"tag\":\"roster-0\",\"err\":null,\"series\":true,\"toasts\":[],\"noGo\":[\"top\",\"jg\",\"mid\",\"ad\",\"sup\"],\"hasExplain\":true,\"prepHasBlock\":true,\"lineupHasWhy\":true,\"sampleToast\":[]}"
+    },
+    {
+      "id": "B6-openBP-throw",
+      "severity": "P1",
+      "title": "openBP 对伤停阵容抛错",
+      "steps": "farm 全伤停 openBP",
+      "fn": "openBP",
+      "how": "拦截路径本身抛异常",
+      "evidence": "Cannot read properties of null (reading 'side')"
+    },
+    {
+      "id": "B7",
+      "severity": "INFO",
+      "title": "缺字段旧档 migrate",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "[{\"tag\":\"minimal\",\"saveFn\":\"function\",\"loadFn\":\"function\",\"loadErr\":null,\"S\":null,\"renderErr\":\"Cannot read properties of null (reading 'day')\",\"clubHasContent\":true,\"clubErr\":null,\"action\":null},{\"tag\":\"no-players\",\"saveFn\":\"function\",\"loadFn\":\"function\",\"loadErr\":null,\"S\":null,\"renderErr\":\"Cannot read properties of null (reading 'day')\",\"clubHasContent\":true,\"clubErr\":null,\"action\":null},{\"tag\":\"v2-old\",\"saveFn\":\"function\",\"loadFn\":\"function\",\"loadErr\":null,\"S\":null,\"renderErr\":\"Cannot read properties of null (reading 'day')\",\"clubHasContent\":true,\"clubErr\":null,\"action\":null},{\"tag\":\"money-old\",\"saveFn\":\"function\",\"loadFn\":\"function\",\"loadErr\":null,\"S\":null,\"renderErr\":\"Cannot read properties of null (reading 'day')\",\"clubHasContent\":true,\"clubErr\":null,\"action\":null},{\"tag\":\"series-stal"
+    },
+    {
+      "id": "B7-render-throw-minimal",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "minimal load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-no-players",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "no-players load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-v2-old",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "v2-old load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-money-old",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "money-old load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-series-stale",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "series-stale load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-yearroll-left",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "yearroll-left load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-empty-obj",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "empty-obj load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-bad-json",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "bad-json load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B7-render-throw-weird-phase",
+      "severity": "P0",
+      "title": "残缺档 renderAll 抛错",
+      "steps": "weird-phase load 后 renderAll",
+      "fn": "renderAll/renderClub",
+      "how": "读档成功但 UI 渲染炸",
+      "evidence": "Cannot read properties of null (reading 'day') | S=null"
+    },
+    {
+      "id": "B-boundary",
+      "severity": "INFO",
+      "title": "边界调用结果",
+      "steps": "",
+      "fn": "",
+      "how": "",
+      "evidence": "[{\"tag\":\"nextAction(null)\",\"result\":null,\"err\":null},{\"tag\":\"nextAction({})\",\"result\":null,\"err\":null},{\"tag\":\"startCup(null)\",\"err\":\"Cannot read properties of null (reading 'phase')\",\"stack\":\"TypeError: Cannot read properties of null (reading 'phase') |     at startCup (evalmachine.<anonymous>:6697:7) |     at evalmachine.<anonymous>:63:33\"},{\"tag\":\"startMatch-S-null\",\"err\":\"Cannot read properties of null (reading 'preseason')\",\"stack\":\"TypeError: Cannot read properties of null (reading 'preseason') |     at startMatch (evalmachine.<anonymous>:8995:7) |     at evalmachine.<anonymous>:64:43\"},{\"tag\":\"finishSeries-S-null\",\"err\":\"Cannot read properties of null (reading 'series')\",\"stack\":\"TypeError: Cannot read properties of null (reading 'series') |     at finishSeries (evalmachine.<anonymo"
+    },
+    {
+      "id": "B-bound-startCup(null)",
+      "severity": "P0",
+      "title": "边界调用抛未捕获异常",
+      "steps": "startCup(null)",
+      "fn": "startCup(null)",
+      "how": "边界/空状态调用直接 throw",
+      "evidence": "Cannot read properties of null (reading 'phase') TypeError: Cannot read properties of null (reading 'phase') |     at startCup (evalmachine.<anonymous>:6697:7) |     at evalmachine.<anonymous>:63:33"
+    },
+    {
+      "id": "B-bound-startMatch-S-null",
+      "severity": "P0",
+      "title": "边界调用抛未捕获异常",
+      "steps": "startMatch-S-null",
+      "fn": "startMatch",
+      "how": "边界/空状态调用直接 throw",
+      "evidence": "Cannot read properties of null (reading 'preseason') TypeError: Cannot read properties of null (reading 'preseason') |     at startMatch (evalmachine.<anonymous>:8995:7) |     at evalmachine.<anonymous>:64:43"
+    },
+    {
+      "id": "B-bound-finishSeries-S-null",
+      "severity": "P0",
+      "title": "边界调用抛未捕获异常",
+      "steps": "finishSeries-S-null",
+      "fn": "finishSeries",
+      "how": "边界/空状态调用直接 throw",
+      "evidence": "Cannot read properties of null (reading 'series') TypeError: Cannot read properties of null (reading 'series') |     at finishSeries (evalmachine.<anonymous>:9228:13) |     at evalmachine.<anonymous>:65:38"
+    },
+    {
+      "id": "B-bound-advanceCalendar(null)",
+      "severity": "P0",
+      "title": "边界调用抛未捕获异常",
+      "steps": "advanceCalendar(null)",
+      "fn": "advanceCalendar(null)",
+      "how": "边界/空状态调用直接 throw",
+      "evidence": "Cannot read properties of null (reading 'split') TypeError: Cannot read properties of null (reading 'split') |     at advanceCalendar (evalmachine.<anonymous>:4762:7) |     at evalmachine.<anonymous>:66:40"
+    },
+    {
+      "id": "B-bound-startCard-empty",
+      "severity": "P0",
+      "title": "边界调用抛未捕获异常",
+      "steps": "startCard-empty",
+      "fn": "startCard",
+      "how": "边界/空状态调用直接 throw",
+      "evidence": "Cannot read properties of null (reading 'matches') TypeError: Cannot read properties of null (reading 'matches') |     at playCardNext (evalmachine.<anonymous>:4155:17) |     at startCard (evalmachine.<anonymous>:9361:130)"
+    }
+  ]
+}

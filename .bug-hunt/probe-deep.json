@@ -1,0 +1,4212 @@
+{
+  "desktop:start": {
+    "player": {
+      "kind": "start-modal",
+      "vw": 1280,
+      "vh": 800,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 421,
+          "rgt": 495,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 503,
+          "rgt": 577,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 585,
+          "rgt": 659,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 110,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 667,
+          "rgt": 777,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 785,
+          "rgt": 859,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 172,
+          "h": 46,
+          "t": 730,
+          "b": 776,
+          "l": 554,
+          "rgt": 726,
+          "minH": "0px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 48,
+          "l": 360,
+          "w": 560,
+          "h": 704,
+          "b": 752
+        },
+        "scrollH": 759,
+        "clientH": 702,
+        "overflowY": "auto",
+        "maxH": "704px",
+        "contentOverflowY": 57,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "coach": {
+      "kind": "start-modal",
+      "vw": 1280,
+      "vh": 800,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 421,
+          "rgt": 495,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 503,
+          "rgt": 577,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 585,
+          "rgt": 659,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 110,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 667,
+          "rgt": 777,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 785,
+          "rgt": 859,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 186,
+          "h": 47,
+          "t": 1205,
+          "b": 1252,
+          "l": 547,
+          "rgt": 733,
+          "minH": "0px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": true,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 48,
+          "l": 360,
+          "w": 560,
+          "h": 704,
+          "b": 752
+        },
+        "scrollH": 1223,
+        "clientH": 702,
+        "overflowY": "auto",
+        "maxH": "704px",
+        "contentOverflowY": 521,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "self": {
+      "kind": "start-modal",
+      "vw": 1280,
+      "vh": 800,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 74,
+          "h": 28,
+          "t": 166,
+          "b": 194,
+          "l": 421,
+          "rgt": 495,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 74,
+          "h": 28,
+          "t": 166,
+          "b": 194,
+          "l": 503,
+          "rgt": 577,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 74,
+          "h": 28,
+          "t": 166,
+          "b": 194,
+          "l": 585,
+          "rgt": 659,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 110,
+          "h": 28,
+          "t": 166,
+          "b": 194,
+          "l": 667,
+          "rgt": 777,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 74,
+          "h": 28,
+          "t": 166,
+          "b": 194,
+          "l": 785,
+          "rgt": 859,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 154,
+          "h": 47,
+          "t": 660,
+          "b": 707,
+          "l": 563,
+          "rgt": 717,
+          "minH": "0px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 72,
+          "l": 360,
+          "w": 560,
+          "h": 656,
+          "b": 728
+        },
+        "scrollH": 654,
+        "clientH": 654,
+        "overflowY": "auto",
+        "maxH": "704px",
+        "contentOverflowY": 0,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "club": {
+      "kind": "start-modal",
+      "vw": 1280,
+      "vh": 800,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 421,
+          "rgt": 495,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 503,
+          "rgt": 577,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 585,
+          "rgt": 659,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 110,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 667,
+          "rgt": 777,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 74,
+          "h": 28,
+          "t": 142,
+          "b": 170,
+          "l": 785,
+          "rgt": 859,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 202,
+          "h": 47,
+          "t": 1091,
+          "b": 1138,
+          "l": 539,
+          "rgt": 741,
+          "minH": "0px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": true,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 48,
+          "l": 360,
+          "w": 560,
+          "h": 704,
+          "b": 752
+        },
+        "scrollH": 1109,
+        "clientH": 702,
+        "overflowY": "auto",
+        "maxH": "704px",
+        "contentOverflowY": 407,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "era": {
+      "kind": "start-modal",
+      "vw": 1280,
+      "vh": 800,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 74,
+          "h": 28,
+          "t": 268,
+          "b": 296,
+          "l": 421,
+          "rgt": 495,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 74,
+          "h": 28,
+          "t": 268,
+          "b": 296,
+          "l": 503,
+          "rgt": 577,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 74,
+          "h": 28,
+          "t": 268,
+          "b": 296,
+          "l": 585,
+          "rgt": 659,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 110,
+          "h": 28,
+          "t": 268,
+          "b": 296,
+          "l": 667,
+          "rgt": 777,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 74,
+          "h": 28,
+          "t": 268,
+          "b": 296,
+          "l": 785,
+          "rgt": 859,
+          "minH": "auto",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 234,
+          "h": 47,
+          "t": 559,
+          "b": 606,
+          "l": 523,
+          "rgt": 757,
+          "minH": "0px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "0px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 173,
+          "l": 360,
+          "w": 560,
+          "h": 454,
+          "b": 627
+        },
+        "scrollH": 452,
+        "clientH": 452,
+        "overflowY": "auto",
+        "maxH": "704px",
+        "contentOverflowY": 0,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    }
+  },
+  "desktop:coach-market-cover": {
+    "kind": "coach-market-cover",
+    "vw": 1280,
+    "vh": 800,
+    "items": [
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 973,
+          "t": 420,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'武汉eStarPro','jg3')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg3')\">申请租借</but",
+        "panel": {
+          "sel": "div.match",
+          "t": 411,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 1051,
+          "t": 420,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'武汉eStarPro','jg3')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg3')\">申请租借</but",
+        "panel": {
+          "sel": "div.match",
+          "t": 411,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 973,
+          "t": 472,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','jg5')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg5')\">申请租借</button>\n ",
+        "panel": {
+          "sel": "div.match",
+          "t": 463,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 1051,
+          "t": 472,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','jg5')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg5')\">申请租借</button>\n ",
+        "panel": {
+          "sel": "div.match",
+          "t": 463,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 973,
+          "t": 524,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','mid4')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','mid4')\">申请租借</button>",
+        "panel": {
+          "sel": "div.match",
+          "t": 515,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 1051,
+          "t": 524,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','mid4')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','mid4')\">申请租借</button>",
+        "panel": {
+          "sel": "div.match",
+          "t": 515,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 973,
+          "t": 576,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','sup4')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','sup4')\">申请租借</button>",
+        "panel": {
+          "sel": "div.match",
+          "t": 567,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 1051,
+          "t": 576,
+          "w": 74,
+          "h": 28
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 28
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 46
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 383
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1460
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1652
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','sup4')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','sup4')\">申请租借</button>",
+        "panel": {
+          "sel": "div.match",
+          "t": 567,
+          "h": 46,
+          "ch": 44,
+          "sh": 44,
+          "ov": "visible"
+        }
+      }
+    ]
+  },
+  "desktop:train-chips": {
+    "kind": "train-chips",
+    "vw": 1280,
+    "vh": 800,
+    "items": [
+      {
+        "sel": "button.ph-x",
+        "text": "×",
+        "l": 1128.4,
+        "r": 1142,
+        "w": 13.6,
+        "h": 16.8,
+        "offX": false,
+        "parent": "div.page-hint",
+        "parentOverflow": "visible",
+        "parentScrollW": 1025,
+        "parentClientW": 1025
+      },
+      {
+        "sel": "button.s-chip.on",
+        "text": "全部",
+        "l": 144,
+        "r": 192,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "对抗路",
+        "l": 197,
+        "r": 257,
+        "w": 60,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "打野",
+        "l": 262,
+        "r": 310,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "中路",
+        "l": 315,
+        "r": 363,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "发育路",
+        "l": 368,
+        "r": 428,
+        "w": 60,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "游走",
+        "l": 433,
+        "r": 481,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip.on",
+        "text": "总值",
+        "l": 498,
+        "r": 546,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "身价",
+        "l": 551,
+        "r": 599,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "年轻",
+        "l": 604,
+        "r": 652,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "士气",
+        "l": 657,
+        "r": 705,
+        "w": 48,
+        "h": 28,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 992,
+        "parentClientW": 992
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "选手档案",
+        "l": 160,
+        "r": 370.5,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.pcard.ssr",
+        "parentOverflow": "visible",
+        "parentScrollW": 237,
+        "parentClientW": 237
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "对线+1~2",
+        "l": 160,
+        "r": 370.5,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 211,
+        "parentClientW": 211
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "运营+1~2",
+        "l": 160,
+        "r": 370.5,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 211,
+        "parentClientW": 211
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "团战+1~2",
+        "l": 160,
+        "r": 370.5,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 211,
+        "parentClientW": 211
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "心态+1~2",
+        "l": 160,
+        "r": 370.5,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 211,
+        "parentClientW": 211
+      },
+      {
+        "sel": "button.btn.sm.gold",
+        "text": "英雄特训 15/80",
+        "l": 160,
+        "r": 370.5,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 211,
+        "parentClientW": 211
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "选手档案",
+        "l": 410.5,
+        "r": 621,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.pcard.ssr",
+        "parentOverflow": "visible",
+        "parentScrollW": 237,
+        "parentClientW": 237
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "对线+1~2",
+        "l": 410.5,
+        "r": 621,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 211,
+        "parentClientW": 211
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "运营+1~2",
+        "l": 410.5,
+        "r": 621,
+        "w": 210.5,
+        "h": 28,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 211,
+        "parentClientW": 211
+      }
+    ]
+  },
+  "desktop:league-tname": {
+    "kind": "tname-ellipsis",
+    "vw": 1280,
+    "vh": 800,
+    "items": []
+  },
+  "desktop:league-header": {
+    "kind": "header",
+    "vw": 1280,
+    "vh": 800,
+    "items": [],
+    "header": {
+      "w": 1028,
+      "h": 76,
+      "scrollW": 1026,
+      "clientW": 1026,
+      "overflowX": 0,
+      "pos": "sticky",
+      "top": "8px",
+      "z": "50",
+      "overflowsRight": false
+    }
+  },
+  "desktop:league-nav": {
+    "kind": "nav-cover",
+    "vw": 1280,
+    "vh": 800,
+    "items": [],
+    "nav": {
+      "pos": "static",
+      "t": 102,
+      "h": 45,
+      "b": 147,
+      "vh": 800,
+      "buttons": [
+        {
+          "p": "club",
+          "text": "俱乐部",
+          "w": 125,
+          "h": 35,
+          "l": 131,
+          "r": 256
+        },
+        {
+          "p": "lineup",
+          "text": "阵容",
+          "w": 125,
+          "h": 35,
+          "l": 259,
+          "r": 383
+        },
+        {
+          "p": "market",
+          "text": "转会",
+          "w": 125,
+          "h": 35,
+          "l": 386,
+          "r": 511
+        },
+        {
+          "p": "train",
+          "text": "训练",
+          "w": 125,
+          "h": 35,
+          "l": 514,
+          "r": 639
+        },
+        {
+          "p": "league",
+          "text": "联赛",
+          "w": 125,
+          "h": 35,
+          "l": 642,
+          "r": 766
+        },
+        {
+          "p": "kjia",
+          "text": "二队",
+          "w": 125,
+          "h": 35,
+          "l": 769,
+          "r": 894
+        },
+        {
+          "p": "union",
+          "text": "联盟",
+          "w": 125,
+          "h": 35,
+          "l": 897,
+          "r": 1021
+        },
+        {
+          "p": "hall",
+          "text": "荣誉馆",
+          "w": 125,
+          "h": 35,
+          "l": 1024,
+          "r": 1149
+        }
+      ]
+    },
+    "padding": {
+      "bodyPB": "20px",
+      "wrapPB": "20px",
+      "footerPB": "10px"
+    },
+    "coveredByNav": []
+  },
+  "desktop:mgr-market-tname": {
+    "kind": "tname-ellipsis",
+    "vw": 1280,
+    "vh": 800,
+    "items": []
+  },
+  "desktop:mgr-club-header": {
+    "kind": "header",
+    "vw": 1280,
+    "vh": 800,
+    "items": [],
+    "header": {
+      "w": 1028,
+      "h": 76,
+      "scrollW": 1026,
+      "clientW": 1026,
+      "overflowX": 0,
+      "pos": "sticky",
+      "top": "8px",
+      "z": "50",
+      "overflowsRight": false
+    }
+  },
+  "desktop:union-nav": {
+    "kind": "nav-cover",
+    "vw": 1280,
+    "vh": 800,
+    "items": [],
+    "nav": {
+      "pos": "static",
+      "t": 102,
+      "h": 45,
+      "b": 147,
+      "vh": 800,
+      "buttons": [
+        {
+          "p": "career",
+          "text": "生涯",
+          "w": 99,
+          "h": 35,
+          "l": 131,
+          "r": 230
+        },
+        {
+          "p": "club",
+          "text": "俱乐部",
+          "w": 99,
+          "h": 35,
+          "l": 233,
+          "r": 332
+        },
+        {
+          "p": "lineup",
+          "text": "阵容",
+          "w": 99,
+          "h": 35,
+          "l": 335,
+          "r": 434
+        },
+        {
+          "p": "market",
+          "text": "转会",
+          "w": 99,
+          "h": 35,
+          "l": 437,
+          "r": 536
+        },
+        {
+          "p": "train",
+          "text": "训练",
+          "w": 99,
+          "h": 35,
+          "l": 539,
+          "r": 639
+        },
+        {
+          "p": "league",
+          "text": "联赛",
+          "w": 99,
+          "h": 35,
+          "l": 642,
+          "r": 741
+        },
+        {
+          "p": "kjia",
+          "text": "二队",
+          "w": 99,
+          "h": 35,
+          "l": 744,
+          "r": 843
+        },
+        {
+          "p": "union",
+          "text": "联盟",
+          "w": 99,
+          "h": 35,
+          "l": 846,
+          "r": 945
+        },
+        {
+          "p": "hall",
+          "text": "荣誉馆",
+          "w": 99,
+          "h": 35,
+          "l": 948,
+          "r": 1047
+        },
+        {
+          "p": "biz",
+          "text": "经营",
+          "w": 99,
+          "h": 35,
+          "l": 1050,
+          "r": 1149
+        }
+      ]
+    },
+    "padding": {
+      "bodyPB": "20px",
+      "wrapPB": "20px",
+      "footerPB": "10px"
+    },
+    "coveredByNav": []
+  },
+  "desktop:toast": {
+    "text": "这是一条用于视觉排查的 toast 提示，字数故意写得比较长以观察是否截断或溢出视口",
+    "l": 375,
+    "r": 905,
+    "w": 530,
+    "h": 41,
+    "vw": 1280,
+    "overflows": false,
+    "scrollW": 527,
+    "clientW": 527,
+    "clipped": false,
+    "cls": "toast on"
+  },
+  "mobile:start": {
+    "player": {
+      "kind": "start-modal",
+      "vw": 390,
+      "vh": 844,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 25,
+          "rgt": 95,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 103,
+          "rgt": 173,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 181,
+          "rgt": 251,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 106,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 259,
+          "rgt": 365,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 70,
+          "h": 38,
+          "t": 178,
+          "b": 216,
+          "l": 160,
+          "rgt": 230,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 172,
+          "h": 46,
+          "t": 1091,
+          "b": 1137,
+          "l": 109,
+          "rgt": 281,
+          "minH": "42px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": true,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 45,
+          "l": 6,
+          "w": 378,
+          "h": 793,
+          "b": 838
+        },
+        "scrollH": 1119,
+        "clientH": 791,
+        "overflowY": "auto",
+        "maxH": "793.36px",
+        "contentOverflowY": 328,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "coach": {
+      "kind": "start-modal",
+      "vw": 390,
+      "vh": 844,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 25,
+          "rgt": 95,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 103,
+          "rgt": 173,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 181,
+          "rgt": 251,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 106,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 259,
+          "rgt": 365,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 70,
+          "h": 38,
+          "t": 178,
+          "b": 216,
+          "l": 160,
+          "rgt": 230,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 186,
+          "h": 47,
+          "t": 1725,
+          "b": 1772,
+          "l": 102,
+          "rgt": 288,
+          "minH": "42px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": true,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 45,
+          "l": 6,
+          "w": 378,
+          "h": 793,
+          "b": 838
+        },
+        "scrollH": 1742,
+        "clientH": 791,
+        "overflowY": "auto",
+        "maxH": "793.36px",
+        "contentOverflowY": 951,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "self": {
+      "kind": "start-modal",
+      "vw": 390,
+      "vh": 844,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 25,
+          "rgt": 95,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 103,
+          "rgt": 173,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 181,
+          "rgt": 251,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 106,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 259,
+          "rgt": 365,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 70,
+          "h": 38,
+          "t": 178,
+          "b": 216,
+          "l": 160,
+          "rgt": 230,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 352,
+          "h": 47,
+          "t": 1175,
+          "b": 1222,
+          "l": 19,
+          "rgt": 371,
+          "minH": "42px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": true,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 45,
+          "l": 6,
+          "w": 378,
+          "h": 793,
+          "b": 838
+        },
+        "scrollH": 1192,
+        "clientH": 791,
+        "overflowY": "auto",
+        "maxH": "793.36px",
+        "contentOverflowY": 401,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "club": {
+      "kind": "start-modal",
+      "vw": 390,
+      "vh": 844,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 25,
+          "rgt": 95,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 103,
+          "rgt": 173,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 70,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 181,
+          "rgt": 251,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 106,
+          "h": 38,
+          "t": 132,
+          "b": 170,
+          "l": 259,
+          "rgt": 365,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 70,
+          "h": 38,
+          "t": 178,
+          "b": 216,
+          "l": 160,
+          "rgt": 230,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 352,
+          "h": 47,
+          "t": 1601,
+          "b": 1648,
+          "l": 19,
+          "rgt": 371,
+          "minH": "42px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": true,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 45,
+          "l": 6,
+          "w": 378,
+          "h": 793,
+          "b": 838
+        },
+        "scrollH": 1618,
+        "clientH": 791,
+        "overflowY": "auto",
+        "maxH": "793.36px",
+        "contentOverflowY": 827,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    },
+    "era": {
+      "kind": "start-modal",
+      "vw": 390,
+      "vh": 844,
+      "items": [
+        {
+          "sel": "#tab-player",
+          "text": "选手生涯",
+          "w": 70,
+          "h": 38,
+          "t": 342,
+          "b": 380,
+          "l": 25,
+          "rgt": 95,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-coach",
+          "text": "教练生涯",
+          "w": 70,
+          "h": 38,
+          "t": 342,
+          "b": 380,
+          "l": 103,
+          "rgt": 173,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-self",
+          "text": "经理模式",
+          "w": 70,
+          "h": 38,
+          "t": 342,
+          "b": 380,
+          "l": 181,
+          "rgt": 251,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-club",
+          "text": "执教现役俱乐部",
+          "w": 106,
+          "h": 38,
+          "t": 342,
+          "b": 380,
+          "l": 259,
+          "rgt": 365,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#tab-era",
+          "text": "历代联盟",
+          "w": 70,
+          "h": 38,
+          "t": 388,
+          "b": 426,
+          "l": 160,
+          "rgt": 230,
+          "minH": "38px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "#coach-apply-btn",
+          "text": "开始执教生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#club-apply-btn",
+          "text": "执教所选俱乐部",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "#era-apply-btn",
+          "text": "执教所选时代俱乐部",
+          "w": 234,
+          "h": 47,
+          "t": 774,
+          "b": 821,
+          "l": 78,
+          "rgt": 312,
+          "minH": "42px",
+          "visible": true,
+          "tooSmall": false,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": true
+        },
+        {
+          "sel": "button[onclick=\"createTeam()\"]",
+          "text": "创建战队",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        },
+        {
+          "sel": "button[onclick=\"createPlayerCareer()\"]",
+          "text": "开启选手生涯",
+          "w": 0,
+          "h": 0,
+          "t": 0,
+          "b": 0,
+          "l": 0,
+          "rgt": 0,
+          "minH": "42px",
+          "visible": false,
+          "tooSmall": true,
+          "offBottom": false,
+          "offRight": false,
+          "disabled": false
+        }
+      ],
+      "modal": {
+        "on": true,
+        "bodyRect": {
+          "t": 255,
+          "l": 6,
+          "w": 378,
+          "h": 583,
+          "b": 838
+        },
+        "scrollH": 581,
+        "clientH": 581,
+        "overflowY": "auto",
+        "maxH": "793.36px",
+        "contentOverflowY": 0,
+        "overflowsViewportBottom": false,
+        "overflowsViewportRight": false
+      }
+    }
+  },
+  "mobile:coach-market-cover": {
+    "kind": "coach-market-cover",
+    "vw": 390,
+    "vh": 844,
+    "items": [
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 212,
+          "t": 554,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','jg5')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg5')\">申请租借</button>\n ",
+        "panel": {
+          "sel": "div.match",
+          "t": 545,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 286,
+          "t": 554,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'重庆狼队','jg5')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg5')\">申请租借</button>\n ",
+        "panel": {
+          "sel": "div.match",
+          "t": 545,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 212,
+          "t": 616,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'武汉eStarPro','jg3')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg3')\">申请租借</but",
+        "panel": {
+          "sel": "div.match",
+          "t": 607,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 286,
+          "t": 616,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'武汉eStarPro','jg3')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg3')\">申请租借</but",
+        "panel": {
+          "sel": "div.match",
+          "t": 607,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 212,
+          "t": 678,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'武汉eStarPro','sup2')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','sup2')\">申请租借</b",
+        "panel": {
+          "sel": "div.match",
+          "t": 669,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 286,
+          "t": 678,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'武汉eStarPro','sup2')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','sup2')\">申请租借</b",
+        "panel": {
+          "sel": "div.match",
+          "t": 669,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "立即租借",
+        "sel": "button.btn.sm.primary",
+        "rect": {
+          "l": 212,
+          "t": 740,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm.primary",
+          "text": "立即租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'南京Hero久竞','jg6')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg6')\">申请租借</butto",
+        "panel": {
+          "sel": "div.match",
+          "t": 731,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      },
+      {
+        "btn": "申请租借",
+        "sel": "button.btn.sm",
+        "rect": {
+          "l": 286,
+          "t": 740,
+          "w": 70,
+          "h": 38
+        },
+        "hit": {
+          "sel": "button.btn.sm",
+          "text": "申请租借",
+          "same": true
+        },
+        "chain": [
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 38
+          },
+          {
+            "sel": "div.match",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 56
+          },
+          {
+            "sel": "div",
+            "pos": "static",
+            "z": "auto",
+            "ov": "auto",
+            "h": 280
+          },
+          {
+            "sel": "div.panel",
+            "pos": "relative",
+            "z": "auto",
+            "ov": "visible",
+            "h": 395
+          },
+          {
+            "sel": "section#page-market.page.on",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 1872
+          },
+          {
+            "sel": "div.wrap",
+            "pos": "static",
+            "z": "auto",
+            "ov": "visible",
+            "h": 2125
+          }
+        ],
+        "parentHtml": "<div style=\"display:flex;gap:4px\">\n   <button class=\"btn sm primary\" onclick=\"loanPlayer(S,'南京Hero久竞','jg6')\">立即租借</button>\n   <button class=\"btn sm\" onclick=\"coachRequest(S,'loan','jg6')\">申请租借</butto",
+        "panel": {
+          "sel": "div.match",
+          "t": 731,
+          "h": 56,
+          "ch": 54,
+          "sh": 54,
+          "ov": "visible"
+        }
+      }
+    ]
+  },
+  "mobile:train-chips": {
+    "kind": "train-chips",
+    "vw": 390,
+    "vh": 844,
+    "items": [
+      {
+        "sel": "button.ph-x",
+        "text": "×",
+        "l": 354.4,
+        "r": 368,
+        "w": 13.6,
+        "h": 16.8,
+        "offX": false,
+        "parent": "div.page-hint",
+        "parentOverflow": "visible",
+        "parentScrollW": 367,
+        "parentClientW": 367
+      },
+      {
+        "sel": "button.s-chip.on",
+        "text": "全部",
+        "l": 23,
+        "r": 76,
+        "w": 53,
+        "h": 38,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "对抗路",
+        "l": 81,
+        "r": 146.5,
+        "w": 65.5,
+        "h": 38,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "打野",
+        "l": 151.5,
+        "r": 204.5,
+        "w": 53,
+        "h": 38,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "中路",
+        "l": 209.5,
+        "r": 262.5,
+        "w": 53,
+        "h": 38,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "发育路",
+        "l": 267.5,
+        "r": 333,
+        "w": 65.5,
+        "h": 38,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "游走",
+        "l": 338,
+        "r": 391,
+        "w": 53,
+        "h": 38,
+        "offX": false,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip.on",
+        "text": "总值",
+        "l": 408,
+        "r": 461,
+        "w": 53,
+        "h": 38,
+        "offX": true,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "身价",
+        "l": 466,
+        "r": 519,
+        "w": 53,
+        "h": 38,
+        "offX": true,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "年轻",
+        "l": 524,
+        "r": 577,
+        "w": 53,
+        "h": 38,
+        "offX": true,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.s-chip",
+        "text": "士气",
+        "l": 582,
+        "r": 635,
+        "w": 53,
+        "h": 38,
+        "offX": true,
+        "parent": "div.sort-row",
+        "parentOverflow": "auto",
+        "parentScrollW": 612,
+        "parentClientW": 344
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "选手档案",
+        "l": 36,
+        "r": 180,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.pcard.ssr",
+        "parentOverflow": "visible",
+        "parentScrollW": 164,
+        "parentClientW": 164
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "对线+1~2",
+        "l": 36,
+        "r": 180,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 144,
+        "parentClientW": 144
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "运营+1~2",
+        "l": 36,
+        "r": 180,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 144,
+        "parentClientW": 144
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "团战+1~2",
+        "l": 36,
+        "r": 180,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 144,
+        "parentClientW": 144
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "心态+1~2",
+        "l": 36,
+        "r": 180,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 144,
+        "parentClientW": 144
+      },
+      {
+        "sel": "button.btn.sm.gold",
+        "text": "英雄特训 15/80",
+        "l": 36,
+        "r": 180,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 144,
+        "parentClientW": 144
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "选手档案",
+        "l": 212,
+        "r": 356,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.pcard.ssr",
+        "parentOverflow": "visible",
+        "parentScrollW": 164,
+        "parentClientW": 164
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "对线+1~2",
+        "l": 212,
+        "r": 356,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 144,
+        "parentClientW": 144
+      },
+      {
+        "sel": "button.btn.sm",
+        "text": "运营+1~2",
+        "l": 212,
+        "r": 356,
+        "w": 144,
+        "h": 38,
+        "offX": false,
+        "parent": "div.g2",
+        "parentOverflow": "visible",
+        "parentScrollW": 144,
+        "parentClientW": 144
+      }
+    ]
+  },
+  "mobile:league-tname": {
+    "kind": "tname-ellipsis",
+    "vw": 390,
+    "vh": 844,
+    "items": [
+      {
+        "sel": "div.tname",
+        "text": "eStar 武汉eStarPro",
+        "dx": 14,
+        "w": 86,
+        "parent": "div.vs",
+        "parentW": 133,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "div.tname",
+        "text": "HERO 南京Hero久竞",
+        "dx": 17,
+        "w": 87,
+        "parent": "div.vs",
+        "parentW": 133,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      }
+    ]
+  },
+  "mobile:league-header": {
+    "kind": "header",
+    "vw": 390,
+    "vh": 844,
+    "items": [],
+    "header": {
+      "w": 370,
+      "h": 218,
+      "scrollW": 370,
+      "clientW": 370,
+      "overflowX": 0,
+      "pos": "sticky",
+      "top": "0px",
+      "z": "50",
+      "overflowsRight": false
+    }
+  },
+  "mobile:league-nav": {
+    "kind": "nav-cover",
+    "vw": 390,
+    "vh": 844,
+    "items": [],
+    "nav": {
+      "pos": "fixed",
+      "t": 787,
+      "h": 57,
+      "b": 844,
+      "vh": 844,
+      "buttons": [
+        {
+          "p": "club",
+          "text": "俱乐部",
+          "w": 54,
+          "h": 52,
+          "l": 4,
+          "r": 58
+        },
+        {
+          "p": "lineup",
+          "text": "阵容",
+          "w": 42,
+          "h": 52,
+          "l": 61,
+          "r": 103
+        },
+        {
+          "p": "market",
+          "text": "转会",
+          "w": 42,
+          "h": 52,
+          "l": 106,
+          "r": 148
+        },
+        {
+          "p": "train",
+          "text": "训练",
+          "w": 42,
+          "h": 52,
+          "l": 151,
+          "r": 194
+        },
+        {
+          "p": "league",
+          "text": "联赛",
+          "w": 42,
+          "h": 52,
+          "l": 197,
+          "r": 239
+        },
+        {
+          "p": "kjia",
+          "text": "二队",
+          "w": 42,
+          "h": 52,
+          "l": 242,
+          "r": 284
+        },
+        {
+          "p": "union",
+          "text": "联盟",
+          "w": 42,
+          "h": 52,
+          "l": 287,
+          "r": 329
+        },
+        {
+          "p": "hall",
+          "text": "荣誉馆",
+          "w": 54,
+          "h": 52,
+          "l": 332,
+          "r": 386
+        }
+      ]
+    },
+    "padding": {
+      "bodyPB": "76px",
+      "wrapPB": "16px",
+      "footerPB": "80px"
+    },
+    "coveredByNav": []
+  },
+  "mobile:mgr-market-tname": {
+    "kind": "tname-ellipsis",
+    "vw": 390,
+    "vh": 844,
+    "items": [
+      {
+        "sel": "span.tname",
+        "text": "钟意 (打野 · 成都AG超玩会 · 总值92 · 20岁)",
+        "dx": 71,
+        "w": 128,
+        "parent": "div.vs",
+        "parentW": 196,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "一诺 (发育路 · 成都AG超玩会 · 总值92 · 18岁)",
+        "dx": 79,
+        "w": 130,
+        "parent": "div.vs",
+        "parentW": 196,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "清融 (中路 · 武汉eStarPro · 总值92 · 21岁)",
+        "dx": 67,
+        "w": 128,
+        "parent": "div.vs",
+        "parentW": 197,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "子阳 (游走 · 武汉eStarPro · 总值92 · 21岁)",
+        "dx": 20,
+        "w": 175,
+        "parent": "div.vs",
+        "parentW": 212,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "暖阳 (打野 · 北京WB · 总值92 · 20岁)",
+        "dx": 45,
+        "w": 126,
+        "parent": "div.vs",
+        "parentW": 203,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "fly (对抗路 · 济南RW侠 · 总值92 · 25岁)",
+        "dx": 57,
+        "w": 124,
+        "parent": "div.vs",
+        "parentW": 196,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "妖刀 (发育路 · 重庆狼队 · 总值91 · 19岁)",
+        "dx": 60,
+        "w": 125,
+        "parent": "div.vs",
+        "parentW": 196,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "花海 (打野 · 武汉eStarPro · 总值91 · 19岁)",
+        "dx": 20,
+        "w": 175,
+        "parent": "div.vs",
+        "parentW": 212,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "九尾 (中路 · 广州TTG · 总值91 · 21岁)",
+        "dx": 46,
+        "w": 127,
+        "parent": "div.vs",
+        "parentW": 203,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "梦泪 (打野 · 济南RW侠 · 总值91 · 18岁)",
+        "dx": 7,
+        "w": 174,
+        "parent": "div.vs",
+        "parentW": 213,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "长生 (中路 · 成都AG超玩会 · 总值90 · 18岁)",
+        "dx": 24,
+        "w": 175,
+        "parent": "div.vs",
+        "parentW": 212,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "大帅 (游走 · 成都AG超玩会 · 总值90 · 21岁)",
+        "dx": 24,
+        "w": 175,
+        "parent": "div.vs",
+        "parentW": 212,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "向鱼 (中路 · 重庆狼队 · 总值90 · 21岁)",
+        "dx": 3,
+        "w": 172,
+        "parent": "div.vs",
+        "parentW": 211,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "帆帆 (游走 · 重庆狼队 · 总值90 · 19岁)",
+        "dx": 3,
+        "w": 172,
+        "parent": "div.vs",
+        "parentW": 211,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "花海 (武汉eStarPro · 打野 · 总值92 · 19岁)",
+        "dx": 15,
+        "w": 180,
+        "parent": "div.vs",
+        "parentW": 180,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "子阳 (武汉eStarPro · 游走 · 总值91 · 22岁)",
+        "dx": 15,
+        "w": 180,
+        "parent": "div.vs",
+        "parentW": 180,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "无畏 (南京Hero久竞 · 打野 · 总值91 · 18岁)",
+        "dx": 18,
+        "w": 180,
+        "parent": "div.vs",
+        "parentW": 180,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "长生 (成都AG超玩会 · 中路 · 总值90 · 21岁)",
+        "dx": 19,
+        "w": 180,
+        "parent": "div.vs",
+        "parentW": 180,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "大帅 (成都AG超玩会 · 游走 · 总值90 · 21岁)",
+        "dx": 19,
+        "w": 180,
+        "parent": "div.vs",
+        "parentW": 180,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "易峥 (武汉eStarPro · 发育路 · 总值90 · 20岁)",
+        "dx": 25,
+        "w": 180,
+        "parent": "div.vs",
+        "parentW": 180,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      },
+      {
+        "sel": "span.tname",
+        "text": "凌隐 (北京JDG · 对抗路 · 总值90 · 20岁)",
+        "dx": 4,
+        "w": 180,
+        "parent": "div.vs",
+        "parentW": 180,
+        "to": "ellipsis",
+        "fontSize": "13px"
+      }
+    ]
+  },
+  "mobile:mgr-club-header": {
+    "kind": "header",
+    "vw": 390,
+    "vh": 844,
+    "items": [],
+    "header": {
+      "w": 370,
+      "h": 218,
+      "scrollW": 370,
+      "clientW": 370,
+      "overflowX": 0,
+      "pos": "sticky",
+      "top": "0px",
+      "z": "50",
+      "overflowsRight": false
+    }
+  },
+  "mobile:union-nav": {
+    "kind": "nav-cover",
+    "vw": 390,
+    "vh": 844,
+    "items": [],
+    "nav": {
+      "pos": "fixed",
+      "t": 787,
+      "h": 57,
+      "b": 844,
+      "vh": 844,
+      "buttons": [
+        {
+          "p": "career",
+          "text": "生涯",
+          "w": 33,
+          "h": 52,
+          "l": 4,
+          "r": 37
+        },
+        {
+          "p": "club",
+          "text": "俱乐部",
+          "w": 45,
+          "h": 52,
+          "l": 40,
+          "r": 85
+        },
+        {
+          "p": "lineup",
+          "text": "阵容",
+          "w": 33,
+          "h": 52,
+          "l": 88,
+          "r": 121
+        },
+        {
+          "p": "market",
+          "text": "转会",
+          "w": 33,
+          "h": 52,
+          "l": 124,
+          "r": 157
+        },
+        {
+          "p": "train",
+          "text": "训练",
+          "w": 33,
+          "h": 52,
+          "l": 160,
+          "r": 193
+        },
+        {
+          "p": "league",
+          "text": "联赛",
+          "w": 33,
+          "h": 52,
+          "l": 196,
+          "r": 230
+        },
+        {
+          "p": "kjia",
+          "text": "二队",
+          "w": 33,
+          "h": 52,
+          "l": 233,
+          "r": 266
+        },
+        {
+          "p": "union",
+          "text": "联盟",
+          "w": 33,
+          "h": 52,
+          "l": 269,
+          "r": 302
+        },
+        {
+          "p": "hall",
+          "text": "荣誉馆",
+          "w": 45,
+          "h": 52,
+          "l": 305,
+          "r": 350
+        },
+        {
+          "p": "biz",
+          "text": "经营",
+          "w": 33,
+          "h": 52,
+          "l": 353,
+          "r": 386
+        }
+      ]
+    },
+    "padding": {
+      "bodyPB": "76px",
+      "wrapPB": "16px",
+      "footerPB": "80px"
+    },
+    "coveredByNav": [
+      {
+        "sel": "tr",
+        "text": "12KSG 苏州KSG 38379 流苏 82 ",
+        "t": 797,
+        "b": 832,
+        "hit": "button"
+      }
+    ]
+  },
+  "mobile:toast": {
+    "text": "这是一条用于视觉排查的 toast 提示，字数故意写得比较长以观察是否截断或溢出视口",
+    "l": 20,
+    "r": 371,
+    "w": 351,
+    "h": 39,
+    "vw": 390,
+    "overflows": false,
+    "scrollW": 483,
+    "clientW": 348,
+    "clipped": true,
+    "cls": "toast on"
+  }
+}

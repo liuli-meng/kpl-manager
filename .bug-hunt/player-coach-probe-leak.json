@@ -1,0 +1,70 @@
+{
+  "summary": {
+    "findings": [
+      {
+        "id": "P1-PLAYER-KJIA-MANAGER-UI",
+        "severity": "FAIL",
+        "title": "选手模式二队页仍暴露经理操作（提拔/召回）且文案指向阵容页",
+        "detail": "{\"mode\":\"player\",\"hasPromoteHint\":true,\"hasRecallHint\":false,\"hasManagerCopy\":true,\"promoteBtnCount\":5,\"recallBtnCount\":0,\"promoteBtns\":[{\"text\":\"↑ 提拔一线队\",\"onclick\":\"promoteKjiaPlayer('kjf_2026_top_jeacw')\",\"disabled\":false},{\"text\":\"↑ 提拔一线队\",\"onclick\":\"promoteKjiaPlayer('kjf_2026_jg_xtszy')\",\"disabled\":false},{\"text\":\"↑ 提拔一线队\",\"onclick\":\"promoteKjiaPlayer('kjf_2026_mid_8bu2u')\",\"disabled\":false}],\"recallBtns\":[],\"promoteTry\":\"ok\",\"promoteToasts\":[],\"recallTry\":\"no-demoted\",\"recallToasts\":[],\"squadLen\":4,\"playersAfterPromote\":7,\"textHead\":\"K甲二队：替补和青训生的练级场，表现好可提拔上一队\\n×\\nK甲联赛 · 二队\\n2026 春季赛 · 第1/7轮 · 每2天一轮\\n次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。\\n二队概况\\nAG\\n成都AG超玩会二队 · 战力 289 · 联赛第8名 · 下放选手 0 人\\n成都AG超玩会二队\\n战力 289\\n下一场 · 第1轮\\nK甲·苍穹\\n战力 364\\nK甲积分榜\\n8队单循环 · 胜者积1分\\n#\\t战队\\t胜\\t负\\t积分\\t净胜局\\t战力\\n1\\tK甲·苍穹\\t0\\t0\\t0\\t0\\t364\\n2\\tK甲·星火\\t0\\t0\\t0\\t0\\t364\\n3\\tK甲·沧澜\\t0\\t0\\t0\\t0\\t386\\n4\\tK甲·曜石\\t\"}"
+      },
+      {
+        "id": "P0-PLAYER-PROMOTE-LEAK",
+        "severity": "FAIL",
+        "title": "选手模式可成功提拔 K甲 选手进一队（俱乐部管理权泄漏）",
+        "detail": "{\"mode\":\"player\",\"hasPromoteHint\":true,\"hasRecallHint\":false,\"hasManagerCopy\":true,\"promoteBtnCount\":5,\"recallBtnCount\":0,\"promoteBtns\":[{\"text\":\"↑ 提拔一线队\",\"onclick\":\"promoteKjiaPlayer('kjf_2026_top_jeacw')\",\"disabled\":false},{\"text\":\"↑ 提拔一线队\",\"onclick\":\"promoteKjiaPlayer('kjf_2026_jg_xtszy')\",\"disabled\":false},{\"text\":\"↑ 提拔一线队\",\"onclick\":\"promoteKjiaPlayer('kjf_2026_mid_8bu2u')\",\"disabled\":false}],\"recallBtns\":[],\"promoteTry\":\"ok\",\"promoteToasts\":[],\"recallTry\":\"no-demoted\",\"recallToasts\":[],\"squadLen\":4,\"playersAfterPromote\":7,\"textHead\":\"K甲二队：替补和青训生的练级场，表现好可提拔上一队\\n×\\nK甲联赛 · 二队\\n2026 春季赛 · 第1/7轮 · 每2天一轮\\n次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。\\n二队概况\\nAG\\n成都AG超玩会二队 · 战力 289 · 联赛第8名 · 下放选手 0 人\\n成都AG超玩会二队\\n战力 289\\n下一场 · 第1轮\\nK甲·苍穹\\n战力 364\\nK甲积分榜\\n8队单循环 · 胜者积1分\\n#\\t战队\\t胜\\t负\\t积分\\t净胜局\\t战力\\n1\\tK甲·苍穹\\t0\\t0\\t0\\t0\\t364\\n2\\tK甲·星火\\t0\\t0\\t0\\t0\\t364\\n3\\tK甲·沧澜\\t0\\t0\\t0\\t0\\t386\\n4\\tK甲·曜石\\t\"}"
+      }
+    ],
+    "count": 2
+  },
+  "leak": {
+    "mode": "player",
+    "hasPromoteHint": true,
+    "hasRecallHint": false,
+    "hasManagerCopy": true,
+    "promoteBtnCount": 5,
+    "recallBtnCount": 0,
+    "promoteBtns": [
+      {
+        "text": "↑ 提拔一线队",
+        "onclick": "promoteKjiaPlayer('kjf_2026_top_jeacw')",
+        "disabled": false
+      },
+      {
+        "text": "↑ 提拔一线队",
+        "onclick": "promoteKjiaPlayer('kjf_2026_jg_xtszy')",
+        "disabled": false
+      },
+      {
+        "text": "↑ 提拔一线队",
+        "onclick": "promoteKjiaPlayer('kjf_2026_mid_8bu2u')",
+        "disabled": false
+      }
+    ],
+    "recallBtns": [],
+    "promoteTry": "ok",
+    "promoteToasts": [],
+    "recallTry": "no-demoted",
+    "recallToasts": [],
+    "squadLen": 4,
+    "playersAfterPromote": 7,
+    "textHead": "K甲二队：替补和青训生的练级场，表现好可提拔上一队\n×\nK甲联赛 · 二队\n2026 春季赛 · 第1/7轮 · 每2天一轮\n次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。\n二队概况\nAG\n成都AG超玩会二队 · 战力 289 · 联赛第8名 · 下放选手 0 人\n成都AG超玩会二队\n战力 289\n下一场 · 第1轮\nK甲·苍穹\n战力 364\nK甲积分榜\n8队单循环 · 胜者积1分\n#\t战队\t胜\t负\t积分\t净胜局\t战力\n1\tK甲·苍穹\t0\t0\t0\t0\t364\n2\tK甲·星火\t0\t0\t0\t0\t364\n3\tK甲·沧澜\t0\t0\t0\t0\t386\n4\tK甲·曜石\t"
+  },
+  "lineupGate": {
+    "currentPage": "club",
+    "toasts": [
+      "当前身份没有「阵容 · 管理选手」页，已回到俱乐部 · 比赛主场"
+    ],
+    "lineupVisible": false
+  },
+  "coachUi": {
+    "marketHintHead": "买人卖人：赛前转会期自由组队，赛季中留意报价与自由市场。教练模式=应急租借与引援申请\n×\n教练工作台 · 应急与引援\n买断挂牌由俱乐部打理\n伤停/集训缺人时可紧急租借；也可向俱乐部提交引援申请（资金与名单允许时自动办理）。不能挂牌出售选手—",
+    "marketHasSell": false,
+    "marketHasLoanApply": true,
+    "kjiaHasPromote": true,
+    "kjiaHasRecall": false,
+    "lineHasSell": false,
+    "lineHasRecall": false,
+    "lineHasLoanOut": false,
+    "mode": "coach"
+  }
+}

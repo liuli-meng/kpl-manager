@@ -1,0 +1,10 @@
+{
+  "bugs": [
+    {
+      "sev": "P0",
+      "title": "runtime: nextAction(S) 有值，但 nextAction(\"startCard\"/\"startPlayoff\")=null — 按钮死链确认",
+      "detail": "{\"a1\":{\"type\":\"startCard\",\"label\":\" 进行卡位赛\",\"fn\":\"startCard\"},\"a2\":null,\"a3\":null,\"sameNull\":true}"
+    }
+  ],
+  "notes": []
+}

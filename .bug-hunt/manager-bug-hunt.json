@@ -1,0 +1,145 @@
+{
+  "bugs": [
+    {
+      "sc": "normal",
+      "scenario": "normal",
+      "sev": "P0",
+      "title": "卡位赛按钮 uiDoNextAction('startCard') → nextAction(字符串)=null，点击无效且兜底被抑制",
+      "detail": "onclick=uiDoNextAction('startCard') toast=当前没有可进行的比赛 clickSeries=false startCardDirect={\"series\":true,\"phase\":\"card\",\"seriesStage\":\"card\",\"toast\":\"\"} correctBtn=0"
+    },
+    {
+      "sc": "normal",
+      "scenario": "normal",
+      "sev": "P0",
+      "title": "季后赛按钮 uiDoNextAction(字符串) 参数错误且无正确入口",
+      "detail": "[{\"text\":\"进行下一场\",\"onclick\":\"uiDoNextAction('startPlayoff')\"}]"
+    },
+    {
+      "sc": "normal",
+      "scenario": "normal",
+      "sev": "P1",
+      "title": "renderLeague 在季后赛空槽位(lb4/lbf=null)时抛错 — 联赛页崩溃",
+      "detail": "Cannot read properties of null (reading 'a') | ui.js renderLeague pMatch(pf.lb4/lbf) 未判空（残缺对阵树/旧档边缘）"
+    },
+    {
+      "sc": "debt",
+      "scenario": "debt",
+      "sev": "P0",
+      "title": "卡位赛按钮 uiDoNextAction('startCard') → nextAction(字符串)=null，点击无效且兜底被抑制",
+      "detail": "onclick=uiDoNextAction('startCard') toast=当前没有可进行的比赛 clickSeries=false startCardDirect={\"series\":true,\"phase\":\"card\",\"seriesStage\":\"card\",\"toast\":\"\"} correctBtn=0"
+    },
+    {
+      "sc": "debt",
+      "scenario": "debt",
+      "sev": "P0",
+      "title": "季后赛按钮 uiDoNextAction(字符串) 参数错误且无正确入口",
+      "detail": "[{\"text\":\"进行下一场\",\"onclick\":\"uiDoNextAction('startPlayoff')\"}]"
+    },
+    {
+      "sc": "debt",
+      "scenario": "debt",
+      "sev": "P1",
+      "title": "renderLeague 在季后赛空槽位(lb4/lbf=null)时抛错 — 联赛页崩溃",
+      "detail": "Cannot read properties of null (reading 'a') | ui.js renderLeague pMatch(pf.lb4/lbf) 未判空（残缺对阵树/旧档边缘）"
+    },
+    {
+      "sc": "exodus",
+      "scenario": "exodus",
+      "sev": "P0",
+      "title": "卡位赛按钮 uiDoNextAction('startCard') → nextAction(字符串)=null，点击无效且兜底被抑制",
+      "detail": "onclick=uiDoNextAction('startCard') toast=当前没有可进行的比赛 clickSeries=false startCardDirect={\"series\":true,\"phase\":\"card\",\"seriesStage\":\"card\",\"toast\":\"\"} correctBtn=0"
+    },
+    {
+      "sc": "exodus",
+      "scenario": "exodus",
+      "sev": "P0",
+      "title": "季后赛按钮 uiDoNextAction(字符串) 参数错误且无正确入口",
+      "detail": "[{\"text\":\"进行下一场\",\"onclick\":\"uiDoNextAction('startPlayoff')\"}]"
+    },
+    {
+      "sc": "exodus",
+      "scenario": "exodus",
+      "sev": "P1",
+      "title": "renderLeague 在季后赛空槽位(lb4/lbf=null)时抛错 — 联赛页崩溃",
+      "detail": "Cannot read properties of null (reading 'a') | ui.js renderLeague pMatch(pf.lb4/lbf) 未判空（残缺对阵树/旧档边缘）"
+    },
+    {
+      "sc": "cap",
+      "scenario": "cap",
+      "sev": "P0",
+      "title": "卡位赛按钮 uiDoNextAction('startCard') → nextAction(字符串)=null，点击无效且兜底被抑制",
+      "detail": "onclick=uiDoNextAction('startCard') toast=当前没有可进行的比赛 clickSeries=false startCardDirect={\"series\":true,\"phase\":\"card\",\"seriesStage\":\"card\",\"toast\":\"\"} correctBtn=0"
+    },
+    {
+      "sc": "cap",
+      "scenario": "cap",
+      "sev": "P0",
+      "title": "季后赛按钮 uiDoNextAction(字符串) 参数错误且无正确入口",
+      "detail": "[{\"text\":\"进行下一场\",\"onclick\":\"uiDoNextAction('startPlayoff')\"}]"
+    },
+    {
+      "sc": "cap",
+      "scenario": "cap",
+      "sev": "P1",
+      "title": "renderLeague 在季后赛空槽位(lb4/lbf=null)时抛错 — 联赛页崩溃",
+      "detail": "Cannot read properties of null (reading 'a') | ui.js renderLeague pMatch(pf.lb4/lbf) 未判空（残缺对阵树/旧档边缘）"
+    },
+    {
+      "sc": "cursed",
+      "scenario": "cursed",
+      "sev": "P0",
+      "title": "卡位赛按钮 uiDoNextAction('startCard') → nextAction(字符串)=null，点击无效且兜底被抑制",
+      "detail": "onclick=uiDoNextAction('startCard') toast=当前没有可进行的比赛 clickSeries=false startCardDirect={\"series\":true,\"phase\":\"card\",\"seriesStage\":\"card\",\"toast\":\"\"} correctBtn=0"
+    },
+    {
+      "sc": "cursed",
+      "scenario": "cursed",
+      "sev": "P0",
+      "title": "季后赛按钮 uiDoNextAction(字符串) 参数错误且无正确入口",
+      "detail": "[{\"text\":\"进行下一场\",\"onclick\":\"uiDoNextAction('startPlayoff')\"}]"
+    },
+    {
+      "sc": "cursed",
+      "scenario": "cursed",
+      "sev": "P1",
+      "title": "renderLeague 在季后赛空槽位(lb4/lbf=null)时抛错 — 联赛页崩溃",
+      "detail": "Cannot read properties of null (reading 'a') | ui.js renderLeague pMatch(pf.lb4/lbf) 未判空（残缺对阵树/旧档边缘）"
+    },
+    {
+      "sc": "engine",
+      "scenario": "engine",
+      "sev": "P0",
+      "title": "ui.js: uiDoNextAction(字符串) 错误绑定 — nextAction(字符串) 恒 null，按钮点击无效",
+      "detail": "bad=uiDoNextAction('startCard'), uiDoNextAction('startPlayoff'), uiDoNextAction('startPlayoff') correct=1 处 uiDoNextAction(S)。影响：卡位赛/季后赛俱乐部面板按钮。"
+    },
+    {
+      "sc": "engine",
+      "scenario": "engine",
+      "sev": "P0",
+      "title": "runtime: nextAction(S) 有值，但 nextAction(\"startCard\"/\"startPlayoff\")=null — 按钮死链确认",
+      "detail": "{\"a1\":{\"type\":\"startCard\",\"label\":\" 进行卡位赛\",\"fn\":\"startCard\"},\"a2\":null,\"a3\":null,\"sameNull\":true}"
+    },
+    {
+      "sc": "engine",
+      "scenario": "engine",
+      "sev": "P0",
+      "title": "clubPhasePanel 兜底被死按钮抑制：html 已含 \"uiDoNextAction\" 字符串，安全网不渲染",
+      "detail": "ui.js clubPhasePanel: if(act&&html.indexOf(act.fn)<0&&html.indexOf('uiDoNextAction')<0)"
+    }
+  ],
+  "fnProbe": {
+    "missing": [],
+    "total": 30
+  },
+  "p0": 13,
+  "p1": 5,
+  "p2": 0,
+  "summaryKeys": [
+    "coachEntry",
+    "normal",
+    "debt",
+    "exodus",
+    "cap",
+    "cursed"
+  ]
+}

@@ -1,0 +1,279 @@
+{
+  "p0": [
+    {
+      "severity": "P0",
+      "id": "R3-crash-roundtrip",
+      "title": "残缺/异常档读档后 UI 崩溃或无法操作",
+      "steps": "localStorage[esport_manager_save_v3]=roundtrip → load() → renderAll/renderClub",
+      "fn": "load/migrateSave/renderClub",
+      "how": "读档后渲染抛错或 load 抛错",
+      "evidence": "{\"tag\":\"roundtrip\",\"loaded\":false,\"loadErr\":null,\"S\":null,\"renderErr\":\"Cannot read properties of null (reading 'day')\",\"clubErr\":null,\"action\":null,\"htmlLen\":1068,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "P0",
+      "id": "R3-stuck-minimal",
+      "title": "读档后无任何推进按钮（卡死）",
+      "steps": "minimal load 后 renderClub",
+      "fn": "nextAction/clubPhasePanel",
+      "how": "phase=r1 但 nextAction=null 且面板无按钮",
+      "evidence": "{\"tag\":\"minimal\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"残缺\",\"phase\":\"r1\",\"n\":0,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":100,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":0},\"renderErr\":null,\"clubErr\":null,\"action\":null,\"htmlLen\":3894,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "P0",
+      "id": "R3-stuck-ewc-null",
+      "title": "读档后无任何推进按钮（卡死）",
+      "steps": "ewc-null load 后 renderClub",
+      "fn": "nextAction/clubPhasePanel",
+      "how": "phase=ewc 但 nextAction=null 且面板无按钮",
+      "evidence": "{\"tag\":\"ewc-null\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"ewc\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":3910,\"ewc\":0,\"ch\":1,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":null,\"htmlLen\":6752,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "P0",
+      "id": "R3-stuck-ch-null",
+      "title": "读档后无任何推进按钮（卡死）",
+      "steps": "ch-null load 后 renderClub",
+      "fn": "nextAction/clubPhasePanel",
+      "how": "phase=challenger 但 nextAction=null 且面板无按钮",
+      "evidence": "{\"tag\":\"ch-null\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"challenger\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":3313,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":null,\"htmlLen\":6564,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "P0",
+      "id": "R6-uDoNext-bad-args",
+      "title": "uiDoNextAction 被传入非 state 参数（onclick 完整性/推进卡死根因）",
+      "steps": "src/js/ui.js clubCardPanel / clubPlayoffPanel 模板字符串",
+      "fn": "uiDoNextAction",
+      "how": "onclick 把动作名字符串当第一参数：uiDoNextAction('startCard') / ('startPlayoff')。函数签名是 uiDoNextAction(s) 期望全局状态 S；传字符串后 nextAction(s) 因 !s.players 返回 null，按钮只弹「当前没有可进行的比赛」。兜底逻辑 html.indexOf(act.fn)<0 && html.indexOf('uiDoNextAction')<0 被已渲染的坏按钮子串命中而抑制，卡位赛/季后赛无可用入口。",
+      "evidence": "[\n {\n  \"line\": 463,\n  \"arg\": \"'startCard'\",\n  \"snippet\": \"${myCard&&!myCard.r?`<button class=\\\"btn primary\\\" style=\\\"width:100%\\\" onclick=\\\"uiDoNextAction('startCard')\\\"> 进行卡位赛</button>`:''}\"\n },\n {\n  \"line\": 475,\n  \"arg\": \"'startPlayoff'\",\n  \"snippet\": \"${!pf.final.r?`<button class=\\\"btn primary\\\" style=\\\"width:100%\\\" onclick=\\\"uiDoNextAction('startPlayoff')\\\">${myPending?'进行下一场':'快进季后赛'}</button>\"\n },\n {\n  \"line\": 476,\n  \"arg\": \"'startPlayoff'\",\n  \"snippet\": \":(pf.final.r&&!pf.champ?`<button class=\\\"btn gold\\\" style=\\\"width:100%\\\" onclick=\\\"uiDoNextAction('startPlayoff')\\\"> 季后赛结算 · 推进赛历</button>`:'')}\"\n }\n]"
+    }
+  ],
+  "p1": [],
+  "info": [
+    {
+      "severity": "INFO",
+      "id": "R2-path",
+      "title": "完整春季链路",
+      "steps": "spring league→challenger→ewc",
+      "fn": "",
+      "how": "{\"league\":{\"phase\":\"champion\",\"g\":19,\"champ\":\"确认探针\",\"split\":\"spring\"},\"endAction\":{\"type\":\"advanceCalendar\",\"label\":\" 前往挑战者杯（32队 · KPL全员）\",\"fn\":\"uiAdvanceCalendar\"},\"ch\":{\"phase\":\"challenger\",\"has\":true,\"action\":{\"type\":\"startCup\",\"label\":\" 进行挑战者杯\",\"fn\":\"uiStartCup\"},\"btn\":true},\"ewc\":{\"phase\":\"ewc\",\"has\":true,\"action\":{\"type\":\"startCup\",\"label\":\" 进行 EWC\",\"fn\":\"uiStartCup\"},\"btn\":true},\"afterEwc\":{\"phase\":\"r1\",\"split\":\"summer\",\"preseason\":true,\"action\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"}},\"afterEwcBtn\":true,\"adv1Err\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-po-final-done",
+      "title": "读档结果",
+      "steps": "po-final-done",
+      "fn": "",
+      "how": "{\"tag\":\"po-final-done\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"r1\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":1300,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"startMatch\",\"label\":\" 赛前准备 · 调整阵容 / BP 开赛\",\"fn\":\"uiStartMatch\"},\"htmlLen\":8473,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-yearroll-left",
+      "title": "读档结果",
+      "steps": "yearroll-left",
+      "fn": "",
+      "how": "{\"tag\":\"yearroll-left\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"r1\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":true,\"fund\":1920,\"ewc\":0,\"ch\":0,\"annual\":1,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"},\"htmlLen\":7981,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-bad-json",
+      "title": "读档结果",
+      "steps": "bad-json",
+      "fn": "",
+      "how": "{\"tag\":\"bad-json\",\"loaded\":false,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"r1\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":true,\"fund\":1920,\"ewc\":0,\"ch\":0,\"annual\":1,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"},\"htmlLen\":7981,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-v2",
+      "title": "读档结果",
+      "steps": "v2",
+      "fn": "",
+      "how": "{\"tag\":\"v2\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"旧档\",\"phase\":\"r1\",\"n\":1,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":16665,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":1},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"startMatch\",\"label\":\" 赛前准备 · 调整阵容 / BP 开赛\",\"fn\":\"uiStartMatch\"},\"htmlLen\":5337,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R4-empty",
+      "title": "空名单 startMatch",
+      "steps": "",
+      "fn": "",
+      "how": "{\"emptyStart\":{\"err\":null,\"series\":true,\"stage\":\"regular\"},\"emptyOpenBP\":{\"err\":null},\"emptyToasts\":[\" 对抗路（无人）、打野（无人）、中路（无人）、发育路（无人）、游走（无人） 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈\"],\"injNoGo\":[\"top\",\"jg\",\"mid\",\"ad\",\"sup\"],\"injLineup\":[\"弈秋:inj5\",\"观澜:inj5\",\"听松:inj5\",\"照夜:inj5\",\"惊蛰:inj5\"],\"injStart\":{\"err\":null,\"series\":true},\"injOpenBP\":{\"err\":null},\"injToasts\":[\" 对抗路（弈秋 伤停 5 天）、打野（观澜 伤停 5 天）、中路（听松 伤停 5 天）、发育路（照夜 伤停 5 天）、游走（惊蛰 伤停 5 天） 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈\"],\"prepHasWhy\":true}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R4-inj",
+      "title": "伤停拦截",
+      "steps": "",
+      "fn": "",
+      "how": "{\"noGo\":[\"top\",\"jg\",\"mid\",\"ad\",\"sup\"],\"toasts\":[\" 对抗路（弈秋 伤停 5 天）、打野（观澜 伤停 5 天）、中路（听松 伤停 5 天）、发育路（照夜 伤停 5 天）、游走（惊蛰 伤停 5 天） 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈\"],\"openBP\":{\"err\":null},\"start\":{\"err\":null,\"series\":true},\"prepHasWhy\":true}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R5-yearRoll",
+      "title": "yearRoll 连点",
+      "steps": "",
+      "fn": "",
+      "how": "{\"pending\":true,\"action\":{\"type\":\"finishAnnual\",\"label\":\" 进入新赛季 · 年度轮换\",\"fn\":\"uiFinishAnnual\"},\"hasBtn\":true,\"clicks\":{\"s0\":1,\"p0\":\"annual\",\"a1\":{\"phase\":\"r1\",\"season\":2,\"yr\":false,\"preseason\":true},\"a2\":{\"phase\":\"r1\",\"season\":2,\"yr\":false},\"a3\":{\"phase\":\"r1\",\"season\":2,\"yr\":false},\"errs\":[]}}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R5-fired",
+      "title": "board.fired UI",
+      "steps": "",
+      "fn": "",
+      "how": "{\"action\":null,\"explain\":true,\"reset\":true,\"toasts\":[\"你已被董事会解约，执教生涯结束\"]}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R6-args-stats",
+      "title": "uiDoNextAction 参数统计",
+      "steps": "",
+      "fn": "",
+      "how": "{\"bad\":3,\"good\":2}",
+      "evidence": "undefined"
+    }
+  ],
+  "all": [
+    {
+      "severity": "INFO",
+      "id": "R2-path",
+      "title": "完整春季链路",
+      "steps": "spring league→challenger→ewc",
+      "fn": "",
+      "how": "{\"league\":{\"phase\":\"champion\",\"g\":19,\"champ\":\"确认探针\",\"split\":\"spring\"},\"endAction\":{\"type\":\"advanceCalendar\",\"label\":\" 前往挑战者杯（32队 · KPL全员）\",\"fn\":\"uiAdvanceCalendar\"},\"ch\":{\"phase\":\"challenger\",\"has\":true,\"action\":{\"type\":\"startCup\",\"label\":\" 进行挑战者杯\",\"fn\":\"uiStartCup\"},\"btn\":true},\"ewc\":{\"phase\":\"ewc\",\"has\":true,\"action\":{\"type\":\"startCup\",\"label\":\" 进行 EWC\",\"fn\":\"uiStartCup\"},\"btn\":true},\"afterEwc\":{\"phase\":\"r1\",\"split\":\"summer\",\"preseason\":true,\"action\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"}},\"afterEwcBtn\":true,\"adv1Err\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "P0",
+      "id": "R3-crash-roundtrip",
+      "title": "残缺/异常档读档后 UI 崩溃或无法操作",
+      "steps": "localStorage[esport_manager_save_v3]=roundtrip → load() → renderAll/renderClub",
+      "fn": "load/migrateSave/renderClub",
+      "how": "读档后渲染抛错或 load 抛错",
+      "evidence": "{\"tag\":\"roundtrip\",\"loaded\":false,\"loadErr\":null,\"S\":null,\"renderErr\":\"Cannot read properties of null (reading 'day')\",\"clubErr\":null,\"action\":null,\"htmlLen\":1068,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "P0",
+      "id": "R3-stuck-minimal",
+      "title": "读档后无任何推进按钮（卡死）",
+      "steps": "minimal load 后 renderClub",
+      "fn": "nextAction/clubPhasePanel",
+      "how": "phase=r1 但 nextAction=null 且面板无按钮",
+      "evidence": "{\"tag\":\"minimal\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"残缺\",\"phase\":\"r1\",\"n\":0,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":100,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":0},\"renderErr\":null,\"clubErr\":null,\"action\":null,\"htmlLen\":3894,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "P0",
+      "id": "R3-stuck-ewc-null",
+      "title": "读档后无任何推进按钮（卡死）",
+      "steps": "ewc-null load 后 renderClub",
+      "fn": "nextAction/clubPhasePanel",
+      "how": "phase=ewc 但 nextAction=null 且面板无按钮",
+      "evidence": "{\"tag\":\"ewc-null\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"ewc\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":3910,\"ewc\":0,\"ch\":1,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":null,\"htmlLen\":6752,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "P0",
+      "id": "R3-stuck-ch-null",
+      "title": "读档后无任何推进按钮（卡死）",
+      "steps": "ch-null load 后 renderClub",
+      "fn": "nextAction/clubPhasePanel",
+      "how": "phase=challenger 但 nextAction=null 且面板无按钮",
+      "evidence": "{\"tag\":\"ch-null\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"challenger\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":3313,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":null,\"htmlLen\":6564,\"hasBtn\":false,\"startCupErr\":null}"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-po-final-done",
+      "title": "读档结果",
+      "steps": "po-final-done",
+      "fn": "",
+      "how": "{\"tag\":\"po-final-done\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"r1\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":1300,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"startMatch\",\"label\":\" 赛前准备 · 调整阵容 / BP 开赛\",\"fn\":\"uiStartMatch\"},\"htmlLen\":8473,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-yearroll-left",
+      "title": "读档结果",
+      "steps": "yearroll-left",
+      "fn": "",
+      "how": "{\"tag\":\"yearroll-left\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"r1\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":true,\"fund\":1920,\"ewc\":0,\"ch\":0,\"annual\":1,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"},\"htmlLen\":7981,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-bad-json",
+      "title": "读档结果",
+      "steps": "bad-json",
+      "fn": "",
+      "how": "{\"tag\":\"bad-json\",\"loaded\":false,\"loadErr\":null,\"S\":{\"team\":\"确认探针\",\"phase\":\"r1\",\"n\":5,\"v\":4,\"_migErr\":null,\"preseason\":true,\"fund\":1920,\"ewc\":0,\"ch\":0,\"annual\":1,\"board\":1,\"eventLog\":true,\"sched\":5},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"},\"htmlLen\":7981,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R3-v2",
+      "title": "读档结果",
+      "steps": "v2",
+      "fn": "",
+      "how": "{\"tag\":\"v2\",\"loaded\":true,\"loadErr\":null,\"S\":{\"team\":\"旧档\",\"phase\":\"r1\",\"n\":1,\"v\":4,\"_migErr\":null,\"preseason\":false,\"fund\":16665,\"ewc\":0,\"ch\":0,\"annual\":0,\"board\":1,\"eventLog\":true,\"sched\":1},\"renderErr\":null,\"clubErr\":null,\"action\":{\"type\":\"startMatch\",\"label\":\" 赛前准备 · 调整阵容 / BP 开赛\",\"fn\":\"uiStartMatch\"},\"htmlLen\":5337,\"hasBtn\":true,\"startCupErr\":null}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R4-empty",
+      "title": "空名单 startMatch",
+      "steps": "",
+      "fn": "",
+      "how": "{\"emptyStart\":{\"err\":null,\"series\":true,\"stage\":\"regular\"},\"emptyOpenBP\":{\"err\":null},\"emptyToasts\":[\" 对抗路（无人）、打野（无人）、中路（无人）、发育路（无人）、游走（无人） 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈\"],\"injNoGo\":[\"top\",\"jg\",\"mid\",\"ad\",\"sup\"],\"injLineup\":[\"弈秋:inj5\",\"观澜:inj5\",\"听松:inj5\",\"照夜:inj5\",\"惊蛰:inj5\"],\"injStart\":{\"err\":null,\"series\":true},\"injOpenBP\":{\"err\":null},\"injToasts\":[\" 对抗路（弈秋 伤停 5 天）、打野（观澜 伤停 5 天）、中路（听松 伤停 5 天）、发育路（照夜 伤停 5 天）、游走（惊蛰 伤停 5 天） 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈\"],\"prepHasWhy\":true}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R4-inj",
+      "title": "伤停拦截",
+      "steps": "",
+      "fn": "",
+      "how": "{\"noGo\":[\"top\",\"jg\",\"mid\",\"ad\",\"sup\"],\"toasts\":[\" 对抗路（弈秋 伤停 5 天）、打野（观澜 伤停 5 天）、中路（听松 伤停 5 天）、发育路（照夜 伤停 5 天）、游走（惊蛰 伤停 5 天） 无法出战：签约替补顶位（转会市场）/ 青训晋升 / 休息等伤愈\"],\"openBP\":{\"err\":null},\"start\":{\"err\":null,\"series\":true},\"prepHasWhy\":true}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R5-yearRoll",
+      "title": "yearRoll 连点",
+      "steps": "",
+      "fn": "",
+      "how": "{\"pending\":true,\"action\":{\"type\":\"finishAnnual\",\"label\":\" 进入新赛季 · 年度轮换\",\"fn\":\"uiFinishAnnual\"},\"hasBtn\":true,\"clicks\":{\"s0\":1,\"p0\":\"annual\",\"a1\":{\"phase\":\"r1\",\"season\":2,\"yr\":false,\"preseason\":true},\"a2\":{\"phase\":\"r1\",\"season\":2,\"yr\":false},\"a3\":{\"phase\":\"r1\",\"season\":2,\"yr\":false},\"errs\":[]}}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "INFO",
+      "id": "R5-fired",
+      "title": "board.fired UI",
+      "steps": "",
+      "fn": "",
+      "how": "{\"action\":null,\"explain\":true,\"reset\":true,\"toasts\":[\"你已被董事会解约，执教生涯结束\"]}",
+      "evidence": "undefined"
+    },
+    {
+      "severity": "P0",
+      "id": "R6-uDoNext-bad-args",
+      "title": "uiDoNextAction 被传入非 state 参数（onclick 完整性/推进卡死根因）",
+      "steps": "src/js/ui.js clubCardPanel / clubPlayoffPanel 模板字符串",
+      "fn": "uiDoNextAction",
+      "how": "onclick 把动作名字符串当第一参数：uiDoNextAction('startCard') / ('startPlayoff')。函数签名是 uiDoNextAction(s) 期望全局状态 S；传字符串后 nextAction(s) 因 !s.players 返回 null，按钮只弹「当前没有可进行的比赛」。兜底逻辑 html.indexOf(act.fn)<0 && html.indexOf('uiDoNextAction')<0 被已渲染的坏按钮子串命中而抑制，卡位赛/季后赛无可用入口。",
+      "evidence": "[\n {\n  \"line\": 463,\n  \"arg\": \"'startCard'\",\n  \"snippet\": \"${myCard&&!myCard.r?`<button class=\\\"btn primary\\\" style=\\\"width:100%\\\" onclick=\\\"uiDoNextAction('startCard')\\\"> 进行卡位赛</button>`:''}\"\n },\n {\n  \"line\": 475,\n  \"arg\": \"'startPlayoff'\",\n  \"snippet\": \"${!pf.final.r?`<button class=\\\"btn primary\\\" style=\\\"width:100%\\\" onclick=\\\"uiDoNextAction('startPlayoff')\\\">${myPending?'进行下一场':'快进季后赛'}</button>\"\n },\n {\n  \"line\": 476,\n  \"arg\": \"'startPlayoff'\",\n  \"snippet\": \":(pf.final.r&&!pf.champ?`<button class=\\\"btn gold\\\" style=\\\"width:100%\\\" onclick=\\\"uiDoNextAction('startPlayoff')\\\"> 季后赛结算 · 推进赛历</button>`:'')}\"\n }\n]"
+    },
+    {
+      "severity": "INFO",
+      "id": "R6-args-stats",
+      "title": "uiDoNextAction 参数统计",
+      "steps": "",
+      "fn": "",
+      "how": "{\"bad\":3,\"good\":2}",
+      "evidence": "undefined"
+    }
+  ]
+}

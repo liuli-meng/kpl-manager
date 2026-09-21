@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "scannedFiles": [
+      "board.js",
+      "bp.js",
+      "career.js",
+      "clubops.js",
+      "cups.js",
+      "data.js",
+      "draft.js",
+      "guide.js",
+      "hall.js",
+      "kjia.js",
+      "main.js",
+      "match.js",
+      "natcamp.js",
+      "playerops.js",
+      "players.js",
+      "rules.js",
+      "season.js",
+      "state.js",
+      "train.js",
+      "transfer.js",
+      "ui-career.js",
+      "ui-lineup.js",
+      "ui-market.js",
+      "ui.js",
+      "src/index.html",
+      "game.html"
+    ],
+    "totalDefined": 918,
+    "totalRefs": 679,
+    "uniqueRefs": 148
+  },
+  "missing": [],
+  "missingGameHtml": [],
+  "missingSrc": [],
+  "caseMismatch": [],
+  "dupDefs": [],
+  "srcOnlyMissingInBuilt": [],
+  "builtOnlySample": [],
+  "okCount": 679
+}

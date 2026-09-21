@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "base": "http://127.0.0.1:8931",
+  "create": {
+    "ok": true,
+    "fn": "createTeam"
+  },
+  "Ssnap": null,
+  "pageErrors": [],
+  "consoleErrors": [],
+  "navErrors": [],
+  "modalErrors": [],
+  "onclickRuntimeMissing": [],
+  "onclickRuntimeTotal": 39,
+  "notes": [
+    "create: {\"ok\":true,\"fn\":\"createTeam\"}",
+    "ui:renderAll {\"ok\":true}",
+    "ui:openSaveMgmt {\"ok\":true}",
+    "ui:closeModal {\"ok\":true}",
+    "ui:renderClubPhase {\"ok\":true,\"phase\":\"r1\",\"preseason\":true}",
+    "ui:nextAction {\"ok\":true,\"action\":{\"type\":\"endPreseason\",\"label\":\" 结束转会期 · 开始赛季\",\"fn\":\"uiEndPreseason\"}}",
+    "[dialog] confirm 确定结束转会期？剩余天数作废，阵容锁定后联赛正式开始",
+    "ui:uiDoNextAction {\"ok\":true}",
+    "ui:goPage-market {\"ok\":true}",
+    "ui:goPage-lineup {\"ok\":true}",
+    "ui:goPage-league {\"ok\":true}",
+    "ui:save-load-roundtrip {\"ok\":true}",
+    "clickNav: [{\"page\":\"career\",\"ok\":true},{\"page\":\"club\",\"ok\":true},{\"page\":\"lineup\",\"ok\":true},{\"page\":\"market\",\"ok\":true},{\"page\":\"train\",\"ok\":true},{\"page\":\"league\",\"ok\":true},{\"page\":\"kjia\",\"ok\":true},{\"page\":\"union\",\"ok\":true},{\"page\":\"hall\",\"ok\":true},{\"page\":\"biz\",\"ok\":true}]",
+    "onclickCheck: {\"total\":39,\"ok\":39,\"missing\":[]}",
+    "__errLog final: []"
+  ],
+  "errorCount": 0
+}
