@@ -181,6 +181,10 @@ function aiDetachDef(s,pid){ // def 被玩家签走/转会：从所有 AI 队与
 function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额合法才接收）；返回是否入册
  const def=defOf(s,pid);
  if(!def)return false;
+ if(typeof canSign==='function'){
+  const chk=canSign(s,{id:pid,name:def.name,pos:def.pos},{actor:'ai',team:teamName});
+  if(!chk.ok)return false;
+ }
  const map=aiRosterDefMap(s);
  if(!map[teamName]||map[teamName].length>=5)return false;
  if(map[teamName].some(id=>{const d=defOf(s,id);return d&&d.pos===def.pos;}))return false;
@@ -687,6 +691,10 @@ function negoComplete(s,p,fee){
  s.aiRosters={}; // 玩家签走任何选手后重建全部对手名册（自由球员也可能是他人首发，防同一名选手出现在两队）
 }
 function openNegotiation(s,pid){
+ if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return;}
+ }
  if(typeof freeSignBlockedReason==='function'){
  const blocked=freeSignBlockedReason(s);
  if(blocked){toast(blocked);return;}
@@ -820,13 +828,22 @@ function sellCeiling(p){
  return Math.round(anchor*0.9);
 }
 function openSellNego(s,pid){
+ if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return;}
+ }
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
- if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
- if(p.loanOut){toast(p.name+' 正租借在外，不能出售');return;}
- if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
+ if(typeof canRelease==='function'){
+  const chk=canRelease(s,p,{asSale:true});
+  if(!chk.ok){toast(chk.reason||'不能出售');return;}
+ }else{
+  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
+  if(p.loanOut){toast(p.name+' 正租借在外，不能出售');return;}
+  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
+  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
+ }
  if(p.natFill){toast(p.name+' 是亚运集训期的借调顶位，归还青训前不能出售');return;}
- if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已挂牌，请先撤牌或等待报价');return;}
  if(!sellGuard(s))return; // 联盟规则：一个转会期卖出不得超过队内一半
  const ask=sellAskPrice(p);
@@ -1032,6 +1049,10 @@ function aiBidTick(s){
  const buyers=[];
  Object.keys(map).forEach(tn=>{
  if(tn===s.teamName)return;
+ if(typeof canSign==='function'){
+  const chk=canSign(s,fa,{actor:'ai',team:tn,allowReplace:true});
+  if(!chk.ok&&String(chk.reason||'').indexOf('已有')<0)return;
+ }
  const cur=map[tn].map(id=>defOf(s,id)).filter(Boolean);
  const atPos=cur.find(d=>d.pos===fa.pos);
  if(!atPos){if(cur.length<5)buyers.push({tn,replace:null});}

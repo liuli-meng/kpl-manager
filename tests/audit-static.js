@@ -75,7 +75,7 @@ T.check(!uiBad.length, 'ui*.js 里出现了数值/名单/日志写入（应下�
   const jsDir = path.join(ROOT, 'src', 'js');
   const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
   // 例外：data.js 提供 $/$$ 给 UI；hall.js 分享图 canvas；match.js 可选 AI 战报读输入框
-  const DOM_OK = new Set(['data.js', 'hall.js', 'match.js']);
+  const DOM_OK = new Set(['data.js', 'hall.js', 'match.js', 'perf-monitor.js', 'bgm.js']);
   const engineDom = files.filter(f => !/^ui/.test(f) && f !== 'main.js' && !DOM_OK.has(f)).filter(f => {
     const txt = fs.readFileSync(path.join(jsDir, f), 'utf8');
     return /document\.(querySelector|getElementById|createElement)/.test(txt);

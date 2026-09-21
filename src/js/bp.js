@@ -525,11 +525,23 @@ function bpSwapIn(pid){
  const d=window._draft;if(!d)return;
  const p=S.players.find(x=>x.id===pid);
  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
+ // 年总精英组：系列赛中途换替补上限
+ if(S.phase==='annual'&&typeof annualGroupOf==='function'&&annualGroupOf(S)==='elites'){
+ const sr=d.sr||S.series;
+ const used=(sr&&sr._swaps)||0;
+ const cap=(typeof annualSubRule==='function'&&(annualSubRule('elites')||{}).maxSwaps)||1;
+ if(used>=cap){toast('精英组规则：年总系列赛中途换替补仅 '+cap+' 次（已用完）');return;}
+ }
  const cur=rosterLineup(S).find(x=>x.pos===p.pos);
  if(!cur){toast('该位置没有首发');return;}
  S.lineup[S.lineup.indexOf(cur.id)]=p.id;
  if(S.pick&&S.pick[p.pos])ensureHeroInPool(p,S.pick[p.pos]); // 上局英雄残留：新选手临时掏
  if(d.myPicks[p.pos])ensureHeroInPool(p,d.myPicks[p.pos]); // 本局已选英雄：保留，新选手接手
+ const sr=d.sr||S.series;
+ if(sr){
+ sr._swaps=(sr._swaps||0)+1;
+ if(typeof annualMarkPlayed==='function')annualMarkPlayed(S,sr);
+ }
  d.ls=rosterLineup(S);d.swap=false;
  save();toast(p.name+' 替补登场（'+POS[p.pos][0]+'）');
  renderBP();

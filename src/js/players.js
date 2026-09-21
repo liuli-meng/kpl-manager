@@ -32,6 +32,13 @@ const HERO_LV={
 function heroLv(p,heroId){const h=(p.heroPool||[]).find(x=>x.n===heroId);return h?h.lv:1;}
 /* 英雄熟练度：绝活+8% / 熟练+4% / 一般0% / 生疏-8% */
 function buyPlayer(s,p){
+ if(typeof canSign==='function'){
+  const chk=canSign(s,p,{actor:'player'});
+  if(!chk.ok){toast(chk.reason||'不能签约');return false;}
+ }else if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return false;}
+ }
  if(!rosterGuard(s))return false; // 联盟规则：大名单 ≤10 人
  if(typeof freeSignBlockedReason==='function'){
  const blocked=freeSignBlockedReason(s);
@@ -48,6 +55,7 @@ function buyPlayer(s,p){
  s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
+ if(typeof aiDetachDef==='function')aiDetachDef(s,p.id); // 玩家签下：AI 名册除名防双挂
  recordTransfer(s,'in',p,cost,'自由市场',p.discount?'市场特惠签约':'市场签约'); // 年度回顾·转会台账
  logEvent(s,` 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
  try{SFX.gold();}catch(_){}

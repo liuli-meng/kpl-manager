@@ -183,7 +183,7 @@ section.page.on{display:block;animation:fadein .18s ease}
   border:1px solid var(--line);border-radius:var(--r1);padding:11px 14px;margin-bottom:8px;transition:.15s}
 .match:hover{border-color:var(--line2)}
 .match .vs{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
-.match .vs .tname{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match .vs .tname{font-weight:700;font-size:14.5px;white-space:normal;word-break:break-word;line-height:1.35}
 .match .vs .power{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 .match .score{font-size:20px;font-weight:800;color:var(--txt);min-width:56px;text-align:center;
   font-variant-numeric:tabular-nums;letter-spacing:-.5px}
@@ -218,7 +218,7 @@ section.page.on{display:block;animation:fadein .18s ease}
 .page-hint{display:flex;align-items:flex-start;gap:8px;background:var(--surface2);border:1px solid var(--line);
   border-left:2px solid var(--accent);border-radius:var(--r1);padding:8px 11px;font-size:12.5px;color:var(--dim);line-height:1.6;margin-bottom:11px}
 .page-hint span{flex:1;min-width:0}
-.ph-x{background:none;border:none;color:var(--faint);font-size:14px;cursor:pointer;padding:0 2px;line-height:1.2;flex:none;font-family:inherit}
+.ph-x{background:none;border:none;color:var(--faint);font-size:14px;cursor:pointer;padding:2px 6px;line-height:1.2;flex:none;font-family:inherit;min-width:28px;min-height:28px}
 .ph-x:hover{color:var(--txt)}
 /* 卡片列表排序 + 位置筛选 chips */
 .sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:9px;padding-bottom:2px}
@@ -244,7 +244,7 @@ section.page.on{display:block;animation:fadein .18s ease}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
   background:var(--raise);border:1px solid var(--line2);border-left:2px solid var(--accent);
   color:var(--txt);padding:9px 18px;font-size:13px;z-index:200;opacity:0;transition:.25s;pointer-events:none;
-  white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;border-radius:var(--r1);box-shadow:var(--shadow)}
+  white-space:normal;word-break:break-word;max-width:min(92vw,560px);border-radius:var(--r1);box-shadow:var(--shadow)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}
 .league-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;margin-top:10px;
   border:1px solid var(--gold);background:rgba(240,187,96,.1);color:var(--gold);

@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <meta name="theme-color" content="#1b1f27">
 <title>王者电竞经理 · KPL 篇</title>
 <link rel="icon" href="data:,">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-:root{--bg:#1b1f27;--surface:#232833;--surface2:#282e3a;--raise:#2f3644;--sunken:#161a21;--line:#3a4150;--line2:#4e5768;--txt:#f3f6fb;--dim:#c5cdd9;--faint:#adb7c5;--accent:#79aaff;--accent-deep:#5b9cff;--accent2:#79aaff;--gold:#f0bb60;--red:#ff8f92;--green:#5cc486;--r:#a9b3c4;--sr:#7ab0ff;--ssr:#f5c877;--card2:#282e3a;--cyan:var(--accent);--grad-a:none;--grad-btn:none;--grad-gold:none;--pos-top:#ffa45c;--pos-jg:#cfadff;--pos-mid:#4cc6f2;--pos-ad:#5ad07a;--pos-sup:#e8b948;--r1:5px;--r2:8px;--r3:12px;--shadow:0 1px 0 rgba(255,255,255,.04) inset,0 6px 18px rgba(0,0,0,.32)}*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}html{color-scheme:dark}body{background:radial-gradient(1100px 480px at 50% -8%,rgba(121,170,255,.07),transparent 62%),var(--bg);color:var(--txt);font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;font-size:14px;line-height:1.6;min-height:100vh;padding-bottom:20px;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}::-webkit-scrollbar-track{background:transparent}::selection{background:rgba(121,170,255,.3)}.wrap{max-width:1060px;margin:0 auto;padding:14px 16px 20px}.ic{flex:none;vertical-align:-2px}svg.ic{display:inline-block}.cut{border-radius:3px}header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:11px 15px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);position:sticky;top:8px;z-index:50;box-shadow:0 8px 22px rgba(0,0,0,.3)}.logo{display:flex;align-items:center;justify-content:center;flex:none}.hd-name{font-size:17px;font-weight:800;letter-spacing:-.2px;line-height:1.25}.hd-name small{display:block;font-size:11px;color:var(--dim);font-weight:500;letter-spacing:.02em}.stats{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto}.stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:5px 11px;min-width:0}.stat .ic{color:var(--faint)}.stat b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1.15;white-space:nowrap}.stat small{font-size:9.5px;color:var(--faint);letter-spacing:.06em;white-space:nowrap}.stat.gold b{color:var(--gold)}.stat.red b{color:var(--red)}.stat.green b{color:var(--green)}.stat.gold .ic{color:var(--gold)}.stat.red .ic{color:var(--red)}.stat.green .ic{color:var(--green)}.hd-btn{display:inline-flex;align-items:center;gap:4px;background:var(--raise);border:1px solid var(--line2);color:var(--dim);border-radius:var(--r1);padding:6px 11px;cursor:pointer;font-size:12px;transition:.15s}.hd-btn:hover{color:var(--txt);border-color:var(--accent);background:rgba(121,170,255,.09)}nav{display:flex;gap:3px;margin:12px 0;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{flex:1;min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 8px;background:transparent;border:none;border-radius:var(--r1);color:var(--dim);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap;box-shadow:inset 0 -2px 0 transparent}nav button .ic{color:var(--faint)}nav button:hover{color:var(--txt);background:var(--surface2)}nav button.on{color:var(--txt);background:var(--raise);box-shadow:inset 0 -2px 0 var(--accent)}nav button.on .ic{color:var(--accent)}section.page{display:none}section.page.on{display:block;animation:fadein .18s ease}@keyframes fadein{from{opacity:0}to{opacity:1}}.panel{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0) 64px),var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:15px 17px;margin-bottom:13px;position:relative}.panel h3{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;margin-bottom:13px;letter-spacing:.06em;color:var(--dim);padding-bottom:9px;border-bottom:1px solid var(--line)}.panel h3 .h-ic{display:none}.panel h3 .tag{font-size:10px;letter-spacing:0;background:var(--raise);border:1px solid var(--line2);color:var(--dim);padding:1px 8px;border-radius:999px;font-weight:600}.grid{display:grid;gap:10px}.g5{grid-template-columns:repeat(5,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}@media(max-width:900px){.g5{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}@media(max-width:560px){.g2{grid-template-columns:1fr}.stats .stat{min-width:62px}}.page-cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}.page-cols>.col{min-width:0}.page-cols>.col>.panel:last-child{margin-bottom:0}@media(max-width:1000px){.page-cols{grid-template-columns:1fr}}.panel.collapsible>h3{cursor:pointer;user-select:none}.panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .18s;transform:rotate(90deg)}.panel.collapsed>h3::after{transform:rotate(0)}.panel.collapsed>*:not(h3){display:none}.panel.collapsed{padding-bottom:12px}.pcard{background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:var(--r1);padding:12px 13px;position:relative;transition:.15s}.pcard::before{content:none}.pcard:hover{border-color:var(--line2);border-left-color:var(--dim)}.pcard .p-top{display:flex;justify-content:flex-start;align-items:center;gap:8px;margin-bottom:7px}.pcard .p-name{font-weight:800;font-size:15px;letter-spacing:-.1px}.pcard .p-pos{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:3px;margin-left:auto;background:rgba(121,170,255,.08);color:var(--accent)}.pcard .p-rarity{font-size:11.5px;font-weight:400;color:var(--dim)}.pcard .p-rarity b{font-size:18px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:-.5px}.pcard .p-tag{font-size:10px;margin-left:3px;background:var(--sunken);color:var(--dim);padding:1px 5px;border-radius:2px}.pcard .p-hero{font-size:11px;color:var(--dim);margin-bottom:3px}.pcard .p-hero b{color:var(--txt)}.pcard .p-disc{float:right;font-size:10px;background:rgba(255,143,146,.10);color:#ff9fa2;padding:1px 6px;border-radius:2px}.pcard .p-hero-pick{border-color:var(--accent);background:rgba(121,170,255,.06)}.pcard .p-skill{font-size:11.5px;color:var(--dim);margin:5px 0;line-height:1.55;min-height:32px}.pcard .p-skill b{color:var(--dim)}.pcard .attr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11px;color:var(--faint);margin-bottom:7px}.pcard .attr i{font-style:normal;color:var(--txt);float:right;font-weight:700;font-variant-numeric:tabular-nums}.pcard .p-foot{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:7px;margin-top:2px}.pcard .p-foot b{color:var(--txt);font-variant-numeric:tabular-nums}.pcard.r{--rc:var(--r)}.pcard.r .p-rarity{color:var(--r)}.pcard.sr{--rc:var(--sr)}.pcard.sr .p-rarity{color:var(--sr)}.pcard.ssr{--rc:var(--ssr)}.pcard.ssr .p-rarity{color:var(--ssr)}.pcard.ssr{border-color:rgba(240,187,96,.45)}.pcard .p-hp{position:absolute;top:7px;right:8px;font-size:10px;color:var(--red)}.pcard .p-salary{color:var(--gold)}.pcard .bench-mark{position:absolute;top:7px;left:8px;font-size:10px;background:var(--sunken);color:var(--dim);padding:1px 7px;border-radius:2px}.pcard button{margin-top:7px;width:100%;padding:7px;border:1px solid var(--line2);background:transparent;color:var(--txt);cursor:pointer;font-size:12px;font-weight:600;transition:.15s;border-radius:var(--r1)}.pcard button:hover{border-color:var(--accent);color:var(--accent)}.pcard button.primary{background:var(--accent);border-color:var(--accent);color:#10141c}.pcard button.primary:hover{background:var(--accent-deep);color:#10141c}.pcard button.danger{color:var(--red)}.pcard button.danger:hover{border-color:var(--red);background:rgba(255,143,146,.08);color:var(--red)}.pcard button:disabled{opacity:.4;cursor:not-allowed}.pcard[data-pos=top]{border-left-color:var(--pos-top)}.pcard[data-pos=jg]{border-left-color:var(--pos-jg)}.pcard[data-pos=mid]{border-left-color:var(--pos-mid)}.pcard[data-pos=ad]{border-left-color:var(--pos-ad)}.pcard[data-pos=sup]{border-left-color:var(--pos-sup)}.p-pos[data-pos=top]{background:rgba(255,164,92,.14);color:var(--pos-top)}.p-pos[data-pos=jg]{background:rgba(207,173,255,.14);color:var(--pos-jg)}.p-pos[data-pos=mid]{background:rgba(76,198,242,.14);color:var(--pos-mid)}.p-pos[data-pos=ad]{background:rgba(90,208,122,.14);color:var(--pos-ad)}.p-pos[data-pos=sup]{background:rgba(232,185,72,.14);color:var(--pos-sup)}.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 18px;border:1px solid var(--line2);background:var(--raise);color:var(--txt);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;border-radius:3px}.btn:hover{border-color:var(--accent);color:var(--accent)}.btn.primary{background:linear-gradient(180deg,#a3c6ff,#5b9cff);border-color:#8dbaff;color:#10141c;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(121,170,255,.22)}.btn.primary:hover{background:linear-gradient(180deg,#b3d3ff,#79aaff);border-color:#a3c6ff;color:#10141c}.btn.gold{background:linear-gradient(180deg,#f7c86e,#f0bb60);border-color:#f2c25f;color:#221806;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(240,187,96,.18)}.btn.gold:hover{background:#dcae4f;border-color:#dcae4f;color:#221806}.btn.danger{color:var(--red);border-color:rgba(255,143,146,.5)}.btn.danger:hover{border-color:var(--red);background:rgba(255,143,146,.08);color:var(--red)}.btn:disabled{opacity:.4;cursor:not-allowed}.btn.sm{padding:5px 12px;font-size:12px}.btn s{opacity:.62;text-decoration:line-through}.match{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:11px 14px;margin-bottom:8px;transition:.15s}.match:hover{border-color:var(--line2)}.match .vs{display:flex;align-items:center;gap:10px;flex:1;min-width:0}.match .vs .tname{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.match .vs .power{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}.match .score{font-size:20px;font-weight:800;color:var(--txt);min-width:56px;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-.5px}.match.win{border-left:3px solid var(--green)}.match.win .score{color:var(--green)}.match.lose{border-left:3px solid var(--red)}.match.lose .score{color:var(--red)}.tbl{width:100%;border-collapse:collapse;font-size:13.5px}.tbl th{color:var(--faint);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-align:left;padding:8px 9px;border-bottom:1px solid var(--line2)}.tbl td{padding:9px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.tbl tr:last-child td{border-bottom:none}.tbl tbody tr:hover td,.tbl tr:hover td{background:rgba(255,255,255,.022)}.tbl tr.me td{background:rgba(121,170,255,.09);font-weight:600}.tbl tr.me td:first-child{border-left:2px solid var(--accent)}.logbox{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r1);padding:6px 13px;max-height:320px;overflow-y:auto;font-size:12.5px;line-height:1.9}.logbox div{border-bottom:1px dashed var(--line)}.logbox div:last-child{border-bottom:none}.logbox .win{color:var(--green)}.logbox .lose{color:var(--red)}.logbox .info{color:var(--dim)}.logbox .gold{color:var(--gold)}.event-card{border:1px solid var(--line);border-left:2px solid var(--accent);background:var(--raise);border-radius:var(--r1);padding:11px 14px;margin-bottom:8px}.event-card .et{font-weight:700;color:var(--accent);font-size:12px;margin-bottom:3px}.event-card p{font-size:13px;color:var(--txt);line-height:1.7}.event-card .opt{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}.center{text-align:center}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.dim{color:var(--dim)}.gold{color:var(--gold)}.cyan{color:var(--accent)}.red{color:var(--red)}.green{color:var(--green)}.hint{font-size:12px;color:var(--faint);line-height:1.7}.page-hint{display:flex;align-items:flex-start;gap:8px;background:var(--surface2);border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:var(--r1);padding:8px 11px;font-size:12.5px;color:var(--dim);line-height:1.6;margin-bottom:11px}.page-hint span{flex:1;min-width:0}.ph-x{background:none;border:none;color:var(--faint);font-size:14px;cursor:pointer;padding:0 2px;line-height:1.2;flex:none;font-family:inherit}.ph-x:hover{color:var(--txt)}.sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:9px;padding-bottom:2px}.sort-row::-webkit-scrollbar{display:none}.s-chip{flex:none;min-height:28px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);color:var(--dim);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}.s-chip:hover{border-color:var(--line2);color:var(--txt)}.s-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(240,187,96,.1);font-weight:700}.s-div{flex:none;width:1px;height:18px;background:var(--line);margin:0 3px}.progress{height:6px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:4px}.progress i{display:block;height:100%;background:var(--accent);border-radius:999px}.pbar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}.pbar .progress{flex:1;margin-top:0}.modal-bg{position:fixed;inset:0;background:rgba(6,7,9,.8);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}.modal-bg.on{display:flex}.modal{background:var(--surface);border:1px solid var(--line2);border-radius:var(--r3);padding:20px;max-width:560px;width:100%;min-width:0;max-height:88vh;overflow-y:auto;position:relative;box-shadow:var(--shadow)}.modal.wide{max-width:720px}.modal h2{display:flex;align-items:center;gap:8px;margin-bottom:13px;font-size:17px;font-weight:800;letter-spacing:-.2px}.modal h2 .h-ic{display:none}.modal h2 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line2);color:var(--dim);padding:1px 8px;border-radius:999px;font-weight:600;margin-left:auto}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--raise);border:1px solid var(--line2);border-left:2px solid var(--accent);color:var(--txt);padding:9px 18px;font-size:13px;z-index:200;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;border-radius:var(--r1);box-shadow:var(--shadow)}.toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}.league-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;margin-top:10px;border:1px solid var(--gold);background:rgba(240,187,96,.1);color:var(--gold);cursor:pointer;font-size:14px;font-weight:700;transition:.15s;border-radius:var(--r1)}.league-btn:hover{background:rgba(240,187,96,.18)}.banner{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:13px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.banner::before{content:none}.banner .big{font-size:19px;font-weight:800;letter-spacing:-.3px;font-variant-numeric:tabular-nums}.sponsor{display:flex;align-items:center;gap:11px;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:11px 13px;margin-bottom:8px}.sponsor .s-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;background:var(--surface);border:1px solid var(--line2);color:var(--accent);font-weight:700;font-size:13px;border-radius:var(--r1)}.sponsor .s-name{font-weight:700;font-size:13.5px}.sponsor .s-desc{font-size:11.5px;color:var(--dim)}.sponsor .s-price{margin-left:auto;font-weight:800;color:var(--gold);font-size:14px;font-variant-numeric:tabular-nums}footer{background:transparent;border-top:1px solid var(--line);text-align:center;padding:10px;font-size:11px;color:var(--faint)}.club-card{cursor:pointer;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:10px;text-align:center;transition:.15s}.club-card:hover{border-color:var(--accent)}.pack-btn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;min-height:48px;background:var(--raise);border:1px solid var(--line2);color:var(--txt);cursor:pointer;padding:8px 10px;transition:.15s;border-radius:var(--r1)}.pack-btn:hover{border-color:var(--accent);color:var(--accent)}.ic-pick{cursor:pointer}.bp-board{display:flex;gap:10px;align-items:stretch;margin:8px 0}.bp-col{flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r1);padding:10px;min-width:0;position:relative}.bp-col::before{content:none}.bp-col.blue::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}.bp-col.red::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}.bp-col-hd{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-col-hd .side-dot{width:8px;height:8px;flex:none;border-radius:2px}.bp-col.blue .side-dot{background:var(--accent)}.bp-col.red .side-dot{background:var(--red)}.bp-col-hd small{font-weight:400;font-size:10px;color:var(--faint);margin-left:auto}.bp-bans{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}.bp-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.bp-slot{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r1);min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 3px;text-align:center;overflow:hidden}.bp-slot b{font-size:10.5px;font-weight:600;line-height:1.3;max-width:100%;color:var(--faint);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}.bp-slot small{font-size:9px;color:var(--faint)}.bp-slot.ban{min-height:32px;border-style:dashed}.bp-slot.ban.filled{border-style:solid;background:rgba(255,143,146,.1);border-color:rgba(255,143,146,.45)}.bp-slot.ban.filled b{color:var(--red);text-decoration:line-through}.bp-slot.pick.filled{border-color:var(--line2);background:var(--raise)}.bp-slot.pick.filled b{color:var(--txt)}.bp-slot.pick.filled small{color:var(--dim)}.bp-slot.pick.blind b{color:var(--faint)}.bp-center{width:118px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.bp-phase{font-size:12px;font-weight:700;color:var(--gold)}.bp-stepnum{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}.bp-stepbar{width:74px;height:4px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden}.bp-stepbar i{display:block;height:100%;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:left center;transition:transform .25s}.bp-used{font-size:9px;color:var(--faint);max-height:72px;overflow-y:auto;line-height:1.6;padding-right:2px}.bp-hero-grid{display:flex;flex-wrap:wrap;gap:6px;max-height:228px;overflow-y:auto;padding:2px}.bp-hero{flex:1 1 96px;max-width:150px;background:var(--raise);border:1px solid var(--line);color:var(--txt);border-radius:var(--r1);padding:7px 9px;cursor:pointer;font-size:12.5px;font-weight:600;transition:.12s;text-align:center}.bp-hero small{display:block;font-size:9px;color:var(--faint);font-weight:400;margin-top:2px}.bp-hero:hover{border-color:var(--accent)}.bp-hero.pos{flex:1 1 108px;display:flex;flex-direction:column;align-items:center;gap:1px}.bp-hero.rec{border-color:var(--accent);background:rgba(121,170,255,.08)}.bp-hero.rec small{color:var(--accent)}.bp-hero.sel{border-color:var(--gold);background:rgba(240,187,96,.1)}.bp-hero.sel small{color:var(--gold)}.bp-hero:active{transform:scale(.97)}.bp-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin:6px 0 2px}.bp-flow .f-step{display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid var(--line);background:var(--raise);white-space:nowrap;border-radius:2px}.bp-flow .f-step.cur{border-color:var(--gold);color:var(--gold)}.bp-flow .f-step.off{opacity:.45}.bp-opp{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin-bottom:8px}.btn:active,.hd-btn:active,nav button:active,.pcard button:active,.club-card:active{transform:scale(.97)}#intro-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none;background:var(--bg);animation:introFade .7s ease .7s forwards}#intro-overlay .intro-inner{text-align:center;animation:introZoom .8s ease both}#intro-overlay .intro-ico{font-size:44px;line-height:1;color:var(--accent);font-weight:700}#intro-overlay .intro-name{font-size:20px;font-weight:700;margin-top:12px}#intro-overlay .intro-sub{font-size:10px;color:var(--dim);margin-top:6px}@keyframes introZoom{0%{transform:scale(.96);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes introFade{to{opacity:0;visibility:hidden}}@media(max-width:640px){body{padding-bottom:76px}.wrap{padding:10px 10px 16px}header{gap:6px;padding:9px 10px;top:0;border-radius:0;border-left:none;border-right:none}.logo{width:32px;height:32px;font-size:16px}.hd-name{font-size:14px}.hd-btn{padding:6px 8px;font-size:11px;min-height:34px}.stats{width:100%;order:5;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-left:0}.stats .stat{min-width:0;padding:5px 8px}.stats .stat b{font-size:15px}.stats .stat small{font-size:9px}nav{position:fixed;bottom:0;left:0;right:0;margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;z-index:80;background:var(--surface);box-shadow:0 -1px 0 var(--line);padding-bottom:env(safe-area-inset-bottom,0)}nav button{min-width:0;flex:1 1 auto;padding:11px 2px;font-size:11.5px;border-bottom-width:2px}.panel{padding:11px 12px;margin-bottom:9px}.banner{padding:10px;gap:8px}.banner .big{font-size:17px}.g4{grid-template-columns:repeat(2,1fr);gap:8px}.g3{grid-template-columns:1fr;gap:8px}.pcard{padding:10px}.pcard .p-name{font-size:14px}.pcard .p-rarity b{font-size:16px}.pcard .p-skill{min-height:0}.btn{padding:9px 14px;font-size:13px;min-height:40px}.s-chip{min-height:38px;padding:6px 13px;font-size:12.5px}.btn.sm{padding:7px 10px;font-size:12px;min-height:36px}.match{padding:9px 10px;gap:6px}.match .vs .tname{font-size:13px}.match .score{font-size:17px;min-width:44px}.tbl{font-size:11px}.tbl th,.tbl td{padding:7px 5px}.logbox{font-size:12px;max-height:280px}.modal{padding:14px;max-height:92vh}.modal h2{font-size:15px}.modal-bg{padding:8px}.bp-hero{flex:1 1 42%;min-height:44px;display:flex;flex-direction:column;justify-content:center}.sponsor{padding:9px}.event-card{padding:9px 11px}.pbar{font-size:10px}.toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0))}footer{padding:8px;font-size:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}#tab-self-body .btn,#tab-club-body .btn{width:100%}.btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}.btn.sm{min-height:38px}nav button{min-height:52px}.tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}.tbl th,.tbl td{white-space:nowrap}.modal{border-radius:10px;padding:16px 12px;max-height:94dvh}.modal-bg{padding:6px;align-items:flex-end}.modal-bg .modal{margin-bottom:env(safe-area-inset-bottom,0)}.page-cols{gap:8px}.g5,.g4{grid-template-columns:1fr 1fr}.banner{flex-wrap:wrap}.banner>div:nth-child(2){flex:1 1 140px;min-width:0}.vs-poster{padding:10px 8px;gap:6px}.vs-mid{width:90px}.vs-pow{font-size:16px}.result-band b{font-size:20px;letter-spacing:1px}.mvp-card{padding:8px 10px;gap:8px}.sponsor{padding:9px 10px}.logbox{max-height:220px}nav{scroll-snap-type:x proximity}nav button{scroll-snap-align:center}}@media (max-width:760px){.bp-board{flex-direction:column}.bp-center{width:100%;flex-direction:row;justify-content:center}.bp-hero{flex:1 1 42%}}a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{transition:border-color 150ms ease,background 150ms ease,color 150ms ease,transform 150ms ease}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}.cr-top{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:4px 0 6px}.cr-top .cr-preview{flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}.cr-tip{font-size:11px;line-height:1.7;text-align:left;max-width:280px}.cr-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}.cr-shape{min-width:54px;padding:7px 8px;border-radius:4px}.cr-sw{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0;flex:none}.cr-sw:hover{border-color:var(--accent);transform:scale(1.08)}.cr-sw.on{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 2px rgba(240,187,96,.25)}@media (max-width:640px){.cr-top .cr-preview{width:96px;height:auto}}.tbl th{cursor:pointer;user-select:none}.tbl th:hover{color:var(--cyan)}.pcard .p-top{gap:8px;justify-content:flex-start}.pcard .p-top .p-pos{margin-left:auto}.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(121,170,255,.09),rgba(121,170,255,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}.vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}.vs-pow.op{color:var(--red)}.vs-mid{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:118px}.vs-tag{font-size:17px;font-weight:800;color:var(--dim)}.vs-bar{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}.vs-bar i{height:100%}.vs-wr{font-size:10.5px;color:var(--dim);text-align:center}.result-band{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-radius:6px;margin-bottom:10px;font-weight:700;border:1px solid var(--line)}.result-band span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}.result-band b{font-size:26px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}.result-band.win{background:linear-gradient(180deg,rgba(92,196,134,.16),rgba(92,196,134,.05));border-color:rgba(92,196,134,.45)}.result-band.lose{background:linear-gradient(180deg,rgba(255,143,146,.12),rgba(255,143,146,.04));border-color:rgba(255,143,146,.35)}.mvp-card{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(242,196,27,.13),rgba(242,196,27,.03));border:1px solid rgba(242,196,27,.42);border-radius:8px;padding:10px 14px;margin-bottom:10px}.mvp-tag{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2.5px}.mvp-name{font-size:16px;font-weight:800}.mvp-kda{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}.pts-bar{height:4px;background:var(--sunken);border-radius:2px;margin-top:4px;overflow:hidden;max-width:150px}.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#a97d1f,var(--gold));border-radius:2px}.bp-slot{gap:3px}.bp-slot b{margin-top:1px}.bp-slot.pick.filled b{font-size:12px}#champion-overlay{position:fixed;inset:0;z-index:200;background:rgba(8,9,12,.93);display:flex;align-items:center;justify-content:center;animation:ccFade .5s ease;cursor:pointer}.cc-inner{text-align:center;position:relative;padding:40px}.cc-cup{animation:ccPop .7s cubic-bezier(.2,1.4,.4,1)}.cc-title{font-size:30px;font-weight:800;color:var(--gold);margin-top:16px;letter-spacing:5px}.cc-team{font-size:15px;color:var(--txt);margin-top:8px;letter-spacing:1px}.cc-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}.cc-confetti i{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;opacity:.85;animation:ccFall 3.2s linear infinite}@keyframes ccFall{to{transform:translateY(112vh) rotate(660deg);opacity:.15}}@keyframes ccPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}@keyframes ccFade{from{opacity:0}to{opacity:1}}@media (prefers-reduced-motion:reduce){.cc-confetti i{display:none}.cc-cup{animation:none}#champion-overlay{animation:none}.km-moment{animation:none}}.km-moment{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:190;min-width:220px;max-width:92vw;padding:14px 22px;border-radius:12px;background:rgba(14,16,22,.94);border:1px solid rgba(92,138,245,.55);box-shadow:0 12px 40px rgba(0,0,0,.45);text-align:center;pointer-events:none;animation:kmMoment .45s ease}.km-moment-hot{border-color:rgba(242,196,21,.75);box-shadow:0 0 0 1px rgba(242,196,21,.25),0 14px 44px rgba(0,0,0,.5)}.km-moment-t{font-size:20px;font-weight:800;color:var(--gold,#F2C41B);letter-spacing:2px}.km-moment-s{font-size:12px;color:var(--txt,#E8ECF4);opacity:.85;margin-top:6px}@keyframes kmMoment{from{opacity:0;transform:translateX(-50%) translateY(-12px) scale(.96)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}body{background:radial-gradient(1100px 480px at 50% -8%,rgba(121,170,255,.10),transparent 62%),radial-gradient(760px 420px at 100% 0%,rgba(240,187,96,.05),transparent 60%),var(--bg);background-attachment:fixed}.tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;line-height:1.55;color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:1px 8px;vertical-align:1px}.tag.gold{color:var(--gold);border-color:rgba(240,187,96,.38);background:rgba(240,187,96,.08)}.tag.red{color:var(--red);border-color:rgba(255,143,146,.38);background:rgba(255,143,146,.08)}.tag.green{color:var(--green);border-color:rgba(92,196,134,.38);background:rgba(92,196,134,.08)}.tag.cyan{color:var(--accent);border-color:rgba(121,170,255,.38);background:rgba(121,170,255,.08)}.panel h3 .tag,.modal h2 .tag{background:var(--surface2)}.panel{box-shadow:0 1px 0 rgba(255,255,255,.028) inset,0 12px 28px -20px rgba(0,0,0,.9)}.panel>h3::before{content:"";flex:none;width:3px;height:13px;border-radius:2px;background:var(--accent);opacity:.92}.panel>h3[data-ic=money]::before,.panel>h3[data-ic=cup]::before,.panel>h3[data-ic=honor]::before{background:var(--gold)}.panel>h3[data-ic=train]::before{background:var(--green)}.panel>h3[data-ic=board]::before{background:var(--pos-jg)}.panel>h3[data-ic=room]::before{background:var(--red)}.panel>h3[data-ic=lineup]::before{background:var(--pos-mid)}.panel>h3[data-ic=union]::before{background:var(--dim)}.panel>h3[data-ic=kjia]::before{background:var(--pos-top)}.panel>h3[data-ic=nat]::before{background:var(--pos-sup)}.panel>h3[data-ic=info]::before{background:var(--faint)}.pcard:hover{transform:translateY(-1px);box-shadow:0 8px 20px -14px rgba(0,0,0,.9)}.club-card:hover,.pack-btn:hover{transform:translateY(-1px)}.match{transition:border-color .15s,background .15s,transform .15s}.match:hover{background:var(--surface2)}header{background:linear-gradient(90deg,rgba(121,170,255,.12),rgba(121,170,255,.025) 32%,transparent 55%),var(--surface)}.logo{width:38px;height:38px;border-radius:var(--r1);overflow:hidden;flex:none}.stat.k-money b{color:var(--gold);font-size:21px}.stat.k-money{border-color:rgba(240,187,96,.34);background:linear-gradient(180deg,rgba(240,187,96,.10),rgba(240,187,96,.02)),var(--raise)}.stat.k-power b{color:var(--accent)}.stat.k-day b{font-size:16px}.stat.k-wage b{font-size:16px}.stat.k-sponsor b{font-size:16px}.stat.k-sponsor,.stat.k-day,.stat.k-wage{background:var(--surface2)}@media(min-width:641px){.btn[style*="width:100%"],.league-btn[style*="width:100%"]{width:auto !important;min-width:min(100%,330px)}.league-btn{width:auto !important;min-width:min(100%,430px);padding-left:22px;padding-right:22px}.center.mt8,.center.mt12,.center.mt16{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.center.mt8>*,.center.mt12>*,.center.mt16>*{margin-top:0}}@media(min-width:960px){section.page.on.flow2{column-count:2;column-gap:12px;column-fill:balance}section.page.on.flow2 .panel{break-inside:avoid}section.page.on.flow2>*:not(.panel){column-span:all}section.page.on.flow2 .panel[data-wide]{column-span:all}}.log-scroll{max-height:268px;overflow-y:auto;padding-right:5px}.log-row{font-size:12px;line-height:1.55;padding:5px 0;border-bottom:1px solid var(--line)}.log-row:last-child{border-bottom:none}.meter{display:flex;align-items:center;gap:9px;margin-bottom:9px}.m-label{font-size:11px;color:var(--faint);letter-spacing:.04em;flex:none}.m-track{flex:1;height:8px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden}.m-track>div{height:100%;border-radius:999px;transition:width .25s}.m-val{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;min-width:26px;text-align:right}.btn.primary{box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 16px -8px rgba(121,170,255,.55)}.btn.gold{box-shadow:0 1px 0 rgba(255,255,255,.24) inset,0 6px 16px -8px rgba(240,187,96,.5)}.btn:active{transform:translateY(1px)}html.hc{--line:#59616f;--line2:#8a93a3;--txt:#ffffff;--dim:#d8dfea;--faint:#bcc5d3;--accent:#9cc0ff;--gold:#f5c877;--red:#ff9fa2;--green:#7fdcaa}html.hc body{background:var(--bg)}html.hc .panel,html.hc header,html.hc nav{border-color:var(--line2)}html.hc .match.win{border-left:4px solid var(--green);border-width:2px}html.hc .match.lose{border-left:4px solid var(--red);border-width:2px}html.hc .match.win .score::before{content:"胜 ";font-weight:800}html.hc .match.lose .score::before{content:"负 ";font-weight:800}html.hc .logbox .win::before{content:"▲ "}html.hc .logbox .lose::before{content:"▼ "}html.hc .result-band.win{border-width:2px}html.hc .result-band.lose{border-width:2px}html.hc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}html.simple .hint{opacity:.92}html.simple .panel h3 .tag{font-size:9px}
+:root{--bg:#1b1f27;--surface:#232833;--surface2:#282e3a;--raise:#2f3644;--sunken:#161a21;--line:#3a4150;--line2:#4e5768;--txt:#f3f6fb;--dim:#c5cdd9;--faint:#adb7c5;--accent:#79aaff;--accent-deep:#5b9cff;--accent2:#79aaff;--gold:#f0bb60;--red:#ff8f92;--green:#5cc486;--r:#a9b3c4;--sr:#7ab0ff;--ssr:#f5c877;--card2:#282e3a;--cyan:var(--accent);--grad-a:none;--grad-btn:none;--grad-gold:none;--pos-top:#ffa45c;--pos-jg:#cfadff;--pos-mid:#4cc6f2;--pos-ad:#5ad07a;--pos-sup:#e8b948;--r1:5px;--r2:8px;--r3:12px;--shadow:0 1px 0 rgba(255,255,255,.04) inset,0 6px 18px rgba(0,0,0,.32)}*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}html{color-scheme:dark}body{background:radial-gradient(1100px 480px at 50% -8%,rgba(121,170,255,.07),transparent 62%),var(--bg);color:var(--txt);font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;font-size:14px;line-height:1.6;min-height:100vh;padding-bottom:20px;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}::-webkit-scrollbar-track{background:transparent}::selection{background:rgba(121,170,255,.3)}.wrap{max-width:1060px;margin:0 auto;padding:14px 16px 20px}.ic{flex:none;vertical-align:-2px}svg.ic{display:inline-block}.cut{border-radius:3px}header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:11px 15px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);position:sticky;top:8px;z-index:50;box-shadow:0 8px 22px rgba(0,0,0,.3)}.logo{display:flex;align-items:center;justify-content:center;flex:none}.hd-name{font-size:17px;font-weight:800;letter-spacing:-.2px;line-height:1.25}.hd-name small{display:block;font-size:11px;color:var(--dim);font-weight:500;letter-spacing:.02em}.stats{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto}.stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:5px 11px;min-width:0}.stat .ic{color:var(--faint)}.stat b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1.15;white-space:nowrap}.stat small{font-size:9.5px;color:var(--faint);letter-spacing:.06em;white-space:nowrap}.stat.gold b{color:var(--gold)}.stat.red b{color:var(--red)}.stat.green b{color:var(--green)}.stat.gold .ic{color:var(--gold)}.stat.red .ic{color:var(--red)}.stat.green .ic{color:var(--green)}.hd-btn{display:inline-flex;align-items:center;gap:4px;background:var(--raise);border:1px solid var(--line2);color:var(--dim);border-radius:var(--r1);padding:6px 11px;cursor:pointer;font-size:12px;transition:.15s}.hd-btn:hover{color:var(--txt);border-color:var(--accent);background:rgba(121,170,255,.09)}nav{display:flex;gap:3px;margin:12px 0;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{flex:1;min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 8px;background:transparent;border:none;border-radius:var(--r1);color:var(--dim);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap;box-shadow:inset 0 -2px 0 transparent}nav button .ic{color:var(--faint)}nav button:hover{color:var(--txt);background:var(--surface2)}nav button.on{color:var(--txt);background:var(--raise);box-shadow:inset 0 -2px 0 var(--accent)}nav button.on .ic{color:var(--accent)}section.page{display:none}section.page.on{display:block;animation:fadein .18s ease}@keyframes fadein{from{opacity:0}to{opacity:1}}.panel{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0) 64px),var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:15px 17px;margin-bottom:13px;position:relative}.panel h3{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;margin-bottom:13px;letter-spacing:.06em;color:var(--dim);padding-bottom:9px;border-bottom:1px solid var(--line)}.panel h3 .h-ic{display:none}.panel h3 .tag{font-size:10px;letter-spacing:0;background:var(--raise);border:1px solid var(--line2);color:var(--dim);padding:1px 8px;border-radius:999px;font-weight:600}.grid{display:grid;gap:10px}.g5{grid-template-columns:repeat(5,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}@media(max-width:900px){.g5{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}@media(max-width:560px){.g2{grid-template-columns:1fr}.stats .stat{min-width:62px}}.page-cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}.page-cols>.col{min-width:0}.page-cols>.col>.panel:last-child{margin-bottom:0}@media(max-width:1000px){.page-cols{grid-template-columns:1fr}}.panel.collapsible>h3{cursor:pointer;user-select:none}.panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .18s;transform:rotate(90deg)}.panel.collapsed>h3::after{transform:rotate(0)}.panel.collapsed>*:not(h3){display:none}.panel.collapsed{padding-bottom:12px}.pcard{background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:var(--r1);padding:12px 13px;position:relative;transition:.15s}.pcard::before{content:none}.pcard:hover{border-color:var(--line2);border-left-color:var(--dim)}.pcard .p-top{display:flex;justify-content:flex-start;align-items:center;gap:8px;margin-bottom:7px}.pcard .p-name{font-weight:800;font-size:15px;letter-spacing:-.1px}.pcard .p-pos{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:3px;margin-left:auto;background:rgba(121,170,255,.08);color:var(--accent)}.pcard .p-rarity{font-size:11.5px;font-weight:400;color:var(--dim)}.pcard .p-rarity b{font-size:18px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:-.5px}.pcard .p-tag{font-size:10px;margin-left:3px;background:var(--sunken);color:var(--dim);padding:1px 5px;border-radius:2px}.pcard .p-hero{font-size:11px;color:var(--dim);margin-bottom:3px}.pcard .p-hero b{color:var(--txt)}.pcard .p-disc{float:right;font-size:10px;background:rgba(255,143,146,.10);color:#ff9fa2;padding:1px 6px;border-radius:2px}.pcard .p-hero-pick{border-color:var(--accent);background:rgba(121,170,255,.06)}.pcard .p-skill{font-size:11.5px;color:var(--dim);margin:5px 0;line-height:1.55;min-height:32px}.pcard .p-skill b{color:var(--dim)}.pcard .attr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11px;color:var(--faint);margin-bottom:7px}.pcard .attr i{font-style:normal;color:var(--txt);float:right;font-weight:700;font-variant-numeric:tabular-nums}.pcard .p-foot{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:7px;margin-top:2px}.pcard .p-foot b{color:var(--txt);font-variant-numeric:tabular-nums}.pcard.r{--rc:var(--r)}.pcard.r .p-rarity{color:var(--r)}.pcard.sr{--rc:var(--sr)}.pcard.sr .p-rarity{color:var(--sr)}.pcard.ssr{--rc:var(--ssr)}.pcard.ssr .p-rarity{color:var(--ssr)}.pcard.ssr{border-color:rgba(240,187,96,.45)}.pcard .p-hp{position:absolute;top:7px;right:8px;font-size:10px;color:var(--red)}.pcard .p-salary{color:var(--gold)}.pcard .bench-mark{position:absolute;top:7px;left:8px;font-size:10px;background:var(--sunken);color:var(--dim);padding:1px 7px;border-radius:2px}.pcard button{margin-top:7px;width:100%;padding:7px;border:1px solid var(--line2);background:transparent;color:var(--txt);cursor:pointer;font-size:12px;font-weight:600;transition:.15s;border-radius:var(--r1)}.pcard button:hover{border-color:var(--accent);color:var(--accent)}.pcard button.primary{background:var(--accent);border-color:var(--accent);color:#10141c}.pcard button.primary:hover{background:var(--accent-deep);color:#10141c}.pcard button.danger{color:var(--red)}.pcard button.danger:hover{border-color:var(--red);background:rgba(255,143,146,.08);color:var(--red)}.pcard button:disabled{opacity:.4;cursor:not-allowed}.pcard[data-pos=top]{border-left-color:var(--pos-top)}.pcard[data-pos=jg]{border-left-color:var(--pos-jg)}.pcard[data-pos=mid]{border-left-color:var(--pos-mid)}.pcard[data-pos=ad]{border-left-color:var(--pos-ad)}.pcard[data-pos=sup]{border-left-color:var(--pos-sup)}.p-pos[data-pos=top]{background:rgba(255,164,92,.14);color:var(--pos-top)}.p-pos[data-pos=jg]{background:rgba(207,173,255,.14);color:var(--pos-jg)}.p-pos[data-pos=mid]{background:rgba(76,198,242,.14);color:var(--pos-mid)}.p-pos[data-pos=ad]{background:rgba(90,208,122,.14);color:var(--pos-ad)}.p-pos[data-pos=sup]{background:rgba(232,185,72,.14);color:var(--pos-sup)}.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 18px;border:1px solid var(--line2);background:var(--raise);color:var(--txt);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;border-radius:3px}.btn:hover{border-color:var(--accent);color:var(--accent)}.btn.primary{background:linear-gradient(180deg,#a3c6ff,#5b9cff);border-color:#8dbaff;color:#10141c;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 8px rgba(121,170,255,.22)}.btn.primary:hover{background:linear-gradient(180deg,#b3d3ff,#79aaff);border-color:#a3c6ff;color:#10141c}.btn.gold{background:linear-gradient(180deg,#f7c86e,#f0bb60);border-color:#f2c25f;color:#221806;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 8px rgba(240,187,96,.18)}.btn.gold:hover{background:#dcae4f;border-color:#dcae4f;color:#221806}.btn.danger{color:var(--red);border-color:rgba(255,143,146,.5)}.btn.danger:hover{border-color:var(--red);background:rgba(255,143,146,.08);color:var(--red)}.btn:disabled{opacity:.4;cursor:not-allowed}.btn.sm{padding:5px 12px;font-size:12px}.btn s{opacity:.62;text-decoration:line-through}.match{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:11px 14px;margin-bottom:8px;transition:.15s}.match:hover{border-color:var(--line2)}.match .vs{display:flex;align-items:center;gap:10px;flex:1;min-width:0}.match .vs .tname{font-weight:700;font-size:14.5px;white-space:normal;word-break:break-word;line-height:1.35}.match .vs .power{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}.match .score{font-size:20px;font-weight:800;color:var(--txt);min-width:56px;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-.5px}.match.win{border-left:3px solid var(--green)}.match.win .score{color:var(--green)}.match.lose{border-left:3px solid var(--red)}.match.lose .score{color:var(--red)}.tbl{width:100%;border-collapse:collapse;font-size:13.5px}.tbl th{color:var(--faint);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-align:left;padding:8px 9px;border-bottom:1px solid var(--line2)}.tbl td{padding:9px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.tbl tr:last-child td{border-bottom:none}.tbl tbody tr:hover td,.tbl tr:hover td{background:rgba(255,255,255,.022)}.tbl tr.me td{background:rgba(121,170,255,.09);font-weight:600}.tbl tr.me td:first-child{border-left:2px solid var(--accent)}.logbox{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r1);padding:6px 13px;max-height:320px;overflow-y:auto;font-size:12.5px;line-height:1.9}.logbox div{border-bottom:1px dashed var(--line)}.logbox div:last-child{border-bottom:none}.logbox .win{color:var(--green)}.logbox .lose{color:var(--red)}.logbox .info{color:var(--dim)}.logbox .gold{color:var(--gold)}.event-card{border:1px solid var(--line);border-left:2px solid var(--accent);background:var(--raise);border-radius:var(--r1);padding:11px 14px;margin-bottom:8px}.event-card .et{font-weight:700;color:var(--accent);font-size:12px;margin-bottom:3px}.event-card p{font-size:13px;color:var(--txt);line-height:1.7}.event-card .opt{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}.center{text-align:center}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.dim{color:var(--dim)}.gold{color:var(--gold)}.cyan{color:var(--accent)}.red{color:var(--red)}.green{color:var(--green)}.hint{font-size:12px;color:var(--faint);line-height:1.7}.page-hint{display:flex;align-items:flex-start;gap:8px;background:var(--surface2);border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:var(--r1);padding:8px 11px;font-size:12.5px;color:var(--dim);line-height:1.6;margin-bottom:11px}.page-hint span{flex:1;min-width:0}.ph-x{background:none;border:none;color:var(--faint);font-size:14px;cursor:pointer;padding:2px 6px;line-height:1.2;flex:none;font-family:inherit;min-width:28px;min-height:28px}.ph-x:hover{color:var(--txt)}.sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:9px;padding-bottom:2px}.sort-row::-webkit-scrollbar{display:none}.s-chip{flex:none;min-height:28px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);color:var(--dim);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}.s-chip:hover{border-color:var(--line2);color:var(--txt)}.s-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(240,187,96,.1);font-weight:700}.s-div{flex:none;width:1px;height:18px;background:var(--line);margin:0 3px}.progress{height:6px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:4px}.progress i{display:block;height:100%;background:var(--accent);border-radius:999px}.pbar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}.pbar .progress{flex:1;margin-top:0}.modal-bg{position:fixed;inset:0;background:rgba(6,7,9,.8);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}.modal-bg.on{display:flex}.modal{background:var(--surface);border:1px solid var(--line2);border-radius:var(--r3);padding:20px;max-width:560px;width:100%;min-width:0;max-height:88vh;overflow-y:auto;position:relative;box-shadow:var(--shadow)}.modal.wide{max-width:720px}.modal h2{display:flex;align-items:center;gap:8px;margin-bottom:13px;font-size:17px;font-weight:800;letter-spacing:-.2px}.modal h2 .h-ic{display:none}.modal h2 .tag{font-size:10px;background:var(--raise);border:1px solid var(--line2);color:var(--dim);padding:1px 8px;border-radius:999px;font-weight:600;margin-left:auto}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--raise);border:1px solid var(--line2);border-left:2px solid var(--accent);color:var(--txt);padding:9px 18px;font-size:13px;z-index:200;opacity:0;transition:.25s;pointer-events:none;white-space:normal;word-break:break-word;max-width:min(92vw,560px);border-radius:var(--r1);box-shadow:var(--shadow)}.toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}.league-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;margin-top:10px;border:1px solid var(--gold);background:rgba(240,187,96,.1);color:var(--gold);cursor:pointer;font-size:14px;font-weight:700;transition:.15s;border-radius:var(--r1)}.league-btn:hover{background:rgba(240,187,96,.18)}.banner{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:13px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.banner::before{content:none}.banner .big{font-size:19px;font-weight:800;letter-spacing:-.3px;font-variant-numeric:tabular-nums}.sponsor{display:flex;align-items:center;gap:11px;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:11px 13px;margin-bottom:8px}.sponsor .s-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;background:var(--surface);border:1px solid var(--line2);color:var(--accent);font-weight:700;font-size:13px;border-radius:var(--r1)}.sponsor .s-name{font-weight:700;font-size:13.5px}.sponsor .s-desc{font-size:11.5px;color:var(--dim)}.sponsor .s-price{margin-left:auto;font-weight:800;color:var(--gold);font-size:14px;font-variant-numeric:tabular-nums}footer{background:transparent;border-top:1px solid var(--line);text-align:center;padding:10px;font-size:11px;color:var(--faint)}.club-card{cursor:pointer;background:var(--raise);border:1px solid var(--line);border-radius:var(--r1);padding:10px;text-align:center;transition:.15s}.club-card:hover{border-color:var(--accent)}.pack-btn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;min-height:48px;background:var(--raise);border:1px solid var(--line2);color:var(--txt);cursor:pointer;padding:8px 10px;transition:.15s;border-radius:var(--r1)}.pack-btn:hover{border-color:var(--accent);color:var(--accent)}.ic-pick{cursor:pointer}.bp-board{display:flex;gap:10px;align-items:stretch;margin:8px 0}.bp-col{flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r1);padding:10px;min-width:0;position:relative}.bp-col::before{content:none}.bp-col.blue::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}.bp-col.red::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}.bp-col-hd{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-col-hd .side-dot{width:8px;height:8px;flex:none;border-radius:2px}.bp-col.blue .side-dot{background:var(--accent)}.bp-col.red .side-dot{background:var(--red)}.bp-col-hd small{font-weight:400;font-size:10px;color:var(--faint);margin-left:auto}.bp-bans{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}.bp-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.bp-slot{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r1);min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 3px;text-align:center;overflow:hidden}.bp-slot b{font-size:10.5px;font-weight:600;line-height:1.3;max-width:100%;color:var(--faint);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}.bp-slot small{font-size:9px;color:var(--faint)}.bp-slot.ban{min-height:32px;border-style:dashed}.bp-slot.ban.filled{border-style:solid;background:rgba(255,143,146,.1);border-color:rgba(255,143,146,.45)}.bp-slot.ban.filled b{color:var(--red);text-decoration:line-through}.bp-slot.pick.filled{border-color:var(--line2);background:var(--raise)}.bp-slot.pick.filled b{color:var(--txt)}.bp-slot.pick.filled small{color:var(--dim)}.bp-slot.pick.blind b{color:var(--faint)}.bp-center{width:118px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}.bp-phase{font-size:12px;font-weight:700;color:var(--gold)}.bp-stepnum{font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}.bp-stepbar{width:74px;height:4px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden}.bp-stepbar i{display:block;height:100%;width:100%;background:var(--gold);transform:scaleX(0);transform-origin:left center;transition:transform .25s}.bp-used{font-size:9px;color:var(--faint);max-height:72px;overflow-y:auto;line-height:1.6;padding-right:2px}.bp-hero-grid{display:flex;flex-wrap:wrap;gap:6px;max-height:228px;overflow-y:auto;padding:2px}.bp-hero{flex:1 1 96px;max-width:150px;background:var(--raise);border:1px solid var(--line);color:var(--txt);border-radius:var(--r1);padding:7px 9px;cursor:pointer;font-size:12.5px;font-weight:600;transition:.12s;text-align:center}.bp-hero small{display:block;font-size:9px;color:var(--faint);font-weight:400;margin-top:2px}.bp-hero:hover{border-color:var(--accent)}.bp-hero.pos{flex:1 1 108px;display:flex;flex-direction:column;align-items:center;gap:1px}.bp-hero.rec{border-color:var(--accent);background:rgba(121,170,255,.08)}.bp-hero.rec small{color:var(--accent)}.bp-hero.sel{border-color:var(--gold);background:rgba(240,187,96,.1)}.bp-hero.sel small{color:var(--gold)}.bp-hero:active{transform:scale(.97)}.bp-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin:6px 0 2px}.bp-flow .f-step{display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid var(--line);background:var(--raise);white-space:nowrap;border-radius:2px}.bp-flow .f-step.cur{border-color:var(--gold);color:var(--gold)}.bp-flow .f-step.off{opacity:.45}.bp-opp{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin-bottom:8px}.btn:active,.hd-btn:active,nav button:active,.pcard button:active,.club-card:active{transform:scale(.97)}#intro-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;pointer-events:none;background:var(--bg);animation:introFade .7s ease .7s forwards}#intro-overlay .intro-inner{text-align:center;animation:introZoom .8s ease both}#intro-overlay .intro-ico{font-size:44px;line-height:1;color:var(--accent);font-weight:700}#intro-overlay .intro-name{font-size:20px;font-weight:700;margin-top:12px}#intro-overlay .intro-sub{font-size:10px;color:var(--dim);margin-top:6px}@keyframes introZoom{0%{transform:scale(.96);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes introFade{to{opacity:0;visibility:hidden}}@media(max-width:640px){body{padding-bottom:76px}.wrap{padding:10px 10px 16px}header{gap:6px;padding:9px 10px;top:0;border-radius:0;border-left:none;border-right:none}.logo{width:32px;height:32px;font-size:16px}.hd-name{font-size:14px}.hd-btn{padding:6px 8px;font-size:11px;min-height:34px}.stats{width:100%;order:5;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-left:0}.stats .stat{min-width:0;padding:5px 8px}.stats .stat b{font-size:15px}.stats .stat small{font-size:9px}nav{position:fixed;bottom:0;left:0;right:0;margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;z-index:80;background:var(--surface);box-shadow:0 -1px 0 var(--line);padding-bottom:env(safe-area-inset-bottom,0)}nav button{min-width:0;flex:1 1 auto;padding:11px 2px;font-size:11.5px;border-bottom-width:2px}.panel{padding:11px 12px;margin-bottom:9px}.banner{padding:10px;gap:8px}.banner .big{font-size:17px}.g4{grid-template-columns:repeat(2,1fr);gap:8px}.g3{grid-template-columns:1fr;gap:8px}.pcard{padding:10px}.pcard .p-name{font-size:14px}.pcard .p-rarity b{font-size:16px}.pcard .p-skill{min-height:0}.btn{padding:9px 14px;font-size:13px;min-height:40px}.s-chip{min-height:38px;padding:6px 13px;font-size:12.5px}.btn.sm{padding:7px 10px;font-size:12px;min-height:36px}.match{padding:9px 10px;gap:6px}.match .vs .tname{font-size:13px}.match .score{font-size:17px;min-width:44px}.tbl{font-size:11px}.tbl th,.tbl td{padding:7px 5px}.logbox{font-size:12px;max-height:280px}.modal{padding:14px;max-height:92vh}.modal h2{font-size:15px}.modal-bg{padding:8px}.bp-hero{flex:1 1 42%;min-height:44px;display:flex;flex-direction:column;justify-content:center}.sponsor{padding:9px}.event-card{padding:9px 11px}.pbar{font-size:10px}.toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0))}footer{padding:8px;font-size:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}#tab-self-body .btn,#tab-club-body .btn{width:100%}.btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}.btn.sm{min-height:38px}nav button{min-height:52px}.tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}.tbl th,.tbl td{white-space:nowrap}.modal{border-radius:10px;padding:16px 12px;max-height:94dvh}.modal-bg{padding:6px;align-items:flex-end}.modal-bg .modal{margin-bottom:env(safe-area-inset-bottom,0)}.page-cols{gap:8px}.g5,.g4{grid-template-columns:1fr 1fr}.banner{flex-wrap:wrap}.banner>div:nth-child(2){flex:1 1 140px;min-width:0}.vs-poster{padding:10px 8px;gap:6px}.vs-mid{width:90px}.vs-pow{font-size:16px}.result-band b{font-size:20px;letter-spacing:1px}.mvp-card{padding:8px 10px;gap:8px}.sponsor{padding:9px 10px}.logbox{max-height:220px}nav{scroll-snap-type:x proximity}nav button{scroll-snap-align:center}}@media (max-width:760px){.bp-board{flex-direction:column}.bp-center{width:100%;flex-direction:row;justify-content:center}.bp-hero{flex:1 1 42%}}a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{transition:border-color 150ms ease,background 150ms ease,color 150ms ease,transform 150ms ease}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}.cr-top{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:4px 0 6px}.cr-top .cr-preview{flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}.cr-tip{font-size:11px;line-height:1.7;text-align:left;max-width:280px}.cr-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}.cr-shape{min-width:54px;padding:7px 8px;border-radius:4px}.cr-sw{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);cursor:pointer;padding:0;flex:none}.cr-sw:hover{border-color:var(--accent);transform:scale(1.08)}.cr-sw.on{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 2px rgba(240,187,96,.25)}@media (max-width:640px){.cr-top .cr-preview{width:96px;height:auto}}.tbl th{cursor:pointer;user-select:none}.tbl th:hover{color:var(--cyan)}.pcard .p-top{gap:8px;justify-content:flex-start}.pcard .p-top .p-pos{margin-left:auto}.vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(121,170,255,.09),rgba(121,170,255,.02));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}.vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}.vs-pow.op{color:var(--red)}.vs-mid{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:118px}.vs-tag{font-size:17px;font-weight:800;color:var(--dim)}.vs-bar{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}.vs-bar i{height:100%}.vs-wr{font-size:10.5px;color:var(--dim);text-align:center}.result-band{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-radius:6px;margin-bottom:10px;font-weight:700;border:1px solid var(--line)}.result-band span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}.result-band b{font-size:26px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums}.result-band.win{background:linear-gradient(180deg,rgba(92,196,134,.16),rgba(92,196,134,.05));border-color:rgba(92,196,134,.45)}.result-band.lose{background:linear-gradient(180deg,rgba(255,143,146,.12),rgba(255,143,146,.04));border-color:rgba(255,143,146,.35)}.mvp-card{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(242,196,27,.13),rgba(242,196,27,.03));border:1px solid rgba(242,196,27,.42);border-radius:8px;padding:10px 14px;margin-bottom:10px}.mvp-tag{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:2.5px}.mvp-name{font-size:16px;font-weight:800}.mvp-kda{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}.pts-bar{height:4px;background:var(--sunken);border-radius:2px;margin-top:4px;overflow:hidden;max-width:150px}.pts-bar i{display:block;height:100%;background:linear-gradient(90deg,#a97d1f,var(--gold));border-radius:2px}.bp-slot{gap:3px}.bp-slot b{margin-top:1px}.bp-slot.pick.filled b{font-size:12px}#champion-overlay{position:fixed;inset:0;z-index:200;background:rgba(8,9,12,.93);display:flex;align-items:center;justify-content:center;animation:ccFade .5s ease;cursor:pointer}.cc-inner{text-align:center;position:relative;padding:40px}.cc-cup{animation:ccPop .7s cubic-bezier(.2,1.4,.4,1)}.cc-title{font-size:30px;font-weight:800;color:var(--gold);margin-top:16px;letter-spacing:5px}.cc-team{font-size:15px;color:var(--txt);margin-top:8px;letter-spacing:1px}.cc-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}.cc-confetti i{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;opacity:.85;animation:ccFall 3.2s linear infinite}@keyframes ccFall{to{transform:translateY(112vh) rotate(660deg);opacity:.15}}@keyframes ccPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}@keyframes ccFade{from{opacity:0}to{opacity:1}}@media (prefers-reduced-motion:reduce){.cc-confetti i{display:none}.cc-cup{animation:none}#champion-overlay{animation:none}.km-moment{animation:none}}.km-moment{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:190;min-width:220px;max-width:92vw;padding:14px 22px;border-radius:12px;background:rgba(14,16,22,.94);border:1px solid rgba(92,138,245,.55);box-shadow:0 12px 40px rgba(0,0,0,.45);text-align:center;pointer-events:none;animation:kmMoment .45s ease}.km-moment-hot{border-color:rgba(242,196,21,.75);box-shadow:0 0 0 1px rgba(242,196,21,.25),0 14px 44px rgba(0,0,0,.5)}.km-moment-t{font-size:20px;font-weight:800;color:var(--gold,#F2C41B);letter-spacing:2px}.km-moment-s{font-size:12px;color:var(--txt,#E8ECF4);opacity:.85;margin-top:6px}@keyframes kmMoment{from{opacity:0;transform:translateX(-50%) translateY(-12px) scale(.96)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}body{background:radial-gradient(1100px 480px at 50% -8%,rgba(121,170,255,.10),transparent 62%),radial-gradient(760px 420px at 100% 0%,rgba(240,187,96,.05),transparent 60%),var(--bg);background-attachment:fixed}.tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;line-height:1.55;color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:1px 8px;vertical-align:1px}.tag.gold{color:var(--gold);border-color:rgba(240,187,96,.38);background:rgba(240,187,96,.08)}.tag.red{color:var(--red);border-color:rgba(255,143,146,.38);background:rgba(255,143,146,.08)}.tag.green{color:var(--green);border-color:rgba(92,196,134,.38);background:rgba(92,196,134,.08)}.tag.cyan{color:var(--accent);border-color:rgba(121,170,255,.38);background:rgba(121,170,255,.08)}.panel h3 .tag,.modal h2 .tag{background:var(--surface2)}.panel{box-shadow:0 1px 0 rgba(255,255,255,.028) inset,0 12px 28px -20px rgba(0,0,0,.9)}.panel>h3::before{content:"";flex:none;width:3px;height:13px;border-radius:2px;background:var(--accent);opacity:.92}.panel>h3[data-ic=money]::before,.panel>h3[data-ic=cup]::before,.panel>h3[data-ic=honor]::before{background:var(--gold)}.panel>h3[data-ic=train]::before{background:var(--green)}.panel>h3[data-ic=board]::before{background:var(--pos-jg)}.panel>h3[data-ic=room]::before{background:var(--red)}.panel>h3[data-ic=lineup]::before{background:var(--pos-mid)}.panel>h3[data-ic=union]::before{background:var(--dim)}.panel>h3[data-ic=kjia]::before{background:var(--pos-top)}.panel>h3[data-ic=nat]::before{background:var(--pos-sup)}.panel>h3[data-ic=info]::before{background:var(--faint)}.pcard:hover{transform:translateY(-1px);box-shadow:0 8px 20px -14px rgba(0,0,0,.9)}.club-card:hover,.pack-btn:hover{transform:translateY(-1px)}.match{transition:border-color .15s,background .15s,transform .15s}.match:hover{background:var(--surface2)}header{background:linear-gradient(90deg,rgba(121,170,255,.12),rgba(121,170,255,.025) 32%,transparent 55%),var(--surface)}.logo{width:38px;height:38px;border-radius:var(--r1);overflow:hidden;flex:none}.stat.k-money b{color:var(--gold);font-size:21px}.stat.k-money{border-color:rgba(240,187,96,.34);background:linear-gradient(180deg,rgba(240,187,96,.10),rgba(240,187,96,.02)),var(--raise)}.stat.k-power b{color:var(--accent)}.stat.k-day b{font-size:16px}.stat.k-wage b{font-size:16px}.stat.k-sponsor b{font-size:16px}.stat.k-sponsor,.stat.k-day,.stat.k-wage{background:var(--surface2)}@media(min-width:641px){.btn[style*="width:100%"],.league-btn[style*="width:100%"]{width:auto !important;min-width:min(100%,330px)}.league-btn{width:auto !important;min-width:min(100%,430px);padding-left:22px;padding-right:22px}.center.mt8,.center.mt12,.center.mt16{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.center.mt8>*,.center.mt12>*,.center.mt16>*{margin-top:0}}@media(min-width:960px){section.page.on.flow2{column-count:2;column-gap:12px;column-fill:balance}section.page.on.flow2 .panel{break-inside:avoid}section.page.on.flow2>*:not(.panel){column-span:all}section.page.on.flow2 .panel[data-wide]{column-span:all}}.log-scroll{max-height:268px;overflow-y:auto;padding-right:5px}.log-row{font-size:12px;line-height:1.55;padding:5px 0;border-bottom:1px solid var(--line)}.log-row:last-child{border-bottom:none}.meter{display:flex;align-items:center;gap:9px;margin-bottom:9px}.m-label{font-size:11px;color:var(--faint);letter-spacing:.04em;flex:none}.m-track{flex:1;height:8px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;overflow:hidden}.m-track>div{height:100%;border-radius:999px;transition:width .25s}.m-val{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;min-width:26px;text-align:right}.btn.primary{box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 6px 16px -8px rgba(121,170,255,.55)}.btn.gold{box-shadow:0 1px 0 rgba(255,255,255,.24) inset,0 6px 16px -8px rgba(240,187,96,.5)}.btn:active{transform:translateY(1px)}html.hc{--line:#59616f;--line2:#8a93a3;--txt:#ffffff;--dim:#d8dfea;--faint:#bcc5d3;--accent:#9cc0ff;--gold:#f5c877;--red:#ff9fa2;--green:#7fdcaa}html.hc body{background:var(--bg)}html.hc .panel,html.hc header,html.hc nav{border-color:var(--line2)}html.hc .match.win{border-left:4px solid var(--green);border-width:2px}html.hc .match.lose{border-left:4px solid var(--red);border-width:2px}html.hc .match.win .score::before{content:"胜 ";font-weight:800}html.hc .match.lose .score::before{content:"负 ";font-weight:800}html.hc .logbox .win::before{content:"▲ "}html.hc .logbox .lose::before{content:"▼ "}html.hc .result-band.win{border-width:2px}html.hc .result-band.lose{border-width:2px}html.hc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}html.simple .hint{opacity:.92}html.simple .panel h3 .tag{font-size:9px}
 </style>
 </head>
 <body>
@@ -1034,6 +1034,209 @@ function installEra(id){
 
 </script>
 <script>
+class PerfMonitor {
+  constructor() {
+
+    this.baseline = {
+      initTime: 200,       // 初始化耗时 (ms)
+      renderTime: 50,      // 单次渲染耗时 (ms)
+      memoryLimit: 50,     // 单赛季内存增长上限 (MB)
+      fpsMinimum: 55       // 最低 FPS
+    };
+
+
+    this.history = [];
+    this.lastRenderStart = 0;
+    this.lastRenderEnd = 0;
+    this.currentFPS = 0;
+    this.renderQueue = [];
+
+
+    this.startPeriodicSampling();
+
+    console.log('[PerfMonitor] Initialized');
+  }
+
+
+  measureInit() {
+    const start = performance.now();
+
+
+    const originalInitStart = window.initStart;
+    if (originalInitStart) {
+      window.initStart = () => {
+        const result = originalInitStart.call(this);
+        const duration = performance.now() - start;
+        this.logMetric('initTime', duration);
+        return result;
+      };
+    }
+
+    return () => performance.now() - start;
+  }
+
+
+  markRenderStart() {
+    this.lastRenderStart = performance.now();
+  }
+
+
+  markRenderEnd() {
+    this.lastRenderEnd = performance.now();
+    const duration = this.lastRenderEnd - this.lastRenderStart;
+    this.lastRenderTime = duration;
+    this.logMetric('renderTime', duration);
+
+
+    this.renderQueue.push({
+      timestamp: Date.now(),
+      duration: duration
+    });
+
+
+    if (this.renderQueue.length > 100) {
+      this.renderQueue.shift();
+    }
+
+    return duration;
+  }
+
+
+  logMetric(name, value) {
+    const status = value <= this.baseline[name] ? '✓' : '✗';
+
+    const snapshot = {
+      timestamp: new Date().toISOString(),
+      metric: name,
+      value: parseFloat(value.toFixed(2)),
+      baseline: this.baseline[name],
+      status: status
+    };
+
+    this.history.push(snapshot);
+
+
+    if (status === '✗') {
+      console.warn(`[PERF] ${name} 超基线：${value.toFixed(1)}ms (阈值：${this.baseline[name]}ms)`);
+    }
+  }
+
+
+  getTrend(metricName, days = 7) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    return this.history
+      .filter(h => new Date(h.timestamp) > cutoff && h.metric === metricName)
+      .map(h => ({
+        date: h.timestamp.split('T')[0],
+        value: h.value
+      }));
+  }
+
+
+  exportToCSV(filename = null) {
+    const fname = filename || `perf-history-${new Date().toISOString().split('T')[0]}.csv`;
+
+    const headers = ['timestamp', 'metric', 'value', 'baseline', 'status'];
+    const rows = this.history.map(h =>
+      [h.timestamp, h.metric, h.value, h.baseline, h.status].join(',')
+    );
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fname;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    console.log(`[PERF] Exported ${this.history.length} records to ${fname}`);
+  }
+
+
+  startPeriodicSampling() {
+
+    if (typeof window.self !== 'undefined') {
+      try {
+        const intervalId = setInterval(() => {
+          try {
+
+            const now = performance.now();
+            if (this.lastFrameTime) {
+              const delta = now - this.lastFrameTime;
+              this.currentFPS = delta > 0 ? Math.round(1000 / delta) : 0;
+            }
+            this.lastFrameTime = now;
+
+
+            if (performance.memory) {
+              const memoryData = {
+                used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                total: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)
+              };
+
+              if (memoryData.used > this.baseline.memoryLimit) {
+                console.warn(`[PERF] 内存使用过高：${memoryData.used}MB / ${memoryData.total}MB`);
+              }
+            }
+
+          } catch (e) {
+
+          }
+        }, 1000); // 每秒采样一次
+
+
+        clearInterval(intervalId);
+      } catch (_) {
+
+      }
+    }
+  }
+
+
+  generateSummary() {
+    const summary = {
+      totalMetrics: this.history.length,
+      issues: this.history.filter(h => h.status === '✗').length,
+      lastValues: {},
+      trends: {}
+    };
+
+
+    const metrics = new Set(this.history.map(h => h.metric));
+    metrics.forEach(m => {
+      const latest = this.history.filter(h => h.metric === m).pop();
+      if (latest) {
+        summary.lastValues[m] = latest.value;
+        summary.trends[m] = latest.status;
+      }
+    });
+
+    console.table(summary);
+    return summary;
+  }
+}
+
+window.perfMonitor = new PerfMonitor();
+
+const originalRenderAll = window.renderAll;
+if (originalRenderAll) {
+  window.renderAll = function() {
+    window.perfMonitor.markRenderStart();
+    const result = originalRenderAll();
+    window.perfMonitor.markRenderEnd();
+    return result;
+  };
+}
+
+console.log('[PerfMonitor] Hooked to renderAll');
+
+</script>
+<script>
 const SAVE_KEY='esport_manager_save_v3';
 const SAVE_VERSION=4; // 存档结构版本：结构变更时在 MIGRATIONS 追加迁移步骤并递增，旧档读入自动升级
 const MIGRATIONS={
@@ -1807,6 +2010,23 @@ function migrateSave(){
  try{
  if(typeof yearRollPending==='function'&&yearRollPending(S)&&typeof finishAnnual==='function')finishAnnual(S,true);
  }catch(e){console.warn('year-roll recover fail',e);}
+
+ try{
+  const ph=S.phase;
+  const needCh=ph==='challenger'&&(!S.challenger||!S.challenger.teams);
+  const needEwc=ph==='ewc'&&(!S.ewc||!S.ewc.qf);
+  const needAg=ph==='asiad'&&(!S.ag||!S.ag.squad);
+  const needAnn=ph==='annual'&&(!S.annual);
+  if(needCh||needEwc||needAg||needAnn){
+   if(needCh&&typeof setupChallenger==='function'){setupChallenger(S);}
+   else if(needEwc&&typeof setupEWC==='function'){try{setupEWC(S);}catch(e){S.phase='champion';}}
+   else if(needAg&&typeof setupAsianGames==='function'){try{setupAsianGames(S);}catch(e){S.phase='annual'||'champion';if(!S.annual&&typeof setupAnnual==='function')setupAnnual(S);}}
+   else if(needAnn&&typeof setupAnnual==='function'){setupAnnual(S);}
+   else S.phase='champion';
+   logEvent(S,'读档修复：赛段结构缺失已尝试重建（phase='+S.phase+'）');
+  }
+ }catch(e){console.warn('cup-structure recover fail',e);try{S.phase='champion';}catch(_){}}
+ try{if(typeof auditSave==='function')auditSave(S,{silent:false});}catch(e){}
 }
 
 function migrateMoneyScale(s){
@@ -2003,6 +2223,13 @@ const HERO_LV={
 function heroLv(p,heroId){const h=(p.heroPool||[]).find(x=>x.n===heroId);return h?h.lv:1;}
 
 function buyPlayer(s,p){
+ if(typeof canSign==='function'){
+  const chk=canSign(s,p,{actor:'player'});
+  if(!chk.ok){toast(chk.reason||'不能签约');return false;}
+ }else if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return false;}
+ }
  if(!rosterGuard(s))return false; // 联盟规则：大名单 ≤10 人
  if(typeof freeSignBlockedReason==='function'){
  const blocked=freeSignBlockedReason(s);
@@ -2019,6 +2246,7 @@ function buyPlayer(s,p){
  s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
+ if(typeof aiDetachDef==='function')aiDetachDef(s,p.id); // 玩家签下：AI 名册除名防双挂
  recordTransfer(s,'in',p,cost,'自由市场',p.discount?'市场特惠签约':'市场签约'); // 年度回顾·转会台账
  logEvent(s,` 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);
  try{SFX.gold();}catch(_){}
@@ -2215,6 +2443,10 @@ function aiDetachDef(s,pid){ // def 被玩家签走/转会：从所有 AI 队与
 function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额合法才接收）；返回是否入册
  const def=defOf(s,pid);
  if(!def)return false;
+ if(typeof canSign==='function'){
+  const chk=canSign(s,{id:pid,name:def.name,pos:def.pos},{actor:'ai',team:teamName});
+  if(!chk.ok)return false;
+ }
  const map=aiRosterDefMap(s);
  if(!map[teamName]||map[teamName].length>=5)return false;
  if(map[teamName].some(id=>{const d=defOf(s,id);return d&&d.pos===def.pos;}))return false;
@@ -2696,6 +2928,10 @@ function negoComplete(s,p,fee){
  s.aiRosters={}; // 玩家签走任何选手后重建全部对手名册（自由球员也可能是他人首发，防同一名选手出现在两队）
 }
 function openNegotiation(s,pid){
+ if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return;}
+ }
  if(typeof freeSignBlockedReason==='function'){
  const blocked=freeSignBlockedReason(s);
  if(blocked){toast(blocked);return;}
@@ -2824,13 +3060,22 @@ function sellCeiling(p){
  return Math.round(anchor*0.9);
 }
 function openSellNego(s,pid){
+ if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return;}
+ }
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
- if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
- if(p.loanOut){toast(p.name+' 正租借在外，不能出售');return;}
- if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
+ if(typeof canRelease==='function'){
+  const chk=canRelease(s,p,{asSale:true});
+  if(!chk.ok){toast(chk.reason||'不能出售');return;}
+ }else{
+  if(p.loan){toast('租借选手不属于俱乐部，不能出售');return;}
+  if(p.loanOut){toast(p.name+' 正租借在外，不能出售');return;}
+  if(typeof natCamping==='function'&&natCamping(s,p)){toast(p.name+' 正在国家队集训（缺席夏季赛），不能出售');return;}
+  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
+ }
  if(p.natFill){toast(p.name+' 是亚运集训期的借调顶位，归还青训前不能出售');return;}
- if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作转会');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已挂牌，请先撤牌或等待报价');return;}
  if(!sellGuard(s))return; // 联盟规则：一个转会期卖出不得超过队内一半
  const ask=sellAskPrice(p);
@@ -3031,6 +3276,10 @@ function aiBidTick(s){
  const buyers=[];
  Object.keys(map).forEach(tn=>{
  if(tn===s.teamName)return;
+ if(typeof canSign==='function'){
+  const chk=canSign(s,fa,{actor:'ai',team:tn,allowReplace:true});
+  if(!chk.ok&&String(chk.reason||'').indexOf('已有')<0)return;
+ }
  const cur=map[tn].map(id=>defOf(s,id)).filter(Boolean);
  const atPos=cur.find(d=>d.pos===fa.pos);
  if(!atPos){if(cur.length<5)buyers.push({tn,replace:null});}
@@ -3973,6 +4222,10 @@ function setupCard(s){
  save();renderAll();
 }
 function playCardNext(s){
+ if(!s||!s.card||!s.card.matches||!s.card.matches.length){
+  if(s){s.phase=s.phase||'r3';toast('卡位赛数据缺失，已跳过本阶段');}
+  return;
+ }
  const m=s.card.matches[s.card.idx];
  if(!m){finishCard(s);return;}
  if(m.a===s.teamName||m.b===s.teamName){
@@ -4455,11 +4708,14 @@ function newSeason(s){
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
  try{gcDefs(s);}catch(e){} // 年度轮换：清杯赛临时 def / 退役 def / 青训幽灵
  try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上
+ try{if(typeof auditSave==='function')auditSave(s,{silent:false});}catch(e){} // 赛季末不变量巡检
  startSplit(s,'spring');
 }
 
 function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
+
+ s._afterMatch=null;
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
  if(s.mode==='player'){
@@ -4553,6 +4809,7 @@ function calendarNextLabel(s){
  return annualRank(s).slice(0,12).includes(s.teamName)?' 前往 KPL 年度总决赛':' 年度收官 · 开启新赛季';
 }
 function advanceCalendar(s){
+ if(!s||!s.players){try{toast('存档状态异常，无法推进赛历');}catch(_){}return;}
  if(s.split==='spring'){setupChallenger(s);return;} // 春 → 挑战者杯 → EWC → 夏 → 年总
  if(isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;} // 亚运年：夏 → 亚运会 → 年总
  setupAnnual(s); // 内部判定是否晋级（未晋级自动补完 AI 赛程并年度轮换）
@@ -5160,6 +5417,7 @@ function kjiaReturnNote(p){ // 归队日志共用后缀
 function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉回一队，成长按已练天数折算
  if(id===undefined){id=s;s=S;}
  s=s||S;
+ if(s.mode==='player'){toast('选手生涯没有俱乐部人事权——召回由俱乐部运作');return;}
  const p=(s.players||[]).find(x=>x.id===id);
  if(!p){toast('选手不在阵中');return;}
  if(!(p.kjia>0)){toast(p.name+' 不在 K甲锻炼中');return;}
@@ -5186,6 +5444,7 @@ function kjiaTick(s){ // 每天结算一次；到期归队并成长
 function promoteKjiaPlayer(s,id){
  if(id===undefined){id=s;s=S;}
  s=s||S;
+ if(s.mode==='player'){toast('选手生涯没有俱乐部人事权——提拔由俱乐部运作');return;}
  if(!s.kjia||!s.kjia.squad){toast('本届 K甲尚未开赛');return;}
  const p=s.kjia.squad.find(x=>x.id===id);
  if(!p){toast('该选手不在二队班底');return;}
@@ -5504,6 +5763,17 @@ function draftAiPick(s,team){
  d.pool=d.pool.filter(x=>x.id!==best.id);
  best.team=team;
  if(team===s.teamName){
+
+ if(typeof canSign==='function'){
+  const chk=canSign(s,best,{actor:'player',checkWindow:false,checkMode:false});
+  if(!chk.ok){
+   d.log.push(s.teamName+' 点名失败（'+(chk.reason||'名单受限')+'）');
+   return null;
+  }
+ }else if(typeof rosterFull==='function'&&rosterFull(s)){
+  d.log.push(s.teamName+' 大名单已满，点名作废');
+  return null;
+ }
  s.players.push(best);
  if(!s.lineup.includes(best.id)&&!s.players.some(x=>x.id!==best.id&&x.pos===best.pos&&s.lineup.includes(x.id)))s.lineup.push(best.id);
  }else{
@@ -5580,6 +5850,10 @@ function draftPick(s,id){
  }
  const p=d.pool.find(x=>x.id===id);
  if(!p){toast('该新秀已不在池中');return;}
+ if(typeof canSign==='function'){
+  const chk=canSign(s,p,{actor:'player',checkWindow:false,checkMode:false});
+  if(!chk.ok){toast(chk.reason||('不能点名 '+p.name));return;}
+ }
  if(draftBlockedFor(s,s.teamName,p)){
   toast(p.name+' 是本队青训出身——第一轮不能选自家，请用训练页「自留签」');
   return;
@@ -5833,6 +6107,199 @@ function freeSignBlockedReason(s){
  if(canFreeSign(s))return '';
  if(!s||!s.preseason)return '';
  return '已进入挂牌期（后 '+TRANSFER_FREE_DAYS+' 天）——只能挂牌/竞价/续约/租借，不能买断直签';
+}
+
+function transferOpsBlockedReason(s){
+ if(!s||!s.players)return '尚未开局';
+ if(s.mode==='coach')return '教练生涯：买断/出售由俱乐部打理——请用转会页「应急租借 / 引援申请」';
+ if(s.mode==='player')return '选手生涯：不操作俱乐部买卖（由经纪与俱乐部处理）';
+ return '';
+}
+
+const AI_ROSTER_MAX=5; // AI 队 def 名册上限（一队五位置）
+function canSign(s,p,opts){
+ if(!s||!p)return {ok:false,reason:'无效选手'};
+ const o=opts||{};
+ const actor=o.actor||'player';
+ const name=p.name||'选手';
+ const pid=p.id;
+ const pos=p.pos;
+ if(actor==='player'){
+  if(typeof transferOpsBlockedReason==='function'){
+   const mb=transferOpsBlockedReason(s);
+   if(mb)return {ok:false,reason:mb};
+  }
+  if(typeof freeSignBlockedReason==='function'&&o.checkWindow!==false){
+   const fb=freeSignBlockedReason(s);
+   if(fb)return {ok:false,reason:fb};
+  }
+  if((s.players||[]).some(x=>x.id===pid))return {ok:false,reason:name+' 已在名单中'};
+  if(typeof rosterFull==='function'&&rosterFull(s))
+   return {ok:false,reason:'KPL 大名单上限 '+(typeof ROSTER_MAX!=='undefined'?ROSTER_MAX:10)+' 人'};
+  const pst=(typeof playerStatus==='function')?playerStatus(p,s):null;
+  if(pst&&pst.loanOut)return {ok:false,reason:name+' 租借在外，不能直接签约'};
+  if(pst&&pst.kjia)return {ok:false,reason:name+' 正在 K甲锻炼'};
+  return {ok:true,reason:''};
+ }
+
+ const team=o.team||s.teamName;
+ const map=(typeof aiRosterDefMap==='function')?aiRosterDefMap(s):null;
+ if(!map||!map[team])return {ok:true,reason:''}; // 无名册数据时不硬拦（时代/杯赛临时队）
+ const arr=map[team];
+ if(o.allowReplace!==true&&arr.length>=AI_ROSTER_MAX)
+  return {ok:false,reason:team+' 名册已满（'+AI_ROSTER_MAX+'人）'};
+ if(o.allowReplace!==true&&pos&&arr.some(id=>{
+  const d=(typeof defOf==='function')?defOf(s,id):null;
+  return d&&d.pos===pos;
+ }))return {ok:false,reason:team+' 已有'+(POS&&POS[pos]?POS[pos][0]:pos)};
+ if(pid&&arr.indexOf(pid)>=0&&o.allowReplace!==true)
+  return {ok:false,reason:name+' 已在 '+team+' 名册'};
+ return {ok:true,reason:''};
+}
+function canRelease(s,p,opts){
+ if(!s||!p)return {ok:false,reason:'无效选手'};
+ const o=opts||{};
+ const name=p.name||'选手';
+ if(typeof natCamping==='function'&&natCamping(s,p))
+  return {ok:false,reason:name+' 国家队集训中，不能离队/出售'};
+ if(p.loanOut)return {ok:false,reason:name+' 已在外租借'};
+ if((p.kjia||0)>0)return {ok:false,reason:name+' K甲锻炼中，不能出售'};
+ if(o.asSale&&p.loan)return {ok:false,reason:name+' 是租借选手，不能出售'};
+ return {ok:true,reason:''};
+}
+
+function nLabel(p){return (p&&p.name)||'选手';}
+function auditSave(s,opts){
+ const silent=!!(opts&&opts.silent);
+ const issues=[],repairs=[];
+ if(!s)return {ok:true,issues,repairs};
+ const players=s.players||[];
+ const byId={};
+ players.forEach(p=>{if(p&&p.id)byId[p.id]=p;});
+
+ if(typeof aiRosterDefMap==='function'&&typeof aiDetachDef==='function'){
+  const map=aiRosterDefMap(s);
+  Object.keys(map).forEach(tn=>{
+   if(tn===s.teamName)return;
+   (map[tn]||[]).slice().forEach(pid=>{
+    if(byId[pid]){
+     issues.push('双挂：'+(byId[pid].name||pid)+' 同时在玩家名单与 '+tn+' AI 名册');
+     aiDetachDef(s,pid);
+     repairs.push('从 '+tn+' AI 名册移除 '+(byId[pid].name||pid));
+    }
+   });
+  });
+
+  const seen={};
+  Object.keys(map).forEach(tn=>{
+   map[tn]=(map[tn]||[]).filter(pid=>{
+    if(seen[pid]&&seen[pid]!==tn){
+     issues.push('AI 双挂：def '+pid+' 同时在 '+seen[pid]+' 与 '+tn);
+     return false;
+    }
+    if(!seen[pid])seen[pid]=tn;
+    return true;
+   });
+  });
+
+  Object.keys(map).forEach(tn=>{
+   if((map[tn]||[]).length>AI_ROSTER_MAX){
+    issues.push('AI 超编：'+tn+' 名册 '+map[tn].length+' > '+AI_ROSTER_MAX);
+    map[tn]=map[tn].slice(0,AI_ROSTER_MAX);
+    repairs.push('截断 '+tn+' 名册至 '+AI_ROSTER_MAX);
+   }
+  });
+ }
+
+ const lineIds=new Set((s.lineup||[]).map(id=>id));
+ (s.lineup||[]).slice().forEach(id=>{
+  if(!byId[id]){
+   issues.push('首发幽灵：'+id+' 不在名单');
+   s.lineup=s.lineup.filter(x=>x!==id);
+   if(s.pick){
+    players.forEach(p=>{if(p.id===id&&s.pick[p.pos]!=null)delete s.pick[p.pos];});
+   }
+   repairs.push('从首发移除幽灵 '+id);
+  }
+ });
+
+ const maxR=(typeof ROSTER_MAX!=='undefined')?ROSTER_MAX:10;
+ if(players.length>maxR){
+  issues.push('玩家名单超编：'+players.length+' > '+maxR);
+  const ranked=players.slice().sort((a,b)=>{
+   const oa=(typeof overall==='function')?overall(a):0;
+   const ob=(typeof overall==='function')?overall(b):0;
+   if(ob!==oa)return ob-oa;
+   return (b.age||0)-(a.age||0); // 同总值留更年轻的
+  });
+  const keep=ranked.slice(0,maxR);
+  const drop=ranked.slice(maxR);
+  const keepIds=new Set(keep.map(p=>p.id));
+  s.players=players.filter(p=>keepIds.has(p.id));
+  s.lineup=(s.lineup||[]).filter(id=>keepIds.has(id));
+  drop.forEach(p=>{
+   s.freeAgents=s.freeAgents||[];
+   if(!s.freeAgents.some(x=>x.id===p.id)){
+    s.freeAgents.push({...p,team:null,willingness:Math.max(p.willingness||50,55),loanOut:null,kjia:0});
+   }
+   repairs.push(nLabel(p)+' 因名单超编转入自由市场');
+  });
+  try{logEvent(s,' 名单超编收敛：保留总值前 '+maxR+' 人，'+drop.length+' 人转入自由市场');}catch(e){}
+ }
+
+ players.forEach(p=>{
+  if(!p)return;
+  const n=p.name||p.id;
+  const st=(typeof playerStatus==='function')?playerStatus(p,s):null;
+  if(st&&st.loan&&st.loanOut){
+   issues.push('状态冲突：'+n+' 同时 loan 与 loanOut');
+   p.loanOut=null;repairs.push(n+' 清除 loanOut（保留 loan）');
+  }
+  if(st&&st.loanOut&&st.kjia){
+   issues.push('状态冲突：'+n+' 同时租借与 K甲');
+   p.kjia=0;repairs.push(n+' 清除 kjia（保留 loanOut）');
+  }
+  const listed=(s.listed||[]).some(x=>x.id===p.id);
+  const busy=!!(st&&st.busy);
+  if(listed&&busy){
+   issues.push('挂牌冲突：'+n+' 挂牌但不在队可售状态');
+   s.listed=s.listed.filter(x=>x.id!==p.id);
+   s.bids=(s.bids||[]).filter(x=>x.id!==p.id);
+   repairs.push(n+' 撤牌（不可售状态）');
+  }
+  const w=p.wage;
+  if(typeof w!=='number'||!isFinite(w)||w<0){
+   issues.push('工资非法：'+n+' wage='+w);
+   repairs.push(n+' 工资待 scrubWages 重估');
+  }
+ });
+
+ if(s.captain&&!byId[s.captain]){
+  issues.push('队长幽灵：captain='+s.captain);
+  s.captain=null;repairs.push('清空队长');
+ }
+
+ (s.offers||[]).slice().forEach(o=>{
+  if(o&&o.pid&&!byId[o.pid]&&!(s.market||[]).some(x=>x.id===o.pid)){
+   issues.push('报价幽灵：pid='+o.pid);
+   s.offers=s.offers.filter(x=>x!==o);
+   repairs.push('清除幽灵报价 '+o.pid);
+  }
+ });
+
+ if(typeof s.fund!=='number'||!isFinite(s.fund)){
+  issues.push('资金非法：fund='+s.fund);
+  s.fund=0;repairs.push('fund 归零');
+ }
+ const report={ok:!issues.length,issues,repairs};
+ s._lastAudit=report;
+ if(!silent&&issues.length){
+  try{
+   logEvent(s,' 存档巡检：发现 '+issues.length+' 项不一致'+(repairs.length?'，已自动修复 '+repairs.length+' 项':'')+'（详情见控制台）');
+  }catch(e){}
+  try{console.warn('[auditSave]',issues,repairs);}catch(e){}
+ }
+ return report;
 }
 
 </script>
@@ -6168,6 +6635,112 @@ function finishAsianGames(s){
  setupAnnual(s);
 }
 
+const ANNUAL_SUB={
+ masters:{minHealthy:6,mustRotate:true,rotatePenalty:4,maxSwaps:99,rosterN:7,rule:'7人大名单每人至少1小局'},
+ elites:{minHealthy:5,mustRotate:false,rotatePenalty:0,maxSwaps:1,rosterN:0,rule:'无强制轮换'},
+};
+function annualGroupOf(s){
+ if(!s||!s.annual||!s.annual.masters)return null;
+ if(s.annual.masters.includes(s.teamName))return 'masters';
+ if(s.annual.elites&&s.annual.elites.includes(s.teamName))return 'elites';
+ return null;
+}
+function annualSubRule(g){return ANNUAL_SUB[g]||null;}
+function annualHealthyCount(s){
+ return (s&&s.players||[]).filter(p=>matchEligible(s,p)&&!p.loan).length;
+}
+
+function annualRosterPool(s){
+ const n=(annualSubRule('masters')||{}).rosterN||7;
+ return (s&&s.players||[]).filter(p=>matchEligible(s,p)&&!p.loan).slice(0,n);
+}
+function annualSubRuleText(s){
+ const g=annualGroupOf(s);
+ if(!g)return '';
+ const r=annualSubRule(g);
+ if(g==='masters')return '大师组官方轮换：擂台赛每场 BO5，7 人大名单内所有选手至少各出场 1 小局（否则士气-'+r.rotatePenalty+'）· 中途换人不限次';
+ return '精英组：无强制轮换 · 年总系列赛中途换替补仅 '+r.maxSwaps+' 次';
+}
+
+function annualSubGuard(s){
+ if(!s||s.phase!=='annual')return true;
+ const g=annualGroupOf(s);
+ const r=annualSubRule(g);
+ if(!r||g!=='masters')return true;
+ const n=annualHealthyCount(s);
+ if(n<r.minHealthy){
+ try{
+ if(typeof emergencyFillRoster==='function')emergencyFillRoster(s);
+ }catch(e){}
+ logEvent(s,' 大师组年总要求 7 人名单可战（当前 '+n+'）——请补强替补；擂台赛 BO5 须全员轮换出场');
+ }
+ return true;
+}
+
+function annualMarkSeriesStart(s,sr){
+ if(!s||!sr)return sr;
+ sr._startIds=rosterLineup(s).map(p=>p.id);
+ sr._swaps=0;
+ sr._autoRotated=false;
+ sr._played=sr._startIds.slice();
+ return sr;
+}
+
+function annualMarkPlayed(s,sr){
+ if(!s||!sr)return;
+ sr._played=sr._played||[];
+ rosterLineup(s).forEach(p=>{
+ if(!sr._played.includes(p.id))sr._played.push(p.id);
+ });
+}
+
+function annualAutoRotate(s,sr){
+ if(!s||!sr||s.phase!=='annual')return false;
+ if(annualGroupOf(s)!=='masters')return false;
+ if(((sr.mw||0)+(sr.ow||0))<1)return false;
+ const pool=annualRosterPool(s);
+ if(pool.length<=5)return false; // 无可轮换空间
+ const played=new Set(sr._played||sr._startIds||[]);
+ const need=pool.filter(p=>!played.has(p.id));
+ if(!need.length){sr._autoRotated=true;return false;}
+
+ const curLine=rosterLineup(s);
+ let swapped=false;
+ need.forEach(p=>{
+ if(swapped)return;
+ if(played.has(p.id))return;
+ const out=curLine.find(x=>x.pos===p.pos&&!need.includes(x))||curLine.find(x=>!need.includes(x));
+ if(!out)return;
+ const idx=s.lineup.indexOf(out.id);
+ if(idx<0)return;
+ s.lineup[idx]=p.id;
+ sr._swaps=(sr._swaps||0)+1;
+ if(!sr._played)sr._played=[];
+ if(!sr._played.includes(p.id))sr._played.push(p.id);
+ swapped=true;
+ logEvent(s,' 大师轮换：'+p.name+'（'+POS[p.pos][0]+'）登场——推进名单全员出场');
+ });
+ if(swapped)sr._autoRotated=true;
+ return swapped;
+}
+
+function annualSubSettle(s,sr){
+ if(!s||!sr||s.phase!=='annual')return;
+ const g=annualGroupOf(s);
+ const r=annualSubRule(g);
+ if(!r||!r.mustRotate)return;
+ annualMarkPlayed(s,sr);
+ const pool=annualRosterPool(s);
+ const played=new Set(sr._played||[]);
+ rosterLineup(s).forEach(p=>played.add(p.id));
+ const missing=pool.filter(p=>!played.has(p.id));
+ if(missing.length){
+ rosterLineup(s).forEach(p=>{p.morale=clamp(p.morale-(r.rotatePenalty||4),20,100);});
+ logEvent(s,' 大师轮换：本系列赛名单未全员出场（缺 '+missing.map(p=>p.name).join('、')+'）——联盟处罚，全队士气-'+(r.rotatePenalty||4));
+ }else if(pool.length>=5){
+ logEvent(s,' 大师轮换：'+pool.length+' 人名单已全员出场 ✓');
+ }
+}
 function annualRank(s){
  return Object.keys(s.annualPts||{}).sort((a,b)=>(s.annualPts[b]||0)-(s.annualPts[a]||0)||powerOf(s,b)-powerOf(s,a));
 }
@@ -6190,6 +6763,7 @@ function setupAnnual(s){
  return;
  }
  logEvent(s,' '+gameYear(s)+' KPL 年度总决赛开幕！你队以年度积分 '+s.annualPts[s.teamName]+' 分（第'+(myRank+1)+'名）进入'+(myRank<6?'大师组':'精英组'));
+ logEvent(s,' '+annualSubRuleText(s));
  save();renderAll();
 }
 function arenaStandings(s){
@@ -6361,7 +6935,9 @@ function playCupMatch(s,m,slot,label,bo){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打完整场杯赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
  tagMatch(s,m,slot);
- playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,_match:m});
+ const mark={};
+ annualMarkSeriesStart(s,mark);
+ playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,_match:m,_startIds:mark._startIds||null,_swaps:0});
  return;
  }
  if(s.series&&s.series.stage==='cup'&&s.series.cupSlot===slot){
@@ -6370,6 +6946,7 @@ function playCupMatch(s,m,slot,label,bo){
  }
  tagMatch(s,m,slot);
  s.series={used:[],usedOpp:[],mw:0,ow:0,max:bo,stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'playoff',opName)};s.seriesAuto=false;
+ annualMarkSeriesStart(s,s.series);
  resetOppEnergy(s,opName);
  showPreMatch(label+'（'+BO_TXT(bo)+'）vs '+opName+' · 第1局');
  return;
@@ -6389,6 +6966,7 @@ function simCup(kind,s){ // 玩家未晋级：AI 自动补完杯赛
  else{while(s.annual&&(s.annual.stage!=='po'||!s.annual.po.champ)&&guard++<80)annualStep(s);}
 }
 function startCup(s){ // 杯赛 UI 入口（进行下一场 / 快进）
+ if(!s||!s.players){try{toast('存档状态异常，无法推进杯赛');}catch(_){}return;}
  if(s.phase==='ewc'){ewcStep(s);return;}
  if(s.phase==='challenger'){challengerStep(s);return;}
  if(s.phase==='annual'){
@@ -6396,6 +6974,7 @@ function startCup(s){ // 杯赛 UI 入口（进行下一场 / 快进）
  if(!a)return;
 
  if(a.po&&a.po.champ&&yearRollPending(s)){finishAnnual(s,true);return;}
+ if(typeof annualSubGuard==='function'&&!annualSubGuard(s))return; // 大师组名单深度
  if(a.stage==='arena')startAnnualArena(s);
  else if(a.stage==='breakthrough')annualBrkNext(s);
  else annualPoStep(s);
@@ -6915,6 +7494,10 @@ function fireAssistant(s,id){
 }
 
 function signFreeAgent(s,id){
+ if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return;}
+ }
  const p=(s.freeAgents||[]).find(x=>x.id===id);
  if(!p)return;
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return;}
@@ -7634,7 +8217,14 @@ function _hintState(){
 function pageHint(name){
  const hide=_hintState();
  if(hide&&hide[name])return '';
- const txt=PAGE_HINTS[name];if(!txt)return '';
+ let txt=PAGE_HINTS[name];if(!txt)return '';
+
+ if(name==='kjia'&&S&&S.mode==='player'){
+  txt='二队 K甲赛况：查看练级数据与俱乐部下放情况（人事权在俱乐部，「生涯」页可申请租借/K甲）';
+ }
+ if(name==='market'&&S&&S.mode==='coach'){
+  txt='教练工作台：应急租借与引援申请（买断谈判由俱乐部打理）';
+ }
  return `<div class="page-hint"><span>${txt}</span><button class="ph-x" onclick="dismissHint('${name}')" title="不再显示这条">×</button></div>`;
 }
 function dismissHint(name){
@@ -8208,11 +8798,23 @@ function bpSwapIn(pid){
  const d=window._draft;if(!d)return;
  const p=S.players.find(x=>x.id===pid);
  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
+
+ if(S.phase==='annual'&&typeof annualGroupOf==='function'&&annualGroupOf(S)==='elites'){
+ const sr=d.sr||S.series;
+ const used=(sr&&sr._swaps)||0;
+ const cap=(typeof annualSubRule==='function'&&(annualSubRule('elites')||{}).maxSwaps)||1;
+ if(used>=cap){toast('精英组规则：年总系列赛中途换替补仅 '+cap+' 次（已用完）');return;}
+ }
  const cur=rosterLineup(S).find(x=>x.pos===p.pos);
  if(!cur){toast('该位置没有首发');return;}
  S.lineup[S.lineup.indexOf(cur.id)]=p.id;
  if(S.pick&&S.pick[p.pos])ensureHeroInPool(p,S.pick[p.pos]); // 上局英雄残留：新选手临时掏
  if(d.myPicks[p.pos])ensureHeroInPool(p,d.myPicks[p.pos]); // 本局已选英雄：保留，新选手接手
+ const sr=d.sr||S.series;
+ if(sr){
+ sr._swaps=(sr._swaps||0)+1;
+ if(typeof annualMarkPlayed==='function')annualMarkPlayed(S,sr);
+ }
  d.ls=rosterLineup(S);d.swap=false;
  save();toast(p.name+' 替补登场（'+POS[p.pos][0]+'）');
  renderBP();
@@ -8608,13 +9210,16 @@ function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 
  autoFillLineup(s); // 我方不可出战时同位置替补顶上；转会/伤停/集训后不留空位
  resetOppEnergy(s,opName);
  const sr={used:[],usedOpp:[],mw:0,ow:0,max:bo,logs:[],myName:s.teamName,opName,side:firstSide(s,'regular',opName)};
+ if(typeof annualMarkSeriesStart==='function')annualMarkSeriesStart(s,sr); // 年总：记首发/出场
  const need=Math.ceil(bo/2);
  let guard=0,myApps=0,myK=0,myD=0,myA=0,myMvp=0;
  while(sr.mw<need&&sr.ow<need&&guard++<bo+2){
+ if(typeof annualAutoRotate==='function'){try{annualAutoRotate(s,sr);}catch(e){}} // 大师组官方轮换
  const my=teamPower(s),op=powerOf(s,opName);
  const g=singleGame(my,op);
  rosterLineup(s).forEach(p=>{p.energy=clamp(p.energy-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;});
  if(g.w)sr.mw++;else sr.ow++;
+ if(typeof annualMarkPlayed==='function'){try{annualMarkPlayed(s,sr);}catch(e){}}
  const mvp=gamePerform(g.w);
  if(mvp){const mp=s.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}}
  if(mvp){sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id);sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a);}
@@ -8815,6 +9420,7 @@ function playGame(){
  if(mvp){const mp=S.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
  if(mvp)sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id); // 系列赛各局 MVP 记录（FMVP 评选用）
  if(mvp)sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a); // 各局 MVP 的 KDA（AI 战报语境用）
+ if(typeof annualMarkPlayed==='function'){try{annualMarkPlayed(S,sr);}catch(e){}} // 年总大师组：记当局出场
  sr.logs.push('第'+(sr.mw+sr.ow)+'局 '+(g.w?'':'')+' 我方 '+g.myK+'-'+g.opK+' '+(g.w?'击败':'憾负')+' '+sr.opName+' ｜ 总比分 '+sr.mw+':'+sr.ow+tag+' '+(sr.side==='red'?'红方':'蓝方')+' '+pick(CASTER)+(mvp?' ｜ MVP：'+mvp.name+'（'+mvp.k+'/'+mvp.d+'/'+mvp.a+'）':''));
 
  sr.logs.push(...genMatchStory(sr,g,mvp));
@@ -8822,6 +9428,8 @@ function playGame(){
  if(sr.mw>=need||sr.ow>=need){
  finishSeries(sr.mw>=need);
  }else{
+
+ if(typeof annualAutoRotate==='function'){try{annualAutoRotate(S,sr);}catch(e){}}
 
  const nextTitle=(sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot==='总决赛'?'总决赛':'季后赛'):PHASE_NAME[S.phase])+' · 第'+(sr.mw+sr.ow+1)+'局（当前 '+sr.mw+':'+sr.ow+'）';
  if(S.seriesAuto){
@@ -8973,6 +9581,7 @@ function finishSeries(finalWin){
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+sr.cupLabel+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
+ if(sr.stage==='cup'&&typeof annualSubSettle==='function'){try{annualSubSettle(S,sr);}catch(e){}}
  title=sr.cupLabel+(finalWin?' · 晋级':' · 落败');
  queueMatchAdvance(S,()=>{
  if(S.phase==='ewc')ewcStep(S);
@@ -9345,6 +9954,7 @@ function renderHeader(){
  <button class="hd-btn" onclick="uiSave()">存档</button>
  <button class="hd-btn" onclick="openSaveMgmt()">管理</button>
  <button class="hd-btn" onclick="toggleSfx()" title="音效开关">${_sfxOn?'音效 开':'音效 关'}</button>
+ <button class="hd-btn" onclick="toggleBGM()" title="背景音乐开关">${_bgmOn?"BGM 开":"BGM 关"}</button>
  <button class="hd-btn" onclick="resetGame()">重开</button>`;
 
  try{
@@ -9436,7 +10046,10 @@ function uiAdvanceCalendar(s){
 }
 
 function nextAction(s){
- if(!s||!s.players||!s.players.length)return null;
+ if(!s||!s.players||!s.players.length){
+
+      return {type:'uiGoMarket',label:'去转会市场 · 买人/签自由球员',fn:'uiGoMarket'};
+  }
  if(playerRetired(s))return null;
  if(s.board&&s.board.fired)return null;
  if(s.preseason)return {type:'endPreseason',label:' 结束转会期 · 开始赛季',fn:'uiEndPreseason'};
@@ -9463,7 +10076,11 @@ function nextAction(s){
  }
  if(p==='challenger'){
  const c=s.challenger;
- if(!c||c.champ)return null;
+ if(!c){
+
+     return {type:'advanceCalendar',label:'推进赛历',fn:'uiAdvanceCalendar'};
+ }
+ if(c.champ)return null;
  return {type:'startCup',label:' 进行挑战者杯',fn:'uiStartCup'};
  }
  if(p==='ewc'){
@@ -9669,6 +10286,7 @@ function clubAnnualPanel(){
  <div class="hint mt8"><b>大师组</b>（积分前6）：${rankLine(st.M,a.masters)}</div>
  <div class="hint"><b>精英组</b>（积分7-12）：${rankLine(st.E,a.elites)}</div>
  <div class="hint mt8">大师组前4 + 精英组第1 直进淘汰赛；大师5/6 与精英2-5 打突围赛；精英第6名直接出局</div>
+ <div class="hint" style="color:var(--cyan)">${typeof annualSubRuleText==='function'?annualSubRuleText(S):''}</div>
  </div>`;
  }
  if(a.stage==='breakthrough'){
@@ -10078,13 +10696,16 @@ function renderLeague(){
 
  if(S.phase==='playoff'&&S.playoff){
  const pf=S.playoff;
- const pMatch=(m,label)=>`<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:12px">${label}：${m.a||'?'} vs ${m.b||'?'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+  const pMatch=(m,label)=>{
+      if(!m)return '';
+      return `<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:12px">${label}：${m.a||'?'} vs ${m.b||'?'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+  };
  html+=`<div class="panel"><h3>季后赛对阵（BO7 双败 · 第7局巅峰对决）</h3>
- ${pf.wb.map((m,i)=>pMatch(m,'胜者组R'+(i+1))).join('')}
+ ${(pf.wb||[]).map((m,i)=>pMatch(m,'胜者组R'+(i+1))).join('')}
  ${pMatch(pf.wf,'胜者组决赛')}
- ${pf.lb.map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
- ${pf.lb2.map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
- ${pf.lb3.map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
+ ${(pf.lb||[]).map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
+ ${(pf.lb2||[]).map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
+ ${(pf.lb3||[]).map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
  ${pMatch(pf.lb4,'败者组半决赛')}
  ${pMatch(pf.lbf,'败者组决赛')}
  ${pMatch(pf.final,' 总决赛')}
@@ -10685,7 +11306,8 @@ function renderMarket(){
  ?`<button class="btn sm ${p.willingness<75?'gold':'primary'}" style="margin:0;min-width:64px" onclick="openNegotiation(S,'${p.id}')">强挖 ${Math.round(raidChance(p)*100)}%</button>`
  :`<button class="btn sm primary" style="margin:0;min-width:64px" onclick="openNegotiation(S,'${p.id}')" ${p.willingness<30?'disabled':''}>${p.willingness<30?'尝试谈判':'谈判'}</button>`;
  return `<div class="match" style="margin-bottom:6px;padding:8px 10px">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.ownerTeam} · 总值${overall(p)}${p.age?' · '+p.age+'岁':''})</span></span>
+ <div class="vs"><div class="tname" style="font-size:13px"><b>${p.name}</b>
+ <div style="color:var(--dim);font-size:11px;font-weight:500;line-height:1.35">${POS[p.pos][0]} · ${p.ownerTeam} · 总值${overall(p)}${p.age?' · '+p.age+'岁':''}</div></div>
  <div class="power" style="font-size:10px">${wil}${unt}</div></div>
  <div class="score" style="font-size:13px;min-width:0">${p.untouchable?untouchablePrice(p)+'万':price+'万'}</div>
  ${btnHtml}
@@ -10696,7 +11318,8 @@ function renderMarket(){
  if(!p)return '';
  const bid=(S.bids||[]).find(b=>b.id===item.id);
  return `<div class="match" style="margin-bottom:6px;padding:8px 10px">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(总值${overall(p)} · 挂牌${item.price}万)</span></span></div>
+ <div class="vs"><div class="tname" style="font-size:13px;white-space:normal;word-break:break-word"><b>${p.name}</b>
+ <div style="color:var(--dim);font-size:11px;font-weight:500">总值${overall(p)} · 挂牌${item.price}万</div></div></div>
  ${bid?`<div class="score" style="font-size:12px;min-width:0"> ${bid.team}<br>${bid.bid}万</div>
  <div style="display:flex;gap:4px"><button class="btn sm primary" style="margin:0" onclick="acceptBid(S,'${item.id}')">接受</button><button class="btn sm" style="margin:0" onclick="rejectBid(S,'${item.id}')">拒绝</button><button class="btn sm danger" style="margin:0" onclick="delistPlayer(S,'${item.id}')">撤牌</button></div>`
  :`<button class="btn sm danger" style="margin:0" onclick="delistPlayer(S,'${item.id}')">撤牌</button>`}
@@ -10982,6 +11605,164 @@ function playerRest(){
  const r=playerRestDay(S);
  if(!r.ok){if(r.reason)toast(r.reason);return;}
  save();renderAll();
+}
+
+</script>
+<script>
+let _bgmOn=false, _bgmNode=null; // 通过 localStorage 'km_bgm'控制
+try{_bgmOn=localStorage.getItem('km_bgm')==='1';}catch(_){}
+
+const BGM = {
+
+  idle:{freqs:[261.63,329.63,392.00],type:'sine',dur:0.5,vol:0.008},
+
+  win:{chords:[[523.25,659.25,783.99],[659.25,783.99,987.77]],delays:[0,120]},
+
+  lose:{chords:[[261.63,311.13,392.00],[246.94,293.66,369.99]],delays:[0,100]}
+};
+
+function playBGM(mode){
+  if(!_bgmOn||!window.AudioContext)return;
+  try{
+    const ac=_bgmNode?_bgmNode.ac:(new (window.AudioContext||window.webkitAudioContext)());
+    if(ac.state==='suspended')ac.resume();
+
+    if(mode==='idle'){
+
+      if(_bgmNode&&_bgmNode.mode==='idle')return; // 已在播放则不重复
+
+      const now=ac.currentTime;
+      const oscs=[];
+
+      BGM.idle.freqs.forEach((f, index) => {
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.type=BGM.idle.type;o.frequency.value=f;
+
+
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(BGM.idle.vol * _bgmVolume, now + 0.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, now+2.0);
+
+        o.connect(g);g.connect(ac.destination);
+        o.start(now);o.stop(now+2.0);
+
+        oscs.push({o, g, baseVol: BGM.idle.vol});
+      });
+
+      _bgmNode={ac,mode:'idle',oscs,stop:()=>oscs.forEach(x=>x.o.stop())};
+    }else if(mode==='win'||mode==='lose'){
+
+      const cfg=mode==='win'?BGM.win:BGM.lose;
+      cfg.chords.forEach((c,i)=>{
+        setTimeout(()=>{
+          c.forEach((f,delayOffset)=>{
+            const o=ac.createOscillator(),g=ac.createGain();
+            o.type='sine';o.frequency.value=f;
+            g.gain.setValueAtTime(BGM.idle.vol*0.02,ac.currentTime+delayOffset/1000);
+            g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+(delayOffset+200)/1000);
+            o.connect(g);g.connect(ac.destination);
+            o.start();o.stop(ac.currentTime+0.5);
+          });
+        },cfg.delays[i]||0);
+      });
+    }
+  }catch(e){console.warn('BGM fail:',e.message);}
+}
+
+function toggleBGM(){
+  _bgmOn=!_bgmOn;
+  try{localStorage.setItem('km_bgm',_bgmOn?'1':'0');if(_bgmNode)_bgmNode.stop();}catch(_){}
+  toast(_bgmOn?'BGM 已开启':'BGM 已关闭');
+
+
+  try{if(S)renderHeader();}catch(_){}
+
+
+  if(_bgmOn) detectAndPlayBGM();
+}
+
+function detectAndPlayBGM() {
+  if (!_bgmOn || !window.AudioContext) return;
+
+  const currentPage = document.querySelector('.page.on');
+  const pageId = currentPage ? currentPage.id.replace('page-', '') : '';
+
+
+  if(_bgmNode && _bgmNode.oscs && _bgmNode.oscs.length > 0) {
+    fadeControl(false, 300);
+  }
+
+  switch(pageId) {
+    case 'club':
+    case 'biz':
+    case 'hall':
+
+      playBGM('idle');
+      break;
+
+    case 'match-result':
+
+      const isWin = JSON.parse(localStorage.getItem('kw_last_match_result') || '{}').isWin;
+      if(isWin !== undefined) {
+        setTimeout(() => playBGM(isWin ? 'win' : 'lose'), 350);
+      }
+      break;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  setTimeout(detectAndPlayBGM, 1000);
+});
+
+function setBgmVolume(percent) {
+  _bgmVolume = Math.max(0, Math.min(1, percent/100));
+  try{localStorage.setItem('km_bgm_vol', Math.round(_bgmVolume*100));}catch(_){}
+  toast(`BGM 音量已调整为 ${Math.round(_bgmVolume*100)}%`);
+
+
+  if(_bgmNode && _bgmNode.oscs) {
+    const now = _bgmNode.ac.currentTime;
+    _bgmNode.oscs.forEach(osc => {
+      osc.g.gain.setTargetAtTime(
+        osc.baseVol * _bgmVolume,
+        now,
+        0.1
+      );
+    });
+  }
+}
+
+function fadeControl(fadeIn, duration=500) {
+  if(!_bgmNode || !_bgmNode.ac || !_bgmNode.oscs || _bgmNode.oscs.length === 0) return;
+
+  const now = _bgmNode.ac.currentTime;
+  const targetGain = fadeIn ? _bgmVolume : 0;
+  const currentGain = _bgmNode.oscs[0].g.gain.value;
+
+
+  _bgmNode.oscs.forEach(osc => {
+    osc.g.gain.cancelScheduledValues(now);
+
+
+    osc.g.gain.setValueAtTime(currentGain, now);
+    osc.g.gain.exponentialRampToValueAtTime(
+      targetGain > 0 ? targetGain * osc.baseVol : 0.0001,
+      now + duration / 1000
+    );
+  });
+
+
+  if(!fadeIn) {
+    setTimeout(() => {
+      if(_bgmNode && _bgmNode.oscs) {
+        _bgmNode.oscs.forEach(osc => {
+          try { osc.o.stop(); } catch(_) {}
+        });
+        _bgmNode.oscs = [];
+      }
+    }, duration);
+  }
 }
 
 </script>

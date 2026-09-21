@@ -522,6 +522,10 @@ function fireAssistant(s,id){
 }
 /* 签约自由球员（无球可打流向市场的选手） */
 function signFreeAgent(s,id){
+ if(typeof transferOpsBlockedReason==='function'){
+ const modeBlock=transferOpsBlockedReason(s);
+ if(modeBlock){toast(modeBlock);return;}
+ }
  const p=(s.freeAgents||[]).find(x=>x.id===id);
  if(!p)return;
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return;}

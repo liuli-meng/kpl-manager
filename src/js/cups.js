@@ -354,7 +354,116 @@ function finishAsianGames(s){
 /* ================= KPL 年度总决赛（年末最高规格） =================
  年度积分前 12 入围：擂台赛（大师组=积分前6 × 精英组=后6，组外单循环 BO5，每队6场）
  → 突围赛（大师5/6+精英2-5，6队 BO7 单败，3队晋级；精英第6名直接出局）
- → 淘汰赛（8队 BO7 双败），冠军捧圣龙杯 + 2000万级奖金池（游戏内取 800 万冠军奖）。 */
+ → 淘汰赛（8队 BO7 双败），冠军捧圣龙杯。
+ 官方「大师轮换」规则（虎扑/百科 2024-2025 年总赛制）：
+ 擂台赛阶段每一场 BO5，大师组 7 人大名单内所有选手至少要完成一小局；
+ 精英组无此强制。另：大师组前六可从未晋级队租借 1 人（游戏内未单独建模租借窗口）。 */
+const ANNUAL_SUB={
+ masters:{minHealthy:6,mustRotate:true,rotatePenalty:4,maxSwaps:99,rosterN:7,rule:'7人大名单每人至少1小局'},
+ elites:{minHealthy:5,mustRotate:false,rotatePenalty:0,maxSwaps:1,rosterN:0,rule:'无强制轮换'},
+};
+function annualGroupOf(s){
+ if(!s||!s.annual||!s.annual.masters)return null;
+ if(s.annual.masters.includes(s.teamName))return 'masters';
+ if(s.annual.elites&&s.annual.elites.includes(s.teamName))return 'elites';
+ return null;
+}
+function annualSubRule(g){return ANNUAL_SUB[g]||null;}
+function annualHealthyCount(s){
+ return (s&&s.players||[]).filter(p=>matchEligible(s,p)&&!p.loan).length;
+}
+/* 大师组年总大名单：健康可战前 7 人（官方 7 人名单口径） */
+function annualRosterPool(s){
+ const n=(annualSubRule('masters')||{}).rosterN||7;
+ return (s&&s.players||[]).filter(p=>matchEligible(s,p)&&!p.loan).slice(0,n);
+}
+function annualSubRuleText(s){
+ const g=annualGroupOf(s);
+ if(!g)return '';
+ const r=annualSubRule(g);
+ if(g==='masters')return '大师组官方轮换：擂台赛每场 BO5，7 人大名单内所有选手至少各出场 1 小局（否则士气-'+r.rotatePenalty+'）· 中途换人不限次';
+ return '精英组：无强制轮换 · 年总系列赛中途换替补仅 '+r.maxSwaps+' 次';
+}
+/* 名单深度：不足时警告并紧急补人，绝不 return false——否则 startCup 整段年总会卡死 */
+function annualSubGuard(s){
+ if(!s||s.phase!=='annual')return true;
+ const g=annualGroupOf(s);
+ const r=annualSubRule(g);
+ if(!r||g!=='masters')return true;
+ const n=annualHealthyCount(s);
+ if(n<r.minHealthy){
+ try{
+ if(typeof emergencyFillRoster==='function')emergencyFillRoster(s);
+ }catch(e){}
+ logEvent(s,' 大师组年总要求 7 人名单可战（当前 '+n+'）——请补强替补；擂台赛 BO5 须全员轮换出场');
+ }
+ return true;
+}
+/* 系列赛开始：记下首发 + 出场名单 */
+function annualMarkSeriesStart(s,sr){
+ if(!s||!sr)return sr;
+ sr._startIds=rosterLineup(s).map(p=>p.id);
+ sr._swaps=0;
+ sr._autoRotated=false;
+ sr._played=sr._startIds.slice();
+ return sr;
+}
+/* 每小局打完后：把当局首发记入「本系列赛出场名单」 */
+function annualMarkPlayed(s,sr){
+ if(!s||!sr)return;
+ sr._played=sr._played||[];
+ rosterLineup(s).forEach(p=>{
+ if(!sr._played.includes(p.id))sr._played.push(p.id);
+ });
+}
+/* 大师组自动轮换：BO5 内尽量让名单里「还没出场过」的选手上场（对齐官方 7 人各 1 小局） */
+function annualAutoRotate(s,sr){
+ if(!s||!sr||s.phase!=='annual')return false;
+ if(annualGroupOf(s)!=='masters')return false;
+ if(((sr.mw||0)+(sr.ow||0))<1)return false;
+ const pool=annualRosterPool(s);
+ if(pool.length<=5)return false; // 无可轮换空间
+ const played=new Set(sr._played||sr._startIds||[]);
+ const need=pool.filter(p=>!played.has(p.id));
+ if(!need.length){sr._autoRotated=true;return false;}
+ // 优先换上未出场的选手（同位置优先）
+ const curLine=rosterLineup(s);
+ let swapped=false;
+ need.forEach(p=>{
+ if(swapped)return;
+ if(played.has(p.id))return;
+ const out=curLine.find(x=>x.pos===p.pos&&!need.includes(x))||curLine.find(x=>!need.includes(x));
+ if(!out)return;
+ const idx=s.lineup.indexOf(out.id);
+ if(idx<0)return;
+ s.lineup[idx]=p.id;
+ sr._swaps=(sr._swaps||0)+1;
+ if(!sr._played)sr._played=[];
+ if(!sr._played.includes(p.id))sr._played.push(p.id);
+ swapped=true;
+ logEvent(s,' 大师轮换：'+p.name+'（'+POS[p.pos][0]+'）登场——推进名单全员出场');
+ });
+ if(swapped)sr._autoRotated=true;
+ return swapped;
+}
+/* 系列赛收尾：大师组检查「名单内是否人人都上过场」 */
+function annualSubSettle(s,sr){
+ if(!s||!sr||s.phase!=='annual')return;
+ const g=annualGroupOf(s);
+ const r=annualSubRule(g);
+ if(!r||!r.mustRotate)return;
+ annualMarkPlayed(s,sr);
+ const pool=annualRosterPool(s);
+ const played=new Set(sr._played||[]);
+ rosterLineup(s).forEach(p=>played.add(p.id));
+ const missing=pool.filter(p=>!played.has(p.id));
+ if(missing.length){
+ rosterLineup(s).forEach(p=>{p.morale=clamp(p.morale-(r.rotatePenalty||4),20,100);});
+ logEvent(s,' 大师轮换：本系列赛名单未全员出场（缺 '+missing.map(p=>p.name).join('、')+'）——联盟处罚，全队士气-'+(r.rotatePenalty||4));
+ }else if(pool.length>=5){
+ logEvent(s,' 大师轮换：'+pool.length+' 人名单已全员出场 ✓');
+ }
+}
 function annualRank(s){
  return Object.keys(s.annualPts||{}).sort((a,b)=>(s.annualPts[b]||0)-(s.annualPts[a]||0)||powerOf(s,b)-powerOf(s,a));
 }
@@ -377,6 +486,7 @@ function setupAnnual(s){
  return;
  }
  logEvent(s,' '+gameYear(s)+' KPL 年度总决赛开幕！你队以年度积分 '+s.annualPts[s.teamName]+' 分（第'+(myRank+1)+'名）进入'+(myRank<6?'大师组':'精英组'));
+ logEvent(s,' '+annualSubRuleText(s));
  save();renderAll();
 }
 function arenaStandings(s){
@@ -550,7 +660,9 @@ function playCupMatch(s,m,slot,label,bo){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打完整场杯赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
  tagMatch(s,m,slot);
- playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,_match:m});
+ const mark={};
+ annualMarkSeriesStart(s,mark);
+ playerPlayAndFinish(s,opName,bo,{stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,_match:m,_startIds:mark._startIds||null,_swaps:0});
  return;
  }
  if(s.series&&s.series.stage==='cup'&&s.series.cupSlot===slot){
@@ -559,6 +671,7 @@ function playCupMatch(s,m,slot,label,bo){
  }
  tagMatch(s,m,slot);
  s.series={used:[],usedOpp:[],mw:0,ow:0,max:bo,stage:'cup',mid:slot,cupSlot:slot,cupLabel:label,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'playoff',opName)};s.seriesAuto=false;
+ annualMarkSeriesStart(s,s.series);
  resetOppEnergy(s,opName);
  showPreMatch(label+'（'+BO_TXT(bo)+'）vs '+opName+' · 第1局');
  return;
@@ -578,6 +691,7 @@ function simCup(kind,s){ // 玩家未晋级：AI 自动补完杯赛
  else{while(s.annual&&(s.annual.stage!=='po'||!s.annual.po.champ)&&guard++<80)annualStep(s);}
 }
 function startCup(s){ // 杯赛 UI 入口（进行下一场 / 快进）
+ if(!s||!s.players){try{toast('存档状态异常，无法推进杯赛');}catch(_){}return;}
  if(s.phase==='ewc'){ewcStep(s);return;}
  if(s.phase==='challenger'){challengerStep(s);return;}
  if(s.phase==='annual'){
@@ -585,6 +699,7 @@ function startCup(s){ // 杯赛 UI 入口（进行下一场 / 快进）
  if(!a)return;
  // 冠军已产生但年度轮换未完成：直接补 newSeason（读档残留 / 颁奖中途抛错后的恢复）
  if(a.po&&a.po.champ&&yearRollPending(s)){finishAnnual(s,true);return;}
+ if(typeof annualSubGuard==='function'&&!annualSubGuard(s))return; // 大师组名单深度
  if(a.stage==='arena')startAnnualArena(s);
  else if(a.stage==='breakthrough')annualBrkNext(s);
  else annualPoStep(s);

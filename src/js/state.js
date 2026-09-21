@@ -830,6 +830,23 @@ function migrateSave(){
  try{
  if(typeof yearRollPending==='function'&&yearRollPending(S)&&typeof finishAnnual==='function')finishAnnual(S,true);
  }catch(e){console.warn('year-roll recover fail',e);}
+ // 杯赛结构丢失恢复：phase 有、bracket 无 → 再跑 setup*（重建）或回退到可推进阶段
+ try{
+  const ph=S.phase;
+  const needCh=ph==='challenger'&&(!S.challenger||!S.challenger.teams);
+  const needEwc=ph==='ewc'&&(!S.ewc||!S.ewc.qf);
+  const needAg=ph==='asiad'&&(!S.ag||!S.ag.squad);
+  const needAnn=ph==='annual'&&(!S.annual);
+  if(needCh||needEwc||needAg||needAnn){
+   if(needCh&&typeof setupChallenger==='function'){setupChallenger(S);}
+   else if(needEwc&&typeof setupEWC==='function'){try{setupEWC(S);}catch(e){S.phase='champion';}}
+   else if(needAg&&typeof setupAsianGames==='function'){try{setupAsianGames(S);}catch(e){S.phase='annual'||'champion';if(!S.annual&&typeof setupAnnual==='function')setupAnnual(S);}}
+   else if(needAnn&&typeof setupAnnual==='function'){setupAnnual(S);}
+   else S.phase='champion';
+   logEvent(S,'读档修复：赛段结构缺失已尝试重建（phase='+S.phase+'）');
+  }
+ }catch(e){console.warn('cup-structure recover fail',e);try{S.phase='champion';}catch(_){}}
+ try{if(typeof auditSave==='function')auditSave(S,{silent:false});}catch(e){}
 }
 /* 货币缩放（一次性标记）：×10 → ÷6 */
 function migrateMoneyScale(s){

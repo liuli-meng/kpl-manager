@@ -240,6 +240,10 @@ function setupCard(s){
  save();renderAll();
 }
 function playCardNext(s){
+ if(!s||!s.card||!s.card.matches||!s.card.matches.length){
+  if(s){s.phase=s.phase||'r3';toast('卡位赛数据缺失，已跳过本阶段');}
+  return;
+ }
  const m=s.card.matches[s.card.idx];
  if(!m){finishCard(s);return;}
  if(m.a===s.teamName||m.b===s.teamName){
@@ -743,6 +747,7 @@ function newSeason(s){
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
  try{gcDefs(s);}catch(e){} // 年度轮换：清杯赛临时 def / 退役 def / 青训幽灵
  try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上
+ try{if(typeof auditSave==='function')auditSave(s,{silent:false});}catch(e){} // 赛季末不变量巡检
  startSplit(s,'spring');
 }
 
@@ -750,6 +755,9 @@ function newSeason(s){
  年龄/合同/退役/工资帽结算只在年度轮换（newSeason）做，夏季赛年中直开（不老化）。 */
 function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
+ // 换赛段必须清掉挂起推进：_afterMatch 是闭包（不进存档），春季赛最后一场杯赛若把它留在内存里，
+ // 夏季赛点「继续」会执行 challengerStep 而不是推进当天（match.js:663 优先跑 after），白丢一天
+ s._afterMatch=null;
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
  if(s.mode==='player'){
@@ -847,6 +855,7 @@ function calendarNextLabel(s){
  return annualRank(s).slice(0,12).includes(s.teamName)?' 前往 KPL 年度总决赛':' 年度收官 · 开启新赛季';
 }
 function advanceCalendar(s){
+ if(!s||!s.players){try{toast('存档状态异常，无法推进赛历');}catch(_){}return;}
  if(s.split==='spring'){setupChallenger(s);return;} // 春 → 挑战者杯 → EWC → 夏 → 年总
  if(isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;} // 亚运年：夏 → 亚运会 → 年总
  setupAnnual(s); // 内部判定是否晋级（未晋级自动补完 AI 赛程并年度轮换）

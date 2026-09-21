@@ -151,7 +151,14 @@ function _hintState(){
 function pageHint(name){
  const hide=_hintState();
  if(hide&&hide[name])return '';
- const txt=PAGE_HINTS[name];if(!txt)return '';
+ let txt=PAGE_HINTS[name];if(!txt)return '';
+ // 选手身份：二队/阵容等页说明不得指向其打不开的经理操作
+ if(name==='kjia'&&S&&S.mode==='player'){
+  txt='二队 K甲赛况：查看练级数据与俱乐部下放情况（人事权在俱乐部，「生涯」页可申请租借/K甲）';
+ }
+ if(name==='market'&&S&&S.mode==='coach'){
+  txt='教练工作台：应急租借与引援申请（买断谈判由俱乐部打理）';
+ }
  return `<div class="page-hint"><span>${txt}</span><button class="ph-x" onclick="dismissHint('${name}')" title="不再显示这条">×</button></div>`;
 }
 function dismissHint(name){

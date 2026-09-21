@@ -159,6 +159,7 @@ function kjiaReturnNote(p){ // 归队日志共用后缀
 function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉回一队，成长按已练天数折算
  if(id===undefined){id=s;s=S;}
  s=s||S;
+ if(s.mode==='player'){toast('选手生涯没有俱乐部人事权——召回由俱乐部运作');return;}
  const p=(s.players||[]).find(x=>x.id===id);
  if(!p){toast('选手不在阵中');return;}
  if(!(p.kjia>0)){toast(p.name+' 不在 K甲锻炼中');return;}
@@ -185,6 +186,7 @@ function kjiaTick(s){ // 每天结算一次；到期归队并成长
 function promoteKjiaPlayer(s,id){
  if(id===undefined){id=s;s=S;}
  s=s||S;
+ if(s.mode==='player'){toast('选手生涯没有俱乐部人事权——提拔由俱乐部运作');return;}
  if(!s.kjia||!s.kjia.squad){toast('本届 K甲尚未开赛');return;}
  const p=s.kjia.squad.find(x=>x.id===id);
  if(!p){toast('该选手不在二队班底');return;}

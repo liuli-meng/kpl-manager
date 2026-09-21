@@ -118,3 +118,201 @@ function freeSignBlockedReason(s){
  if(!s||!s.preseason)return '';
  return '已进入挂牌期（后 '+TRANSFER_FREE_DAYS+' 天）——只能挂牌/竞价/续约/租借，不能买断直签';
 }
+/* 身份限制：经理才做买断/出售生意；教练=俱乐部代管（应急租借/引援申请）；选手不碰转会 */
+function transferOpsBlockedReason(s){
+ if(!s||!s.players)return '尚未开局';
+ if(s.mode==='coach')return '教练生涯：买断/出售由俱乐部打理——请用转会页「应急租借 / 引援申请」';
+ if(s.mode==='player')return '选手生涯：不操作俱乐部买卖（由经纪与俱乐部处理）';
+ return '';
+}
+/* ================= 规则中心：签约/放行/不变量巡检 =================
+   canSign / canRelease：玩家 UI 与 AI 行程共用同一闸门。
+   auditSave：业务不变量（双挂/名单/状态旗）——读档后与赛季末自动跑，
+   与 migrate 的「字段修复」互补，不替代它。 */
+const AI_ROSTER_MAX=5; // AI 队 def 名册上限（一队五位置）
+function canSign(s,p,opts){
+ if(!s||!p)return {ok:false,reason:'无效选手'};
+ const o=opts||{};
+ const actor=o.actor||'player';
+ const name=p.name||'选手';
+ const pid=p.id;
+ const pos=p.pos;
+ if(actor==='player'){
+  if(typeof transferOpsBlockedReason==='function'){
+   const mb=transferOpsBlockedReason(s);
+   if(mb)return {ok:false,reason:mb};
+  }
+  if(typeof freeSignBlockedReason==='function'&&o.checkWindow!==false){
+   const fb=freeSignBlockedReason(s);
+   if(fb)return {ok:false,reason:fb};
+  }
+  if((s.players||[]).some(x=>x.id===pid))return {ok:false,reason:name+' 已在名单中'};
+  if(typeof rosterFull==='function'&&rosterFull(s))
+   return {ok:false,reason:'KPL 大名单上限 '+(typeof ROSTER_MAX!=='undefined'?ROSTER_MAX:10)+' 人'};
+  const pst=(typeof playerStatus==='function')?playerStatus(p,s):null;
+  if(pst&&pst.loanOut)return {ok:false,reason:name+' 租借在外，不能直接签约'};
+  if(pst&&pst.kjia)return {ok:false,reason:name+' 正在 K甲锻炼'};
+  return {ok:true,reason:''};
+ }
+ // AI / 俱乐部侧：按 def 名册与位置名额
+ const team=o.team||s.teamName;
+ const map=(typeof aiRosterDefMap==='function')?aiRosterDefMap(s):null;
+ if(!map||!map[team])return {ok:true,reason:''}; // 无名册数据时不硬拦（时代/杯赛临时队）
+ const arr=map[team];
+ if(o.allowReplace!==true&&arr.length>=AI_ROSTER_MAX)
+  return {ok:false,reason:team+' 名册已满（'+AI_ROSTER_MAX+'人）'};
+ if(o.allowReplace!==true&&pos&&arr.some(id=>{
+  const d=(typeof defOf==='function')?defOf(s,id):null;
+  return d&&d.pos===pos;
+ }))return {ok:false,reason:team+' 已有'+(POS&&POS[pos]?POS[pos][0]:pos)};
+ if(pid&&arr.indexOf(pid)>=0&&o.allowReplace!==true)
+  return {ok:false,reason:name+' 已在 '+team+' 名册'};
+ return {ok:true,reason:''};
+}
+function canRelease(s,p,opts){
+ if(!s||!p)return {ok:false,reason:'无效选手'};
+ const o=opts||{};
+ const name=p.name||'选手';
+ if(typeof natCamping==='function'&&natCamping(s,p))
+  return {ok:false,reason:name+' 国家队集训中，不能离队/出售'};
+ if(p.loanOut)return {ok:false,reason:name+' 已在外租借'};
+ if((p.kjia||0)>0)return {ok:false,reason:name+' K甲锻炼中，不能出售'};
+ if(o.asSale&&p.loan)return {ok:false,reason:name+' 是租借选手，不能出售'};
+ return {ok:true,reason:''};
+}
+/* 业务不变量巡检：发现问题能安全修的修掉，修不了的记入 issues */
+function nLabel(p){return (p&&p.name)||'选手';}
+function auditSave(s,opts){
+ const silent=!!(opts&&opts.silent);
+ const issues=[],repairs=[];
+ if(!s)return {ok:true,issues,repairs};
+ const players=s.players||[];
+ const byId={};
+ players.forEach(p=>{if(p&&p.id)byId[p.id]=p;});
+
+ // ① 玩家名单 vs AI 名册双挂：玩家侧优先，AI 侧除名
+ if(typeof aiRosterDefMap==='function'&&typeof aiDetachDef==='function'){
+  const map=aiRosterDefMap(s);
+  Object.keys(map).forEach(tn=>{
+   if(tn===s.teamName)return;
+   (map[tn]||[]).slice().forEach(pid=>{
+    if(byId[pid]){
+     issues.push('双挂：'+(byId[pid].name||pid)+' 同时在玩家名单与 '+tn+' AI 名册');
+     aiDetachDef(s,pid);
+     repairs.push('从 '+tn+' AI 名册移除 '+(byId[pid].name||pid));
+    }
+   });
+  });
+  // ② 同一 def 挂两支 AI 队：保留先出现的队
+  const seen={};
+  Object.keys(map).forEach(tn=>{
+   map[tn]=(map[tn]||[]).filter(pid=>{
+    if(seen[pid]&&seen[pid]!==tn){
+     issues.push('AI 双挂：def '+pid+' 同时在 '+seen[pid]+' 与 '+tn);
+     return false;
+    }
+    if(!seen[pid])seen[pid]=tn;
+    return true;
+   });
+  });
+  // ③ AI 名册超编：截断到 5（保留原有顺序）
+  Object.keys(map).forEach(tn=>{
+   if((map[tn]||[]).length>AI_ROSTER_MAX){
+    issues.push('AI 超编：'+tn+' 名册 '+map[tn].length+' > '+AI_ROSTER_MAX);
+    map[tn]=map[tn].slice(0,AI_ROSTER_MAX);
+    repairs.push('截断 '+tn+' 名册至 '+AI_ROSTER_MAX);
+   }
+  });
+ }
+
+ // ④ 首发幽灵：lineup 引用不在 players
+ const lineIds=new Set((s.lineup||[]).map(id=>id));
+ (s.lineup||[]).slice().forEach(id=>{
+  if(!byId[id]){
+   issues.push('首发幽灵：'+id+' 不在名单');
+   s.lineup=s.lineup.filter(x=>x!==id);
+   if(s.pick){
+    players.forEach(p=>{if(p.id===id&&s.pick[p.pos]!=null)delete s.pick[p.pos];});
+   }
+   repairs.push('从首发移除幽灵 '+id);
+  }
+ });
+ // ⑤ 玩家名单超编：收敛到 ROSTER_MAX（保留总值更高者，其余回自由市场）
+ const maxR=(typeof ROSTER_MAX!=='undefined')?ROSTER_MAX:10;
+ if(players.length>maxR){
+  issues.push('玩家名单超编：'+players.length+' > '+maxR);
+  const ranked=players.slice().sort((a,b)=>{
+   const oa=(typeof overall==='function')?overall(a):0;
+   const ob=(typeof overall==='function')?overall(b):0;
+   if(ob!==oa)return ob-oa;
+   return (b.age||0)-(a.age||0); // 同总值留更年轻的
+  });
+  const keep=ranked.slice(0,maxR);
+  const drop=ranked.slice(maxR);
+  const keepIds=new Set(keep.map(p=>p.id));
+  s.players=players.filter(p=>keepIds.has(p.id));
+  s.lineup=(s.lineup||[]).filter(id=>keepIds.has(id));
+  drop.forEach(p=>{
+   s.freeAgents=s.freeAgents||[];
+   if(!s.freeAgents.some(x=>x.id===p.id)){
+    s.freeAgents.push({...p,team:null,willingness:Math.max(p.willingness||50,55),loanOut:null,kjia:0});
+   }
+   repairs.push(nLabel(p)+' 因名单超编转入自由市场');
+  });
+  try{logEvent(s,' 名单超编收敛：保留总值前 '+maxR+' 人，'+drop.length+' 人转入自由市场');}catch(e){}
+ }
+ // ⑥ 状态旗冲突：读 playerStatus 单一出口，不在本文件裸拼旗标
+ players.forEach(p=>{
+  if(!p)return;
+  const n=p.name||p.id;
+  const st=(typeof playerStatus==='function')?playerStatus(p,s):null;
+  if(st&&st.loan&&st.loanOut){
+   issues.push('状态冲突：'+n+' 同时 loan 与 loanOut');
+   p.loanOut=null;repairs.push(n+' 清除 loanOut（保留 loan）');
+  }
+  if(st&&st.loanOut&&st.kjia){
+   issues.push('状态冲突：'+n+' 同时租借与 K甲');
+   p.kjia=0;repairs.push(n+' 清除 kjia（保留 loanOut）');
+  }
+  const listed=(s.listed||[]).some(x=>x.id===p.id);
+  const busy=!!(st&&st.busy);
+  if(listed&&busy){
+   issues.push('挂牌冲突：'+n+' 挂牌但不在队可售状态');
+   s.listed=s.listed.filter(x=>x.id!==p.id);
+   s.bids=(s.bids||[]).filter(x=>x.id!==p.id);
+   repairs.push(n+' 撤牌（不可售状态）');
+  }
+  const w=p.wage;
+  if(typeof w!=='number'||!isFinite(w)||w<0){
+   issues.push('工资非法：'+n+' wage='+w);
+   repairs.push(n+' 工资待 scrubWages 重估');
+  }
+ });
+ // ⑦ captain 指向幽灵
+ if(s.captain&&!byId[s.captain]){
+  issues.push('队长幽灵：captain='+s.captain);
+  s.captain=null;repairs.push('清空队长');
+ }
+ // ⑧ offers 指向不存在的选手
+ (s.offers||[]).slice().forEach(o=>{
+  if(o&&o.pid&&!byId[o.pid]&&!(s.market||[]).some(x=>x.id===o.pid)){
+   issues.push('报价幽灵：pid='+o.pid);
+   s.offers=s.offers.filter(x=>x!==o);
+   repairs.push('清除幽灵报价 '+o.pid);
+  }
+ });
+ // ⑨ fund 非法
+ if(typeof s.fund!=='number'||!isFinite(s.fund)){
+  issues.push('资金非法：fund='+s.fund);
+  s.fund=0;repairs.push('fund 归零');
+ }
+ const report={ok:!issues.length,issues,repairs};
+ s._lastAudit=report;
+ if(!silent&&issues.length){
+  try{
+   logEvent(s,' 存档巡检：发现 '+issues.length+' 项不一致'+(repairs.length?'，已自动修复 '+repairs.length+' 项':'')+'（详情见控制台）');
+  }catch(e){}
+  try{console.warn('[auditSave]',issues,repairs);}catch(e){}
+ }
+ return report;
+}

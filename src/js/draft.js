@@ -309,6 +309,17 @@ function draftAiPick(s,team){
  d.pool=d.pool.filter(x=>x.id!==best.id);
  best.team=team;
  if(team===s.teamName){
+ // 与玩家手动点名同一闸门：名单满则这一签作废，禁止无限膨胀
+ if(typeof canSign==='function'){
+  const chk=canSign(s,best,{actor:'player',checkWindow:false,checkMode:false});
+  if(!chk.ok){
+   d.log.push(s.teamName+' 点名失败（'+(chk.reason||'名单受限')+'）');
+   return null;
+  }
+ }else if(typeof rosterFull==='function'&&rosterFull(s)){
+  d.log.push(s.teamName+' 大名单已满，点名作废');
+  return null;
+ }
  s.players.push(best);
  if(!s.lineup.includes(best.id)&&!s.players.some(x=>x.id!==best.id&&x.pos===best.pos&&s.lineup.includes(x.id)))s.lineup.push(best.id);
  }else{
@@ -394,6 +405,10 @@ function draftPick(s,id){
  }
  const p=d.pool.find(x=>x.id===id);
  if(!p){toast('该新秀已不在池中');return;}
+ if(typeof canSign==='function'){
+  const chk=canSign(s,p,{actor:'player',checkWindow:false,checkMode:false});
+  if(!chk.ok){toast(chk.reason||('不能点名 '+p.name));return;}
+ }
  if(draftBlockedFor(s,s.teamName,p)){
   toast(p.name+' 是本队青训出身——第一轮不能选自家，请用训练页「自留签」');
   return;

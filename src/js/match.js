@@ -240,13 +240,16 @@ function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 
  autoFillLineup(s); // 我方不可出战时同位置替补顶上；转会/伤停/集训后不留空位
  resetOppEnergy(s,opName);
  const sr={used:[],usedOpp:[],mw:0,ow:0,max:bo,logs:[],myName:s.teamName,opName,side:firstSide(s,'regular',opName)};
+ if(typeof annualMarkSeriesStart==='function')annualMarkSeriesStart(s,sr); // 年总：记首发/出场
  const need=Math.ceil(bo/2);
  let guard=0,myApps=0,myK=0,myD=0,myA=0,myMvp=0;
  while(sr.mw<need&&sr.ow<need&&guard++<bo+2){
+ if(typeof annualAutoRotate==='function'){try{annualAutoRotate(s,sr);}catch(e){}} // 大师组官方轮换
  const my=teamPower(s),op=powerOf(s,opName);
  const g=singleGame(my,op);
  rosterLineup(s).forEach(p=>{p.energy=clamp(p.energy-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;});
  if(g.w)sr.mw++;else sr.ow++;
+ if(typeof annualMarkPlayed==='function'){try{annualMarkPlayed(s,sr);}catch(e){}}
  const mvp=gamePerform(g.w);
  if(mvp){const mp=s.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}}
  if(mvp){sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id);sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a);}
@@ -450,6 +453,7 @@ function playGame(){
  if(mvp){const mp=S.players.find(x=>x.id===mvp.id);if(mp){mp.mvp=(mp.mvp||0)+1;mp.popularity=Math.min(99,(mp.popularity||0)+2);mp.val=clamp((mp.val||100)+3,70,150);}} // MVP：人气+2、身价+3
  if(mvp)sr.mvpIds=(sr.mvpIds||[]).concat(mvp.id); // 系列赛各局 MVP 记录（FMVP 评选用）
  if(mvp)sr.mvpKda=(sr.mvpKda||[]).concat(mvp.k+'/'+mvp.d+'/'+mvp.a); // 各局 MVP 的 KDA（AI 战报语境用）
+ if(typeof annualMarkPlayed==='function'){try{annualMarkPlayed(S,sr);}catch(e){}} // 年总大师组：记当局出场
  sr.logs.push('第'+(sr.mw+sr.ow)+'局 '+(g.w?'':'')+' 我方 '+g.myK+'-'+g.opK+' '+(g.w?'击败':'憾负')+' '+sr.opName+' ｜ 总比分 '+sr.mw+':'+sr.ow+tag+' '+(sr.side==='red'?'红方':'蓝方')+' '+pick(CASTER)+(mvp?' ｜ MVP：'+mvp.name+'（'+mvp.k+'/'+mvp.d+'/'+mvp.a+'）':''));
  // 文字直播（事件模板池 × 数据驱动语境：MVP KDA/英雄/战术/比分背景全部织进句子）
  sr.logs.push(...genMatchStory(sr,g,mvp));
@@ -457,6 +461,8 @@ function playGame(){
  if(sr.mw>=need||sr.ow>=need){
  finishSeries(sr.mw>=need);
  }else{
+ // 年总大师组：每局后按官方「名单全员出场」推进轮换
+ if(typeof annualAutoRotate==='function'){try{annualAutoRotate(S,sr);}catch(e){}}
  // 进入下一局：败方选边（KPL 规则：第2-6局败方选边；第7局巅峰对决由第6局败方选边）
  const nextTitle=(sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot==='总决赛'?'总决赛':'季后赛'):PHASE_NAME[S.phase])+' · 第'+(sr.mw+sr.ow+1)+'局（当前 '+sr.mw+':'+sr.ow+'）';
  if(S.seriesAuto){
@@ -611,6 +617,7 @@ function finishSeries(finalWin){
  S.fund+=bonus;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
  logEvent(S,' '+sr.cupLabel+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（奖金 '+bonus+'万）');
+ if(sr.stage==='cup'&&typeof annualSubSettle==='function'){try{annualSubSettle(S,sr);}catch(e){}}
  title=sr.cupLabel+(finalWin?' · 晋级':' · 落败');
  queueMatchAdvance(S,()=>{
  if(S.phase==='ewc')ewcStep(S);

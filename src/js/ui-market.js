@@ -104,7 +104,8 @@ function renderMarket(){
  ?`<button class="btn sm ${p.willingness<75?'gold':'primary'}" style="margin:0;min-width:64px" onclick="openNegotiation(S,'${p.id}')">强挖 ${Math.round(raidChance(p)*100)}%</button>`
  :`<button class="btn sm primary" style="margin:0;min-width:64px" onclick="openNegotiation(S,'${p.id}')" ${p.willingness<30?'disabled':''}>${p.willingness<30?'尝试谈判':'谈判'}</button>`;
  return `<div class="match" style="margin-bottom:6px;padding:8px 10px">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.ownerTeam} · 总值${overall(p)}${p.age?' · '+p.age+'岁':''})</span></span>
+ <div class="vs"><div class="tname" style="font-size:13px"><b>${p.name}</b>
+ <div style="color:var(--dim);font-size:11px;font-weight:500;line-height:1.35">${POS[p.pos][0]} · ${p.ownerTeam} · 总值${overall(p)}${p.age?' · '+p.age+'岁':''}</div></div>
  <div class="power" style="font-size:10px">${wil}${unt}</div></div>
  <div class="score" style="font-size:13px;min-width:0">${p.untouchable?untouchablePrice(p)+'万':price+'万'}</div>
  ${btnHtml}
@@ -115,7 +116,8 @@ function renderMarket(){
  if(!p)return '';
  const bid=(S.bids||[]).find(b=>b.id===item.id);
  return `<div class="match" style="margin-bottom:6px;padding:8px 10px">
- <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(总值${overall(p)} · 挂牌${item.price}万)</span></span></div>
+ <div class="vs"><div class="tname" style="font-size:13px;white-space:normal;word-break:break-word"><b>${p.name}</b>
+ <div style="color:var(--dim);font-size:11px;font-weight:500">总值${overall(p)} · 挂牌${item.price}万</div></div></div>
  ${bid?`<div class="score" style="font-size:12px;min-width:0"> ${bid.team}<br>${bid.bid}万</div>
  <div style="display:flex;gap:4px"><button class="btn sm primary" style="margin:0" onclick="acceptBid(S,'${item.id}')">接受</button><button class="btn sm" style="margin:0" onclick="rejectBid(S,'${item.id}')">拒绝</button><button class="btn sm danger" style="margin:0" onclick="delistPlayer(S,'${item.id}')">撤牌</button></div>`
  :`<button class="btn sm danger" style="margin:0" onclick="delistPlayer(S,'${item.id}')">撤牌</button>`}

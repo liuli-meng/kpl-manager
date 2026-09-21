@@ -222,6 +222,7 @@ function renderHeader(){
  <button class="hd-btn" onclick="uiSave()">存档</button>
  <button class="hd-btn" onclick="openSaveMgmt()">管理</button>
  <button class="hd-btn" onclick="toggleSfx()" title="音效开关">${_sfxOn?'音效 开':'音效 关'}</button>
+ <button class="hd-btn" onclick="toggleBGM()" title="背景音乐开关">${_bgmOn?"BGM 开":"BGM 关"}</button>
  <button class="hd-btn" onclick="resetGame()">重开</button>`;
  // 数字滚动：资金/战力平滑滚数（带 data-num 的 stat）
  try{
@@ -316,7 +317,10 @@ function uiAdvanceCalendar(s){
 /* 当前唯一「该点的比赛动作」：UI 按钮一律从这里派生，避免赛段面板漏按钮导致打不了。
    引擎可直接调 startMatch/startCup；这里只回答「玩家下一步该点什么」。 */
 function nextAction(s){
- if(!s||!s.players||!s.players.length)return null;
+ if(!s||!s.players||!s.players.length){
+      // 空名单特殊处理：给市场入口让玩家买人/签自由球员，而不是直接 null
+      return {type:'uiGoMarket',label:'去转会市场 · 买人/签自由球员',fn:'uiGoMarket'};
+  }
  if(playerRetired(s))return null;
  if(s.board&&s.board.fired)return null;
  if(s.preseason)return {type:'endPreseason',label:' 结束转会期 · 开始赛季',fn:'uiEndPreseason'};
@@ -343,7 +347,11 @@ function nextAction(s){
  }
  if(p==='challenger'){
  const c=s.challenger;
- if(!c||c.champ)return null;
+ if(!c){
+     // 杯赛结构丢失 → 给推进赛历入口重建（读档损坏或迁移缺失）
+     return {type:'advanceCalendar',label:'推进赛历',fn:'uiAdvanceCalendar'};
+ }
+ if(c.champ)return null;
  return {type:'startCup',label:' 进行挑战者杯',fn:'uiStartCup'};
  }
  if(p==='ewc'){
@@ -552,6 +560,7 @@ function clubAnnualPanel(){
  <div class="hint mt8"><b>大师组</b>（积分前6）：${rankLine(st.M,a.masters)}</div>
  <div class="hint"><b>精英组</b>（积分7-12）：${rankLine(st.E,a.elites)}</div>
  <div class="hint mt8">大师组前4 + 精英组第1 直进淘汰赛；大师5/6 与精英2-5 打突围赛；精英第6名直接出局</div>
+ <div class="hint" style="color:var(--cyan)">${typeof annualSubRuleText==='function'?annualSubRuleText(S):''}</div>
  </div>`;
  }
  if(a.stage==='breakthrough'){
@@ -962,13 +971,16 @@ function renderLeague(){
  // 季后赛 bracket
  if(S.phase==='playoff'&&S.playoff){
  const pf=S.playoff;
- const pMatch=(m,label)=>`<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:12px">${label}：${m.a||'?'} vs ${m.b||'?'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+  const pMatch=(m,label)=>{
+      if(!m)return '';
+      return `<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:12px">${label}：${m.a||'?'} vs ${m.b||'?'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+  };
  html+=`<div class="panel"><h3>季后赛对阵（BO7 双败 · 第7局巅峰对决）</h3>
- ${pf.wb.map((m,i)=>pMatch(m,'胜者组R'+(i+1))).join('')}
+ ${(pf.wb||[]).map((m,i)=>pMatch(m,'胜者组R'+(i+1))).join('')}
  ${pMatch(pf.wf,'胜者组决赛')}
- ${pf.lb.map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
- ${pf.lb2.map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
- ${pf.lb3.map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
+ ${(pf.lb||[]).map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
+ ${(pf.lb2||[]).map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
+ ${(pf.lb3||[]).map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
  ${pMatch(pf.lb4,'败者组半决赛')}
  ${pMatch(pf.lbf,'败者组决赛')}
  ${pMatch(pf.final,' 总决赛')}
