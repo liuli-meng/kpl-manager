@@ -140,7 +140,8 @@ function finishChallenger(s){
  :c.r1.some(m=>m.r&&loserOf(m)===s.teamName)?'32强':'参赛';
  s.yearStages.push({ev:'挑战者杯',place:chPlace});
  try{gcDefs(s);}catch(e){}
- setupEWC(s); // 挑杯收官 → EWC 电竞世界杯（夏季休赛）
+ // 真实2026：挑杯(4-5月) → 夏季赛(6月起) → EWC(7/30-8/8) → 亚运 → 年总。原先EWC错放在夏季赛之前
+ startSplit(s,'summer'); // 挑杯收官 → 夏季赛转会期
 }
 /* ================= 电竞世俱杯（EWC 王者荣耀项目，年中国际杯赛） =================
  真实口径（2026）：赛事名「电竞世俱杯」，7/30–8/8，**20 队**参赛（KPL 与 KML/PKL/RPL 等各赛区联赛名额），
@@ -177,8 +178,10 @@ function genEwcDef(s,i,teamName){
  sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:gameYear(s)+' EWC 电竞世界杯海外参赛队选手。'};
 }
 function setupEWC(s){
+ // EWC 直邀：夏季/当季冠亚军（EWC 在 7 月底）
  const p=s.playoff;
- const champ=p.final.r,runner=p.final.r===p.final.a?p.final.b:p.final.a;
+ const champ=p&&p.final&&p.final.r,runner=champ?(p.final.r===p.final.a?p.final.b:p.final.a):null;
+ if(!champ){logEvent(s,' EWC 直邀名额待定：先完成联赛冠军结算');return;}
  const overs=shuffle(EWC_OVERSEAS.slice()).slice(0,6);
  // 海外队选手 def（挂 s.ewcDefMap，供 ensureAiRosters 构建真实阵容：BP 情报/体力/战力全流程可用）
  s.ewcDefMap={};
@@ -235,7 +238,9 @@ function finishEWC(s){
  :e.qf.some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'未晋级'});
  s.ewcDone=true;
  try{gcDefs(s);}catch(e){}
- startSplit(s,'summer'); // EWC 收官 → 夏季赛转会期（年中不老化）
+ // EWC 在夏休/夏中：收官后接亚运（亚运年）或年总
+ if(typeof isAsiadYear==='function'&&isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;}
+ setupAnnual(s);
 }
 /* ================= 亚运会（四年一届 · 国家队征召） =================
  真实建模简化：中国代表队由 KPL 联盟各位置当赛季总值最高者组成（含玩家队选手），

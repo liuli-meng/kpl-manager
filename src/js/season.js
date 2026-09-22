@@ -6,7 +6,7 @@
  常规赛胜者积1分；2026起奖金按胜小局数结算 */
 const PHASE_NAME={r1:'常规赛·第一轮',r2:'常规赛·第二轮',card:'卡位赛',r3:'常规赛·第三轮',playoff:'季后赛',champion:'赛季结束',eliminated:'赛季结束',challenger:'挑战者杯',ewc:'EWC 电竞世界杯',asiad:'亚运会',annual:'KPL 年度总决赛'};
 const isAsiadYear=s=>gameYear(s)%4===2; // 亚运会四年一届（2026 名古屋 / 2030 / 2034…），夏赛后、年总前举行
-/* ================= 年度赛历（春季赛 → EWC 电竞世界杯 → 夏季赛 → KPL 年度总决赛） =================
+/* ================= 年度赛历（春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运 → 年总） =================
  真实 KPL 年历建模：一年两个联赛赛段（春/夏，赛制相同），夏季赛前穿插 EWC 国际杯赛
  （春季冠亚军分别以 KPL冠军 / 英雄亚冠ACL 身份直邀 8 强），年末年度积分前 12 打年总
  （擂台赛→突围赛→淘汰赛，冠军捧圣龙杯）。年度积分（官方规则）：
@@ -871,15 +871,63 @@ function awardFMVP(s,champ,event){
  }else logEvent(s,' FMVP：'+champ+' 的 '+winner.name+' 当选 '+event+' 总决赛最有价值选手');
  }catch(e){}
 }
-/* ===== 年度赛历推进（赛季结束按钮统一入口）：春→EWC→夏→年总→下一年 ===== */
+/* ===== 年度赛历推进（真实 2026）：春→挑杯→夏→EWC→（亚运）→年总→下一年 ===== */
+function calendarStages(s){
+ const asiad=isAsiadYear(s);
+ return [
+  {k:'spring',n:'春季赛',hint:'约1-4月'},
+  {k:'challenger',n:'挑战者杯',hint:'4/25-5/23'},
+  {k:'summer',n:'夏季赛',hint:'6月起'},
+  {k:'ewc',n:'EWC',hint:'7/30-8/8'},
+ ].concat(asiad?[{k:'asiad',n:'亚运会',hint:'9月·名古屋'}]:[]).concat([
+  {k:'annual',n:'年度总决赛',hint:'10-11月'},
+ ]);
+}
+function currentCalendarKey(s){
+ if(!s)return 'spring';
+ const ph=s.phase;
+ if(ph==='challenger')return 'challenger';
+ if(ph==='ewc')return 'ewc';
+ if(ph==='asiad')return 'asiad';
+ if(ph==='annual')return 'annual';
+ if(s.split==='spring'){
+  if(ph==='champion'||ph==='eliminated')return 'challenger';
+  return 'spring';
+ }
+ if(ph==='champion'||ph==='eliminated'){
+  if(!s.ewcDone)return 'ewc';
+  if(isAsiadYear(s)&&!s.agDone)return 'asiad';
+  return 'annual';
+ }
+ return 'summer';
+}
 function calendarNextLabel(s){
- if(s.split==='spring')return ' 前往挑战者杯（32队 · KPL全员）';
- if(isAsiadYear(s)&&!s.agDone)return ' 出征亚运会（中国代表队征召）';
+ if(s.split==='spring'&&s.phase!=='challenger')return ' 前往挑战者杯（32队 · KPL全员）';
+ if(s.split==='summer'&&!s.ewcDone&&(s.phase==='champion'||s.phase==='eliminated'))
+  return ' 前往 EWC 电竞世界杯（夏休 · 8强）';
+ if(isAsiadYear(s)&&!s.agDone&&(s.ewcDone||s.phase==='ewc'||s.split==='summer')&&s.phase!=='challenger')
+  return ' 出征亚运会（中国代表队征召）';
  return annualRank(s).slice(0,12).includes(s.teamName)?' 前往 KPL 年度总决赛':' 年度收官 · 开启新赛季';
 }
 function advanceCalendar(s){
  if(!s||!s.players){try{toast('存档状态异常，无法推进赛历');}catch(_){}return;}
- if(s.split==='spring'){setupChallenger(s);return;} // 春 → 挑战者杯 → EWC → 夏 → 年总
- if(isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;} // 亚运年：夏 → 亚运会 → 年总
+ if(s.split==='spring'){setupChallenger(s);return;} // 春 → 挑战者杯 → 夏 → EWC → 年总
+ if(!s.ewcDone){setupEWC(s);return;} // 夏季赛打完 → EWC（夏休国际杯）
+ if(isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;} // 亚运年：EWC后 → 亚运会 → 年总
  setupAnnual(s); // 内部判定是否晋级（未晋级自动补完 AI 赛程并年度轮换）
+}
+function yearCalendarHtml(s){
+ const st0=s||S;
+ const stages=calendarStages(st0);
+ const cur=currentCalendarKey(st0);
+ const curIdx=stages.findIndex(x=>x.k===cur);
+ return '<div class="panel"><h3>年度赛历 <span class="tag">2026 赛制</span></h3><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch">'
+  +stages.map((st,i)=>{
+   const on=st.k===cur;
+   const done=i<curIdx;
+   return '<div style="flex:1;min-width:72px;text-align:center;padding:8px 4px;border:1px solid '+(on?'var(--accent)':'var(--line)')+';border-radius:8px;background:'+(on?'rgba(121,170,255,.12)':'var(--raise)')+';opacity:'+(done&&!on?0.55:1)+'">'
+    +'<div style="font-size:13px;font-weight:800;color:'+(on?'var(--accent)':'var(--txt)')+'">'+st.n+'</div>'
+    +'<div style="font-size:10px;color:var(--faint);margin-top:2px">'+st.hint+(on?' · 进行中':done?' · 已完':'')+'</div></div>';
+  }).join('')
+  +'</div><div class="hint" style="margin-top:8px">顺序：春季赛 → 挑战者杯 → 夏季赛 → EWC（夏休）→ 亚运会（亚运年）→ 年度总决赛</div></div>';
 }

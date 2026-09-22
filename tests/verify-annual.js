@@ -71,7 +71,17 @@ const out = vm.runInContext(`
       if(!S.series&&!c.champ)break;
     }
     if(!S.challenger.champ)fail('挑战者杯未产生冠军');
-    // 挑杯 → EWC（玩家=春冠直邀，打穿）
+    // 真实 2026：挑杯 → 夏季赛 → EWC → 亚运/年总
+    if(S.split!=='summer')fail('挑战者杯后应直通夏季赛: split='+S.split);
+    log('挑战者杯收官: 冠军='+S.challenger.champ+'（年总积分+'+(S.annualPts[S.teamName]||0)+'）→ '+splitLabel(S));
+    // ===== 夏季赛 =====
+    runLeague();
+    if(S.phase!=='champion'&&S.phase!=='eliminated')fail('夏季赛未正常收官: phase='+S.phase);
+    const summerPts=S.annualPts[S.teamName]||0;
+    log('夏季赛收官: 冠军='+(S.playoff&&S.playoff.champ)+' 年度积分累计='+summerPts);
+    // ===== 夏季结束 → EWC（夏休）→ 亚运/年总 =====
+    advanceCalendar(S);
+    if(S.phase!=='ewc')fail('夏季赛后应进入 EWC: phase='+S.phase);
     let g2=0;
     while(S.phase==='ewc'&&g2++<40){
       if(S.series){closeSeries();continue;}
@@ -81,17 +91,10 @@ const out = vm.runInContext(`
       if(!S.series&&!S.ewc.champ)break;
     }
     if(!S.ewc||!S.ewc.champ)fail('EWC 未产生冠军');
-    if(S.split!=='summer')fail('挑战者杯/EWC 后未进入夏季赛: split='+S.split);
-    log('挑战者杯收官: 冠军='+S.challenger.champ+'（年总积分+'+(S.annualPts[S.teamName]||0)+'）→ EWC 冠军='+S.ewc.champ+' → '+splitLabel(S));
-    // ===== 夏季赛 =====
-    runLeague();
-    if(S.phase!=='champion'&&S.phase!=='eliminated')fail('夏季赛未正常收官: phase='+S.phase);
-    const summerPts=S.annualPts[S.teamName]||0;
-    log('夏季赛收官: 冠军='+(S.playoff&&S.playoff.champ)+' 年度积分累计='+summerPts);
-    // ===== 夏季结束 → 亚运年先打亚运会 → 年度总决赛 =====
-    advanceCalendar(S);
+    log('EWC 收官: 冠军='+S.ewc.champ);
+    advanceCalendar(S); // EWC 后 → 亚运（亚运年）或年总
     if(isAsiadYear(S)){
-      if(S.phase!=='asiad')fail('亚运年夏季赛后应进入亚运会: phase='+S.phase);
+      if(S.phase!=='asiad')fail('亚运年 EWC 后应进入亚运会: phase='+S.phase);
       if(!S.ag||!S.ag.squad.length)fail('亚运会未生成中国代表队名单');
       let ag=0;
       while(S.phase==='asiad'&&!S.ag.champ&&ag++<20){asiadStep(S);renderLeague();} // 渲染冒烟：亚运面板模板
@@ -167,7 +170,7 @@ const out = vm.runInContext(`
     }
     if(S.phase!=='eliminated')fail('弱队应止步（实际 phase='+S.phase+'）');
     const ptsBefore=S.annualPts[S.teamName]||0;
-    advanceCalendar(S); // 春季结束 → 挑战者杯（KPL 全员参赛，弱队陪跑全输）
+    advanceCalendar(S); // 春季结束 → 挑战者杯
     if(S.phase!=='challenger')fail('弱队春季后应进挑战者杯: phase='+S.phase);
     let g6=0;
     while(S.phase==='challenger'&&g6++<80){
@@ -177,13 +180,12 @@ const out = vm.runInContext(`
       const myPo=c.po&&!c.final&&[...c.po.wb1,...c.po.lb1,...c.po.wb2,...c.po.lb2,c.po.wf,c.po.lbs,c.po.lbf].some(m=>!m.r&&(m.a===S.teamName||m.b===S.teamName));
       const myFinal=c.final&&!c.final.r&&(c.final.a===S.teamName||c.final.b===S.teamName);
       if(mySingle||myPo||myFinal){startCup(S);if(!S.series)break;continue;}
-      simCup('challenger',S);break; // 玩家已出局：AI 快进补完挑杯（终局自动接 EWC/夏季赛）
+      simCup('challenger',S);break; // 玩家已出局：AI 快进补完挑杯（终局自动接夏季赛）
     }
     if(!S.challenger.champ)fail('挑战者杯应由 AI 补完产生冠军');
     if(S.split!=='summer')fail('弱队挑战者杯后应直通夏季赛: split='+S.split);
-    if(!S.ewc||!S.ewc.champ)fail('EWC 应由 AI 补完产生冠军');
-    log('弱队春季止步（积分'+ptsBefore+'）→ 挑战者杯陪跑（冠军='+S.challenger.champ+'）→ EWC 观赛（冠军='+S.ewc.champ+'）→ '+splitLabel(S));
-    // 夏季也全输 → 无缘年总 → 直接下一年
+    log('弱队春季止步（积分'+ptsBefore+'）→ 挑战者杯陪跑（冠军='+S.challenger.champ+'）→ '+splitLabel(S));
+    // 夏季也全输 → EWC 观赛 → 无缘年总 → 直接下一年
     let g5=0;
     while(!['champion','eliminated'].includes(S.phase)&&g5++<200){
       if(S.preseason){S.preseason=false;S.transferWindow=0;continue;}
@@ -197,7 +199,13 @@ const out = vm.runInContext(`
         if(!S.series&&!['champion','eliminated'].includes(S.phase))break;
       }else break;
     }
-    advanceCalendar(S); // 夏季结束 → 亚运年先进亚运会 → 年总判定
+    advanceCalendar(S); // 夏季结束 → EWC
+    if(S.phase==='ewc'){
+      simCup('ewc',S);
+      if(!S.ewc||!S.ewc.champ)fail('EWC 应由 AI 补完产生冠军');
+      log('弱队夏季止步 → EWC 观赛（冠军='+S.ewc.champ+'）');
+      advanceCalendar(S); // EWC 后 → 亚运/年总
+    }
     if(isAsiadYear(S)){
       let ag2=0;
       while(S.phase==='asiad'&&ag2++<20)asiadStep(S); // 弱队陪跑：亚运→无缘年总→AI 补完年总→年度轮换一气呵成（ag 已归零）

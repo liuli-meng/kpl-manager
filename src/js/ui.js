@@ -595,7 +595,7 @@ function clubResultPanel(){
  <div style="font-size:40px;color:var(--gold)"></div>
  <h3 style="justify-content:center">${splitLabel(S)} 总冠军：${S.playoff?S.playoff.champ:'—'}</h3>
  ${S.champion?'<div class="green" style="font-size:16px;font-weight:800;margin:8px 0">你是冠军！王朝就此建立！</div>':'<div class="dim">冠军属于对手，继续积蓄力量！</div>'}
- <div class="hint" style="margin:6px 0">${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → KPL 年度总决赛':'接下来：KPL 年度总决赛（年度积分前12）'}</div>
+ <div class="hint" style="margin:6px 0">${S.split==='spring'?'接下来：挑战者杯 → 夏季赛 → EWC':(!S.ewcDone&&S.split==='summer')?'接下来：EWC → '+(isAsiadYear(S)&&!S.agDone?'亚运会 → 年度总决赛':'年度总决赛'):(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → KPL 年度总决赛':'接下来：KPL 年度总决赛（年度积分前12）'}</div>
  <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
  }
@@ -603,7 +603,7 @@ function clubResultPanel(){
  <div style="font-size:40px;color:var(--faint)"></div>
  <h3 style="justify-content:center">${splitLabel(S)} 止步</h3>
  <div class="dim" style="margin:8px 0">未能晋级后续阶段（B组后2名 / 卡位赛失利 / 季后赛出局）</div>
- <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → 年度总决赛':'接下来：年度总决赛（前12晋级）'}</div>
+ <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → 夏季赛 → EWC':(!S.ewcDone&&S.split==='summer')?'接下来：EWC → '+(isAsiadYear(S)&&!S.agDone?'亚运会 → 年度总决赛':'年度总决赛'):(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → 年度总决赛':'接下来：年度总决赛（前12晋级）'}</div>
  <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
 }
@@ -910,8 +910,8 @@ function renderLeague(){
  try{if(typeof markSeasonQuestSeen==='function')markSeasonQuestSeen('seenLeague_'+((S&&S.season)||1));}catch(_){}
  const groups=phaseGroups(S);
  const myG=myGroup(S);
- let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
- <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
+ let html=pageHint('league')+(typeof yearCalendarHtml==='function'?yearCalendarHtml(S):'')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
+ <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运会（亚运年）→ 年度总决赛</div></div>`;
  // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
  const rank=annualRank(S);

@@ -68,7 +68,7 @@ const out = vm.runInContext(`
    else log('② 转会台账：签入 '+inRec.name+'（'+inRec.fee+'万）/ 售出 '+outRec.name+'（+1234万 → 测试买家）均入册');
   }
 
-  // ③ 全年快进：挑杯 → EWC → 夏赛 → 年总 → 年度轮换（回顾在轮换前定格）
+  // ③ 全年快进（真实 2026）：挑杯 → 夏赛 → EWC → 亚运/年总 → 年度轮换（回顾在轮换前定格）
   advanceCalendar(S); // → 挑战者杯
   if(S.phase!=='challenger')fail('未进挑战者杯: '+S.phase);
   let g1=0;
@@ -82,6 +82,10 @@ const out = vm.runInContext(`
    startCup(S);
    if(!S.series&&!c.champ)break;
   }
+  if(S.split!=='summer')fail('挑杯后未进夏季赛');
+  runLeague();
+  advanceCalendar(S); // → EWC
+  if(S.phase!=='ewc')fail('夏赛后未进 EWC: '+S.phase);
   let g2=0;
   while(S.phase==='ewc'&&g2++<40){
    if(S.series){closeSeries();continue;}
@@ -90,8 +94,6 @@ const out = vm.runInContext(`
    startCup(S);
    if(!S.series&&!S.ewc.champ)break;
   }
-  if(S.split!=='summer')fail('EWC 后未进夏季赛');
-  runLeague();
   advanceCalendar(S); // → 亚运年先打亚运会 → 年度总决赛
   let ag=0;
   while(S.phase==='asiad'&&ag++<20)asiadStep(S); // 2026 亚运年：AI 代打（国家队教练席不在玩家手里）
@@ -114,7 +116,7 @@ const out = vm.runInContext(`
   if(!r)fail('年度回顾未生成');
   else{
    const evs=r.stages.map(x=>x.ev);
-   const need=['春季赛','挑战者杯','EWC电竞世界杯','夏季赛','KPL年度总决赛'];
+   const need=['春季赛','挑战者杯','夏季赛','EWC电竞世界杯','KPL年度总决赛'];
    const missing=need.filter(e=>!evs.includes(e));
    if(missing.length)fail('成绩曲线缺赛段: '+missing.join('/'));
    else if(!r.board)fail('回顾缺董事会评价');

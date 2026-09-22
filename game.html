@@ -4896,16 +4896,64 @@ function awardFMVP(s,champ,event){
  }catch(e){}
 }
 
+function calendarStages(s){
+ const asiad=isAsiadYear(s);
+ return [
+  {k:'spring',n:'春季赛',hint:'约1-4月'},
+  {k:'challenger',n:'挑战者杯',hint:'4/25-5/23'},
+  {k:'summer',n:'夏季赛',hint:'6月起'},
+  {k:'ewc',n:'EWC',hint:'7/30-8/8'},
+ ].concat(asiad?[{k:'asiad',n:'亚运会',hint:'9月·名古屋'}]:[]).concat([
+  {k:'annual',n:'年度总决赛',hint:'10-11月'},
+ ]);
+}
+function currentCalendarKey(s){
+ if(!s)return 'spring';
+ const ph=s.phase;
+ if(ph==='challenger')return 'challenger';
+ if(ph==='ewc')return 'ewc';
+ if(ph==='asiad')return 'asiad';
+ if(ph==='annual')return 'annual';
+ if(s.split==='spring'){
+  if(ph==='champion'||ph==='eliminated')return 'challenger';
+  return 'spring';
+ }
+ if(ph==='champion'||ph==='eliminated'){
+  if(!s.ewcDone)return 'ewc';
+  if(isAsiadYear(s)&&!s.agDone)return 'asiad';
+  return 'annual';
+ }
+ return 'summer';
+}
 function calendarNextLabel(s){
- if(s.split==='spring')return ' 前往挑战者杯（32队 · KPL全员）';
- if(isAsiadYear(s)&&!s.agDone)return ' 出征亚运会（中国代表队征召）';
+ if(s.split==='spring'&&s.phase!=='challenger')return ' 前往挑战者杯（32队 · KPL全员）';
+ if(s.split==='summer'&&!s.ewcDone&&(s.phase==='champion'||s.phase==='eliminated'))
+  return ' 前往 EWC 电竞世界杯（夏休 · 8强）';
+ if(isAsiadYear(s)&&!s.agDone&&(s.ewcDone||s.phase==='ewc'||s.split==='summer')&&s.phase!=='challenger')
+  return ' 出征亚运会（中国代表队征召）';
  return annualRank(s).slice(0,12).includes(s.teamName)?' 前往 KPL 年度总决赛':' 年度收官 · 开启新赛季';
 }
 function advanceCalendar(s){
  if(!s||!s.players){try{toast('存档状态异常，无法推进赛历');}catch(_){}return;}
- if(s.split==='spring'){setupChallenger(s);return;} // 春 → 挑战者杯 → EWC → 夏 → 年总
- if(isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;} // 亚运年：夏 → 亚运会 → 年总
+ if(s.split==='spring'){setupChallenger(s);return;} // 春 → 挑战者杯 → 夏 → EWC → 年总
+ if(!s.ewcDone){setupEWC(s);return;} // 夏季赛打完 → EWC（夏休国际杯）
+ if(isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;} // 亚运年：EWC后 → 亚运会 → 年总
  setupAnnual(s); // 内部判定是否晋级（未晋级自动补完 AI 赛程并年度轮换）
+}
+function yearCalendarHtml(s){
+ const st0=s||S;
+ const stages=calendarStages(st0);
+ const cur=currentCalendarKey(st0);
+ const curIdx=stages.findIndex(x=>x.k===cur);
+ return '<div class="panel"><h3>年度赛历 <span class="tag">2026 赛制</span></h3><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch">'
+  +stages.map((st,i)=>{
+   const on=st.k===cur;
+   const done=i<curIdx;
+   return '<div style="flex:1;min-width:72px;text-align:center;padding:8px 4px;border:1px solid '+(on?'var(--accent)':'var(--line)')+';border-radius:8px;background:'+(on?'rgba(121,170,255,.12)':'var(--raise)')+';opacity:'+(done&&!on?0.55:1)+'">'
+    +'<div style="font-size:13px;font-weight:800;color:'+(on?'var(--accent)':'var(--txt)')+'">'+st.n+'</div>'
+    +'<div style="font-size:10px;color:var(--faint);margin-top:2px">'+st.hint+(on?' · 进行中':done?' · 已完':'')+'</div></div>';
+  }).join('')
+  +'</div><div class="hint" style="margin-top:8px">顺序：春季赛 → 挑战者杯 → 夏季赛 → EWC（夏休）→ 亚运会（亚运年）→ 年度总决赛</div></div>';
 }
 
 </script>
@@ -6551,7 +6599,8 @@ function finishChallenger(s){
  :c.r1.some(m=>m.r&&loserOf(m)===s.teamName)?'32强':'参赛';
  s.yearStages.push({ev:'挑战者杯',place:chPlace});
  try{gcDefs(s);}catch(e){}
- setupEWC(s); // 挑杯收官 → EWC 电竞世界杯（夏季休赛）
+
+ startSplit(s,'summer'); // 挑杯收官 → 夏季赛转会期
 }
 
 const EWC_OVERSEAS=['NOVA Esports','Blacklist International','Twisted Minds','Alpha7 Esports','Team Vitality','Gen.G Esports','Nongshim RedForce','PAWS Gaming','BOOM Esports','KAGENDRA'];
@@ -6582,8 +6631,10 @@ function genEwcDef(s,i,teamName){
  sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:gameYear(s)+' EWC 电竞世界杯海外参赛队选手。'};
 }
 function setupEWC(s){
+
  const p=s.playoff;
- const champ=p.final.r,runner=p.final.r===p.final.a?p.final.b:p.final.a;
+ const champ=p&&p.final&&p.final.r,runner=champ?(p.final.r===p.final.a?p.final.b:p.final.a):null;
+ if(!champ){logEvent(s,' EWC 直邀名额待定：先完成联赛冠军结算');return;}
  const overs=shuffle(EWC_OVERSEAS.slice()).slice(0,6);
 
  s.ewcDefMap={};
@@ -6640,7 +6691,9 @@ function finishEWC(s){
  :e.qf.some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'未晋级'});
  s.ewcDone=true;
  try{gcDefs(s);}catch(e){}
- startSplit(s,'summer'); // EWC 收官 → 夏季赛转会期（年中不老化）
+
+ if(typeof isAsiadYear==='function'&&isAsiadYear(s)&&!s.agDone){setupAsianGames(s);return;}
+ setupAnnual(s);
 }
 
 const AG_NATIONS=[['韩国',470],['中国台北',432],['越南',427],['泰国',416],['日本',400],['沙特阿拉伯',385],['印度',365]];
@@ -10447,7 +10500,7 @@ function clubResultPanel(){
  <div style="font-size:40px;color:var(--gold)"></div>
  <h3 style="justify-content:center">${splitLabel(S)} 总冠军：${S.playoff?S.playoff.champ:'—'}</h3>
  ${S.champion?'<div class="green" style="font-size:16px;font-weight:800;margin:8px 0">你是冠军！王朝就此建立！</div>':'<div class="dim">冠军属于对手，继续积蓄力量！</div>'}
- <div class="hint" style="margin:6px 0">${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → KPL 年度总决赛':'接下来：KPL 年度总决赛（年度积分前12）'}</div>
+ <div class="hint" style="margin:6px 0">${S.split==='spring'?'接下来：挑战者杯 → 夏季赛 → EWC':(!S.ewcDone&&S.split==='summer')?'接下来：EWC → '+(isAsiadYear(S)&&!S.agDone?'亚运会 → 年度总决赛':'年度总决赛'):(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → KPL 年度总决赛':'接下来：KPL 年度总决赛（年度积分前12）'}</div>
  <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
  }
@@ -10455,7 +10508,7 @@ function clubResultPanel(){
  <div style="font-size:40px;color:var(--faint)"></div>
  <h3 style="justify-content:center">${splitLabel(S)} 止步</h3>
  <div class="dim" style="margin:8px 0">未能晋级后续阶段（B组后2名 / 卡位赛失利 / 季后赛出局）</div>
- <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → EWC → 夏季赛':(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → 年度总决赛':'接下来：年度总决赛（前12晋级）'}</div>
+ <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → 夏季赛 → EWC':(!S.ewcDone&&S.split==='summer')?'接下来：EWC → '+(isAsiadYear(S)&&!S.agDone?'亚运会 → 年度总决赛':'年度总决赛'):(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → 年度总决赛':'接下来：年度总决赛（前12晋级）'}</div>
  <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
 }
@@ -10761,8 +10814,8 @@ function renderLeague(){
  try{if(typeof markSeasonQuestSeen==='function')markSeasonQuestSeen('seenLeague_'+((S&&S.season)||1));}catch(_){}
  const groups=phaseGroups(S);
  const myG=myGroup(S);
- let html=pageHint('league')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
- <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → EWC → 夏季赛 → 年度总决赛</div></div>`;
+ let html=pageHint('league')+(typeof yearCalendarHtml==='function'?yearCalendarHtml(S):'')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
+ <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运会（亚运年）→ 年度总决赛</div></div>`;
 
  {
  const rank=annualRank(S);

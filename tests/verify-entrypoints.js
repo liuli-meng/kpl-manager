@@ -95,7 +95,17 @@ const out = vm.runInContext(`
       if(!S.series&&!c.champ)break;
     }
     if(!S.challenger.champ)fail('挑战者杯未产生冠军');
-    // ===== EWC（8强单败）=====
+    if(S.split!=='summer')fail('挑战者杯后未进入夏季赛: split='+S.split);
+    // ===== 夏季赛 =====
+    leagueEntry();
+    cardUiChecked=false;poUiChecked=false;
+    runLeague();
+    if(S.phase!=='champion'&&S.phase!=='eliminated')fail('夏季赛未正常收官: phase='+S.phase);
+    checkEntry(S.phase==='champion'?'夏季冠军收官':'夏季止步收官','uiAdvanceCalendar');
+    advanceCalendar(S);
+    if(S._poError)fail('夏季赛后 _poError 非空（季后赛推进曾抛异常）: '+S._poError);
+    // ===== EWC（8强单败 · 夏休）=====
+    if(S.phase!=='ewc')fail('夏季赛后应进入 EWC: phase='+S.phase);
     let g2=0;
     while(S.phase==='ewc'&&g2++<40){
       const e=S.ewc;
@@ -108,18 +118,9 @@ const out = vm.runInContext(`
       if(!S.series&&!S.ewc.champ)break;
     }
     if(!S.ewc||!S.ewc.champ)fail('EWC 未产生冠军');
-    if(S.split!=='summer')fail('挑战者杯/EWC 后未进入夏季赛: split='+S.split);
-    // ===== 夏季赛 =====
-    leagueEntry();
-    cardUiChecked=false;poUiChecked=false;
-    runLeague();
-    if(S.phase!=='champion'&&S.phase!=='eliminated')fail('夏季赛未正常收官: phase='+S.phase);
-    checkEntry(S.phase==='champion'?'夏季冠军收官':'夏季止步收官','uiAdvanceCalendar');
-    // ===== 亚运年：亚运会（玩家放人观赛，只断言推进按钮）=====
-    advanceCalendar(S);
-    if(S._poError)fail('夏季赛后 _poError 非空（季后赛推进曾抛异常）: '+S._poError);
+    advanceCalendar(S); // EWC 后 → 亚运/年总
     if(isAsiadYear(S)){
-      if(S.phase!=='asiad')fail('亚运年夏季赛后应进入亚运会: phase='+S.phase);
+      if(S.phase!=='asiad')fail('亚运年 EWC 后应进入亚运会: phase='+S.phase);
       checkEntry('亚运会','uiAsiadStep');
       let ag=0;
       while(S.phase==='asiad'&&!S.ag.champ&&ag++<20)asiadStep(S);
