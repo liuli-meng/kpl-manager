@@ -501,7 +501,7 @@ function nextDay(s){
  natCampTick(s); // 亚运集训日结：征召选手在国家队合练涨状态
  if(typeof clubRelTick==='function')clubRelTick(s); // 战队关系事件（媒体/股东/赞助/更衣室）
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
- if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+h.income,0); // 退役主播人气收入
+ if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+(isFinite(h&&h.income)?h.income:0),0); // 主播收入防 NaN 污染基金
  if(s.transferWindow>0){
  s.transferWindow--;
  aiBidTick(s); // AI 队对挂牌选手报价

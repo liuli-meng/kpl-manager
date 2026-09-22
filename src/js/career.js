@@ -65,7 +65,7 @@ function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地�
  s.lineup=buildBestLineup(s); // 统一可出场过滤排满首发
  s.pick={};
  s.seedPower=teamPower(s)||300;
- logEvent(s,' 转会完成：'+me.name+' 正式加盟 '+tmpl.name+'（转会费 '+mv.fee+'万 · 年薪 '+me.wage+'万/周）——首发位置要重新证明');
+ logEvent(s,' 转会完成：'+me.name+' 正式加盟 '+tmpl.name+'（转会费 '+mv.fee+'万 · 周薪 '+me.wage+'万）——首发位置要重新证明');
 }
 /* 选手板凳计数：健康可出场却连续坐板凳 → 可申请租借/K甲练级（生涯页出路面板） */
 function tickPlayerBench(s){
@@ -530,12 +530,12 @@ function signFreeAgent(s,id){
  const p=(s.freeAgents||[]).find(x=>x.id===id);
  if(!p)return;
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return;}
- if(s.fund<p.signCost){toast('资金不足（签约费 '+p.signCost+'万）');return;}
- if(weeklyWage(s)+p.wage>s.wageCap){
- const {over,tax}=overCapTax(s,p.wage);
- if(!confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return;
+ if(s.fund<(p.signCost||0)){toast('资金不足（签约费 '+(p.signCost||0)+'万）');return;}
+ if(weeklyWage(s)+(p.wage||0)>s.wageCap){
+ const {over,tax}=overCapTax(s,p.wage||0);
+ if(!confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+(p.wage||0))+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return;
  }
- s.fund-=p.signCost;
+ s.fund-=(p.signCost||0);
  p.acqCost=p.signCost; // 买入价锚定（转售保护用）
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.freeAgents=s.freeAgents.filter(x=>x.id!==id);

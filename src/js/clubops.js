@@ -34,7 +34,9 @@ function idleMul(s){
 }
 /* 每日商业流水：赞助单价（粉丝加成）+ 门票/周边（同样走封顶）。抽成纯函数便于精确断言 */
 function dailyCommercialIncome(s){
- return Math.round((SPONSORS[s.sponsorLv].income*fanMul(s,500)+Math.round(fanEff(s)*0.08))*idleMul(s));
+ const sp=SPONSORS[clamp(s.sponsorLv||0,0,SPONSORS.length-1)]||SPONSORS[0];
+ const inc=sp&&isFinite(sp.income)?sp.income:0;
+ return Math.round((inc*fanMul(s,500)+Math.round(fanEff(s)*0.08))*idleMul(s));
 }
 /* ================= 赛事奖金 70/30 分成（KPL 硬规则） =================
  官方奖金选手分成不得低于 70%（士气/签约意愿体现），俱乐部最多留成 30% 入基金。
