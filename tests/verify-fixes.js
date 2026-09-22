@@ -24,7 +24,8 @@ const out = vm.runInContext(`
   if(!document.querySelector('#app-modal-body').innerHTML.includes('bp-hero-grid'))fail('巅峰对决选位后无英雄网格');
   const peakPick=window._draft;bpPickHero(myCandidates(peakPick,'top')[0].n);
   log('①巅峰对决手动选人：选位→选英雄 全流程可用');
-  // ② 出售选手不蒸发：市场签来（无 def）的选手出售后补建 def，满员时在转会市场归属买家
+  // ② 出售选手不蒸发：市场签来（无 def）的选手出售后补建 def；买家满员收容进自由市场
+//   （不得挂 transferList——关窗/序列化会整表清空，见 verify-noswallow ③ 与 completeSale）
   const mk=genPlayer(genFreeAgentDef('jg','mid',new Set()));
   S.players.push(mk);S.lineup.push(mk.id);
   S.transferList=[];
@@ -32,8 +33,9 @@ const out = vm.runInContext(`
   if(!defOf(S,mk.id))fail('出售后 def 未注册');
   const inBuyer=ensureAiRosters(S,'成都AG超玩会').some(p=>p.id===mk.id);
   const inMarket=(S.transferList||[]).some(x=>x.id===mk.id&&x.ownerTeam==='成都AG超玩会');
-  if(!inBuyer&&!inMarket)fail('出售选手完全不可见（买家阵容满 + 市场无条目）');
-  log('②出售可见性：def 已注册，'+(inBuyer?'现于买家阵容':'买家满员 → 转会市场归属买家，随时可查/可买回'));
+  const inFA=(S.freeAgents||[]).some(x=>x.id===mk.id);
+  if(!inBuyer&&!inMarket&&!inFA)fail('出售选手完全不可见（买家阵容满 + 市场/自由市场无条目）');
+  log('②出售可见性：def 已注册，'+(inBuyer?'现于买家阵容':inMarket?'转会市场归属买家':'买家满员 → 自由市场待签（不蒸发）'));
   // ③ 真实经济对齐（KPL 硬规则：转会封顶 1500 万 ⇒ OVR99 曲线 670、火热顶星买断必被压到 1500 天花板）
   // 不用随机 star 档断言身价下限（总值可掉到 378 造成 flaky）；曲线与封顶用固定 OVR 断言
   const star=genPlayer(genFreeAgentDef('top','star',new Set()));
