@@ -56,9 +56,10 @@ function build() {
       cssInjected = true;
       continue;
     }
-    const m = line.match(/<script src="js\/(.+?)"><\/script>/);
+    const m = line.match(/<script src="(js\/|core\/)(.+?)"><\/script>/);
     if (m) {
-      const raw = readUtf8(path.join(SRC, 'js', m[1]));
+      const dir = m[1] === 'js/' ? 'js' : 'core';
+      const raw = readUtf8(path.join(SRC, dir, m[2]));
       out.push('<script>');
       out.push(minifyJs(raw));
       out.push('</script>');

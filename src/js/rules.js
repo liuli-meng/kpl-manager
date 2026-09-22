@@ -5,6 +5,15 @@
 const TEMP_SEAT_COUNT=2;
 const TRANSFER_FREE_DAYS=4; // 7 天窗：前 4 自由交易，后 3 挂牌期
 const YOUTH_DIRECT_ENTRY=2;
+// 席位判定禁止用 TEAM_BRAND（队徽配色表，含升班马）或 AI_TEAMS.seed（根本没有 seed 字段）
+// 真实 KPL：16 固定席永不降级；2 临时席 = K甲升班马，年度垫底可被收回
+const TEMP_SEAT_TEAMS=['常山UUG','桐乡情久'];
+const FIXED_SEAT_TEAMS=[
+ '成都AG超玩会','重庆狼队','武汉eStarPro','北京WB','济南RW侠','广州TTG','杭州LGD.NBW','苏州KSG',
+ '佛山DRG','南京Hero久竞','上海EDG.M','深圳DYG','北京JDG','长沙TES.A','上海RNG.M','西安WE'
+];
+function isFixedSeatTeam(n){return FIXED_SEAT_TEAMS.indexOf(n)>=0;}
+function isTempSeatTeam(n){return TEMP_SEAT_TEAMS.indexOf(n)>=0;}
 function transferPhase(s){ // 'free' | 'list' | null
  if(!s||!s.preseason||(s.transferWindow||0)<=0)return null;
  const total=(s.transferWindowStart||7);
@@ -22,74 +31,91 @@ function canFreeSign(s){ // 买断/自由市场直签是否开放
 }
 function initTempSeats(s){
  if(!s)return;
- if(s.tempSeats&&s.tempSeats.length===TEMP_SEAT_COUNT)return;
- // 默认：联盟里战力中等偏下的两支 AI 队挂临时席
- const pool=AI_TEAMS.map(t=>t.name).filter(n=>n!==s.teamName);
- if(pool.length<TEMP_SEAT_COUNT){s.tempSeats=pool.slice();return;}
- // 取 seed 较低的两支作初始临时席（可被收回）
- const sorted=pool.slice().sort((a,b)=>{
- const ta=AI_TEAMS.find(x=>x.name===a),tb=AI_TEAMS.find(x=>x.name===b);
- return (ta&&ta.seed||0)-(tb&&tb.seed||0);
- });
- s.tempSeats=sorted.slice(0,TEMP_SEAT_COUNT);
+ // 升班马挂临时席（含玩家执教升班马——真实 KPL 席位可收回）；固定 16 队绝不进临时席
+ s.tempSeatFixed=s.tempSeatFixed||[];
+ s.tempSeats=TEMP_SEAT_TEAMS.filter(n=>s.tempSeatFixed.indexOf(n)<0);
+ while(s.tempSeats.length<TEMP_SEAT_COUNT){
+  const incoming=KJIA_AI_TEAMS.find(n=>!AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0)
+   ||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):(s.season||1)));
+  if(s.tempSeats.indexOf(incoming)<0)s.tempSeats.push(incoming); else break;
+ }
  s.tempSeatLog=s.tempSeatLog||[];
 }
 function isTempSeat(s,team){
  return !!(s&&s.tempSeats&&s.tempSeats.includes(team));
 }
-/* 年度轮换时结算临时席：垫底临时席收回 → K甲冠军顶上（名字进联盟） */
+/* 年度轮换时结算临时席：垫底临时席收回（含玩家升班马）→ K甲冠军顶上；夺冠可转正固定席 */
 function settleTempSeats(s){
  if(!s)return;
  initTempSeats(s);
  if(!s.tempSeats||!s.tempSeats.length)return;
+ s.tempSeatFixed=s.tempSeatFixed||[];
+ (s.titleHistory||[]).forEach(t=>{
+  if(t&&t.champ&&isTempSeat(s,t.champ)&&s.tempSeatFixed.indexOf(t.champ)<0&&!isFixedSeatTeam(t.champ)){
+   s.tempSeatFixed.push(t.champ);
+   try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——临时席转正为 KPL 固定席位！');}catch(e){}
+  }
+ });
+ s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t)&&s.tempSeatFixed.indexOf(t)<0);
+ if(s.tempSeats.length<TEMP_SEAT_COUNT){
+  TEMP_SEAT_TEAMS.forEach(n=>{
+   if(s.tempSeats.length<TEMP_SEAT_COUNT&&s.tempSeats.indexOf(n)<0&&s.tempSeatFixed.indexOf(n)<0)s.tempSeats.push(n);
+  });
+ }
  const pts=s.annualPts||{};
- // 临时席里年度积分最低的收回
  let worst=null,worstPts=Infinity;
  s.tempSeats.forEach(t=>{
- const p=pts[t]||0;
- if(p<worstPts){worstPts=p;worst=t;}
+  const p=pts[t]||0;
+  if(p<worstPts){worstPts=p;worst=t;}
  });
- if(!worst)return;
- // K甲冠军：优先本届 s.kjia 的 AI 冠军；否则造一支次级豪门名
+ if(!worst||!s.tempSeats.length)return;
+ if(s.tempSeatFixed.indexOf(worst)>=0)return;
  let incoming=null;
  try{
- const k=s.kjia;
- if(k&&k.champ&&k.champ!==kjiaMyName(s)&&!AI_TEAMS.some(t=>t.name===k.champ)){
- incoming=k.champ; // 次级 AI 队名
- }else if(k&&k.champ){
- // 我的二队夺冠：俱乐部获「资格赛关注」——临时席由 K甲积分榜次席 AI 顶上
- const rank=kjiaRank(s)||[];
- incoming=rank.find(n=>n!==k.champ&&n!==kjiaMyName(s))||null;
- }
+  const k=s.kjia;
+  if(k&&k.champ&&k.champ!==kjiaMyName(s)&&!AI_TEAMS.some(t=>t.name===k.champ)){
+   incoming=k.champ;
+  }else if(k&&k.champ){
+   const rank=kjiaRank(s)||[];
+   incoming=rank.find(n=>n!==k.champ&&n!==kjiaMyName(s))||null;
+  }
  }catch(e){}
  if(!incoming){
- // 兜底：用未占用的 K甲 AI 名
- incoming=KJIA_AI_TEAMS.find(n=>!AI_TEAMS.some(t=>t.name===n))||('K甲·新军'+gameYear(s));
+  incoming=KJIA_AI_TEAMS.find(n=>!AI_TEAMS.some(t=>t.name===n))||('K甲·新军'+gameYear(s));
  }
  s.tempSeats=s.tempSeats.filter(t=>t!==worst);
- if(!s.tempSeats.includes(incoming))s.tempSeats.push(incoming);
+ if(incoming&&incoming!==s.teamName&&!isFixedSeatTeam(incoming)&&s.tempSeats.indexOf(incoming)<0&&s.tempSeatFixed.indexOf(incoming)<0)s.tempSeats.push(incoming);
  s.tempSeatLog=s.tempSeatLog||[];
  s.tempSeatLog.unshift(gameYear(s)+'：收回 '+worst+' 临时席 → '+incoming+' 顶上');
  s.tempSeatLog=s.tempSeatLog.slice(0,8);
  try{
- logEvent(s,' 临时席变动：'+worst+' 席位收回，'+incoming+' 获得下赛季 KPL 临时席位（固定席位不降级）');
+  logEvent(s,' 临时席变动：'+worst+' 席位收回，'+incoming+' 获得下赛季 KPL 临时席位（固定席位不降级）');
  }catch(e){}
- // 我的二队若夺冠，额外公告
- try{
- if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
- logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
- addFans(s,1,'K甲夺冠·席位资格');
+ if(worst===s.teamName){
+  try{
+   s.seatLost=true;
+   logEvent(s,' 你的俱乐部临时席位被收回——降入 K甲。固定席位球队不会降级，升班马需用成绩保住席位');
+  }catch(e){}
  }
+ try{
+  if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
+   logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
+   addFans(s,1,'K甲夺冠·席位资格');
+  }
  }catch(e){}
 }
 function tempSeatsPanelHtml(){
  const s=S;
  if(!s||!s.tempSeats||!s.tempSeats.length)return '';
+ const atRisk=isTempSeat(s,s.teamName);
  let html=`<div class="panel"><h3>临时席位 <span class="tag">固定 16 + 临时 ${TEMP_SEAT_COUNT} · 只升不降</span></h3>
- <div class="hint" style="margin-bottom:8px">KPL 固定席位不会降级；临时席由 K甲/资格赛队伍打上来，年度成绩垫底可能被收回。你的俱乐部是固定席，不受收回影响。</div>
- <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">${s.tempSeats.map(t=>`<span class="tag" style="border-color:var(--gold)">${crest(null,t,14)} ${t} · 临时</span>`).join('')}</div>`;
+ <div class="hint" style="margin-bottom:8px"><b>升班马（常山UUG、桐乡情久）挂临时席</b>，年度成绩垫底会被收回，由 K甲/资格赛队伍顶上。老牌豪门（AG/狼队/eStar 等）是固定席，永不降级。${atRisk?'<b class="red">你执教的是升班马临时席——年度垫底有收回风险；夺冠可转正固定席。</b>':'你执教的俱乐部是固定席。'}</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">${s.tempSeats.map(t=>`<span class="tag" style="border-color:var(--gold)">${crest(null,t,14)} ${t} · 临时${t===s.teamName?'（你）':''}</span>`).join('')}</div>`;
+ if((s.tempSeatFixed||[]).length){
+  html+=`<div class="hint">已转正固定席：${s.tempSeatFixed.map(t=>_escTxt(t)).join('、')}</div>`;
+ }
  if((s.tempSeatLog||[]).length){
- html+=`<div class="hint">近年变动：${s.tempSeatLog.slice(0,4).map(l=>_escTxt(l)).join('<br>')}</div>`;
+  html+=`<div class="hint">近年变动：${s.tempSeatLog.slice(0,4).map(l=>_escTxt(l)).join('<br>')}</div>`;
  }
  html+=`</div>`;
  return html;

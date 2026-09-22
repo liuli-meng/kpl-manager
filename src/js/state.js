@@ -801,6 +801,23 @@ function migrateSave(){
  S.v++;
  }
  applySaveDefaults(S); // 字段级兜底：一律走 SAVE_DEFAULTS
+ // 旧档选手缺 energy / NaN 时回满：否则 clamp(NaN) 永远回不了体力
+ (S.players||[]).forEach(p=>{
+  if(!p)return;
+  if(p.energy==null||!isFinite(p.energy))p.energy=100;
+ });
+ try{if(typeof autoFillLineup==='function')autoFillLineup(S);}catch(e){} // 亚运/伤停读档后立刻摘首发
+ try{if(typeof initTempSeats==='function'){
+  // 真实 KPL：固定 16 队永不降级；升班马（含玩家）挂临时席；不用 TEAM_BRAND/seed 误判
+  if(!S.tempSeats)initTempSeats(S);
+  S.tempSeatFixed=S.tempSeatFixed||[];
+  S.tempSeats=(S.tempSeats||[]).filter(t=>{
+   if(typeof isFixedSeatTeam==='function'&&isFixedSeatTeam(t))return false;
+   if(S.tempSeatFixed.indexOf(t)>=0)return false;
+   return true;
+  });
+  if(typeof initTempSeats==='function')initTempSeats(S);
+ }}catch(e){}
  S.aiRosters={};
  migrateFixZeroZero(S);
  if(S.series&&!S.series.side)S.series.side='blue';

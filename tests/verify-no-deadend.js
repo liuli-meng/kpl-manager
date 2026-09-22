@@ -76,7 +76,7 @@ function candidates(dom) {
     const grab=html=>{const o=[];let m;while((m=re.exec(html)))o.push(m[1]);return o;};
     // 噪声判定要看**整条语句**：'closeModal(...);openBP(...)' 以 closeModal 开头，
     // 但它才是真正的推进入口（赛前面板的「进入 BP」）——按前缀滤会把它误杀（踩过）。
-    const ADV=/\b(uiNextDay|uiDoNextAction|uiStartMatch|uiEndPreseason|uiSkipTransfer|startCard|startPlayoff|uiStartCup|uiAdvanceCalendar|uiFinishAnnual|uiAsiadStep|startPlayerMatch|closeMatchContinue|uiNoGoEmergency|uiNoGoDefer|openBP|setSide|playGame|bpConfirm)\b/;
+    const ADV=/\b(uiNextDay|uiDoNextAction|uiStartMatch|uiEndPreseason|uiSkipTransfer|startCard|startPlayoff|uiStartCup|uiAdvanceCalendar|uiFinishAnnual|uiAsiadStep|startPlayerMatch|closeMatchContinue|uiNoGoEmergency|openBP|setSide|playGame|bpConfirm)\b/;
     const isAdv=c=>ADV.test(c);
     const isNoise=c=>c.split(';').map(x=>x.trim()).filter(Boolean).every(seg=>NOISE.test(seg));
     const keep=a=>[...new Set(a)].filter(c=>c.indexOf('(')>=0&&!isNoise(c));

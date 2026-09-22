@@ -236,7 +236,12 @@ function renderHeader(){
  下课是"软终局"：只在 UI 入口拦截，不改进程内部逻辑——平衡门禁（sim/sim-quick/fuzz）
  直接调用 nextDay/startMatch/startCup，若在那里硬守卫，门禁就再也测不出真实数值了。 */
 function boardLocked(){return !!(S&&S.board&&S.board.fired);}
-function uiGuard(msg){if(boardLocked()){try{toast(msg||'你已被董事会解约，执教生涯结束');}catch(_){}return true;}return false;}
+function seatLocked(){return !!(S&&S.seatLost);}
+function uiGuard(msg){
+ if(boardLocked()){try{toast(msg||'你已被董事会解约，执教生涯结束');}catch(_){}return true;}
+ if(seatLocked()){try{toast(msg||'临时席位被收回，已降入 K甲——执教生涯结束');}catch(_){}return true;}
+ return false;
+}
 function uiSave(){if(!requireSave('存档'))return;if(save())toast('存档成功');}
 function playerRetired(s){return !!(s&&s.mode==='player'&&s.career&&s.career.retired);}
 function uiNextDay(s){if(uiGuard())return;if(!requireSave('推进一天'))return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);renderAll();}

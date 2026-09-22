@@ -1393,14 +1393,44 @@ function loanCap(s){
 }
 function loanCandidates(s){
  const U=untouchableSet();
+ // 真实口径：只外借「青训级替补」。对面主力/默认首发/高总值一律不租——
+ // 静态 AI_ROSTERS.p 覆盖不全（转会后新主力 id 不在表里），所以再按当前队内战力前五 + 总值闸门挡一道。
  const map=aiRosterDefMap(s);
- const need=new Set(injuryGapPositions(s)); // 缺人位置优先推人
+ const need=new Set(injuryGapPositions(s));
  const out=[];
+ const used=rookieUsedNames(s);
  for(const tn in map){
  if(tn===s.teamName)continue;
- (ensureAiRosters(s,tn)||[]).forEach(p=>{
- if(U.has(p.id))return; // 非卖品：队魂不外借
+ const rosterDefs=(s.aiRosterDefs&&s.aiRosterDefs[tn])||map[tn]||[];
+ const full=ensureAiRosters(s,tn)||[];
+ const top5=new Set(full.slice().sort((a,b)=>overall(b)-overall(a)).slice(0,5).map(p=>p.id));
+ full.forEach(p=>{
+ if(U.has(p.id))return;
+ if(top5.has(p.id))return; // 当前队内前五 = 主力
+ if(rosterDefs.slice(0,5).includes(p.id))return;
+ if(overall(p)>=80)return; // 高总值不外借（主力/准主力）
+ used.add(p.name);
  out.push({p,from:tn,rent:loanRent(p)});
+ });
+ // 主力不可租——每队补 2 名可租替补（青训级，弱于首发，挂 loanBenches 供 loanPlayer 取用）
+ const benches=s.loanBenches=s.loanBenches||{};
+ if(!benches[tn]||!benches[tn].length){
+  benches[tn]=[];
+  for(let i=0;i<2;i++){
+   const p=genSeasonPlayer(s,genAcademyDef(POS_ORDER[i%5],used,s.season));
+   used.add(p.name);
+   // 合成替补标成可租：id 前缀 loan_bench_，总值压在 75 以下
+   p.id='loan_bench_'+tn+'_'+i+'_'+p.id;
+   if(overall(p)>=75){
+    ['lane','farm','team','mind'].forEach(k=>{p.attrs[k]=Math.max(50,(p.attrs[k]||70)-8);});
+   }
+   benches[tn].push(p);
+  }
+ }
+ (benches[tn]||[]).forEach(p=>{
+  if(!p||p.id==null)return;
+  if(overall(p)>=80)return;
+  out.push({p,from:tn,rent:loanRent(p)});
  });
  }
  return out.sort((a,b)=>{
@@ -1415,14 +1445,37 @@ function loanPlayer(s,teamName,pid){
  toast('租借名额已满（当前上限 '+cap+' 人'+(cap>LOAN_CAP_BASE?' · 含伤停应急名额':'')+'）');
  return;
  }
- const p=(ensureAiRosters(s,teamName)||[]).find(x=>x.id===pid);
+ let p=(ensureAiRosters(s,teamName)||[]).find(x=>x.id===pid);
+ if(!p&&s.loanBenches&&s.loanBenches[teamName])p=s.loanBenches[teamName].find(x=>x.id===pid);
+ // 合成替补（loanCandidates 的 _bench）没有进 aiRosters：按 id 前缀再找一次
+ if(!p&&String(pid).indexOf('loan_bench_')===0){
+  p=(loanCandidates(s)||[]).find(x=>x.p.id===pid);
+  if(p)p=p.p;
+ }
  if(!p){toast('该选手不在租借名单');return;}
  if(untouchableSet().has(p.id)){toast(p.name+' 是非卖品，不外借');return;}
+ // 主力闸门：静态首发 + 当前队内前五 + 总值 ≥80 一律不租（防转会后新主力漏网）
+ const starters=new Set();
+ for(const tn in AI_ROSTERS)(AI_ROSTERS[tn].p||[]).forEach(id=>starters.add(id));
+ const rosterDefs=(s.aiRosterDefs&&s.aiRosterDefs[teamName])||[];
+ const fullRoster=ensureAiRosters(s,teamName)||[];
+ const top5=new Set(fullRoster.slice().sort((a,b)=>overall(b)-overall(a)).slice(0,5).map(x=>x.id));
+ if(starters.has(p.id)||rosterDefs.slice(0,5).includes(p.id)||top5.has(p.id)||overall(p)>=80){
+ toast(p.name+' 是 '+teamName+' 主力/核心，俱乐部不放人——只能租替补');
+ return;
+ }
+ if(String(p.id).indexOf('loan_')===0&&overall(p)>=80){
+ toast(p.name+' 级别过高，'+teamName+' 不会放人');
+ return;
+ }
  const rent=loanRent(p);
  if(s.fund<rent){toast('资金不足（租金 '+rent+'万）');return;}
  s.fund-=rent;
  p.loan={from:teamName,days:LOAN_DAYS};
  s.players.push(p);
+ if(s.loanBenches&&s.loanBenches[teamName]){
+  s.loanBenches[teamName]=s.loanBenches[teamName].filter(x=>x.id!==p.id);
+ }
  aiDetachDef(s,p.id); // 原队除名（真实 def）：租借期内原队青训递补
  s.aiRosters={}; // 名册缓存失效
  const gap=injuryGapPositions(s).includes(p.pos);

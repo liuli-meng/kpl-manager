@@ -45,6 +45,7 @@ const SUITES = [
   { id: 'verify-kjia', file: 'tests/verify-kjia.js', label: 'K甲二队' },
   { id: 'verify-draft', file: 'tests/verify-draft.js', label: '选秀大会' },
   { id: 'verify-rules', file: 'tests/verify-rules.js', label: '联盟规则扩展' },
+  { id: 'verify-bugfix', file: 'tests/verify-bugfix.js', label: '手感/席位/伤停/租借/体力回归' },
   { id: 'verify-academy', file: 'tests/verify-academy.js', label: '青训一键培养' },
   { id: 'verify-offer', file: 'tests/verify-offer.js', label: '转会报价' },
   { id: 'verify-kplrules', file: 'tests/verify-kplrules.js', label: 'KPL硬规则' },

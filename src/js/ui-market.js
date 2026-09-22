@@ -56,8 +56,8 @@ function renderMarket(){
  <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
  </div>`;
  }).join('')}</div>`;
- if(S.coachMarket.length){
- coachHtml+=`<div class="g3">${S.coachMarket.map(c=>{
+ if((S.coachMarket||[]).length){
+ coachHtml+=`<div class="g3">${(S.coachMarket||[]).map(c=>{
  const oc=ovrColor(c.rating||80);
  return `<div class="pcard ${ovrCls(c.rating||80)}" style="text-align:center">
  <div style="margin:6px 0;color:var(--faint)"></div>

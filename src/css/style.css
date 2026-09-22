@@ -65,23 +65,47 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:11px
 .stat small{font-size:9.5px;color:var(--faint);letter-spacing:.06em;white-space:nowrap}
 .stat.gold b{color:var(--gold)} .stat.red b{color:var(--red)} .stat.green b{color:var(--green)}
 .stat.gold .ic{color:var(--gold)} .stat.red .ic{color:var(--red)} .stat.green .ic{color:var(--green)}
-.hd-btn{display:inline-flex;align-items:center;gap:4px;background:var(--raise);border:1px solid var(--line2);
-  color:var(--dim);border-radius:var(--r1);padding:6px 11px;cursor:pointer;font-size:12px;transition:.15s}
+.hd-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;background:var(--raise);border:1px solid var(--line2);
+  color:var(--dim);border-radius:var(--r1);padding:6px 11px;cursor:pointer;font-size:12px;transition:.15s;
+  line-height:1.2;white-space:nowrap;vertical-align:middle}
 .hd-btn:hover{color:var(--txt);border-color:var(--accent);background:rgba(121,170,255,.09)}
+.stats{display:flex;gap:7px;flex-wrap:wrap;margin-left:auto;align-items:stretch}
+.stat{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;background:var(--raise);
+  border:1px solid var(--line);border-radius:var(--r1);padding:5px 11px;min-width:0}
 
-/* ===== Nav（桌面：顶部页签；移动：底部标签栏） ===== */
+/* ===== Nav（桌面：顶部页签；移动：底部标签栏） + 悬浮换页窗 ===== */
 nav{display:flex;gap:3px;margin:12px 0;padding:4px;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r2);overflow-x:auto;scrollbar-width:none}
+  border-radius:var(--r2);overflow-x:auto;scrollbar-width:none;align-items:stretch}
 nav::-webkit-scrollbar{display:none}
-nav button{flex:1;min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px;
+nav button{flex:1;min-width:72px;display:inline-flex;align-items:center;justify-content:center;gap:5px;
   padding:9px 8px;background:transparent;border:none;border-radius:var(--r1);
   color:var(--dim);cursor:pointer;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap;
-  box-shadow:inset 0 -2px 0 transparent}
-nav button .ic{color:var(--faint)}
+  box-shadow:inset 0 -2px 0 transparent;line-height:1.2;vertical-align:middle}
+nav button .ic{color:var(--faint);flex:none;width:14px;height:14px;vertical-align:middle}
 nav button:hover{color:var(--txt);background:var(--surface2)}
 /* 选中态：内阴影做下划线，避免 border 挤动行高 */
-nav button.on{color:var(--txt);background:var(--raise);box-shadow:inset 0 -2px 0 var(--accent)}
-nav button.on .ic{color:var(--accent)}
+nav button.on,nav button[aria-current="page"]{color:var(--txt);background:var(--raise);box-shadow:inset 0 -2px 0 var(--accent)}
+nav button.on .ic,nav button[aria-current="page"] .ic{color:var(--accent)}
+/* 悬浮换页窗（活动窗口） */
+.page-fab{position:fixed;right:16px;bottom:18px;z-index:80;width:48px;height:48px;border-radius:14px;
+  background:var(--raise);border:1px solid var(--line2);color:var(--txt);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+  box-shadow:var(--shadow);transition:.15s}
+.page-fab:hover{border-color:var(--accent);background:rgba(121,170,255,.12)}
+.page-fab:active{transform:scale(.97)}
+.page-dock{position:fixed;right:16px;bottom:78px;z-index:80;width:168px;max-height:min(70vh,420px);overflow:auto;
+  background:var(--surface);border:1px solid var(--line2);border-radius:var(--r2);padding:8px;
+  box-shadow:var(--shadow);display:none}
+.page-dock.open{display:block}
+.page-dock h4{font-size:11px;color:var(--faint);letter-spacing:.06em;margin:2px 6px 8px;font-weight:700}
+.page-dock button{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%;
+  padding:9px 10px;margin-bottom:4px;background:transparent;border:1px solid transparent;border-radius:var(--r1);
+  color:var(--dim);cursor:pointer;font-size:13px;font-weight:600;text-align:left;line-height:1.2}
+.page-dock button .ic{flex:none;color:var(--faint);width:14px;height:14px}
+.page-dock button:hover{background:var(--surface2);color:var(--txt)}
+.page-dock button.on,.page-dock button[aria-current="page"]{
+  background:var(--raise);color:var(--txt);border-color:var(--line2);box-shadow:inset 2px 0 0 var(--accent)}
+.page-dock button.on .ic,.page-dock button[aria-current="page"] .ic{color:var(--accent)}
 section.page{display:none}
 section.page.on{display:block;animation:fadein .18s ease}
 @keyframes fadein{from{opacity:0}to{opacity:1}}

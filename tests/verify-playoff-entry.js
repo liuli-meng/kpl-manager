@@ -92,33 +92,29 @@ const scored = p => [p.wb, p.lb, p.lb2, p.lb3].flat().concat([p.wf, p.lb4, p.lbf
   })()`, dom);
   const noGo = vm.runInContext('lineupNoGo(S).length', dom);
   check(noGo > 0, `⑤ 前置条件不成立：伤停后 lineupNoGo 为 0，测不到缺位路径`);
+  // KPL 不会因伤停推迟比赛：openBP 缺位时自动紧急补签，不再提供「推迟本场」
   const modal = vm.runInContext(`(function(){
     openBP('测试 BP',function(){});
-    const body=document.getElementById('app-modal-body').innerHTML||'';   // 沙箱 DOM 桩按选择器缓存，可直接读回写入的 HTML
-    return {body:body.slice(0,600), opened:/uiNoGoEmergency/.test(body)&&/uiNoGoDefer/.test(body), draft:!!window._draft};
+    const body=document.getElementById('app-modal-body').innerHTML||'';
+    return {
+      body:body.slice(0,600),
+      noGo:lineupNoGo(S).length,
+      draft:!!window._draft,
+      hasDefer:/uiNoGoDefer|推迟本场/.test(body),
+      filled:S.players.some(p=>p.pos==='top'&&p.injury<=0)
+    };
   })()`, dom);
-  check(modal.opened, '⑤ 缺位时 openBP 没有给出带出口按钮的弹窗（旧行为=toast+return，玩家被锁死）');
-  check(/紧急补签/.test(modal.body) && /推迟本场/.test(modal.body), '⑤ 缺位弹窗缺少「紧急补签」或「推迟本场」出口');
-  check(!modal.draft, '⑤ 缺位未处理却已经建好 BP 状态（顺序错了）');
+  check(modal.noGo === 0, `⑤ 自动紧急补签后仍缺位 ${modal.noGo}（KPL 不因伤停推迟）`);
+  check(modal.filled, '⑤ 对抗路未补上可出战选手');
+  check(modal.draft, '⑤ 补齐阵容后 BP 仍未打开');
+  check(!modal.hasDefer, '⑤ 不应再出现「推迟本场」出口（伤停延期已按真实 KPL 移除）');
 
   const after = vm.runInContext(`(function(){
-    uiNoGoEmergency();                       // 点「紧急补签自由球员并继续」
-    return {noGo:lineupNoGo(S).length, draft:!!window._draft, board:!!document.querySelector('.bp-board')||!!window._draft};
+    return {noGo:lineupNoGo(S).length, draft:!!window._draft, day:S.day};
   })()`, dom);
   check(after.noGo === 0, `⑥ 紧急补签后仍缺位 ${after.noGo} 个位置`);
   check(after.draft, '⑥ 补齐阵容后 BP 仍未打开（玩家还是打不了这场）');
 
-  // 推迟休息：一局没打时允许，且必须真的推进时间（伤停 -1）
-  const defer = vm.runInContext(`(function(){
-    openBP('测试 BP',function(){});          // 再次触发缺位弹窗
-    const inj0=(S.players.find(p=>p.pos==='top'&&p.injury>0)||{}).injury||0;
-    const day0=S.day;
-    uiNoGoDefer();
-    return {dayDelta:S.day-day0, injuryNow:(S.players.find(p=>p.pos==='top'&&p.injury>0)||{}).injury, series:S.series?1:0};
-  })()`, dom);
-  check(defer.dayDelta === 1, `⑦「推迟本场 · 休息一天」没有推进时间（Δday=${defer.dayDelta}）`);
-  check(defer.injuryNow < 8, `⑦ 休息一天后伤停没减少（仍 ${defer.injuryNow} 天）`);
-  check(!defer.series, '⑦ 推迟后应清掉未开打的系列赛，让赛程可重开');
 }
 
 if (errors.length) {

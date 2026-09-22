@@ -42,6 +42,55 @@ function applyModeNav(){
  });
  const cur=document.querySelector('nav button.on');
  if(cur&&cur.style.display==='none'){cur.classList.remove('on');goPage(pages[0]);}
+ syncPageDock();
+}
+function pageLabel(id){
+ const m={career:'生涯',club:'俱乐部',lineup:'阵容',market:'转会',train:'训练',league:'联赛',kjia:'二队',union:'联盟',hall:'荣誉馆',biz:'经营'};
+ return m[id]||id;
+}
+function curPageNameSafe(){
+ try{if(typeof curPageName==='function')return curPageName();}catch(_){}
+ const c=document.querySelector('nav button.on');
+ return (c&&c.dataset&&c.dataset.page)||'club';
+}
+function renderPageDock(){
+ const dock=document.getElementById('page-dock');
+ if(!dock)return;
+ const pages=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
+ const cur=curPageNameSafe();
+ dock.innerHTML='<h4>更换页面</h4>'+pages.map(id=>
+  '<button type="button" data-page="'+id+'" class="'+(id===cur?'on':'')+'" '+(id===cur?'aria-current="page"':'')+'>'+pageLabel(id)+'</button>'
+ ).join('');
+ $$('#page-dock button').forEach(b=>{
+  b.onclick=function(){goPage(b.dataset.page);var d=document.getElementById('page-dock');if(d)d.classList.remove('open');};
+ });
+}
+function syncPageDock(){
+ const cur=curPageNameSafe();
+ $$('#nav button').forEach(b=>{
+  var on=b.dataset.page===cur;
+  b.classList.toggle('on',on);
+  if(on)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+ });
+ renderPageDock();
+}
+function togglePageDock(){
+ const dock=document.getElementById('page-dock');
+ if(!dock)return;
+ renderPageDock();
+ dock.classList.toggle('open');
+}
+function initPageDock(){
+ const fab=document.getElementById('page-fab');
+ if(!fab)return;
+ fab.addEventListener('click',function(e){e.preventDefault();togglePageDock();});
+ document.addEventListener('click',function(e){
+  var dock=document.getElementById('page-dock');
+  if(!dock||!dock.classList.contains('open'))return;
+  if(e.target.closest('#page-dock')||e.target.closest('#page-fab'))return;
+  dock.classList.remove('open');
+ });
+ renderPageDock();
 }
 function goPage(name){
  // 身份门禁：导航只藏不够——教练/选手程序化 goPage 仍会进转会/经营等经理专属页
@@ -51,10 +100,15 @@ function goPage(name){
   toast('当前身份没有「'+(TOUR_TITLES[name]||name)+'」页，已回到'+(TOUR_TITLES[fallback]||fallback));
   name=fallback;
  }
- $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.page===name));
+ $$('nav button').forEach(b=>{
+  var on=b.dataset.page===name;
+  b.classList.toggle('on',on);
+  if(on)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+ });
  $$('section.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+name));
  renderHeader();
  renderPage(name);
+ syncPageDock();
  maybeStartTour(); // 首访自动开引导（km_tour 标记只弹一次；引导内部导航由 _tour.on 守卫）
 }
 function renderPage(name){
@@ -1035,6 +1089,7 @@ function _reportErr(tag,msg){
 window.addEventListener('error', e => _reportErr('全局异常', e.message||'未知错误'));
 window.addEventListener('unhandledrejection', e => _reportErr('Promise拒绝', e.reason));
 $$('nav button').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
+try{initPageDock();}catch(_){}
 applyUiPrefs(); // 本机偏好（简化/高对比）立即生效
 initTabGuard(); // 双开检测：多标签互写存档时提示
 if(load()&&S&&S.teamName){

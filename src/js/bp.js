@@ -160,7 +160,7 @@ function autoFillLineup(s){
  POS_ORDER.forEach(pos=>{
  const cur=s.lineup.map(id=>s.players.find(p=>p.id===id)).filter(Boolean);
  const inPos=cur.find(p=>p.pos===pos);
- if(inPos&&natBusy(s,inPos)){ // 伤员/集训/未成年自动下场
+ if(inPos&&natBusy(s,inPos)){ // 伤员/集训/未成年/K甲/外租一律自动下场（KPL 不因伤停推迟）
  const cands=s.players.filter(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p))
  .sort((a,b)=>playerPower(b,b.sig)-playerPower(a,a.sig)); // 替补择优上场
  const fit=cands[0];
@@ -170,12 +170,10 @@ function autoFillLineup(s){
  logEvent(s,' '+inPos.name+'（'+why+'）'+fit.name+' 顶替首发（'+POS[pos][0]+'）');
  return;
  }
- if(inPos.natCamp||(inPos.age||0)<MATCH_MIN_AGE){ // 集训/未成年且无替补：强制下场留空位
+ // 无替补：一律强制下场留空位（原先伤停会「留在首发」等玩家补人 → 等价于推迟比赛）
  s.lineup.splice(s.lineup.indexOf(inPos.id),1);
- logEvent(s,' '+inPos.name+' '+why+'且无替补可顶——'+POS[pos][0]+'空缺！转会市场签一名替补，否则该位置无法出战');
+ logEvent(s,' '+inPos.name+' '+why+'且无替补可顶——'+POS[pos][0]+'空缺！可紧急补签，比赛照常进行');
  return;
- }
- // 伤停无替补：留在首发（伤员自动下场后会无人可换），留给 openBP 拦截
  }
  if(!cur.some(p=>p.pos===pos)){
  const cands=s.players.filter(p=>!s.lineup.includes(p.id)&&p.pos===pos&&!natBusy(s,p))
@@ -183,6 +181,11 @@ function autoFillLineup(s){
  const bench=cands[0];
  if(bench){s.lineup.push(bench.id);logEvent(s,' '+bench.name+' 递补进入首发（'+POS[pos][0]+'）');}
  }
+ });
+ // 最后硬摘：任何不可出战的人不得留在 lineup（读档残留/中途受伤/集训）
+ s.lineup=(s.lineup||[]).filter(id=>{
+ const p=s.players.find(x=>x.id===id);
+ return p&&!natBusy(s,p);
  });
 }
 /* 简化模式：同位置把「可出场」里战力更高者换进首发（伤停/集训/K甲锻炼排除）。
@@ -240,24 +243,22 @@ function resetOppEnergy(s,opName){
  });
  s.aiPower[opName]=aiRosterPower(r,s,opName);
 }
-/* 阵容缺位时 BP 开不出来。原来只 toast 一句「签约替补顶位 / 青训晋升 / 休息等伤愈」就 return，
-   但常规赛里**时间只能靠打完比赛推进**（「推进一天」按钮只存在于转会期面板），所以第三条路不存在：
-   实测 day 停住、S.series 挂着、nextAction 恒为 startMatch、页面零出口 → 伤停永远好不了。
-   教练模式更狠：自由市场恒空（season.js 的 coach 分支提前 return，跳过了 buildTransferMarket），
-   连第一条路都没有。这里把三条路做成真能点的按钮，并补上缺失的第四条「推迟休息」。 */
+/* 阵容缺位时 BP 开不出来。KPL 不会因选手伤停推迟比赛——只能补人硬打（紧急补签/市场/青训）。 */
 function showNoGoModal(title,onConfirm,noGo){
  _noGoRetry={title,onConfirm};
- const canDefer=!!(S.series&&S.series.mw+S.series.ow===0); // 一局没打才允许推迟，避免白丢系列赛进度
+ // KPL 不会因伤停推迟：缺位时自动紧急补签，补完仍缺才弹窗（不把「等人伤愈」当合法延期）
+ try{if(typeof emergencyFillRoster==='function')emergencyFillRoster(S);}catch(e){}
+ try{autoFillLineup(S);}catch(e){}
+ const still=lineupNoGo(S);
+ if(!still.length){openBP(title,onConfirm);return;} // 补齐后直接开 BP，不再弹窗卡住
  $('#app-modal-body').innerHTML=`
- <h2>无法出战 · 阵容缺位 <span class="tag">${noGo.map(pos=>POS[pos][1]).join(' / ')}</span></h2>
- <div class="hint" style="margin-bottom:10px">${noGoDetail(S,noGo)} 无法出战。挑一条处理完就能继续打本场。</div>
+ <h2>无法出战 · 阵容缺位 <span class="tag">${still.map(pos=>POS[pos][1]).join(' / ')}</span></h2>
+ <div class="hint" style="margin-bottom:10px">${noGoDetail(S,still)} 无法出战。KPL 不会因伤停推迟——补齐阵容立即开赛。</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap">
  <button class="btn primary" onclick="uiNoGoEmergency()">紧急补签自由球员并继续</button>
  <button class="btn" onclick="closeModal('app-modal');goPage('market')">前往转会市场签约</button>
  <button class="btn" onclick="closeModal('app-modal');goPage('train')">前往训练 · 青训晋升</button>
- ${canDefer?`<button class="btn" onclick="uiNoGoDefer()">推迟本场 · 休息一天等伤愈</button>`:''}
- </div>
- ${canDefer?'':'<div class="hint mt8">本场已开出小局比分，不能推迟——请先补齐阵容再继续系列赛。</div>'}`;
+ </div>`;
  $('#app-modal').classList.add('on');
 }
 function uiNoGoEmergency(){
@@ -265,18 +266,9 @@ function uiNoGoEmergency(){
  autoFillLineup(S);
  closeModal('app-modal');
  const r=_noGoRetry||{};_noGoRetry=null;
- if(lineupNoGo(S).length){toast(' 紧急补签后仍有人无法出战（集训/伤停），请去转会市场签约或推迟本场');renderAll();return;}
+ if(lineupNoGo(S).length){toast(' 紧急补签后仍有人无法出战（集训/伤停），请去转会市场签约或提拔青训');renderAll();return;}
  save();renderAll();
  openBP(r.title||'BP',r.onConfirm||function(){});
-}
-function uiNoGoDefer(){
- const sr=S.series;
- if(!sr){toast(' 当前没有待打的系列赛');return;}
- if(sr.mw+sr.ow>0){toast(' 系列赛已开打，不能推迟');return;}
- S.series=null;S.seriesAuto=false;
- closeModal('app-modal');
- nextDay(S);save();renderAll();
- toast(' 已推迟本场：时间推进一天，伤停 -1 天，补齐阵容后可重新开赛');
 }
 let _noGoRetry=null; // 缺位处理弹窗记住原来的 BP 回调，补人后直接重试
 function openBP(title,onConfirm){

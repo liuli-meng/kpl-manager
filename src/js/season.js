@@ -466,6 +466,24 @@ function poPlace(slot,isFinal){
  if(/^lb[12]$|^lb2_/.test(slot))return '八强';
  return '四强';
 }
+/* 比赛日收尾（finishSeries 调用）：一场系列赛 = 一个比赛日。
+ 此前赛季内只有 matchIdx++、日历不走 → nextDay 从不跑，体力/伤情/工资全部冻结
+（表现为「体力永远恢复不了」「伤停好不了」「时间不对」）。 */
+function matchDayTick(s){
+ if(!s)return;
+ s.day=(s.day||0)+1;
+ s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
+ s.players.forEach(p=>{
+  if(!p)return;
+  p.injury=Math.max(0,(p.injury||0)-1);
+  // 赛后回体力；NaN 必须先回满，否则 clamp(NaN) 永远修不回来——表现为「体力永远恢复不了」
+  const e=p.energy;
+  p.energy=(e==null||!isFinite(e))?ENERGY_MAX:clamp(e+35,0,ENERGY_MAX);
+ });
+ try{if(s.day%WAGE_EVERY===0)payWage(s);}catch(e){}
+ try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
+ try{natCampTick(s);}catch(e){}
+}
 function nextDay(s){
  s.day++;
  // 怠政判定必须排在清旗标之前：四个每日行动位 + 当天打过比赛，是「玩家这一天动没动手」的全部痕迹。
@@ -511,7 +529,12 @@ function nextDay(s){
  inSeasonOfferTick(s); // 赛中转会报价：表现火热的选手被挖角（留人/放人/抬价，俱乐部页答复）
  }
  if(s.day%WAGE_EVERY===0)payWage(s);
- s.players.forEach(p=>{p.injury=Math.max(0,p.injury-1);p.energy=clamp(p.energy+10,0,ENERGY_MAX);}); // 伤情恢复 + 体力自然回复
+ s.players.forEach(p=>{
+  if(!p)return;
+  p.injury=Math.max(0,(p.injury||0)-1);
+  const e=p.energy;
+  p.energy=(e==null||!isFinite(e))?Math.min(ENERGY_MAX,20):clamp(e+10,0,ENERGY_MAX);
+ }); // 伤情恢复 + 体力自然回复（NaN 先兜底，禁止把 NaN 一直传下去）
  tickLoans(s); // 租借倒计时：到期自动归队
  // 签到补贴改成「履约奖励」：只有当日做过经营动作才发。原来每 3 天无条件 +80 万，
  // 60 天纯挂机白拿 1600 万——那是"什么都不干也暴富"的头号来源（实测占挂机净收益 72%）

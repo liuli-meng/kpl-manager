@@ -310,6 +310,13 @@ function startMatch(){
  }
  m.mid=mid;
  tagMatch(S,m,mid);
+ // 集训/伤停/未成年不得进首发：硬摘一遍再开系列赛（KPL 不会因伤停推迟，也不让集训选手替俱乐部打）
+ autoFillLineup(S);
+ S.lineup=(S.lineup||[]).filter(id=>{
+  const p=S.players.find(x=>x.id===id);
+  return p&&matchEligible(S,p);
+ });
+ autoFillLineup(S);
  S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',mid,logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
  resetOppEnergy(S,m.opp); // 对手体力回满：衰减只在系列赛内累积
  showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
@@ -543,12 +550,18 @@ function finishSeries(finalWin){
  if(ls.length){const p=pick(ls);p.injury=rnd(2,4);logEvent(S,' '+p.name+' 在比赛中受伤，将伤停'+p.injury+'天（必须休息）');autoFillLineup(S);}
  }
  const winGames=sr.mw; // 2026 KPL 奖金按胜小局数结算
- // 连胜/连败手感（常规赛与季后赛系列赛均计入）
- if(sr.stage==='regular'||sr.stage==='po'){
- S.streak=(S.streak||0)+(finalWin?1:-1);
+ // 连胜/连败手感：任何系列赛失利都会打断连胜（含杯赛）；连胜只在常规/季后累加，
+ // 否则杯赛刷胜会把手感叠穿、平衡门禁失真。断了就是断了，绝不能「5连胜输1场仍显示5连胜」。
+ if(finalWin){
+  if((S.streak||0)<0)S.streak=1;
+  else if(sr.stage==='regular'||sr.stage==='po')S.streak=(S.streak||0)+1;
+  else S.streak=Math.max(S.streak||0,1);
+ }else S.streak=-1;
  if(S.streak>=3)logEvent(S,' '+S.streak+'连胜！队伍手感火热（全队战力+'+clamp(S.streak,-5,5)*2+'%）');
  else if(S.streak<=-3)logEvent(S,' '+(-S.streak)+'连败，士气低迷（全队战力'+clamp(S.streak,-5,5)*2+'%）');
- }
+ // 比赛日收尾：一场系列赛占一个比赛日（KPL 不会因伤停推迟）。
+ // 此前只 matchIdx++、不推日历 → 赛季里 nextDay 从不跑，体力/伤情/工资全部冻结。
+ matchDayTick(S);
  // 以下克上 / 阴沟翻船：任何系列赛（常规/卡位/季后/杯赛）按纸面差结算
  let upsetHit=false;
  if(finalWin)try{upsetHit=!!maybeUpsetWin(S,true,sr.opName);}catch(e){}
@@ -674,7 +687,8 @@ function closeMatchContinue(){
  if(S&&S.playoff&&S.playoff.final&&S.playoff.final.r&&!S.playoff.champ){playoffStep(S);return;}
  if(S&&S.preseason){goPage(S.mode==='player'?'club':'market');return;}
  if(S&&(S.phase==='champion'||S.phase==='eliminated')){advanceCalendar(S);return;}
- nextDay(S);
+ // 不要在这里 nextDay：finishSeries 的 matchDayTick 已经推进过比赛日。
+ // 再 nextDay 会日历连跳两天（表现为「时间不对」、发薪/伤停错位）。
  goPage(S&&S.mode==='player'?'career':'club');
 }
 function showMatchModal(r,title){

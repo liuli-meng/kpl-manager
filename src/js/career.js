@@ -283,7 +283,8 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
     const cands=(loanCandidates(s)||[]).filter(c=>c.p.pos===pos);
     if(cands.length&&s.fund>=cands[0].rent&&loanCap(s)>(s.players||[]).filter(p=>p.loan).length){
      loanPlayer(s,cands[0].from,cands[0].p.id);
-     need=need.filter(x=>x!==pos);
+     // loanPlayer 可能拒租——只有真补上人才能消缺，否则 while 会漏掉这个位置
+     if(s.players.some(p=>p.pos===pos&&playable(p)))need=need.filter(x=>x!==pos);
     }
    }catch(e){}
   });
