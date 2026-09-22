@@ -48,7 +48,9 @@ function build() {
   let scriptCount = 0;
 
   for (const line of lines) {
-    if (line.includes('<link rel="stylesheet" href="css/style.css">')) {
+    // 去掉 split(\r?\n) 留下的行尾 \r，避免输出混入 CRLF（与 git diff --exit-code game.html 冲突）
+    const row = line.replace(/\r+$/, '');
+    if (row.includes('<link rel="stylesheet" href="css/style.css">')) {
       const css = minifyCss(readUtf8(path.join(SRC, 'css', 'style.css')));
       out.push('<style>');
       out.push(css);
@@ -56,7 +58,7 @@ function build() {
       cssInjected = true;
       continue;
     }
-    const m = line.match(/<script src="(js\/|core\/)(.+?)"><\/script>/);
+    const m = row.match(/<script src="(js\/|core\/)(.+?)"><\/script>/);
     if (m) {
       const dir = m[1] === 'js/' ? 'js' : 'core';
       const raw = readUtf8(path.join(SRC, dir, m[2]));
@@ -66,12 +68,13 @@ function build() {
       scriptCount++;
       continue;
     }
-    out.push(line);
+    out.push(row);
   }
   if (!cssInjected) throw new Error('style.css link not found');
   if (!scriptCount) throw new Error('no js modules inlined');
 
-  fs.writeFileSync(OUT, out.join('\n'), 'utf8');
+  // 输出统一 LF，保证 Windows checkout/autocrlf 下重建结果稳定
+  fs.writeFileSync(OUT, out.join('\n').replace(/\r\n/g, '\n').replace(/\r/g, ''), 'utf8');
   const kb = Math.round(fs.statSync(OUT).size / 1024);
   console.log('OK -> ' + OUT + ' (' + kb + ' KB, scripts=' + scriptCount + ')');
 }
