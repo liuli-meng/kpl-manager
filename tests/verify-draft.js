@@ -21,6 +21,16 @@ const out = vm.runInContext(`
     S=s;
     return s;
   }
+  /* 统一口径后的竞拍动作：能叫则叫，超 draftTeamMaxBid 则放弃（原先玩家可砸光 s.fund，
+     现在玩家与 AI 同一 cap——测试侧必须按新规则跟价/弃权，而不是无脑 draftBidRaise）。 */
+  function bidOrPass(s){
+    const d=s.draft;
+    const max=draftTeamMaxBid(s,s.teamName,d.slot);
+    const nxt=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
+    if(nxt>max){draftBidPass(s);return 'pass';}
+    draftBidRaise(s);
+    return 'raise';
+  }
 
   // ① 开局：竞拍阶段 + 池子
   const s1=mkS(0);
@@ -31,28 +41,31 @@ const out = vm.runInContext(`
   else if(d1.bid!==DRAFT_BID_TOP)fail('前8签应 '+DRAFT_BID_TOP+'万起拍，实际 '+d1.bid);
   else log('① 竞拍开局：池 '+d1.pool.length+' 人 · 第1签起拍 '+d1.bid+'万 · 弱队优先');
 
-  // ② 竞拍真实收敛：玩家一路叫价必须能落定（历史 bug：误用 s.bid → NaN，签位永不落定、玩家反被顺位抢签）
+  // ② 竞拍真实收敛：玩家按统一上限跟价/弃权后必须落定（历史 bug：误用 s.bid → NaN，签位永不落定、玩家反被顺位抢签）
+  // 测试变更：原先只 draftBidRaise 一路砸到底（可越过 25%/意愿 cap）；现在超 cap 走 bidOrPass 放弃，
+  // 与引擎新规则（玩家 max==AI max）一致，不再弱化引擎上限。
   if(d1.phase!=='auction'||d1.order[0]!==s1.teamName)fail('开局应停在玩家竞拍（弱队第一顺位），实际 phase='+d1.phase+' order0='+d1.order[0]);
   else{
     let g=0,err='';
     while(d1.phase==='auction'&&g++<25){
       const f0=s1.fund;
-      draftBidRaise(s1);
+      bidOrPass(s1);
       if(!Number.isFinite(d1.bid)){err='叫价把竞拍价写成 NaN';break;}
       if(!Number.isFinite(s1.fund)){err='叫价把资金写成 NaN';break;}
       if(d1.bid<DRAFT_BID_TOP){err='竞拍价跌破起拍价（'+d1.bid+'）';break;}
       if(d1.phase==='auction'&&d1.leader===s1.teamName&&d1.passed[s1.teamName]){err='玩家既领先又已放弃';break;}
       if(s1.fund>f0){err='叫价反而加钱';break;}
+      if(d1.phase==='auction'&&s1.fund!==f0){err='叫价阶段改动了资金（只应在 draftWinSlot 扣款）';break;}
     }
     if(err)fail('竞拍叫价异常：'+err);
     else if(d1.phase==='auction')fail('竞拍不收敛：'+g+' 次叫价后仍在 auction（领先='+d1.leader+' 价='+d1.bid+'）');
-    else if(d1.phase!=='pick')fail('玩家拍得签后应进入点名，实际 '+d1.phase);
-    else if(d1.leader!==s1.teamName)fail('点名阶段领先者应是玩家，实际 '+d1.leader);
-    else log('② 竞拍收敛：第1签 '+d1.bid+'万成交给玩家 · 资金 '+s1.fund+'（'+g+' 次叫价）');
+    else if(d1.phase!=='pick'&&d1.phase!=='done'&&d1.phase!=='auction')fail('竞拍结束后 phase 异常：'+d1.phase);
+    else if(d1.phase==='pick'&&d1.leader!==s1.teamName)fail('点名阶段领先者应是玩家，实际 '+d1.leader);
+    else log('② 竞拍收敛：第1签 '+d1.bid+'万成交（leader='+d1.leader+'）· 资金 '+s1.fund+'（'+g+' 次动作）');
   }
 
-  // ②b 点名
-  if(d1.phase==='pick'){
+  // ②b 点名（若 ② 里玩家被更高上限的 AI 击败，则本段跳过——收敛性已由 ② 断言）
+  if(d1.phase==='pick'&&d1.leader===s1.teamName){
     const n0=s1.players.length;
     const winBid=d1.bid;
     const t=d1.pool[0];
@@ -61,7 +74,7 @@ const out = vm.runInContext(`
     else if(s1.players.length!==n0+1)fail('一队人数未+1');
     else if(!d1.picks.length||d1.picks[0].team!==s1.teamName)fail('成交/点名记录未归玩家');
     else log('②b 点名：'+t.name+' 入队 · 已签 '+d1.picks.filter(x=>x.playerId).length+' 人 · 花费 '+winBid+'万');
-  }
+  }else log('②b 点名：本签非玩家成交，跳过');
 
   // ③ 自家青训不可选
   const s3=mkS(0);
@@ -151,7 +164,7 @@ const out = vm.runInContext(`
   // ⑨ 点名/放弃必须落盘 + 刷新（曾经两者都没有 save/renderAll：点完画面纹丝不动、刷新即丢）
   for(const act of ['draftPick','draftSkip']){
     const s9=mkS(0);const d9=initDraft(s9,true);
-    let g9=0;while(d9.phase==='auction'&&g9++<25)draftBidRaise(s9);
+    let g9=0;while(d9.phase==='auction'&&g9++<25)bidOrPass(s9);
     if(d9.phase!=='pick'){fail('⑨ 未进入点名阶段，无法验证 '+act);continue;}
     let nSave=0,nRender=0;
     const oSave=save,oRender=renderAll;
@@ -219,7 +232,22 @@ const out = vm.runInContext(`
   const ai14=d14.order.filter(t=>t!==s14.teamName)[0];
   const b14a=draftMaxAiBid(s14,ai14,0),b14b=draftMaxAiBid(s14,ai14,0);
   if(b14a!==b14b)fail('⑭ 同队同签位的出价上限不稳定（'+b14a+' vs '+b14b+'）');
-  else log('⑭ AI 预算稳定：同签位两次评估均为 '+b14a+'万');
+  else if(draftMaxAiBid(s14,ai14,0)!==draftTeamMaxBid(s14,ai14,0))fail('⑭ draftMaxAiBid 应是 draftTeamMaxBid 的薄别名');
+  else log('⑭ AI 预算稳定：同签位两次评估均为 '+b14a+'万 · 与 draftTeamMaxBid 同口径');
+
+  // ⑲ 玩家与 AI 同一口径：玩家叫价也受 draftTeamMaxBid 封顶（原先玩家可砸光 s.fund，AI 不能）
+  const s19=mkS(0);
+  const d19=initDraft(s19,true);
+  const max19=draftTeamMaxBid(s19,s19.teamName,d19.slot);
+  // 造一个必须超过上限才能跟的价：已有 AI 领先且当前价已达 cap，下一手 nxt=max+10
+  d19.leader=d19.order.filter(t=>t!==s19.teamName)[0];
+  d19.bid=max19;
+  d19.passed={};
+  const fund19=s19.fund,bid19=d19.bid,leader19=d19.leader;
+  draftBidRaise(s19);
+  if(d19.bid!==bid19||d19.leader!==leader19)fail('⑲ 超过签位预算上限仍能叫价（max='+max19+'，bid '+bid19+'→'+d19.bid+'）');
+  else if(s19.fund!==fund19)fail('⑲ 被拒叫价仍改动了资金（'+fund19+'→'+s19.fund+'）');
+  else log('⑲ 统一上限：玩家超 cap叫价被拒（max='+max19+'万，与 AI 同一口径；不扣款、不改领先者）');
 
   // ⑮ 季前赛结束时没打完的选秀必须自动收官，一个新秀都不能凭空消失
   //   （历史 bug：面板只在 preseason 显示，转会期一结束剩下的签位再也点不到，
@@ -247,7 +275,7 @@ const out = vm.runInContext(`
 
   // ⑬ 池空的点名阶段不能卡死：渲染时必须能自愈（要么给放弃按钮，要么直接收官）
   const s13=mkS(0);const d13=initDraft(s13,true);
-  let g13=0;while(d13.phase==='auction'&&g13++<25)draftBidRaise(s13);
+  let g13=0;while(d13.phase==='auction'&&g13++<25)bidOrPass(s13);
   if(d13.phase==='pick'){
     d13.pool=[];
     let h13='';
@@ -284,7 +312,7 @@ const out = vm.runInContext(`
 
   // ⑰ 点名阶段整张卡可点，且一次点击只触发一次 draftPick（内层按钮不能再挂 onclick，否则冒泡会调两次）
   const s17=mkS(0);const d17=initDraft(s17,true);
-  let g17=0;while(d17.phase==='auction'&&g17++<25)draftBidRaise(s17);
+  let g17=0;while(d17.phase==='auction'&&g17++<25)bidOrPass(s17);
   if(d17.phase!=='pick')fail('⑰ 未能进入点名阶段');
   else{
     let h17='';
