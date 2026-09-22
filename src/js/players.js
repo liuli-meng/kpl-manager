@@ -1,4 +1,4 @@
-function genPlayer(def){
+﻿function genPlayer(def){
  const keys=['lane','farm','team','mind'];
  const attrs={};
  keys.forEach((k,i)=>{attrs[k]=clamp((def.base?def.base[i]:70)+rnd(-1,1),40,99);});
@@ -55,6 +55,8 @@ function buyPlayer(s,p){
  s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
+  s.freeAgents=(s.freeAgents||[]).filter(x=>x.id!==p.id); // 同步摘自由市场，防同名双挂
+  s.transferList=(s.transferList||[]).filter(x=>x.id!==p.id);
  if(typeof aiDetachDef==='function')aiDetachDef(s,p.id); // 玩家签下：AI 名册除名防双挂
  recordTransfer(s,'in',p,cost,'自由市场',p.discount?'市场特惠签约':'市场签约'); // 年度回顾·转会台账
  logEvent(s,` 从转会市场签约 ${p.name}（总值${overall(p)}·${POS[p.pos][0]}）${p.discount?'（特惠'+Math.round(p.discount*10)+'折）':''}`);

@@ -1,4 +1,4 @@
-/* 联赛核心：赛程/赛段/季后赛/日结/工资/王朝/最佳阵容/年度轮换/积分/赛历（season.js 机械拆出） */
+﻿/* 联赛核心：赛程/赛段/季后赛/日结/工资/王朝/最佳阵容/年度轮换/积分/赛历（season.js 机械拆出） */
 
 /* ================= 比赛与联赛（KPL 2025 官方赛制） =================
  常规赛4阶段：第一轮(3组单循环BO5)→第二轮(S/A/B)→卡位赛(BO5含巅峰对决)→第三轮(S/A单循环BO5)
@@ -745,8 +745,19 @@ function newSeason(s){
  }
  // 租借选手：新赛季开始前一律归队（租借不跨赛季）
  (s.players||[]).filter(p=>p.loan).forEach(p=>{
- aiAttachDef(s,p.id,p.loan.from);
- logEvent(s,' 租借到期：'+p.name+' 返回 '+(p.loan.from||'原队')+'（新赛季阵容注册）');
+  const from=p.loan.from||'原队';
+  if(typeof ensureDef==='function')ensureDef(s,p);
+  const back=(typeof aiAttachDef==='function')?aiAttachDef(s,p.id,p.loan.from):false;
+  if(back){
+   logEvent(s,' 租借到期：'+p.name+' 返回 '+from+'（新赛季阵容注册）');
+   p.loan=null;
+  }else if(typeof parkFreeAgent==='function'){
+   // 原队同位被占/合成替补无 def 时不能只删不入册，否则选手被吞
+   parkFreeAgent(s,p,'赛季轮换未能回 '+from+'，转入自由市场');
+  }else{
+   logEvent(s,' 租借到期：'+p.name+' 未能回 '+from+'（缺少收容函数，已除名）');
+   p.loan=null;
+  }
  });
  if((s.players||[]).some(p=>p.loan)){
  s.players=s.players.filter(p=>!p.loan);

@@ -1,4 +1,4 @@
-// 全量测试 runner：逐项执行，单挂不阻断后续，结束时汇总失败清单与耗时。
+﻿// 全量测试 runner：逐项执行，单挂不阻断后续，结束时汇总失败清单与耗时。
 // 用法：node tests/run.js [--fail-fast] [--only=id,id] [--skip=id,id] [--timeout=秒]
 // 只跑年终：node tests/run.js --only=sim-yearend
 const { spawnSync } = require('child_process');
@@ -49,6 +49,7 @@ const SUITES = [
   { id: 'verify-cup-cal', file: 'tests/verify-cup-cal.js', label: '杯赛时序/年度赛历条' },
   { id: 'verify-academy', file: 'tests/verify-academy.js', label: '青训一键培养' },
   { id: 'verify-offer', file: 'tests/verify-offer.js', label: '转会报价' },
+  { id: 'verify-noswallow', file: 'tests/verify-noswallow.js', label: '选手防吞' },
   { id: 'verify-kplrules', file: 'tests/verify-kplrules.js', label: 'KPL硬规则' },
   { id: 'verify-bp', file: 'tests/verify-bp.js', label: 'BP两段式引擎' },
   { id: 'verify-aiplan', file: 'tests/verify-aiplan.js', label: 'AI赛季规划' },
