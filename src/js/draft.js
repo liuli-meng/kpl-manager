@@ -112,15 +112,18 @@ function draftAiFund(s,team){
  if(d.aiFund[team]==null)d.aiFund[team]=rnd(400,1600);
  return d.aiFund[team];
 }
-function draftMaxAiBid(s,team,slot){
+/* 玩家/AI 同一口径的签位出价上限。
+   原先只有 AI 走这套公式，玩家可用 s.fund 砸穿 25%/意愿 cap——统一后两边同一规则。 */
+function draftTeamMaxBid(s,team,slot){
  if(!draftStillWant(s,team))return 0;
  const fund=team===s.teamName?(s.fund||0):draftAiFund(s,team);
  const need=POS_ORDER.reduce((t,pos)=>t+draftPosNeed(s,team,pos),0);
  const base=draftSlotPrice(slot);
  // 临时席位队更愿意砸钱抢签（保级/站稳脚跟）
  const tempBoost=(typeof isTempSeat==='function'&&isTempSeat(s,team))?1.25:1;
- return Math.min(Math.round(fund*0.25*tempBoost), Math.round((base+need*12)*tempBoost));
+ return Math.min(Math.round(fund*0.25*tempBoost), Math.round((base+need*12)*tempBoost), Math.floor(fund));
 }
+function draftMaxAiBid(s,team,slot){return draftTeamMaxBid(s,team,slot);}
 /* 旧档/异常档修复：竞拍价与领先者一旦被写成 NaN/null，整场竞拍再也不可能收敛
    （早期 `draftBidRaise` 误用 s.bid，NaN 会跟着存档落盘，JSON 里变 null 再读出）。
    读档时统一归一化，别指望坏值自己好。 */
@@ -201,7 +204,7 @@ function draftAiAuction(s){ // AI 叫价直到轮到玩家或签位落定
   for(const t of candidates){if(t===d.leader)continue;next=t;break;}
   if(!next)break;
   if(next===s.teamName)break; // 等玩家
-  const max=draftMaxAiBid(s,next,d.slot);
+  const max=draftTeamMaxBid(s,next,d.slot);
   if(max>=d.bid+DRAFT_BID_STEP){
    d.bid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
    d.leader=next;
@@ -218,6 +221,8 @@ function draftWinSlot(s,team,cost){
  const playerFull=(team===s.teamName)&&!draftStillWant(s,team);
  if(cost>0&&!playerFull){
  if(team===s.teamName)s.fund=Math.max(0,(s.fund||0)-cost);
+ else if(d.aiFund&&d.aiFund[team]!=null)d.aiFund[team]=Math.max(0,d.aiFund[team]-cost);
+ else if(d.aiFund)d.aiFund[team]=Math.max(0,(draftAiFund(s,team)-cost));
  d.log.push(team+' 以 '+cost+'万拍得第'+(d.slot+1)+'签');
  }else if(cost>0){
  d.log.push(team+' 拍得第'+(d.slot+1)+'签，但大名单已满（不扣款）');
@@ -275,13 +280,20 @@ function draftBidRaise(s){
  // → NaN 万叫价，连锁把领先者/成交价全污染。这里再兜一层，坏档也拉得回来。
  if(!Number.isFinite(d.bid))d.bid=draftSlotPrice(d.slot);
  if(!draftStillWant(s,s.teamName)){toast('大名单已满（'+ROSTER_MAX+' 人），无法再拍签位');return;}
+ const max=draftTeamMaxBid(s,s.teamName,d.slot);
  const nxt=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
+ // 玩家与 AI 同一口径：超 cap 直接拒，不能拿整个 s.fund 砸穿预算/意愿上限
+ if(nxt>max){
+ if(nxt>(s.fund||0))toast('资金不足（需 '+nxt+'万，现有 '+Math.floor(s.fund||0)+'万）');
+ else toast('按本队签位预算/意愿封顶，上限 '+max+' 万（需 '+nxt+'万）');
+ return;
+ }
  if(s.fund<nxt){toast('资金不足（需 '+nxt+'万）');return;}
  d.bid=nxt;
  d.leader=s.teamName;
  delete d.passed[s.teamName];
  d.log.push(s.teamName+' 叫价 '+nxt+'万（第'+(d.slot+1)+'签）');
- // 其余 AI 再应一轮
+ // 其余 AI 再应一轮（成交在 draftWinSlot 才扣款，叫价本身不动 fund）
  draftAiAuction(s);
  save();renderAll();
 }
@@ -492,7 +504,7 @@ function draftPanelHtml(){
  const mePick=d.phase==='pick'&&!d.done;
  const alive=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
  let html=`<div class="panel ${foldCls('mdraft')}" data-fold="mdraft"><h3>KPL 选秀大会 <span class="tag">${d.done?'已收官':(d.phase==='auction'?'竞拍签位':'点名')} · 已签 ${taken} · 第${Math.min(d.slot+1,d.order.length)}签 · 大名单 ${rosterNow}/${ROSTER_MAX} · 自留签剩 ${reserveLeft(s)}</span></h3>
- <div class="hint" style="margin-bottom:8px">流程：先<strong>竞拍签位</strong>（前8签 ${DRAFT_BID_TOP}万起 / 第9签起 ${DRAFT_BID_REST}万起，加价 ${DRAFT_BID_STEP} 万），拍到再<strong>点名</strong>。池子=训练营+K甲突出者（本届二队名次影响 K甲前三档：${kj.n}人 · 底子${kj.base}+）。<strong>不能选自家青训</strong>；自家苗子用训练页自留签（每季2个）；大名单上限 ${ROSTER_MAX} 人。</div>`;
+ <div class="hint" style="margin-bottom:8px">流程：先<strong>竞拍签位</strong>（前8签 ${DRAFT_BID_TOP}万起 / 第9签起 ${DRAFT_BID_REST}万起，加价 ${DRAFT_BID_STEP} 万；叫价受<strong>本队签位预算上限</strong>约束，玩家与 AI 同一口径），拍到再<strong>点名</strong>。池子=训练营+K甲突出者（本届二队名次影响 K甲前三档：${kj.n}人 · 底子${kj.base}+）。<strong>不能选自家青训</strong>；自家苗子用训练页自留签（每季2个）；大名单上限 ${ROSTER_MAX} 人。</div>`;
  if(!d.done&&d.phase==='auction'){
  html+=`<div class="match" style="border-color:var(--gold);margin-bottom:8px">
  <div class="vs"><div class="tname">第${d.slot+1}签</div><div class="power">起拍 ${draftSlotPrice(d.slot)}万</div></div>
