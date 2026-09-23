@@ -1362,7 +1362,30 @@ function applySaveDefaults(s){
  if(s.mode==='coach'&&!s.coachDeal)s.coachDeal={years:0,honors:[],log:[]};
  if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0;
 }
-let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
+
+const _memStore=Object.create(null);
+let _storeOk=null,_storeWarned=false;
+function storeAvailable(){
+ if(_storeOk!==null)return _storeOk;
+ try{localStorage.setItem('__kpl_probe','1');localStorage.removeItem('__kpl_probe');_storeOk=true;}
+ catch(_){_storeOk=false;}
+ return _storeOk;
+}
+function storeGet(k){
+ try{const v=localStorage.getItem(k);return (v===null&&(k in _memStore))?_memStore[k]:v;}
+ catch(_){return (k in _memStore)?_memStore[k]:null;}
+}
+function storeSet(k,v){
+ try{localStorage.setItem(k,v);return true;}catch(_){_memStore[k]=String(v);return false;}
+}
+function storeDel(k){
+ try{localStorage.removeItem(k);}catch(_){delete _memStore[k];}
+}
+function storeWarnOnce(){
+ if(_storeWarned)return;_storeWarned=true;
+ try{toast('浏览器禁用了本机存储：进度只保留在本次会话，刷新即丢。建议关闭无痕模式或允许 Cookie。');}catch(_){}
+}
+let curSlot=parseInt(storeGet('esport_manager_curslot')||'1',10)||1;
 function slotKey(){return SAVE_KEY+(curSlot>1?'_'+curSlot:'');}
 function b64e(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
 function b64d(s){const bin=atob(s);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder().decode(bytes);}
@@ -1763,8 +1786,13 @@ function serializeForSave(s){
 function save(){
  if(!S)return false;
  try{checkAchievements(S);}catch(e){}
- try{localStorage.setItem(slotKey(),serializeForSave(S));try{_touchTabLock();}catch(_){}return true;}
- catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}return false;}
+ let payload=null;
+ try{payload=serializeForSave(S);}catch(e){console.warn('save serialize fail',e);}
+ if(payload===null){try{toast(' 存档失败：数据无法序列化');}catch(_){}return false;}
+ if(storeSet(slotKey(),payload)){try{_touchTabLock();}catch(_){}return true;}
+
+ storeWarnOnce();
+ return false;
 }
 
 function seasonShapeOk(s){
@@ -12010,7 +12038,7 @@ function detectAndPlayBGM() {
 
     case 'match-result':
 
-      const isWin = JSON.parse(localStorage.getItem('kw_last_match_result') || '{}').isWin;
+      let isWin;try{isWin=JSON.parse(storeGet('kw_last_match_result') || '{}').isWin;}catch(_){isWin=undefined;}
       if(isWin !== undefined) {
         setTimeout(() => playBGM(isWin ? 'win' : 'lose'), 350);
       }
@@ -12786,13 +12814,14 @@ class PerfMonitorDashboard {
 window.PerfDashboard = new PerfMonitorDashboard();
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'F12') {
-    e.preventDefault();
-    PerfDashboard.toggle();
-  }
+  if (e.key === 'F12') PerfDashboard.toggle();
 });
 
-console.log('[Perf Dashboard] Initialized (press F12 to toggle)');
+try {
+  if (/(^|[?&])perf=1(&|$)/.test((window.location && window.location.search) || '')) PerfDashboard.start();
+} catch (_) {}
+
+console.log('[Perf Dashboard] Initialized (F12 或 ?perf=1 切换)');
 
 </script>
 <script>
@@ -12987,7 +13016,7 @@ function downloadSaveHowto(){
  });
 }
 function openSaveMgmt(){
- const occ=i=>!!localStorage.getItem(SAVE_KEY+(i>1?'_'+i:''));
+ const occ=i=>!!storeGet(SAVE_KEY+(i>1?'_'+i:''));
  $('#app-modal-body').innerHTML=`
  <h2>存档管理</h2>
  <div class="center" style="margin-bottom:12px">
@@ -13002,7 +13031,7 @@ function openSaveMgmt(){
  <button class="btn sm" onclick="save();exportSaveFile()"> 下载存档文件</button>
  <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
- <button class="btn sm" onclick="restoreAutoBackup()" ${localStorage.getItem(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
+ <button class="btn sm" onclick="restoreAutoBackup()" ${storeGet(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
  <button class="btn sm" onclick="startTour()"> 重玩新手引导</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>
@@ -13034,7 +13063,7 @@ function resetRuntimeGlobals(){
 }
 
 function restoreAutoBackup(){
- const raw=localStorage.getItem(slotKey()+'_auto');
+ const raw=storeGet(slotKey()+'_auto');
  if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
  if(!confirm('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
  try{
@@ -13048,7 +13077,7 @@ function restoreAutoBackup(){
  }catch(e){toast('恢复失败：备份不可用');}
 }
 function setSlot(i){
- curSlot=i;localStorage.setItem('esport_manager_curslot',String(i));
+ curSlot=i;storeSet('esport_manager_curslot',String(i));
  resetRuntimeGlobals(); // 换档：先清上一档残留的会话级 UI/开局选择状态，再读新档
  if(load()){save();renderAll();closeModal('app-modal');toast('已切换到 槽'+i);}
  else{S=null;closeModal('app-modal');initStart();toast('槽'+i+' 暂无存档，请创建新战队开局');}
@@ -13200,7 +13229,7 @@ function resetGame(){
  const season=(S&&S.season)?('第'+S.season+'赛季'):('空档');
  const team=(S&&S.teamName)||'当前槽';
  if(!confirmDanger('确定重新开始？\n将清空「'+team+' · '+season+'」存档（槽'+curSlot+'）。\n系统已把当前进度备份到「恢复前重开备份」。'))return;
- localStorage.removeItem(slotKey());
+ storeDel(slotKey());
  location.reload();
 }
 

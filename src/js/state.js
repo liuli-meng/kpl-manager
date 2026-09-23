@@ -135,7 +135,33 @@ function applySaveDefaults(s){
  if(s.mode==='coach'&&!s.coachDeal)s.coachDeal={years:0,honors:[],log:[]};
  if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0;
 }
-let curSlot=parseInt(localStorage.getItem('esport_manager_curslot')||'1',10)||1;
+/* localStorage 兜底：iOS Safari 开「阻止所有 Cookie」/ 无痕模式 / 配额写满时，读 localStorage 会**直接抛异常**。
+   curSlot 全仓第一个存储访问点且在模块顶层——一抛就中断 state.js，下面的 `let S=null` 永不执行，
+   game.html 内联的后续模块全部 `S is not defined` → 整页白屏（且每次加载都崩在同一点，表现为「永久打不开」）。
+   以下包装把「存储不可用」降级成「内存兜底 + 只提示一次」，页面在任何存储状态下都能起来。 */
+const _memStore=Object.create(null);
+let _storeOk=null,_storeWarned=false;
+function storeAvailable(){
+ if(_storeOk!==null)return _storeOk;
+ try{localStorage.setItem('__kpl_probe','1');localStorage.removeItem('__kpl_probe');_storeOk=true;}
+ catch(_){_storeOk=false;}
+ return _storeOk;
+}
+function storeGet(k){
+ try{const v=localStorage.getItem(k);return (v===null&&(k in _memStore))?_memStore[k]:v;}
+ catch(_){return (k in _memStore)?_memStore[k]:null;}
+}
+function storeSet(k,v){
+ try{localStorage.setItem(k,v);return true;}catch(_){_memStore[k]=String(v);return false;}
+}
+function storeDel(k){
+ try{localStorage.removeItem(k);}catch(_){delete _memStore[k];}
+}
+function storeWarnOnce(){
+ if(_storeWarned)return;_storeWarned=true;
+ try{toast('浏览器禁用了本机存储：进度只保留在本次会话，刷新即丢。建议关闭无痕模式或允许 Cookie。');}catch(_){}
+}
+let curSlot=parseInt(storeGet('esport_manager_curslot')||'1',10)||1;
 function slotKey(){return SAVE_KEY+(curSlot>1?'_'+curSlot:'');}
 function b64e(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
 function b64d(s){const bin=atob(s);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder().decode(bytes);}
@@ -575,9 +601,15 @@ function serializeForSave(s){
 function save(){
  if(!S)return false;
  try{checkAchievements(S);}catch(e){}
- try{localStorage.setItem(slotKey(),serializeForSave(S));try{_touchTabLock();}catch(_){}return true;}
- catch(e){console.warn('save fail',e);try{toast(' 存档失败：'+(e.message||'存储不可用'));}catch(_){}return false;}
+ let payload=null;
+ try{payload=serializeForSave(S);}catch(e){console.warn('save serialize fail',e);}
+ if(payload===null){try{toast(' 存档失败：数据无法序列化');}catch(_){}return false;}
+ if(storeSet(slotKey(),payload)){try{_touchTabLock();}catch(_){}return true;}
+ /* 存储不可用（无痕 / 阻止 Cookie / 配额写满）：已降级为内存存档，只提示一次，别每次保存都弹 */
+ storeWarnOnce();
+ return false;
 }
+
 /* 赛制形态校验：当前阶段的分组结构是否存在且匹配。
  r2 起分组是 {S,A,B}/{S,A}，没有 G1 是正常的——不能用「无 G1」当旧档特征，
  否则打进 S 组后每次读档都会被误判成旧档、整体回滚到第一轮分组赛。 */

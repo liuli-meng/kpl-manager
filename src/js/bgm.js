@@ -103,7 +103,7 @@ function detectAndPlayBGM() {
       
     case 'match-result':
       // 比赛结算：根据胜负
-      const isWin = JSON.parse(localStorage.getItem('kw_last_match_result') || '{}').isWin;
+      let isWin;try{isWin=JSON.parse(storeGet('kw_last_match_result') || '{}').isWin;}catch(_){isWin=undefined;}
       if(isWin !== undefined) {
         setTimeout(() => playBGM(isWin ? 'win' : 'lose'), 350);
       }

@@ -194,7 +194,7 @@ function downloadSaveHowto(){
  });
 }
 function openSaveMgmt(){
- const occ=i=>!!localStorage.getItem(SAVE_KEY+(i>1?'_'+i:''));
+ const occ=i=>!!storeGet(SAVE_KEY+(i>1?'_'+i:''));
  $('#app-modal-body').innerHTML=`
  <h2>存档管理</h2>
  <div class="center" style="margin-bottom:12px">
@@ -209,7 +209,7 @@ function openSaveMgmt(){
  <button class="btn sm" onclick="save();exportSaveFile()"> 下载存档文件</button>
  <button class="btn sm primary" onclick="pickSaveFile()"> 从文件导入</button>
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
- <button class="btn sm" onclick="restoreAutoBackup()" ${localStorage.getItem(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
+ <button class="btn sm" onclick="restoreAutoBackup()" ${storeGet(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
  <button class="btn sm" onclick="startTour()"> 重玩新手引导</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>
@@ -246,7 +246,7 @@ function resetRuntimeGlobals(){
 }
 /* 赛季轮转自动备份的恢复：把 _auto 快照写回当前槽（覆盖前先把它再挪一份，防二次误操作） */
 function restoreAutoBackup(){
- const raw=localStorage.getItem(slotKey()+'_auto');
+ const raw=storeGet(slotKey()+'_auto');
  if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
  if(!confirm('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
  try{
@@ -260,7 +260,7 @@ function restoreAutoBackup(){
  }catch(e){toast('恢复失败：备份不可用');}
 }
 function setSlot(i){
- curSlot=i;localStorage.setItem('esport_manager_curslot',String(i));
+ curSlot=i;storeSet('esport_manager_curslot',String(i));
  resetRuntimeGlobals(); // 换档：先清上一档残留的会话级 UI/开局选择状态，再读新档
  if(load()){save();renderAll();closeModal('app-modal');toast('已切换到 槽'+i);}
  else{S=null;closeModal('app-modal');initStart();toast('槽'+i+' 暂无存档，请创建新战队开局');}
@@ -422,7 +422,7 @@ function resetGame(){
  const season=(S&&S.season)?('第'+S.season+'赛季'):('空档');
  const team=(S&&S.teamName)||'当前槽';
  if(!confirmDanger('确定重新开始？\n将清空「'+team+' · '+season+'」存档（槽'+curSlot+'）。\n系统已把当前进度备份到「恢复前重开备份」。'))return;
- localStorage.removeItem(slotKey());
+ storeDel(slotKey());
  location.reload();
 }
 

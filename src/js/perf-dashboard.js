@@ -167,12 +167,16 @@ class PerfMonitorDashboard {
 // 全局实例
 window.PerfDashboard = new PerfMonitorDashboard();
 
-// 快捷键：按 F12 切换显示
+/* 快捷键：F12 切换显示。
+   不调 e.preventDefault() —— F12（及 Ctrl+Shift+I）是浏览器级快捷键，页面本来就拦不住；
+   拦下去只会在某些内置浏览器/网页调试环境里惹麻烦。现在 F12 与 DevTools 各自生效，互不干扰。 */
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'F12') {
-    e.preventDefault();
-    PerfDashboard.toggle();
-  }
+  if (e.key === 'F12') PerfDashboard.toggle();
 });
 
-console.log('[Perf Dashboard] Initialized (press F12 to toggle)');
+/* 手机上（尤其中文 App 内置浏览器）没有 F12：支持 URL 参数直接打开，方便给玩家收集性能数据 */
+try {
+  if (/(^|[?&])perf=1(&|$)/.test((window.location && window.location.search) || '')) PerfDashboard.start();
+} catch (_) {}
+
+console.log('[Perf Dashboard] Initialized (F12 或 ?perf=1 切换)');

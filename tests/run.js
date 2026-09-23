@@ -77,6 +77,7 @@ const SUITES = [
   { id: 'sim-player', file: 'tests/sim-player.js', label: '选手长局门禁' },
   { id: 'sim-yearend', file: 'tests/sim-yearend.js', label: '年终全链路门禁' },
   { id: 'late-game-probe', file: 'tests/late-game-probe.js', label: '长局压测15年' },
+  { id: 'verify-storage-fallback', file: 'tests/verify-storage-fallback.js', label: '存储不可用启动兜底' },
   { id: 'verify-ios-export', file: 'tests/verify-ios-export.js', label: 'iOS内置浏览器导出兜底' },
   { id: 'verify-built', file: 'tests/verify-built.js', label: '构建产物校验' },
 ];
