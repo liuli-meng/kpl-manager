@@ -1,4 +1,4 @@
-﻿/* 生成 AI 战队阵容（BP 界面可见对手选手与招牌英雄） */
+/* 生成 AI 战队阵容（BP 界面可见对手选手与招牌英雄） */
 function ensureAiRosters(s,teamName){
  s.aiRosters=s.aiRosters||{};
  if(s.aiRosters[teamName])return s.aiRosters[teamName];
@@ -660,11 +660,12 @@ function buildTransferMarket(s){
    本人要价降低）。三处结算必须同用一个判定，避免" UI 说容易谈、实际更贵"的分裂 */
 const effWillingness=p=>clamp((p.willingness||0)+(p.transferRequest?-30:0),0,100);
 /* ================= KPL 联盟硬规则（真实对齐） =================
- TRANSFER_CAP 转会竞价封顶 1500 万——任何成交价（买断/强挖/挂牌/报价）不得突破，顶星摸天花板；
+ TRANSFER_CAP 转会竞价封顶 12000 万（1.2 亿）——任何成交价（买断/强挖/挂牌/报价）不得突破；
  ROSTER_MAX 大名单 ≤10 人（5 首发 + 2~5 替补）；
  SELL_HALF_GUARD 一个转会期卖出不得超过队内一半（保障队伍基本架构）；
- PLAYER_WAGE_MAX 个人顶薪 70 万/周（基本工资封顶，商务/直播收入不在此列）。 */
-const TRANSFER_CAP=1500,ROSTER_MAX=10,PLAYER_WAGE_MAX=70;
+ PLAYER_WAGE_MAX 个人顶薪 400 万/年（基本工资封顶，商务/直播收入不在此列）。
+ 口径：p.wage 一律年薪；谈判/续约/发薪/工资帽同一单位——UI 不得写「年薪」。 */
+const TRANSFER_CAP=ECON.transferCap,ROSTER_MAX=ECON.rosterMax,PLAYER_WAGE_MAX=ECON.playerWageMax;
 const capFee=x=>Math.min(Math.round(x),TRANSFER_CAP);
 /* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖）；要求离队者八五折——封顶 1500 */
 function buyoutPrice(p){
@@ -694,10 +695,10 @@ function sellGuard(s){
  return true;
 }
 /* ================= FC26 式转会谈判 =================
- 玩家报「转会费+周薪」组合报价 → 对方评估 → 最多 3 轮拉锯：
+ 玩家报「转会费+年薪」组合报价 → 对方评估 → 最多 3 轮拉锯：
  每轮被拒后对方给出明确还价，接受还价即成交；超轮次或强挖失败则谈判破裂。
  超帽不拒签：允许超工资帽签约，超出部分每周缴纳 60% 奢侈税（发薪日结算，经营页可见）。
- 口径统一：p.wage 一律是周薪（顶薪 70），谈判/续约/发薪/工资帽同一单位——UI 不得再写「年薪」。 */
+ 口径统一：p.wage 一律是年薪（顶薪 400），谈判/续约/发薪/工资帽同一单位——UI 不得再写「年薪」。 */
 function negoWageDemand(p){
  return Math.min(PLAYER_WAGE_MAX,Math.max(2,Math.round(p.wage*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)))); // 个人顶薪封顶
 }
@@ -711,7 +712,7 @@ function overCapTax(s,extraWage){
 function negoCapCheck(s,p){
  const {over,tax}=overCapTax(s,p.wage);
  if(over<=0)return true;
- return confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？');
+ return confirm(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需按 60% 缴纳奢侈税（'+tax+'万）。\n多花钱可以，确定签下？');
 }
 function negoComplete(s,p,fee){
  const from=p.ownerTeam,isFA=p.freeAgent;
@@ -756,15 +757,15 @@ function renderNego(){
  ${negoRow('现效力',p.freeAgent?'自由球员（无球可打）':p.ownerTeam||'—')}
  ${negoRow('本人意愿',effWillingness(p)+' / 100',p.transferRequest?' <span style="color:var(--gold)">（已公开要求离队 · 更容易谈）</span>':(p.willingness<40?' <span style="color:var(--red)">（很可能拒绝）</span>':''))}
  ${negoRow('对方心理价位',n.freeAgent?'—（仅谈薪资）':n.askFee+'万 转会费')}
- ${negoRow('期望周薪',n.askWage+'万')}
- ${(()=>{const {over,tax}=overCapTax(s,p.wage);return negoRow('签后周薪',(cur+p.wage)+' / 帽 '+s.wageCap+'万',over>0?` <span style="color:var(--red)">超帽${over}万 · 税${tax}万/周</span>`:' <span style="color:var(--green)">帽内</span>');})()}
+ ${negoRow('期望年薪',n.askWage+'万')}
+ ${(()=>{const {over,tax}=overCapTax(s,p.wage);return negoRow('签后年薪',(cur+p.wage)+' / 帽 '+s.wageCap+'万',over>0?` <span style="color:var(--red)">超帽${over}万 · 税${tax}万</span>`:' <span style="color:var(--green)">帽内</span>');})()}
  ${p.untouchable?`<div class="hint" style="color:var(--red)"> 非卖品：需 ${n.askFee}万 溢价强挖，每轮谈判有失败风险</div>`:''}
  </div>
- <div class="hint" style="margin-bottom:8px">报价需同时满足「转会费 ≥ 心理价位」和「周薪 ≥ 期望」，也可压价试探——但每被拒一轮，对方要价上涨，第 3 轮仍不满足则谈判破裂（意愿-10）。</div>
+ <div class="hint" style="margin-bottom:8px">报价需同时满足「转会费 ≥ 心理价位」和「年薪 ≥ 期望」，也可压价试探——但每被拒一轮，对方要价上涨，第 3 轮仍不满足则谈判破裂（意愿-10）。</div>
  ${n.msg?`<div class="event-card" style="margin-bottom:10px">${n.msg}</div>`:''}
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
  <label style="flex:1;min-width:120px">转会费(万)<input id="nego-fee" type="number" class="hd-in" value="${n.freeAgent?0:Math.round(n.askFee*0.8)}" ${n.freeAgent?'disabled':''} style="width:100%;margin-top:4px"></label>
- <label style="flex:1;min-width:120px">周薪(万)<input id="nego-wage" type="number" class="hd-in" value="${n.askWage}" style="width:100%;margin-top:4px"></label>
+ <label style="flex:1;min-width:120px">年薪(万)<input id="nego-wage" type="number" class="hd-in" value="${n.askWage}" style="width:100%;margin-top:4px"></label>
  </div>
  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn" onclick="negoQuit()"> 放弃</button>
@@ -800,7 +801,7 @@ function negoSubmit(){
  n.msg=' '+p.ownerTeam+' 拒绝放人！对方态度更加强硬（意愿降至 '+p.willingness+'，要价已上调）。';
  renderNego();return;
  }
- // 评估：转会费/周薪是否达到逐轮上涨的要价
+ // 评估：转会费/年薪是否达到逐轮上涨的要价
  const feeOk=n.freeAgent||fee>=n.askFee;
  const wageOk=wage>=n.askWage;
  const willingOk=p.willingness>=30||fee>=n.askFee*1.3; // 意愿低但要价给足也能打动
@@ -811,7 +812,7 @@ function negoSubmit(){
  const fromTeam=n.freeAgent?'自由球员':(p.ownerTeam||'原俱乐部');
  negoComplete(s,p,n.freeAgent?0:fee);
  recordTransfer(s,'in',p,n.freeAgent?0:fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
- logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（周薪 '+wage+'万）':'（转会费 '+fee+'万 · 周薪 '+wage+'万）'));
+ logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
  if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
  window._nego=null;closeModal('app-modal');
  try{SFX.gold();}catch(_){}
@@ -824,10 +825,10 @@ function negoSubmit(){
  n.askWage=Math.round(n.askWage*(wageOk?1:1.1));
  const why=[];
  if(!feeOk)why.push('转会费低于心理价位');
- if(!wageOk)why.push('周薪不够');
+ if(!wageOk)why.push('年薪不够');
  if(!willingOk)why.push('本人无意加盟');
  if(n.round>3){negoBreak(s,p,why.join('、'));return;}
- n.msg=' 对方摇头：'+why.join('、')+'。<br> 经纪人放话——'+(n.freeAgent?'':'转会费至少 <b style="color:var(--gold)">'+n.askFee+'万</b>，')+'周薪 <b style="color:var(--gold)">'+n.askWage+'万</b> 才考虑。';
+ n.msg=' 对方摇头：'+why.join('、')+'。<br> 经纪人放话——'+(n.freeAgent?'':'转会费至少 <b style="color:var(--gold)">'+n.askFee+'万</b>，')+'年薪 <b style="color:var(--gold)">'+n.askWage+'万</b> 才考虑。';
  renderNego();
 }
 function negoBreak(s,p,reason){
@@ -1144,15 +1145,15 @@ function renewPlayer(s,pid,years,offerWage){
  const cost=renewCostN(p,y);
  if(s.fund<cost){toast('资金不足（续约签字费 '+cost+'万）');return;}
  s.fund-=cost;
- const nw=offerWage?Math.round(offerWage):Math.round(wageOf(overall(p))*((p.val||100)/100)); // 报价成交按谈定周薪，否则按表现重定
+ const nw=offerWage?Math.round(offerWage):Math.round(wageOf(overall(p))*((p.val||100)/100)); // 报价成交按谈定年薪，否则按表现重定
  const wageFinal=Math.min(PLAYER_WAGE_MAX,Math.max(1,nw)); // 个人顶薪封顶
- if(wageFinal>p.wage)logEvent(s,' '+p.name+' 续约涨薪：'+p.wage+'万 → '+wageFinal+'万/周（表现好值得加薪）');
- else if(wageFinal<p.wage)logEvent(s,' '+p.name+' 接受降薪续约：'+p.wage+'万 → '+wageFinal+'万/周');
+ if(wageFinal>p.wage)logEvent(s,' '+p.name+' 续约涨薪：'+p.wage+'万 → '+wageFinal+'万（表现好值得加薪）');
+ else if(wageFinal<p.wage)logEvent(s,' '+p.name+' 接受降薪续约：'+p.wage+'万 → '+wageFinal+'万');
  p.wage=wageFinal;
  p.contract=y;
  p.morale=clamp(p.morale+6,20,100);
  p.willingness=Math.min(100,(p.willingness||50)+10);
- logEvent(s,' 与 '+p.name+' 完成续约（'+y+' 年 · 签字费 '+cost+'万 · 周薪 '+nw+'万）');
+ logEvent(s,' 与 '+p.name+' 完成续约（'+y+' 年 · 签字费 '+cost+'万 · 年薪 '+nw+'万）');
  s.expiring=(s.expiring||[]).filter(x=>x!==pid);
  save();renderAll();toast(p.name+' 续约 '+y+' 年！');
 }
@@ -1205,20 +1206,20 @@ function renderRenewNego(){
  const ageTag=p.age>=m.gold?'<span class="red">下滑期 · 要价偏高</span>':p.age<=22?'<span class="green">上升期</span>':'黄金期';
  $('#app-modal-body').innerHTML=`
  <h2>续约谈判 · ${p.name} <span class="tag">${POS[p.pos][0]} · 总值 ${overall(p)}</span></h2>
- <div class="hint" style="margin-bottom:10px">${p.age}岁 · ${ageTag} · 表现 ${p.val||100}% · 当前周薪 ${p.wage}万 · 现合同 ${p.contract>0?'最后 1 年':'已到期'}${_nego.attempt?'<br><span class="red">已拒绝 '+_nego.attempt+' 次（满 3 次谈崩，士气受损）</span>':''}</div>
+ <div class="hint" style="margin-bottom:10px">${p.age}岁 · ${ageTag} · 表现 ${p.val||100}% · 当前年薪 ${p.wage}万 · 现合同 ${p.contract>0?'最后 1 年':'已到期'}${_nego.attempt?'<br><span class="red">已拒绝 '+_nego.attempt+' 次（满 3 次谈崩，士气受损）</span>':''}</div>
  <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
  <span class="dim" style="font-size:12px">合同年限：</span>
  ${[1,2,3,4].map(k=>`<button class="btn sm ${k===y?'primary':''}" style="min-width:44px" onclick="renewNegoYears(${k})">${k}年</button>`).join('')}
  </div>
- <div class="hint" style="margin-bottom:10px">经纪人心理价位 <b class="gold">≈ ${ask}万/周</b>（长约溢价 · 签字费 ${cost}万）· 接受度 <b style="color:${chance[1]}">${chance[0]}</b></div>
+ <div class="hint" style="margin-bottom:10px">经纪人心理价位 <b class="gold">≈ ${ask}万</b>（长约溢价 · 签字费 ${cost}万）· 接受度 <b style="color:${chance[1]}">${chance[0]}</b></div>
  <div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
- <span class="dim" style="font-size:12px">周薪报价：</span>
+ <span class="dim" style="font-size:12px">年薪报价：</span>
  <button class="btn sm" onclick="renewNegoOffer(-10)">-10</button>
  <button class="btn sm" onclick="renewNegoOffer(-5)">-5</button>
  <input id="nego-offer" type="number" min="5" value="${offer}" onchange="renewNegoOfferInput(this.value)" style="width:76px;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:3px;padding:6px 8px;font-size:14px;text-align:center">
  <button class="btn sm" onclick="renewNegoOffer(5)">+5</button>
  <button class="btn sm" onclick="renewNegoOffer(10)">+10</button>
- <span class="dim" style="font-size:12px">万/周</span>
+ <span class="dim" style="font-size:12px">万</span>
  </div>
  <div class="center" style="display:flex;gap:8px;justify-content:center">
  <button class="btn primary" onclick="submitRenewNego()">提出报价</button>
@@ -1247,13 +1248,13 @@ function submitRenewNego(){
  logEvent(S,' 与 '+p.name+' 的续约谈判破裂（三轮未谈拢，士气受损）');
  _nego=null;
  save();renderAll();closeModal('app-modal');
- toast('谈判破裂：'+p.name+' 坚持要价 '+ask+'万/周');
+ toast('谈判破裂：'+p.name+' 坚持要价 '+ask+'万');
  return;
  }
  _nego.ask=Math.max(5,Math.round(_nego.ask*1.07/5)*5);
  _nego.offer=null;
  renderRenewNego();
- toast(p.name+' 的经纪人嫌低了，要价涨到 '+_nego.ask+'万/周');
+ toast(p.name+' 的经纪人嫌低了，要价涨到 '+_nego.ask+'万');
 }
 function releasePlayer(s,pid){
  const p=s.players.find(x=>x.id===pid);
@@ -1563,7 +1564,7 @@ function tickLoans(s){
  赛季进行中（非转会期），表现火热的选手会被其他俱乐部盯上——留人/放人/抬价三选：
  留人花工资（涨薪 ~8% 表达诚意，士气与忠诚上升）；放人收钱但得罪粉丝与更衣室；
  抬价约半数买家接受、部分给最终报价、也可能直接离场。报价 3 天不答复自动过期。
- 与董事会/更衣室的联动是天然发生的：留人推高周薪（工资帽/奢侈税压力），
+ 与董事会/更衣室的联动是天然发生的：留人推高年薪（工资帽/奢侈税压力），
  放人削弱阵容（KPI 风险）并让队友寒心。引擎只在 nextDay 生成与过期 offer——
  门禁模拟不结算真实比赛表现（val 只在 gamePerform 更新），不会触发本系统。 */
 const OFFER_TTL=3; // 报价有效期（天）
@@ -1626,8 +1627,8 @@ function respondOffer(s,idx,action){
  p.morale=clamp(p.morale+5,20,100);
  p.willingness=clamp((p.willingness==null?70:p.willingness)+5,0,100);
  s.offers=s.offers.filter(x=>x.pid!==p.id);
- logEvent(s,' 留队：回绝 '+o.team+'，俱乐部给 '+p.name+' 涨薪至 '+p.wage+'万/周（士气+5 · 忠诚+5）');
- toast(p.name+' 留队！周薪 +'+raise+'万');
+ logEvent(s,' 留队：回绝 '+o.team+'，俱乐部给 '+p.name+' 涨薪至 '+p.wage+'万（士气+5 · 忠诚+5）');
+ toast(p.name+' 留队！年薪 +'+raise+'万');
  }else if(action==='sell'){
  s.career.pendingMove={team:o.team,fee:o.fee};
  s.offers=s.offers.filter(x=>x.pid!==p.id);
@@ -1645,8 +1646,8 @@ function respondOffer(s,idx,action){
  p.morale=clamp(p.morale+5,20,100);
  p.willingness=clamp((p.willingness==null?70:p.willingness)+5,0,100);
  s.offers=s.offers.filter(x=>x.pid!==p.id);
- logEvent(s,' 留人：回绝 '+o.team+' 的报价，给 '+p.name+' 涨薪至 '+p.wage+'万/周（士气+5 · 忠诚+5）——工资帽压力自负');
- toast(p.name+' 留队！周薪 +'+raise+'万');
+ logEvent(s,' 留人：回绝 '+o.team+' 的报价，给 '+p.name+' 涨薪至 '+p.wage+'万（士气+5 · 忠诚+5）——工资帽压力自负');
+ toast(p.name+' 留队！年薪 +'+raise+'万');
  }else if(action==='sell'){ // 放人：接受报价
  const fanHit=sellViaOffer(s,p,o.fee,o.team);
  s.offers=s.offers.filter(x=>x.pid!==p.id);

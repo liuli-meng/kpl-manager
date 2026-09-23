@@ -16,7 +16,7 @@ function renderLineup(){
   }
  }
  let html=gapBanner+pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
- <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 周薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
+ <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 年薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
  if(!p)return `<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;

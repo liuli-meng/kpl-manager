@@ -6,10 +6,29 @@ function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 
-/* ================= 真实 KPL 经济系统 v2.0 =================
-   对标真实 KPL 2016-2026 年俱乐部运营模式 */
+/* ================= 真实 KPL 经济系统 v2（单源刻度） =================
+   单位约定（全仓唯一，禁止再引入第二套换算）：
+   - 资金 / 转会费 / 身价 / 签约费：万 RMB
+   - p.wage / coach.wage / wageCap：**年薪**（万/年）；发薪日扣 年薪/52
+   - 豪门开档预算 1.5 亿 = 15000 万；转会封顶 1.2 亿 = 12000 万；个人顶薪 400 万/年
+   生成侧（wageOf/valueOf/模板/赞助）与迁移 migrateEconV2 共用本块，禁止旁路常量。 */
+const ECON={
+ v:2,
+ wageUnit:'year',
+ playerWageMin:12,
+ playerWageMax:400,
+ transferCap:12000,
+ rosterMax:10,
+ wageCapMin:1200,
+ wageCapDefault:2000,
+ wageCapMax:3200,
+ budgetLow:3000,
+ budgetMid:8000,
+ budgetRich:15000,
+ payWeeks:52,
+};
 
-// 年份经济参数 (逐年增长)
+// 年份经济参数（相对 2026 基准的倍率；transfer_cap 为该年封顶，万）
 const YEAR_ECONOMY = {
   2016: { fund_mul: 0.5, wage_mul: 0.4, transfer_cap: 800, inflation: 0.0 },
   2017: { fund_mul: 0.6, wage_mul: 0.5, transfer_cap: 1000, inflation: 0.02 },
@@ -23,39 +42,37 @@ const YEAR_ECONOMY = {
   2025: { fund_mul: 1.1, wage_mul: 1.05, transfer_cap: 11000, inflation: 0.1 },
   2026: { fund_mul: 1.15, wage_mul: 1.1, transfer_cap: 12000, inflation: 0.12 },
 };
+function yearEconomy(s){
+ const y=(typeof gameYear==='function')?gameYear(s):2026;
+ return YEAR_ECONOMY[y]||YEAR_ECONOMY[2026];
+}
+function transferCapOf(s){
+ const e=yearEconomy(s);
+ return Math.min(ECON.transferCap, e.transfer_cap||ECON.transferCap);
+}
 
-// 俱乐部分级预算标准
+// 俱乐部分级预算（只给 AI 决策用；开档模板见 CLUB_TEMPLATES）
 const CLUB_TIERS = {
   elite: { budget_scale: 1.15, wage_capacity: 'high', transfer_aggression: 0.9, commercial_focus: 0.85 },
   mid_tier: { budget_scale: 1.0, wage_capacity: 'medium', transfer_aggression: 0.6, commercial_focus: 0.7 },
   low_tier: { budget_scale: 0.7, wage_capacity: 'low', transfer_aggression: 0.3, commercial_focus: 0.5 },
 };
 
-// 选手真实薪资体系
+// 选手年薪参考表（万/年）——wageOf 曲线与之对齐；谈判/续约展示用
 const PLAYER_SALARY_REAL = {
-  base_salary: { rookie_17: 15, junior_19: 25, veteran_experienced: 50 }, // 万 RMB/年
-  
+  base_salary: { rookie_17: 15, junior_19: 25, veteran_experienced: 50 },
   top_salary_by_rating: {
     ovr_95_plus: 400, ovr_90_94: 350, ovr_85_89: 250,
     ovr_80_84: 150, ovr_75_79: 100, ovr_below_75: 60,
   },
-  
-  calculate_wage: function(overall, age, popularity) {
-    let base = this.get_base_by_rating(overall);
-    let age_factor = this.get_age_factor(age);
-    let pop_factor = 1 + (popularity - 50) / 200;
-    return Math.round(base * age_factor * pop_factor);
-  },
-  
   get_base_by_rating: function(ovr) {
-    if(ovr >= 95) return this.base_salary.rookie_17 * 15;
-    if(ovr >= 90) return this.base_salary.rookie_17 * 12;
-    if(ovr >= 85) return this.base_salary.junior_19 * 8;
-    if(ovr >= 80) return this.base_salary.veteran_experienced * 3;
-    if(ovr >= 75) return this.base_salary.veteran_experienced * 2;
-    return this.base_salary.veteran_experienced;
+    if(ovr >= 95) return this.top_salary_by_rating.ovr_95_plus;
+    if(ovr >= 90) return this.top_salary_by_rating.ovr_90_94;
+    if(ovr >= 85) return this.top_salary_by_rating.ovr_85_89;
+    if(ovr >= 80) return this.top_salary_by_rating.ovr_80_84;
+    if(ovr >= 75) return this.top_salary_by_rating.ovr_75_79;
+    return this.top_salary_by_rating.ovr_below_75;
   },
-  
   get_age_factor: function(age) {
     if(age <= 18) return 0.6;
     if(age <= 21) return 0.85;
@@ -63,6 +80,13 @@ const PLAYER_SALARY_REAL = {
     if(age <= 27) return 1.1;
     if(age <= 29) return 0.95;
     return 0.7;
+  },
+  // 权威年薪：生成/迁移/scrubWages 全走这里（与 wageOf 同一曲线）
+  calculate_wage: function(overall, age, popularity) {
+    let base = this.get_base_by_rating(overall);
+    let age_factor = this.get_age_factor(age);
+    let pop_factor = 1 + ((popularity||50) - 50) / 200;
+    return clamp(Math.round(base * age_factor * pop_factor), ECON.playerWageMin, ECON.playerWageMax);
   },
 };
 
@@ -250,28 +274,35 @@ const _curve=(pts,o)=>{
  }
  return pts[pts.length-1][1];
 };
-/* 总值→签约身价（万）：2026-09 真实经济对齐（KPL 转会封顶 1500 万 ⇒ 顶星身价曲线顶格 ≈670，
- 配合意愿/强挖倍率后顶星摸到 1500 天花板；原千万级刻度 ÷6） */
-const VALUE_PTS=[[40,10],[50,25],[60,50],[66,75],[72,110],[76,165],[80,235],[84,310],[88,400],[92,475],[96,560],[99,670]];
+/* 总值→签约身价（万）：对齐转会封顶 1.2 亿——顶星基础身价约 6500，
+ 意愿/强挖/保护期倍率后摸到 ECON.transferCap 天花板 */
+const VALUE_PTS=[[40,60],[50,180],[60,400],[66,650],[72,1000],[76,1600],[80,2400],[84,3200],[88,4200],[92,5200],[96,6000],[99,6500]];
 const valueOf=o=>_curve(VALUE_PTS,o);
-/* 总值→周薪曲线（万）：同步 ÷6（个人顶薪封顶 70，见 transfer.js PLAYER_WAGE_MAX） */
-const WAGE_PTS=[[40,2],[50,3],[60,6],[66,8],[72,12],[76,17],[80,23],[85,35],[90,47],[96,58],[99,67]];
-const wageOf=o=>_curve(WAGE_PTS,o);
+/* 总值→年薪曲线（万/年）：与 PLAYER_SALARY_REAL.calculate_wage 同刻度；
+ 权威入口是 wageOf——迁移/scrub/生成不得再各写一套 */
+const WAGE_PTS=[[40,15],[50,30],[55,42],[60,55],[66,75],[72,100],[76,125],[80,150],[85,220],[90,300],[96,360],[99,400]];
+function wageOf(o,age,pop){
+ if(age!=null||pop!=null){
+ return PLAYER_SALARY_REAL.calculate_wage(o,age==null?22:age,pop==null?50:pop);
+ }
+ return clamp(_curve(WAGE_PTS,o),ECON.playerWageMin,ECON.playerWageMax);
+}
 const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
  {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
-/* 赞助商：升级同时需要资金与粉丝（fans，单位万）——把"成绩 → 粉丝 → 商业"接成一条链 */
-const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:15,cost:0,fans:0},
- {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:40,cost:250,fans:20},
- {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:90,cost:650,fans:80},
- {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:180,cost:1650,fans:200}];
+/* 赞助商：升级同时需要资金与粉丝（fans，单位万）——把"成绩 → 粉丝 → 商业"接成一条链
+ 收入为万/日，与年薪刻度同源放大 */
+const SPONSORS=[{lv:0,name:'社区网吧',icon:'Ⅰ',income:15,cost:2000,fans:0},
+ {lv:1,name:'本地电竞馆',icon:'Ⅱ',income:45,cost:5000,fans:20},
+ {lv:2,name:'全国连锁外设',icon:'Ⅲ',income:110,cost:12000,fans:80},
+ {lv:3,name:'国际大厂冠名',icon:'Ⅳ',income:220,cost:28000,fans:200}];
 const ENERGY_MAX=100, WAGE_EVERY=7, SEASON_MATCHES=7;
 
 /* ================= 经济结算系数（P2-12：由引擎各处魔法数字收敛，调平衡只动这里） ================= */
-const BONUS_PER_WIN_GAME={regular:13,card:20,po:25,cup:20}; // 系列赛胜小局奖金（万/小局）
-const REG_WIN_EXTRA_CHANCE=0.5, REG_WIN_EXTRA=33;           // 常规赛胜场随机追加（概率 / 万）
-const PO_CHAMPION_BONUS=100;                                 // 季后赛夺冠追加（万）
+const BONUS_PER_WIN_GAME={regular:100,card:160,po:200,cup:160}; // 系列赛胜小局奖金（万/小局 · 年薪刻度）
+const REG_WIN_EXTRA_CHANCE=0.5, REG_WIN_EXTRA=260;           // 常规赛胜场随机追加（概率 / 万）
+const PO_CHAMPION_BONUS=800;                                 // 季后赛夺冠追加（万）
 const PRIZE_PLAYER_SHARE=0.7, PRIZE_CLUB_SHARE=0.3;          // 杯赛奖金 70/30 分成（KPL 硬规则：选手分成≥70%）
-const ENDORSE_PER_POP=0.3;                                   // 代言收入：每点人气 × 万/周（payWage 结算与选手卡展示共用）
+const ENDORSE_PER_POP=1.2;                                   // 代言收入：每点人气 × 万/周（payWage 周结）
 const RENEW_MORALE_DIV=500;                                  // 续约谈判：士气偏离 50 的概率修正除数（±50 士气 = ±10%）
 
 /* ================= 英雄池（KPL 常用英雄 · 含摇摆位） =================
@@ -549,24 +580,24 @@ const AI_ROSTERS={
 /* ================= 原版俱乐部模板（豪门/中坚/草根预算差异化） =================
  budget: 初始资金 cap: 工资帽 coach: 教练 players: 首发 seed: 战力种子(开局分组用) */
 const CLUB_TEMPLATES=[
- {name:'成都AG超玩会',icon:'焰',budget:2500,cap:250,coach:'co1',seed:640,players:['top4','jg4','mid3','ad1','sup3'],desc:'银河战舰 · 2025三冠王朝 · 预算拉满'},
- {name:'重庆狼队',icon:'狼',budget:2333,cap:242,coach:'co2',seed:620,players:['top6','jg5','mid4','ad2','sup4'],desc:'六冠豪门 · 野核体系 · 顶级预算'},
- {name:'武汉eStarPro',icon:'★',budget:2167,cap:233,coach:'co3',seed:600,players:['top3','jg3','mid1','ad3','sup2'],desc:'eStar王朝 · 三冠主力全保留'},
- {name:'北京WB',icon:'熊',budget:1667,cap:208,coach:'co5',seed:580,players:['top5','jg2','mid6','ad4','sup5'],desc:'追光者 · 暖阳领衔 · 中坚预算'},
- {name:'广州TTG',icon:'环',budget:1500,cap:197,coach:'co8',seed:540,players:['top12','jg13','mid2','ad11','sup13'],desc:'九尾带队 · 法刺体系'},
- {name:'南京Hero久竞',icon:'影',budget:1583,cap:200,coach:'co10',seed:460,players:['top9','jg6','mid5','ad12','sup6'],desc:'久竞传奇 · 久诚回归 · 中游预算'},
- {name:'苏州KSG',icon:'虎',budget:1417,cap:187,coach:'co9',seed:500,players:['top14','jg7','mid13','ad9','sup12'],desc:'新锐崛起 · 稳扎稳打'},
- {name:'上海EDG.M',icon:'电',budget:1000,cap:167,coach:'co11',seed:440,players:['top10','jg16','mid15','ad14','sup15'],desc:'平民战队 · 挑战者之路 · 低预算高目标'},
- {name:'北京JDG',icon:'豹',budget:1583,cap:200,coach:'co4',seed:570,players:['top11','jg12','mid12','ad10','sup10'],desc:'劲旅 · 轩染领衔 · 顶配中坚'},
- {name:'济南RW侠',icon:'',budget:1500,cap:197,coach:'co6',seed:560,players:['top1','jg1','mid10','ad7','sup11'],desc:'传奇飞牛坐镇 · 老牌侠客'},
- {name:'佛山DRG',icon:'龙',budget:1417,cap:187,coach:'co7',seed:500,players:['top7','jg8','mid8','ad5','sup8'],desc:'龙魂新锐 · 百兽野心'},
- {name:'深圳DYG',icon:'鹰',budget:1333,cap:175,coach:'co4',seed:480,players:['top13','jg14','mid7','ad6','sup14'],desc:'小义引擎 · 重塑荣光'},
- {name:'长沙TES.A',icon:'',budget:1167,cap:175,coach:'co6',seed:450,players:['top8','jg15','mid14','ad13','sup9'],desc:'滔搏青春风暴 · 稳中求进'},
- {name:'杭州LGD.NBW',budget:1083,cap:167,coach:'co7',seed:430,icon:'鹅',players:['top15','jg17','mid16','ad8','sup16'],desc:'大鹅新军 · 敢打敢拼'},
- {name:'上海RNG.M',icon:'冠',budget:1000,cap:167,coach:'co4',seed:420,players:['top16','jg11','mid17','ad15','sup7'],desc:'皇族余晖 · 重建之路'},
- {name:'西安WE',icon:'蝎',budget:917,cap:158,coach:'co6',seed:410,players:['top17','jg18','mid9','ad16','sup17'],desc:'蓝色风暴 · 草根逆袭'},
- {name:'桐乡情久',icon:'红',budget:867,cap:158,coach:'co7',seed:400,players:['top18','jg19','mid11','ad17','sup18'],desc:'新军冲击 · 从零开始'},
- {name:'常山UUG',icon:'牛',budget:833,cap:153,coach:'co4',seed:390,players:['top19','jg10','mid18','ad18','sup19'],desc:'升班马 · 一切从零'},
+ {name:'成都AG超玩会',icon:'焰',budget:15000,cap:2800,coach:'co1',seed:640,players:['top4','jg4','mid3','ad1','sup3'],desc:'银河战舰 · 2025三冠王朝 · 预算拉满'},
+ {name:'重庆狼队',icon:'狼',budget:14000,cap:2700,coach:'co2',seed:620,players:['top6','jg5','mid4','ad2','sup4'],desc:'六冠豪门 · 野核体系 · 顶级预算'},
+ {name:'武汉eStarPro',icon:'★',budget:13000,cap:2600,coach:'co3',seed:600,players:['top3','jg3','mid1','ad3','sup2'],desc:'eStar王朝 · 三冠主力全保留'},
+ {name:'北京WB',icon:'熊',budget:10000,cap:2300,coach:'co5',seed:580,players:['top5','jg2','mid6','ad4','sup5'],desc:'追光者 · 暖阳领衔 · 中坚预算'},
+ {name:'广州TTG',icon:'环',budget:9000,cap:2200,coach:'co8',seed:540,players:['top12','jg13','mid2','ad11','sup13'],desc:'九尾带队 · 法刺体系'},
+ {name:'南京Hero久竞',icon:'影',budget:9500,cap:2250,coach:'co10',seed:460,players:['top9','jg6','mid5','ad12','sup6'],desc:'久竞传奇 · 久诚回归 · 中游预算'},
+ {name:'苏州KSG',icon:'虎',budget:8500,cap:2100,coach:'co9',seed:500,players:['top14','jg7','mid13','ad9','sup12'],desc:'新锐崛起 · 稳扎稳打'},
+ {name:'上海EDG.M',icon:'电',budget:6000,cap:1800,coach:'co11',seed:440,players:['top10','jg16','mid15','ad14','sup15'],desc:'平民战队 · 挑战者之路 · 低预算高目标'},
+ {name:'北京JDG',icon:'豹',budget:9500,cap:2250,coach:'co4',seed:570,players:['top11','jg12','mid12','ad10','sup10'],desc:'劲旅 · 轩染领衔 · 顶配中坚'},
+ {name:'济南RW侠',icon:'',budget:9000,cap:2200,coach:'co6',seed:560,players:['top1','jg1','mid10','ad7','sup11'],desc:'传奇飞牛坐镇 · 老牌侠客'},
+ {name:'佛山DRG',icon:'龙',budget:8500,cap:2100,coach:'co7',seed:500,players:['top7','jg8','mid8','ad5','sup8'],desc:'龙魂新锐 · 百兽野心'},
+ {name:'深圳DYG',icon:'鹰',budget:8000,cap:2000,coach:'co4',seed:480,players:['top13','jg14','mid7','ad6','sup14'],desc:'小义引擎 · 重塑荣光'},
+ {name:'长沙TES.A',icon:'',budget:7000,cap:1950,coach:'co6',seed:450,players:['top8','jg15','mid14','ad13','sup9'],desc:'滔搏青春风暴 · 稳中求进'},
+ {name:'杭州LGD.NBW',budget:6500,cap:1900,coach:'co7',seed:430,icon:'鹅',players:['top15','jg17','mid16','ad8','sup16'],desc:'大鹅新军 · 敢打敢拼'},
+ {name:'上海RNG.M',icon:'冠',budget:6000,cap:1800,coach:'co4',seed:420,players:['top16','jg11','mid17','ad15','sup7'],desc:'皇族余晖 · 重建之路'},
+ {name:'西安WE',icon:'蝎',budget:5500,cap:1700,coach:'co6',seed:410,players:['top17','jg18','mid9','ad16','sup17'],desc:'蓝色风暴 · 草根逆袭'},
+ {name:'桐乡情久',icon:'红',budget:5000,cap:1650,coach:'co7',seed:400,players:['top18','jg19','mid11','ad17','sup18'],desc:'新军冲击 · 从零开始'},
+ {name:'常山UUG',icon:'牛',budget:3000,cap:1500,coach:'co4',seed:390,players:['top19','jg10','mid18','ad18','sup19'],desc:'升班马 · 一切从零'},
 ];
 
 /* ================= 2026 自由市场（真实 KPL 选手 · 合同到期/转会流拍） =================
@@ -745,11 +776,11 @@ const SCENARIOS=[
  {id:'normal',name:'常规开档',hard:false,desc:'初始资金 1300万 · 工资帽 150万/周 · 标准挑战',
   apply:s=>{}},
  {id:'debt',name:'财政危机',hard:true,desc:'负债累累接手：初始资金 330万 · 工资帽 120万，只能靠成绩翻身',
-  apply:s=>{s.fund=330;s.wageCap=120;}},
+  apply:s=>{s.fund=2000;s.wageCap=1400;}},
  {id:'exodus',name:'核心出走',hard:true,desc:'队内王牌季前被挖走，开局即空一个位置，必须去市场补人',
   apply:s=>dropBestPlayer(s)},
  {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 90万/周，豪华阵容养不起，只能靠青训与规划',
-  apply:s=>{s.wageCap=90;}},
+  apply:s=>{s.wageCap=1200;}},
  {id:'cursed',name:'无冠魔咒',hard:true,desc:'常年无冠、士气低落：全队属性 -4 · 初始士气 50，等你破咒',
   apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));p.morale=50;});}},
 ];
@@ -957,18 +988,18 @@ const KPL_ERAS={
    'VgHow':{p:[null,null,null,null,null],u:[]},
   },
   clubs:[
-   {name:'QGhappy',icon:'翼',budget:2333,cap:242,coach:'co7',seed:640,players:['a17_fly','a17_alan','a17_cat17','a17_hurt','a17_yang'],desc:'卫冕王朝 · QG五虎全盛 · 大满贯之师'},
-   {name:'AG超玩会',icon:'焰',budget:2167,cap:233,coach:'coe3',seed:600,players:['a17_vv','a17_meng','a17_laoshuai','a17_liusu','a17_lanxi'],desc:'三年三亚 · 梦泪老帅率领的信仰之师'},
-   {name:'eStarPro',icon:'★',budget:1833,cap:217,coach:'co4',seed:560,players:['a17_dake','a17_nuoyan','a17_weizhuang','a17_xingchen','a17_tiger'],desc:'老牌豪门 · 诺言伪装领衔 · 秋季大引援'},
-   {name:'XQ',icon:'戒',budget:1750,cap:213,coach:'co11',seed:555,players:['g2017_XQ_top','g2017_XQ_jg','a17_ata','g2017_XQ_ad','g2017_XQ_sup'],desc:'阿泰军团 · 国服第一中单 · 秋亚余威'},
-   {name:'AS仙阁',icon:'仙',budget:1500,cap:197,coach:'coe2',seed:520,players:['a17_wuhen','a17_xiaoyu','a17_chengui','a17_togo','a17_yuqiu'],desc:'卫冕冠军 · 黑八奇迹班底'},
-   {name:'JC',icon:'竞',budget:1417,cap:187,coach:'co8',seed:505,players:['g2017_JC_top','g2017_JC_jg','a17_qingfeng','g2017_JC_ad','g2017_JC_sup'],desc:'新锐劲旅 · 竞技之都'},
-   {name:'RNG.M',icon:'冠',budget:1467,cap:192,coach:'co5',seed:500,players:['g2017_RNGM_top','g2017_RNGM_jg','g2017_RNGM_mid','g2017_RNGM_ad','a17_zero'],desc:'皇族新军 · 初生牛犊不怕虎'},
-   {name:'GK',icon:'山',budget:1333,cap:180,coach:'co9',seed:480,players:['g2017_GK_top','g2017_GK_jg','g2017_GK_mid','g2017_GK_ad','g2017_GK_sup'],desc:'升班黑马 · 山城新锐'},
-   {name:'EDG.M',icon:'电',budget:1250,cap:175,coach:'co10',seed:460,players:['g2017_EDGM_top','g2017_EDGM_jg','g2017_EDGM_mid','g2017_EDGM_ad','g2017_EDGM_sup'],desc:'超电新军 · 潜力股'},
-   {name:'BA黑凤梨',icon:'梨',budget:1300,cap:177,coach:'co12',seed:440,players:['g2017_BA黑凤梨_top','g2017_BA黑凤梨_jg','g2017_BA黑凤梨_mid','g2017_BA黑凤梨_ad','g2017_BA黑凤梨_sup'],desc:'黑凤梨起航 · 未来可期'},
-   {name:'YTG',icon:'拓',budget:1083,cap:163,coach:'co11',seed:420,players:['g2017_YTG_top','g2017_YTG_jg','g2017_YTG_mid','g2017_YTG_ad','g2017_YTG_sup'],desc:'草根之师 · 敢打敢拼'},
-   {name:'WF.D',icon:'海',budget:1033,cap:158,coach:'co12',seed:400,players:['g2017_WFD_top','g2017_WFD_jg','g2017_WFD_mid','g2017_WFD_ad','g2017_WFD_sup'],desc:'WeFun · 青春风暴'},
+   {name:'QGhappy',icon:'翼',budget:13998,cap:2178,coach:'co7',seed:640,players:['a17_fly','a17_alan','a17_cat17','a17_hurt','a17_yang'],desc:'卫冕王朝 · QG五虎全盛 · 大满贯之师'},
+   {name:'AG超玩会',icon:'焰',budget:13002,cap:2097,coach:'coe3',seed:600,players:['a17_vv','a17_meng','a17_laoshuai','a17_liusu','a17_lanxi'],desc:'三年三亚 · 梦泪老帅率领的信仰之师'},
+   {name:'eStarPro',icon:'★',budget:10998,cap:1953,coach:'co4',seed:560,players:['a17_dake','a17_nuoyan','a17_weizhuang','a17_xingchen','a17_tiger'],desc:'老牌豪门 · 诺言伪装领衔 · 秋季大引援'},
+   {name:'XQ',icon:'戒',budget:10500,cap:1917,coach:'co11',seed:555,players:['g2017_XQ_top','g2017_XQ_jg','a17_ata','g2017_XQ_ad','g2017_XQ_sup'],desc:'阿泰军团 · 国服第一中单 · 秋亚余威'},
+   {name:'AS仙阁',icon:'仙',budget:9000,cap:1773,coach:'coe2',seed:520,players:['a17_wuhen','a17_xiaoyu','a17_chengui','a17_togo','a17_yuqiu'],desc:'卫冕冠军 · 黑八奇迹班底'},
+   {name:'JC',icon:'竞',budget:8502,cap:1683,coach:'co8',seed:505,players:['g2017_JC_top','g2017_JC_jg','a17_qingfeng','g2017_JC_ad','g2017_JC_sup'],desc:'新锐劲旅 · 竞技之都'},
+   {name:'RNG.M',icon:'冠',budget:8802,cap:1728,coach:'co5',seed:500,players:['g2017_RNGM_top','g2017_RNGM_jg','g2017_RNGM_mid','g2017_RNGM_ad','a17_zero'],desc:'皇族新军 · 初生牛犊不怕虎'},
+   {name:'GK',icon:'山',budget:7998,cap:1620,coach:'co9',seed:480,players:['g2017_GK_top','g2017_GK_jg','g2017_GK_mid','g2017_GK_ad','g2017_GK_sup'],desc:'升班黑马 · 山城新锐'},
+   {name:'EDG.M',icon:'电',budget:7500,cap:1575,coach:'co10',seed:460,players:['g2017_EDGM_top','g2017_EDGM_jg','g2017_EDGM_mid','g2017_EDGM_ad','g2017_EDGM_sup'],desc:'超电新军 · 潜力股'},
+   {name:'BA黑凤梨',icon:'梨',budget:7800,cap:1593,coach:'co12',seed:440,players:['g2017_BA黑凤梨_top','g2017_BA黑凤梨_jg','g2017_BA黑凤梨_mid','g2017_BA黑凤梨_ad','g2017_BA黑凤梨_sup'],desc:'黑凤梨起航 · 未来可期'},
+   {name:'YTG',icon:'拓',budget:6498,cap:1467,coach:'co11',seed:420,players:['g2017_YTG_top','g2017_YTG_jg','g2017_YTG_mid','g2017_YTG_ad','g2017_YTG_sup'],desc:'草根之师 · 敢打敢拼'},
+   {name:'WF.D',icon:'海',budget:6198,cap:1422,coach:'co12',seed:400,players:['g2017_WFD_top','g2017_WFD_jg','g2017_WFD_mid','g2017_WFD_ad','g2017_WFD_sup'],desc:'WeFun · 青春风暴'},
   ],
  },
  '2019':{
@@ -1051,21 +1082,21 @@ const KPL_ERAS={
    '启明电竞':{p:[null,null,null,null,null],u:[]},
   },
   clubs:[
-   {name:'武汉eStarPro',icon:'★',budget:2333,cap:242,coach:'co4',seed:640,players:['a19_nuoyan','a19_huahai','a19_cat19','a19_weizhuang','a19_wuming'],desc:'大魔王元年 · cat指挥 · 春冠+世冠双冠'},
-   {name:'成都AG超玩会',icon:'焰',budget:2167,cap:233,coach:'co6',seed:620,players:['a19_ldl','a19_menglei','a19_laoshuai19','a19_yinuo','a19_aisi'],desc:'信仰回归 · 梦泪一诺老帅 · 主教练月光'},
-   {name:'重庆QGhappy',icon:'翼',budget:2083,cap:230,coach:'co2',seed:600,players:['a19_fly','g2019_重庆QGhappy_jg','g2019_重庆QGhappy_mid','a19_hurt','g2019_重庆QGhappy_sup'],desc:'四冠王朝 · Fly/Hurt 老而弥坚'},
-   {name:'上海RNG.M',icon:'冠',budget:1750,cap:208,coach:'co5',seed:580,players:['a19_bfr','g2019_上海RNGM_jg','g2019_上海RNGM_mid','a19_qcz','a19_zero19'],desc:'春赛亚军 · 虔诚领衔 · 皇族再冲'},
-   {name:'济南RW侠',icon:'剑',budget:1583,cap:200,coach:'co8',seed:560,players:['g2019_济南RW侠_top','g2019_济南RW侠_jg','g2019_济南RW侠_mid','g2019_济南RW侠_ad','g2019_济南RW侠_sup'],desc:'世冠亚军 · 老牌侠客重建'},
-   {name:'南京Hero久竞',icon:'影',budget:1667,cap:203,coach:'co3',seed:540,players:['a19_zuichu','a19_wuwei','a19_jiucheng','a19_qinian','a19_fanfan'],desc:'王朝原班 · 久诚狙神 · 久哲执教'},
-   {name:'DYG.JC',icon:'竞',budget:1500,cap:197,coach:'co9',seed:520,players:['a19_qq','g2019_DYGJC_jg','a19_qf19','g2019_DYGJC_ad','g2019_DYGJC_sup'],desc:'清清青枫 · 新贵崛起'},
-   {name:'TS',icon:'潮',budget:1417,cap:187,coach:'co10',seed:500,players:['g2019_TS_top','a19_ny','g2019_TS_mid','g2019_TS_ad','g2019_TS_sup'],desc:'暖阳野核 · 未来双冠的雏形'},
-   {name:'广州XQ',icon:'戒',budget:1333,cap:180,coach:'co11',seed:485,players:['g2019_广州XQ_top','g2019_广州XQ_jg','a19_jw','g2019_广州XQ_ad','g2019_广州XQ_sup'],desc:'九尾法刺 · 阿泰出走后重建'},
-   {name:'佛山GK',icon:'山',budget:1333,cap:180,coach:'co7',seed:480,players:['g2019_佛山GK_top','a19_pp','g2019_佛山GK_mid','g2019_佛山GK_ad','g2019_佛山GK_sup'],desc:'鹏鹏野核 · 山城劲旅'},
-   {name:'厦门VG',icon:'紫',budget:1167,cap:170,coach:'co9',seed:460,players:['g2019_厦门VG_top','g2019_厦门VG_jg','g2019_厦门VG_mid','g2019_厦门VG_ad','g2019_厦门VG_sup'],desc:'紫金军团 · 中游挑战者'},
-   {name:'ROX',icon:'星',budget:1200,cap:173,coach:'co5',seed:450,players:['g2019_ROX_top','g2019_ROX_jg','g2019_ROX_mid','g2019_ROX_ad','g2019_ROX_sup'],desc:'韩国外援军 · 联盟海外新势力'},
-   {name:'上海EDG.M',icon:'电',budget:1167,cap:170,coach:'co10',seed:440,players:['g2019_上海EDGM_top','g2019_上海EDGM_jg','g2019_上海EDGM_mid','g2019_上海EDGM_ad','g2019_上海EDGM_sup'],desc:'超电重建 · 等待翻身'},
-   {name:'西安WE',icon:'狼',budget:1083,cap:163,coach:'co6',seed:430,players:['g2019_西安WE_top','g2019_西安WE_jg','g2019_西安WE_mid','g2019_西安WE_ad','g2019_西安WE_sup'],desc:'蓝色风暴 · 草根逆袭'},
-   {name:'YTG',icon:'拓',budget:1000,cap:158,coach:'co11',seed:410,players:['g2019_YTG_top','g2019_YTG_jg','g2019_YTG_mid','g2019_YTG_ad','g2019_YTG_sup'],desc:'草根之师 · 最后的荣光'},
+   {name:'武汉eStarPro',icon:'★',budget:13998,cap:2178,coach:'co4',seed:640,players:['a19_nuoyan','a19_huahai','a19_cat19','a19_weizhuang','a19_wuming'],desc:'大魔王元年 · cat指挥 · 春冠+世冠双冠'},
+   {name:'成都AG超玩会',icon:'焰',budget:13002,cap:2097,coach:'co6',seed:620,players:['a19_ldl','a19_menglei','a19_laoshuai19','a19_yinuo','a19_aisi'],desc:'信仰回归 · 梦泪一诺老帅 · 主教练月光'},
+   {name:'重庆QGhappy',icon:'翼',budget:12498,cap:2070,coach:'co2',seed:600,players:['a19_fly','g2019_重庆QGhappy_jg','g2019_重庆QGhappy_mid','a19_hurt','g2019_重庆QGhappy_sup'],desc:'四冠王朝 · Fly/Hurt 老而弥坚'},
+   {name:'上海RNG.M',icon:'冠',budget:10500,cap:1872,coach:'co5',seed:580,players:['a19_bfr','g2019_上海RNGM_jg','g2019_上海RNGM_mid','a19_qcz','a19_zero19'],desc:'春赛亚军 · 虔诚领衔 · 皇族再冲'},
+   {name:'济南RW侠',icon:'剑',budget:9498,cap:1800,coach:'co8',seed:560,players:['g2019_济南RW侠_top','g2019_济南RW侠_jg','g2019_济南RW侠_mid','g2019_济南RW侠_ad','g2019_济南RW侠_sup'],desc:'世冠亚军 · 老牌侠客重建'},
+   {name:'南京Hero久竞',icon:'影',budget:10002,cap:1827,coach:'co3',seed:540,players:['a19_zuichu','a19_wuwei','a19_jiucheng','a19_qinian','a19_fanfan'],desc:'王朝原班 · 久诚狙神 · 久哲执教'},
+   {name:'DYG.JC',icon:'竞',budget:9000,cap:1773,coach:'co9',seed:520,players:['a19_qq','g2019_DYGJC_jg','a19_qf19','g2019_DYGJC_ad','g2019_DYGJC_sup'],desc:'清清青枫 · 新贵崛起'},
+   {name:'TS',icon:'潮',budget:8502,cap:1683,coach:'co10',seed:500,players:['g2019_TS_top','a19_ny','g2019_TS_mid','g2019_TS_ad','g2019_TS_sup'],desc:'暖阳野核 · 未来双冠的雏形'},
+   {name:'广州XQ',icon:'戒',budget:7998,cap:1620,coach:'co11',seed:485,players:['g2019_广州XQ_top','g2019_广州XQ_jg','a19_jw','g2019_广州XQ_ad','g2019_广州XQ_sup'],desc:'九尾法刺 · 阿泰出走后重建'},
+   {name:'佛山GK',icon:'山',budget:7998,cap:1620,coach:'co7',seed:480,players:['g2019_佛山GK_top','a19_pp','g2019_佛山GK_mid','g2019_佛山GK_ad','g2019_佛山GK_sup'],desc:'鹏鹏野核 · 山城劲旅'},
+   {name:'厦门VG',icon:'紫',budget:7002,cap:1530,coach:'co9',seed:460,players:['g2019_厦门VG_top','g2019_厦门VG_jg','g2019_厦门VG_mid','g2019_厦门VG_ad','g2019_厦门VG_sup'],desc:'紫金军团 · 中游挑战者'},
+   {name:'ROX',icon:'星',budget:7200,cap:1557,coach:'co5',seed:450,players:['g2019_ROX_top','g2019_ROX_jg','g2019_ROX_mid','g2019_ROX_ad','g2019_ROX_sup'],desc:'韩国外援军 · 联盟海外新势力'},
+   {name:'上海EDG.M',icon:'电',budget:7002,cap:1530,coach:'co10',seed:440,players:['g2019_上海EDGM_top','g2019_上海EDGM_jg','g2019_上海EDGM_mid','g2019_上海EDGM_ad','g2019_上海EDGM_sup'],desc:'超电重建 · 等待翻身'},
+   {name:'西安WE',icon:'狼',budget:6498,cap:1467,coach:'co6',seed:430,players:['g2019_西安WE_top','g2019_西安WE_jg','g2019_西安WE_mid','g2019_西安WE_ad','g2019_西安WE_sup'],desc:'蓝色风暴 · 草根逆袭'},
+   {name:'YTG',icon:'拓',budget:6000,cap:1422,coach:'co11',seed:410,players:['g2019_YTG_top','g2019_YTG_jg','g2019_YTG_mid','g2019_YTG_ad','g2019_YTG_sup'],desc:'草根之师 · 最后的荣光'},
   ],
  },
 };

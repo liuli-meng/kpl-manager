@@ -49,16 +49,16 @@ const out = vm.runInContext(`
     if(s.scenario!==id)fail(id+': scenario 未写入 ('+s.scenario+')');
     if(!scLogged)fail(id+': 事件日志未记录剧本名');
     if(id==='normal'){
-      if(fundActual!==1300)fail('normal: 资金应 1300，实际 '+fundActual);
-      if(cap!==150)fail('normal: 帽应 150，实际 '+cap);
+      if(fundActual!==ECON.budgetMid)fail('normal: 资金应 '+ECON.budgetMid+'，实际 '+fundActual);
+      if(cap!==ECON.wageCapDefault)fail('normal: 帽应 '+ECON.wageCapDefault+'，实际 '+cap);
     }
     if(id==='debt'){
-      if(fundActual!==330)fail('debt: 资金应 330，实际 '+fundActual);
-      if(cap!==120)fail('debt: 帽应 120，实际 '+cap);
+      if(fundActual!==2000)fail('debt: 资金应 2000，实际 '+fundActual);
+      if(cap!==1400)fail('debt: 帽应 1400，实际 '+cap);
     }
     if(id==='cap'){
-      if(cap!==90)fail('cap: 帽应 90，实际 '+cap);
-      if(fundActual!==1300)fail('cap: 资金应保持默认 1300，实际 '+fundActual);
+      if(cap!==1200)fail('cap: 帽应 1200，实际 '+cap);
+      if(fundActual!==ECON.budgetMid)fail('cap: 资金应保持默认 '+ECON.budgetMid+'，实际 '+fundActual);
     }
     if(id==='exodus'){
       if(s.players.length!==4)fail('exodus: 应 4 人，实际 '+s.players.length);
@@ -92,8 +92,8 @@ const out = vm.runInContext(`
   // ---- 与 KPL 硬规则交叉 ----
   info('===== 与 KPL 五条硬规则交叉 =====');
   // ① 转会费封顶 1500：五档都应遵守（封顶是联盟规则，不因剧本改变）
-  if(TRANSFER_CAP!==1500)fail('TRANSFER_CAP 不是 1500');
-  else ok('① 转会费 1500 封顶：五档共用，剧本不改（TRANSFER_CAP 全局）');
+  if(TRANSFER_CAP!==ECON.transferCap)fail('TRANSFER_CAP 不是 ECON.transferCap');
+  else ok('① 转会费 1.2 亿封顶：五档共用，剧本不改（TRANSFER_CAP 全局）');
 
   // ② 大名单 ≤10：exodus 开局 4 人，转会期可补；满员后仍应拦截
   _scenario='exodus';document.querySelector('#new-team-name').value='x';createTeam();
@@ -125,7 +125,7 @@ const out = vm.runInContext(`
   }
 
   // ④ 顶薪 70：五档不改顶薪
-  if(PLAYER_WAGE_MAX!==70)fail('PLAYER_WAGE_MAX 不是 70');
+  if(PLAYER_WAGE_MAX!==ECON.playerWageMax)fail('PLAYER_WAGE_MAX 不是 ECON.playerWageMax');
   else ok('④ 顶薪 70：五档共用，剧本不改工资上限');
 
   // ⑤ 奖金 70/30：五档不改分成
@@ -151,7 +151,7 @@ const out = vm.runInContext(`
     const sB=newState('原版豪门','AG');fillRoster(sB,'star','star');
     sB.fund=5000;sB.wageCap=200; // 假豪门
     applyScenario(sB);
-    if(sB.fund!==330||sB.wageCap!==120)fail('applyScenario 未覆盖豪门预算: fund='+sB.fund+' cap='+sB.wageCap);
+    if(sB.fund!==2000||sB.wageCap!==1400)fail('applyScenario 未覆盖豪门预算: fund='+sB.fund+' cap='+sB.wageCap);
     else warn('执教原版也会被难剧本覆盖预算（debt 将 5000/200 → 330/120）——若 UI 未提示，玩家可能误以为是 bug');
   }catch(e){fail('执教原版交叉异常: '+e.message);}
 

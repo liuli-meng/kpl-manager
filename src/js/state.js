@@ -76,7 +76,7 @@ const SAVE_DEFAULTS=[
  ['_poError',null,'季后赛推进异常原因（诊断用：非空说明 ensureLeagueChampion 走过 catch）'],
  ['_migErr',null,'读档期完整性异常（迁移步骤失败 / 比赛索引重建失败；非空说明这个档需要人工看一眼）'],
  ['socialUsed',false,'选手社交已用'],
- ['wageCap',150,'工资帽（缺失按现役刻度）'],
+ ['wageCap',0,'工资帽占位（真实默认由 migrateEconV2 / 开档模板给出）'],
  // —— 基础状态字段补齐（2026-09-17）：newState 一直有这些字段，但没登记进默认表，
  //    于是「导入残缺档 / 手工构造的档」缺字段时不会被兜底 —— 例如 logEvent 直接
  //    s.eventLog.unshift(...)（season.js:54），缺 eventLog 就抛错。全部登记后由
@@ -123,7 +123,7 @@ function applySaveDefaults(s){
  //   本顺序：缺失 cap → 150 → ×10 → ÷6 = 250（偏宽松，现役区间 150~250 的顶格）；
  //   移到迁移后：合法迁移出的 30 会被抬成 150（把迁移结果改掉）。
  // 结论是有意保持现状。真要动这条，先想清楚「缺失 cap」和「合法的小 cap」如何区分。
- if(!s.wageCap||s.wageCap<50)s.wageCap=150;
+ if(!s.wageCap)s.wageCap=0; // 缺失留给 migrateEconV2 定单位；此处只挡 undefined
  if(s.streak)s.streak=0;
  if(s.mode==='player'&&!s.career)s.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
  if(s.mode==='player'&&s.career){
@@ -278,10 +278,10 @@ function initTabGuard(){
 
 function newState(teamName,icon){
  return {
- teamName,icon,crest:null,v:SAVE_VERSION,season:1,day:1,fund:1300,sponsorLv:0,moneyScaled:true,econReal:true,
+ teamName,icon,crest:null,v:SAVE_VERSION,season:1,day:1,fund:ECON.budgetMid,sponsorLv:0,moneyScaled:true,econReal:true,econV2:true,
  reserveSlots:2,reserveUsed:0, // 自留签：每季 2 个（晋升青训消耗）
  honors:[], // 历史荣誉（多赛季）
- stage:'regular',phase:'r1',matchIdx:0,wageCap:150,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
+ stage:'regular',phase:'r1',matchIdx:0,wageCap:ECON.wageCapDefault,streak:0,transferWindow:0,preseason:false, // 工资帽/连胜手感/转会窗/赛前转会期
  players:[],lineup:[],market:[],
  schedule:[],groups:{},tables:{},aiPower:{},card:null,playoff:null,eliminated:[],
  eventLog:[],trained:false,marketRefreshed:false,academyTrained:false,champion:false,
@@ -552,6 +552,8 @@ function registerChampCore(s,title){
  s.champCore={ids,titles:((prev&&prev.titles)||0)+1,label:title||'',names:ls.map(p=>p.name)};
  try{logEvent(s,' 冠军班底成型！'+(s.champCore.names||[]).join('、')+'——此后同场 ≥3 人触发羁绊加成'+(s.champCore.titles>=2?'（连冠加成已升级）':''));}catch(e){}
 }
+/* 全队基本工资合计（年薪，万/年）。历史函数名 weeklyWage 保留以免大改调用点，
+ v2 起语义为年薪——发薪日再 /ECON.payWeeks 扣周结。 */
 function weeklyWage(s){
  // 租借选手租金已一次性支付，工资由原俱乐部承担，不计入本队周薪
  // NaN 守卫：旧档/异常写入可能让 wage 变成 undefined/NaN，连加会污染整个周薪显示与发薪
@@ -568,7 +570,7 @@ function scrubWages(s){
   if(!p)return;
   const w=p.wage;
   if(typeof w!=='number'||!isFinite(w)||w<0){
-   try{p.wage=Math.max(2,Math.min(PLAYER_WAGE_MAX,Math.round(wageOf(overall(p))*(p.val||100)/100)));}
+   try{p.wage=Math.max(ECON.playerWageMin,Math.min(ECON.playerWageMax,Math.round(wageOf(overall(p),p.age,p.popularity)*(p.val||100)/100)));}
    catch(e){p.wage=2;}
   }
  };
@@ -885,6 +887,7 @@ function migrateSave(){
  try{if(typeof scrubWages==='function')scrubWages(S);}catch(e){}
  migrateMoneyScale(S);
  migrateEconReal(S);
+ migrateEconV2(S);
  migrateCoachRating(S);
  migrateSeasonShape(S);
  migratePlayerFields(S);
@@ -937,7 +940,38 @@ function migrateEconReal(s){
  (s.listed||[]).forEach(x=>x.price=div(x.price));
  (s.bids||[]).forEach(x=>x.bid=div(x.bid));
  s.econReal=true;
- try{logEvent(s,' 联盟硬规则落地：转会费封顶 1500 万 · 大名单 ≤10 人 · 个人顶薪 70 万/周 · 奖金 70% 归选手（全联盟货币同步缩放）');}catch(e){}
+ try{logEvent(s,' 联盟硬规则：转会封顶见年份表 · 大名单 ≤10 人 · 奖金 70% 归选手');}catch(e){}
+}
+/* v1 刻度（econReal 周薪/旧预算）→ v2 年薪刻度：一次迁移，生成侧已全是 v2。
+ 做法：资金/身价 ×6 或按曲线重估工资，禁止再叠一层 ×13 口径。 */
+function migrateEconV2(s){
+ if(!s||s.econV2)return;
+ // 已有 econReal 的档：fund/wageCap/费税还是 v1 刻度
+ const x6=v=>(typeof v==='number'&&isFinite(v))?Math.max(0,Math.round(v*6)):v;
+ const x8=v=>(typeof v==='number'&&isFinite(v))?Math.max(0,Math.round(v*8)):v;
+ s.fund=x6(s.fund);
+ // 工资帽：v1 周薪帽 50~300 → ×8 成年薪帽；已是年薪（≥500）或缺失 → 按默认
+ {
+ const raw=s.wageCap;
+ if(typeof raw==='number'&&raw>0&&raw<500)s.wageCap=clamp(x8(raw),ECON.wageCapMin,ECON.wageCapMax);
+ else s.wageCap=clamp(raw||ECON.wageCapDefault,ECON.wageCapMin,ECON.wageCapMax);
+ }
+ const scaleMoney=arr=>{if(Array.isArray(arr))arr.forEach(o=>{if(o&&typeof o==='object'){
+ o.cost=x8(o.cost);o.income=x8(o.income);o.acqCost=x8(o.acqCost);o.signCost=x8(o.signCost);
+ }});};
+ scaleMoney(s.coachMarket);scaleMoney(s.retiredCoaches);scaleMoney(s.assistants);
+ scaleMoney(s.market);scaleMoney(s.freeAgents);scaleMoney(s.transferList);scaleMoney(s.hosts);
+ if(s.coach){s.coach.cost=x8(s.coach.cost);if(typeof s.coach.wage==='number')s.coach.wage=x8(s.coach.wage);}
+ (s.listed||[]).forEach(x=>x.price=x8(x.price));
+ (s.bids||[]).forEach(x=>x.bid=x8(x.bid));
+ // 工资按总值/年龄/人气重估为年薪（比线性 ×N 稳），再夹紧
+ const fixWage=p=>{if(!p)return;try{
+ p.wage=Math.round(wageOf(overall(p),p.age,p.popularity)*((p.val||100)/100));
+ p.wage=clamp(p.wage,ECON.playerWageMin,ECON.playerWageMax);
+ }catch(e){p.wage=ECON.playerWageMin;}};
+ [s.players,s.market,s.transferList,s.freeAgents,s.academy].forEach(l=>(l||[]).forEach(fixWage));
+ s.econV2=true;
+ try{logEvent(s,' 经济刻度 v2：年薪制 + 豪门预算 1.5 亿级 · 转会封顶 1.2 亿 · 顶薪 400 万/年（旧档已一次性换算）');}catch(e){}
 }
 function migrateCoachRating(s){
  const R2RATE={SSR:90,SR:80,R:70};

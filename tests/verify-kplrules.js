@@ -1,5 +1,5 @@
 // KPL 五条硬规则专属回归（2026-09 真实经济对齐）
-// ① 转会费封顶 1500  ② 大名单 ≤10  ③ 转会期卖出 ≤ 半数  ④ 个人顶薪 70/周  ⑤ 奖金 70/30 分成
+// ① 转会费封顶 ECON.transferCap  ② 大名单 ≤10  ③ 转会期卖出 ≤ 半数  ④ 个人顶薪 70/周  ⑤ 奖金 70/30 分成
 // 运行：node tests/verify-kplrules.js
 const vm = require('vm');
 const { makeDom } = require('./harness');
@@ -17,27 +17,27 @@ const out = vm.runInContext(`
   const starDef=()=>({id:'p_star_'+Math.random().toString(36).slice(2,7),name:'顶星',pos:'mid',team:'测试豪门',
    tags:[],base:[99,99,99,99],skill:{n:'顶星',t:'team',d:'x'},sig:'貂蝉',career:''});
 
-  // ① 转会费封顶 1500：买断 / 强挖 / 挂牌 / AI 报价全链路
+  // ① 转会费封顶 ECON.transferCap：买断 / 强挖 / 挂牌 / AI 报价全链路
   const s1=mkS();S=s1;
   const star=genPlayer(starDef());star.val=150;star.willingness=10; // 意愿极低 → wilMult 2.2 拉满
   const bo=buyoutPrice(star),ut=untouchablePrice(star);
   s1.players.push(star);s1.lineup=s1.lineup.filter(id=>id!==star.id); // 非首发才能挂牌
   listPlayer(s1,star.id);
   const listed=(s1.listed||[]).find(x=>x.id===star.id);
-  // 强制 AI 高价报价路径：price*(0.85+0.35)=1.2x，封顶前理论值远超 1500
+  // 强制 AI 高价报价路径：price*(0.85+0.35)=1.2x，封顶前理论值远超 ECON.transferCap
   s1.bids=[];
-  if(listed){s1.bids=[{id:star.id,team:'测试豪门',bid:Math.min(1500,Math.round(listed.price*1.2))}];}
+  if(listed){s1.bids=[{id:star.id,team:'测试豪门',bid:Math.min(ECON.transferCap,Math.round(listed.price*1.2))}];}
   // sellAskPrice（出售谈判要价）
   const ask=sellAskPrice(star);
   const bad=[];
-  if(!(bo>0&&bo<=1500))bad.push('买断='+bo);
-  if(!(ut>0&&ut<=1500))bad.push('强挖='+ut);
-  if(!(ask>0&&ask<=1500))bad.push('要价='+ask);
-  if(listed&&!(listed.price>0&&listed.price<=1500))bad.push('挂牌='+listed.price);
-  if(s1.bids.length&&s1.bids[0].bid>1500)bad.push('AI报价='+s1.bids[0].bid);
-  if(TRANSFER_CAP!==1500)bad.push('常量='+TRANSFER_CAP);
+  if(!(bo>0&&bo<=ECON.transferCap))bad.push('买断='+bo);
+  if(!(ut>0&&ut<=ECON.transferCap))bad.push('强挖='+ut);
+  if(!(ask>0&&ask<=ECON.transferCap))bad.push('要价='+ask);
+  if(listed&&!(listed.price>0&&listed.price<=ECON.transferCap))bad.push('挂牌='+listed.price);
+  if(s1.bids.length&&s1.bids[0].bid>ECON.transferCap)bad.push('AI报价='+s1.bids[0].bid);
+  if(TRANSFER_CAP!==ECON.transferCap)bad.push('常量='+TRANSFER_CAP);
   if(bad.length)fail('① 转会费封顶被突破: '+bad.join(', '));
-  else log('① 转会费 1500 封顶：买断 '+bo+' · 强挖 '+ut+' · 要价 '+ask+' · 挂牌 '+(listed?listed.price:'—')+' · AI报价 '+(s1.bids[0]?s1.bids[0].bid:'—'));
+  else log('① 转会费 ECON.transferCap 封顶：买断 '+bo+' · 强挖 '+ut+' · 要价 '+ask+' · 挂牌 '+(listed?listed.price:'—')+' · AI报价 '+(s1.bids[0]?s1.bids[0].bid:'—'));
 
   // ② 大名单 ≤10：买断签约 / 谈判入口 / 青训晋升 三处守卫
   const s2=mkS(10);S=s2;
@@ -109,11 +109,11 @@ const out = vm.runInContext(`
   // confirm 桩默认 true
   const bought4=buyPlayer(s4,buyP);
   const buyW=bought4?buyP.wage:null;
-  if(PLAYER_WAGE_MAX!==70)fail('④ 顶薪常量不是 70: '+PLAYER_WAGE_MAX);
-  else if(demand>70)fail('谈判要价突破顶薪: '+demand);
-  else if(renewW>70)fail('续约突破顶薪: '+renewW);
-  else if(keepW>70)fail('留人涨薪突破顶薪: '+keepW);
-  else if(bought4&&buyW>70)fail('买入突破顶薪: '+buyW);
+  if(PLAYER_WAGE_MAX!==ECON.playerWageMax)fail('④ 顶薪常量不是 ECON.playerWageMax: '+PLAYER_WAGE_MAX);
+  else if(demand>ECON.playerWageMax)fail('谈判要价突破顶薪: '+demand);
+  else if(renewW>ECON.playerWageMax)fail('续约突破顶薪: '+renewW);
+  else if(keepW>ECON.playerWageMax)fail('留人涨薪突破顶薪: '+keepW);
+  else if(bought4&&buyW>ECON.playerWageMax)fail('买入突破顶薪: '+buyW);
   else log('④ 顶薪 70：要价 '+demand+' · 续约 '+renewW+' · 留人 '+keepW+' · 买入 '+(buyW==null?'—':buyW)+'（全部≤70）');
 
   // ⑤ 奖金 70/30 分成：基金只进 30%，选手士气+3/意愿+2

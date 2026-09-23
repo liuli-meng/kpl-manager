@@ -30,7 +30,7 @@ function renderMarket(){
  coachHtml+=`<div class="sponsor" style="border-color:var(--gold)">
  <span class="s-icon">教</span>
  <div><div class="s-name">${c.name} <span class="gold">(现任主教练)</span></div>
- <div class="s-desc">${c.rating||80}评分 · ${COACH_STYLE[c.style]||'—'}型 · ${(c.skill&&c.skill.n)||'—'}：${(c.skill&&c.skill.d)||'—'} · 周薪 ${c.wage||0}万</div></div>
+ <div class="s-desc">${c.rating||80}评分 · ${COACH_STYLE[c.style]||'—'}型 · ${(c.skill&&c.skill.n)||'—'}：${(c.skill&&c.skill.d)||'—'} · 年薪 ${c.wage||0}万</div></div>
  <button class="btn sm danger" onclick="fireCoach(S)">解雇</button>
  </div>`;
  }else{
@@ -41,7 +41,7 @@ function renderMarket(){
  coachHtml+=`<div style="margin:12px 0 6px;font-weight:800;font-size:12px">助教席 <span class="tag">${asCnt}/2 · 与主教练叠加</span></div>`;
  coachHtml+=asCnt?`<div class="g2">${S.assistants.map(a=>`
  <div class="sponsor"><span class="s-icon">助</span>
- <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]||'—'}型 · ${(a.skill&&a.skill.d)||'—'} · 周薪 ${a.wage||0}万</div></div>
+ <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]||'—'}型 · ${(a.skill&&a.skill.d)||'—'} · 年薪 ${a.wage||0}万</div></div>
  <button class="btn sm danger" onclick="fireAssistant(S,'${a.id}')">解约</button>
  </div>`).join('')}</div>`
  :`<div class="hint" style="margin-bottom:8px">未聘助教——每名助教提供小额全队加成，与主教练叠加（买替补工资帽之外的第二处长期开销）</div>`;
@@ -52,7 +52,7 @@ function renderMarket(){
  <div class="p-name" style="font-weight:800">${a.name}</div>
  <div class="p-rarity" style="color:${oc};letter-spacing:0">${a.rating}评分 · ${COACH_STYLE[a.style]||'—'}型</div>
  <div class="p-skill"> ${(a.skill&&a.skill.d)||'—'}</div>
- <div class="p-foot"><span>签约费 <b>${a.cost}万</b></span><span>周薪 <b>${a.wage}万</b></span></div>
+ <div class="p-foot"><span>签约费 <b>${a.cost}万</b></span><span>年薪 <b>${a.wage}万</b></span></div>
  <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
  </div>`;
  }).join('')}</div>`;
@@ -68,7 +68,7 @@ function renderMarket(){
  <span>全队战力 <i style="color:var(--gold)">+${c.bonus||0}%</i></span>
  <span>${COACH_STYLE[c.style]||'—'}属性 <i style="color:var(--gold)">+${c.styleBonus||0}%</i></span>
  </div>
- <div class="p-foot"><span>签约费 <b>${c.cost}万</b></span><span>周薪 <b>${c.wage}万</b></span></div>
+ <div class="p-foot"><span>签约费 <b>${c.cost}万</b></span><span>年薪 <b>${c.wage}万</b></span></div>
  <button class="btn sm primary" onclick="signCoach(S,S.coachMarket.find(x=>x.id==='${c.id}'))">${S.coach&&S.coach.id===c.id?'现任':'签约执教'}</button>
  </div>`;
  }).join('')}</div>`;
@@ -81,7 +81,7 @@ function renderMarket(){
  // 合同续约面板：到期选手必须处理（谈判/放走），最后一年可提前谈（防合同年自由身）
  const renewRow=(p,tag)=>`<div class="match" style="margin-bottom:6px;padding:8px 10px;${p.contract<=0?'border-color:rgba(217,164,65,.45)':''}">
  <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${(POS[p.pos]||['?','?'])[0]} · 总值${overall(p)} · ${p.age||'?'}岁)</span></span>
- <div class="power" style="font-size:10px">${tag} · 周薪 ${p.wage}万 · 心理价位 ≈${renewAskWage(p,2)}万</div></div>
+ <div class="power" style="font-size:10px">${tag} · 年薪 ${p.wage}万 · 心理价位 ≈${renewAskWage(p,2)}万</div></div>
  <div style="display:flex;gap:4px">
  <button class="btn sm gold" style="margin:0" onclick="openRenewNego(S,'${p.id}')">续约谈判</button>
  ${p.contract<=0?`<button class="btn sm danger" style="margin:0" onclick="releasePlayer(S,'${p.id}')">不续约</button>`:''}
@@ -92,8 +92,8 @@ function renderMarket(){
  return renewRow(p,'合同到期');
  }).join('');
  const earlyRows=(S.players||[]).filter(p=>!p.loan&&(p.contract===1)&&!(S.expiring||[]).includes(p.id)).map(p=>renewRow(p,'最后一年')).join('');
- const renewPanel=(expRows||earlyRows)?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3>合同续约 <span class="tag">年限 1-4 年可谈 · 报价定周薪</span></h3>
- <div class="hint" style="margin-bottom:8px">续约 = 谈判：选年限 + 出周薪报价，经纪人按心理价位博弈（长约溢价 / 老将抬价 / 三轮谈崩伤士气），签字费按年限递增。到期不处理将自动续约 1 年；「最后一年」可提前谈，拖到合同年有自由身离队风险。</div>
+ const renewPanel=(expRows||earlyRows)?`<div class="panel ${foldCls('mrenew')}" data-fold="mrenew"><h3>合同续约 <span class="tag">年限 1-4 年可谈 · 报价定年薪</span></h3>
+ <div class="hint" style="margin-bottom:8px">续约 = 谈判：选年限 + 出年薪报价，经纪人按心理价位博弈（长约溢价 / 老将抬价 / 三轮谈崩伤士气），签字费按年限递增。到期不处理将自动续约 1 年；「最后一年」可提前谈，拖到合同年有自由身离队风险。</div>
  ${expRows}${earlyRows}</div>`:'';
  const allBuy=applySortPref('buy',S.transferList);
  const rows=truncSlice('mtransfer',allBuy).map(p=>{
@@ -124,7 +124,7 @@ function renderMarket(){
  </div>`;
  }).join('');
  transferHtml=renewPanel+`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3>转会市场 <span class="tag">转会窗剩余 ${S.transferWindow} 天 · 31岁+退役</span></h3>
- <div class="hint" style="margin-bottom:8px">多轮谈判：报价需同时打动俱乐部（转会费）和选手（周薪）；非卖品溢价强挖有失败风险；生涯暮年选手（29岁+）买来即巅峰末期</div>
+ <div class="hint" style="margin-bottom:8px">多轮谈判：报价需同时打动俱乐部（转会费）和选手（年薪）；非卖品溢价强挖有失败风险；生涯暮年选手（29岁+）买来即巅峰末期</div>
  ${sortChips('buy')}
  <div style="max-height:340px;overflow-y:auto">${rows||'<div class="hint">转会市场暂无选手</div>'}${truncMoreHtml('mtransfer',allBuy.length)}</div>
  <div class="hint" style="margin:10px 0 6px">我的挂牌（AI 队会来报价，转会窗关闭未成交自动撤牌）：</div>

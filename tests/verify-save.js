@@ -33,7 +33,7 @@ const out = vm.runInContext(`
   renderAll=function(){};save=function(){};
   const wrap={kplSave:true,v:SAVE_VERSION,exported:'2026-09-05',team:'文件队',season:3,data:{teamName:'文件队',players:[{id:'x'}],fund:999,season:3,moneyScaled:true,econReal:true}};
   applyImport(wrap,'测试文件');
-  if(S.teamName!=='文件队'||S.fund!==999||S.v!==SAVE_VERSION)fail('④包装格式导入异常: '+S.teamName+'/'+S.fund);
+  if(S.teamName!=='文件队'||S.fund!==5994||S.v!==SAVE_VERSION)fail('④包装格式导入异常: '+S.teamName+'/'+S.fund+'（旧档 fund 999 经 v2×6=5994）');
   else log('④包装格式导入 OK（自动解包 data）');
 
   // ⑤ 比当前游戏新的存档：拒绝导入且不污染当前状态

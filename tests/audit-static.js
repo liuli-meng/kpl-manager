@@ -103,7 +103,7 @@ const out = vm_run(dom, `
      ⚠ 白名单三个是「缺省即未迁移」的语义字段，登记了会让迁移链整条跳过（applySaveDefaults
      跑在 migrateMoneyScale/migrateEconReal 之前）：v / moneyScaled / econReal。
      fund / wageCap 另有 migrateFixZeroZero 与现役刻度兜底，登记会互相打架，也不在表内。 */
-  const SAVE_DEFAULT_EXEMPT=['v','moneyScaled','econReal','fund','wageCap'];
+  const SAVE_DEFAULT_EXEMPT=['v','moneyScaled','econReal','econV2','fund','wageCap'];
   (function(){
     const st=newState('字段登记门禁','测');
     const reg=new Set(SAVE_DEFAULTS.map(d=>d[0]));
@@ -116,10 +116,10 @@ const out = vm_run(dom, `
      单看「有没有赋值」的断言抓不到，必须锁数值区间 + 资金帽比。 */
   const econBadOf=c=>{
     const bad=[];
-    if(!(c.cap>=150&&c.cap<=300))bad.push('工资帽'+c.cap);
-    if(!(c.budget>=800&&c.budget<=2700))bad.push('资金'+c.budget);
+    if(!(c.cap>=ECON.wageCapMin&&c.cap<=ECON.wageCapMax))bad.push('工资帽'+c.cap);
+    if(!(c.budget>=2500&&c.budget<=16000))bad.push('资金'+c.budget);
     const r=c.cap?c.budget/c.cap:0;
-    if(r<4.5||r>12)bad.push('资金帽比'+r.toFixed(1));
+    if(r<1.8||r>8)bad.push('资金帽比'+r.toFixed(1));
     return bad;
   };
   const heroNames={},dupHero=[];

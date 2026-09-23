@@ -19,7 +19,7 @@ function run(days, act) {
     fillRoster(s,'mid');
     const f0=s.fund,t0=(s.board||{}).trust;
     for(let d=0;d<${days};d++){
-      if(${act ? 'true' : 'false'}){s.trained=true;s.fund-=13;}
+      if(${act ? 'true' : 'false'}){s.trained=true;s.fund-=20;}
       s._quietSave=true;
       nextDay(s);
     }
@@ -51,7 +51,7 @@ ACTIVE.forEach((r, i) => {
 
 // ④ idleMul 档位（赞助商曝光义务折扣）
 const MUL = vm.runInContext('[0,2,3,5,6,11,12,30].map(d=>idleMul({idleDays:d}))', dom);
-const WANT = [1, 1, 0.97, 0.97, 0.91, 0.91, 0.82, 0.82];
+const WANT = [1, 1, 0.55, 0.55, 0.35, 0.35, 0.15, 0.15];
 check(JSON.stringify(MUL) === JSON.stringify(WANT), `④idleMul 档位漂移：${MUL.join('/')} ≠ ${WANT.join('/')}`);
 
 // ⑤ 签到补贴门禁：随机数钉死（不抽事件）+ 避开周结日，两次运行的资金差必须正好是 80 万
@@ -62,7 +62,7 @@ const SIGN = vm.runInContext(`(function(){
     s.day=(Math.floor(20/7)*7); // 对齐到周结日的前一天，下一次 nextDay 正好跨周结，两组同样跨
     return s;};
   const a=mk(),b=mk();
-  a.trained=true;a.fund-=13;      // 履约组：当天练过
+  a.trained=true;a.fund-=20;      // 履约组：当天练过
   const a0=a.fund,b0=b.fund;
   nextDay(a);nextDay(b);
   globalThis.Math=_Math;

@@ -40,17 +40,17 @@ const out = vm.runInContext(`
   // 不用随机 star 档断言身价下限（总值可掉到 378 造成 flaky）；曲线与封顶用固定 OVR 断言
   const star=genPlayer(genFreeAgentDef('top','star',new Set()));
   if(valueOf(90)<400)fail('OVR90 曲线应≥400万: '+valueOf(90));
-  if(valueOf(99)!==670)fail('OVR99 曲线应 670: '+valueOf(99));
+  if(valueOf(99)!==6500)fail('OVR99 曲线应 6500: '+valueOf(99));
   const hot=Math.round(buyoutPrice({...star,willingness:60,attrs:{lane:99,farm:99,team:99,mind:99}}));
   if(hot>TRANSFER_CAP)fail('火热顶星买断超过联盟封顶 1500: '+hot);
   const unt=Math.round(untouchablePrice({...star,willingness:5,attrs:{lane:99,farm:99,team:99,mind:99}}));
   if(unt>TRANSFER_CAP)fail('非卖品强挖价超过联盟封顶 1500: '+unt);
-  if(initFund!==1300||initCap!==150)fail('新档资金/工资帽未对齐真实经济: fund='+initFund+' cap='+initCap);
-  log('③真实经济：随机star≈'+valueOf(overall(star))+'万 · OVR90='+valueOf(90)+'万 · OVR99=670万 · 火热买断='+hot+'万 · 非卖品强挖='+unt+'（均≤1500 封顶） · 初始资金 1300万/帽 150万');
+  if(initFund!==ECON.budgetMid||initCap!==ECON.wageCapDefault)fail('新档资金/工资帽未对齐真实经济: fund='+initFund+' cap='+initCap);
+  log('③真实经济：随机star≈'+valueOf(overall(star))+'万 · OVR90='+valueOf(90)+'万 · OVR99=6500万 · 火热买断='+hot+'万 · 非卖品强挖='+unt+'（均≤1.2亿封顶） · 初始资金 8000万/帽 2000万');
   // ④ 旧档货币迁移（两段链：×10 千万级 → ÷6 真实对齐）
   const old={teamName:'旧档',icon:'x',fund:800,wageCap:90,players:[{id:'p1',name:'a',wage:10,acqCost:200,pos:'mid',attrs:{lane:70,farm:70,team:70,mind:70}}],market:[],lineup:[],coachMarket:[],retiredCoaches:[],assistants:[],hosts:[],freeAgents:[],transferList:[],listed:[{id:'p1',price:200}],bids:[{id:'p1',bid:180}]};
   S=old;migrateSave();
-  if(S.fund!==1333||S.wageCap!==150||S.players[0].wage!==17||S.listed[0].price!==333)fail('旧档两段迁移结果异常: '+JSON.stringify({fund:S.fund,wageCap:S.wageCap,wage:S.players[0].wage,price:S.listed[0].price}));
+  if(S.fund!==7998||S.wageCap!==ECON.wageCapMin||S.listed[0].price!==2664)fail('旧档全链迁移结果异常: '+JSON.stringify({fund:S.fund,wageCap:S.wageCap,wage:S.players[0].wage,price:S.listed[0].price}));
   log('④旧档迁移两段链：fund 800→8000→1333 · 帽 90→900→150 · 周薪 10→100→17 · 挂牌价 200→2000→333');
   // ⑤ BO9 决赛巅峰对决判定（4:4 → 第 9 局盲选；此前写死 3:3 只适配 BO7）
   S=newState('测试队','⚔️');

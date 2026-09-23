@@ -50,7 +50,7 @@ function buyPlayer(s,p){
  p.wage=Math.min(p.wage,PLAYER_WAGE_MAX); // 个人顶薪封顶
  if(weeklyWage(s)+p.wage>s.wageCap){
  const {over,tax}=overCapTax(s,p.wage);
- if(!confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return false;
+ if(!confirm(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return false;
  }
  s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
  if(p.contract==null)p.contract=2; // 签约即给合同年限

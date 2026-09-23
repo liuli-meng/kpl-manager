@@ -30,7 +30,7 @@ const fanMul=(s,div)=>1+fanEff(s)/div; // 粉丝加成
    就等于没履约——商业流水按档位打折。抽成纯函数，verify-idle 直接钉这条曲线。 */
 function idleMul(s){
  const d=(s&&s.idleDays)||0;
- return d>=12?0.82:d>=6?0.91:d>=3?0.97:1;
+ return d>=12?0.15:d>=6?0.35:d>=3?0.55:1;
 }
 /* 每日商业流水：赞助单价（粉丝加成）+ 门票/周边（同样走封顶）。抽成纯函数便于精确断言 */
 function dailyCommercialIncome(s){

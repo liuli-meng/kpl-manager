@@ -12,7 +12,7 @@ const out = vm.runInContext(`
  // ① 缺工资帽回落 150（不是旧 90）
  S={teamName:'缺帽',players:[{id:'p1',wage:20}],fund:100,moneyScaled:true,econReal:true};
  migrateSave();
- if(S.wageCap!==150)fail('缺工资帽应补 150，实为 '+S.wageCap);
+ if(S.wageCap!==ECON.wageCapDefault)fail('缺工资帽应补 ECON.wageCapDefault，实为 '+S.wageCap);
  else log('① 缺工资帽回落 150（现役经济刻度）');
 
  // ② mid 阵容开局帽内（不含教练；star 档+顶帅可能压线 151>150，属随机而非规则错误）
@@ -43,7 +43,7 @@ const out = vm.runInContext(`
  const c1=S.wageCap;
  newSeason(S);
  const g2=S.wageCap-c1;
- if(g1!==6||g2!==3)fail('帽成长异常: 正常+'+g1+' 王朝+'+g2+'（应 6/3）');
+ if(g1!==80||g2!==40)fail('帽成长异常: 正常+'+g1+' 王朝+'+g2+'（应 80/40）');
  else log('④ 帽成长：正常 +'+g1+' · 王朝 +'+g2+'（减半）');
 
  if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; '));

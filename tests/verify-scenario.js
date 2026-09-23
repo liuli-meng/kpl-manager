@@ -27,11 +27,11 @@ const out = vm.runInContext(`
   else log('② 常规开档：资金 '+s.fund+' / 工资帽 '+s.wageCap+'（与默认一致）');
 
   s=mk();pick('debt').apply(s);
-  if(s.fund!==330||s.wageCap!==120)fail('财政危机效果错误: fund='+s.fund+' cap='+s.wageCap);
+  if(s.fund!==2000||s.wageCap!==1400)fail('财政危机效果错误: fund='+s.fund+' cap='+s.wageCap);
   else log('② 财政危机：资金 1300→'+s.fund+' · 工资帽 150→'+s.wageCap);
 
   s=mk();pick('cap').apply(s);
-  if(s.wageCap!==90)fail('工资帽紧缩效果错误: '+s.wageCap);
+  if(s.wageCap!==1200)fail('工资帽紧缩效果错误: '+s.wageCap);
   else log('② 工资帽紧缩：工资帽 150→'+s.wageCap);
 
   s=mk();const before=s.players.length;pick('exodus').apply(s);
@@ -54,7 +54,7 @@ const out = vm.runInContext(`
   // ③ createTeam 真开局链路：剧本经 _scenario 生效，且开局三步能识别空缺
   document.querySelector('#new-team-name').value='剧本队';
   _scenario='debt';createTeam();
-  if(S.scenario!=='debt'||S.fund!==330||S.wageCap!==120)fail('createTeam 未应用剧本: '+S.scenario+'/'+S.fund+'/'+S.wageCap);
+  if(S.scenario!=='debt'||S.fund!==2000||S.wageCap!==1400)fail('createTeam 未应用剧本: '+S.scenario+'/'+S.fund+'/'+S.wageCap);
   else log('③ 自建开局（财政危机）：scenario='+S.scenario+' 资金 '+S.fund+' 工资帽 '+S.wageCap);
   _scenario='exodus';createTeam();
   const h2=POS_ORDER.filter(pos=>!S.players.some(p=>p.pos===pos));

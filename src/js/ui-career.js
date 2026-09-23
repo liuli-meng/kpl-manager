@@ -38,7 +38,7 @@ function renderCareer(){
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
  ${avatar(me,64)}
  <div><div style="font-size:20px;font-weight:800">${me.name} <span class="tag">${POS[me.pos][0]} · ${me.age}岁 · ${ageStage(me)}</span>${starter?' <span class="tag" style="border-color:var(--green);color:var(--green)">首发</span>':' <span class="tag" style="border-color:var(--gold);color:var(--gold)">替补</span>'}</div>
- <div class="dim" style="font-size:12px">${crest(S.icon,S.teamName,18)} ${S.teamName} · 合同 ${me.contract>0?me.contract+' 年':'到期'} · 周薪 ${me.wage}万 · 总值 <b style="color:${ovrColor(overall(me))}">${overall(me)}</b> · 身价系数 ${me.val||100}%${me.injury>0?' · <span class="red">伤停 '+me.injury+' 天</span>':''}</div></div>
+ <div class="dim" style="font-size:12px">${crest(S.icon,S.teamName,18)} ${S.teamName} · 合同 ${me.contract>0?me.contract+' 年':'到期'} · 年薪 ${me.wage}万 · 总值 <b style="color:${ovrColor(overall(me))}">${overall(me)}</b> · 身价系数 ${me.val||100}%${me.injury>0?' · <span class="red">伤停 '+me.injury+' 天</span>':''}</div></div>
  <div style="margin-left:auto;text-align:right"><div class="gold" style="font-size:16px;font-weight:800">${c.titles||0} 冠 · ${c.fmvp||0} FMVP · ${c.allstar||0} 一阵</div><div class="dim" style="font-size:11px">生涯荣誉</div></div>
  </div></div>`;
  // 成长 + 每日行动（伤停/集训/外租/K甲不可加练；休息仍可回体力并加速养伤）

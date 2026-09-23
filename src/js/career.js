@@ -65,7 +65,7 @@ function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地�
  s.lineup=buildBestLineup(s); // 统一可出场过滤排满首发
  s.pick={};
  s.seedPower=teamPower(s)||300;
- logEvent(s,' 转会完成：'+me.name+' 正式加盟 '+tmpl.name+'（转会费 '+mv.fee+'万 · 周薪 '+me.wage+'万）——首发位置要重新证明');
+ logEvent(s,' 转会完成：'+me.name+' 正式加盟 '+tmpl.name+'（转会费 '+mv.fee+'万 · 年薪 '+me.wage+'万）——首发位置要重新证明');
 }
 /* 选手板凳计数：健康可出场却连续坐板凳 → 可申请租借/K甲练级（生涯页出路面板） */
 function tickPlayerBench(s){
@@ -440,7 +440,7 @@ function buildYearReview(s){
  return review;
 }
 
-/* 名宿教练定价（评分/加成 → 周薪与签约费）：三处创建"名宿/回流旧帅"的对象都走这里。
+/* 名宿教练定价（评分/加成 → 年薪与签约费）：三处创建"名宿/回流旧帅"的对象都走这里。
    漏一个字段的后果不是显示难看，而是 signRetired/hireAssistant 里 `s.fund-=r.cost` 把资金
    算成 NaN、`weeklyWage` 丢一个工资项——转会页那一行 "undefined万" 只是最先露出来的表象。 */
 function legendPrice(rating,bonus){
@@ -533,7 +533,7 @@ function signFreeAgent(s,id){
  if(s.fund<(p.signCost||0)){toast('资金不足（签约费 '+(p.signCost||0)+'万）');return;}
  if(weeklyWage(s)+(p.wage||0)>s.wageCap){
  const {over,tax}=overCapTax(s,p.wage||0);
- if(!confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+(p.wage||0))+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？'))return;
+ if(!confirm(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+(p.wage||0))+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return;
  }
  s.fund-=(p.signCost||0);
  p.acqCost=p.signCost; // 买入价锚定（转售保护用）

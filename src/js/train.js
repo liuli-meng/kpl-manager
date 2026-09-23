@@ -21,7 +21,7 @@ function doTrain(s,pid,attr){
  // 状态 + 个人天花板：不再保证上涨（后期不能靠刷训练无敌）
  const role=(s.mode==='player'&&typeof playerRole==='function')?playerRole(s):'rot';
  const r=(typeof trainOutcome==='function')?trainOutcome(role,p,attr):{gain:rnd(0,1),note:'训练'};
- s.fund-=13;p.energy=clamp((p.energy==null||!isFinite(p.energy)?100:p.energy)-10,0,ENERGY_MAX);s.trained=true;
+ s.fund-=20;p.energy=clamp((p.energy==null||!isFinite(p.energy)?100:p.energy)-10,0,ENERGY_MAX);s.trained=true;
  p.attrs[attr]=clamp(p.attrs[attr]+r.gain,40,99);
  p.morale=clamp(p.morale-2,20,100);
  if(r.gain>0)logEvent(s,` 训练完成：${p.name} 的「${TRAIN_ITEMS.find(t=>t.k===attr).n}」提升 ${r.gain} 点（${r.note||'状态'}）`);

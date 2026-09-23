@@ -551,6 +551,7 @@ function nextDay(s){
  if(typeof clubRelTick==='function')clubRelTick(s); // 战队关系事件（媒体/股东/赞助/更衣室）
  s.fund+=dailyCommercialIncome(s); // 赞助商每日结算 + 门票/周边（两者都随粉丝上浮）
  if(s.hosts&&s.hosts.length)s.fund+=s.hosts.reduce((t,h)=>t+(isFinite(h&&h.income)?h.income:0),0); // 主播收入防 NaN 污染基金
+ if((s.idleDays||0)>=3)s.fund=Math.max(0,s.fund-8); // 怠政固定开销（场地/编制空转），压住纯挂机净收益
  if(s.transferWindow>0){
  s.transferWindow--;
  aiBidTick(s); // AI 队对挂牌选手报价
@@ -590,7 +591,7 @@ function nextDay(s){
  if(s.day%3===0&&s.idleDays===0){s.fund+=80;toast('赞助补贴到账 +80万（当日有经营动作）');}
  // 随机事件：连续怠政满一周就不再抽"好事"——赞助商追加、粉丝应援、青训惊喜这些正期望事件
  // 需要一个还在运转的俱乐部做基本盘；顺带把纯挂机的收益方差压下来（门禁才能钉得住）
- if(Math.random()<0.65&&s.players.length&&s.idleDays<2){
+ if(Math.random()<0.65&&s.players.length&&s.idleDays===0){
  const ev=pick(EVENTS);
  const tp=pick(rosterAll(s)); // 公告文案与效果作用同一名选手
  const txt=ev.desc.replace('{p}',()=>tp.name);
@@ -614,20 +615,20 @@ function nextDay(s){
 }
 function payWage(s){
  try{scrubWages(s);}catch(e){}
- const wage=weeklyWage(s);
- // 选手代言收入：人气 × ENDORSE_PER_POP 万/周 × 粉丝系数（商业价值对冲工资帽压力）
- // 注意：×3 是旧千万级刻度残留——在现役「万」单位下会把基金刷爆（5 人人气 40 → 周入 600 万，远超周薪）
+ const annual=weeklyWage(s); // 年薪合计
+ const wage=Math.max(0,Math.round(annual/ECON.payWeeks)); // 周结 = 年薪/52
+ // 选手代言收入：人气 × ENDORSE_PER_POP 万 × 粉丝系数（商业价值对冲工资帽压力）
  const endorse=Math.round((s.players||[]).reduce((t,p)=>t+((p.popularity||0)*ENDORSE_PER_POP),0)*fanMul(s,300));
  s.fund-=wage;
  s.fund+=endorse;
  let tax=0;
- if(wage>s.wageCap){
- // KPL 工资帽：超帽部分缴纳 60% 奢侈税
- tax=Math.round((wage-s.wageCap)*0.6);
+ if(annual>s.wageCap){
+ // KPL 工资帽（年薪帽）：超帽部分缴纳 60% 奢侈税，按周摊
+ tax=Math.round((annual-s.wageCap)*0.6/ECON.payWeeks);
  s.fund-=tax;
- logEvent(s,' 周薪 '+wage+'万（工资帽 '+s.wageCap+'万，超帽缴纳奢侈税 '+tax+'万）');
+ logEvent(s,' 发薪：年薪 '+annual+'万（本周 '+wage+'万）· 超帽 '+ (annual-s.wageCap) +'万，本周奢侈税 '+tax+'万（帽 '+s.wageCap+'万）');
  }else{
- logEvent(s,' 发放周薪 '+wage+'万（工资帽内 '+s.wageCap+'万）');
+ logEvent(s,' 发放周结 '+wage+'万（年薪 '+annual+'万 / 帽 '+s.wageCap+'万）');
  }
  if(endorse>0)logEvent(s,' 选手代言收入 '+endorse+'万（人气变现）');
  if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0; // 防 NaN 写入存档（JSON 会变 null）
@@ -729,7 +730,7 @@ function newSeason(s){
  if(me.contract<=0&&!s.career.pendingMove){ // 选手模式无转会期：俱乐部自动续约（薪资随身价上浮）
  me.contract=1;
  const nw=Math.max(me.wage,Math.round(me.wage*1.1)+1);
- if(nw>me.wage){me.wage=nw;logEvent(s,' 俱乐部与你续约 1 年：周薪涨至 '+me.wage+'万');}
+ if(nw>me.wage){me.wage=nw;logEvent(s,' 俱乐部与你续约 1 年：年薪涨至 '+me.wage+'万');}
  }
  if(me.age>=(AGE_MODEL[me.pos]||AGE_MODEL.mid).retire&&!s.career.retired){
  s.career.retired=true;
@@ -747,7 +748,7 @@ function newSeason(s){
  if(p.val>=120){ // 巅峰表现 → 续约涨薪（工资帽压力随成绩增长）
  if(typeof p.wage!=='number'||!isFinite(p.wage)||p.wage<0){try{p.wage=Math.max(2,Math.round(wageOf(overall(p))));}catch(e){p.wage=2;}}
  const nw=Math.min(Math.round(p.wage*1.15)+1,Math.round(wageOf(overall(p))*1.5));
- if(isFinite(nw)&&nw>p.wage){p.wage=nw;logEvent(s,' 赛季结算：'+p.name+' 续约涨薪至 '+nw+'万/周');}
+ if(isFinite(nw)&&nw>p.wage){p.wage=nw;logEvent(s,' 赛季结算：'+p.name+' 续约涨薪至 '+nw+'万');}
  }
  });
  // 青训新秀同步长一岁：满 18 岁才有晋升一线队资格（KPL 注册规则）；每年自然成长（潜力越高长得越快）
@@ -778,8 +779,8 @@ function newSeason(s){
  });
  // 王朝反制②：连冠队伍工资帽成长减半（保住豪华阵容越来越难）
  const st=dynastyStreak(s,s.teamName);
- const capGrow=st>=2?3:6; // 正常 +6；王朝 +3（约一半）
- s.wageCap=(s.wageCap||150)+capGrow;
+ const capGrow=st>=2?40:80; // 年薪帽：正常 +80；王朝 +40（约一半）
+ s.wageCap=clamp((s.wageCap||ECON.wageCapDefault)+capGrow,ECON.wageCapMin,ECON.wageCapMax);
  // 王朝反制③：版本针对——力度随连冠次数加码
  if(st>=2){
  logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+capGrow+'万，正常 +6）');
@@ -814,7 +815,7 @@ function newSeason(s){
  s.aiRosters={};
  }
  s.fund+=220; // 联盟赛季启动金（年度轮换只发一次）
- logEvent(s,' 联盟调整工资帽：本周薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
+ logEvent(s,' 联盟调整工资帽：本年薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
  s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过

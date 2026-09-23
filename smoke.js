@@ -367,7 +367,7 @@ const r10 = vm.runInContext(`
   newSeason(S);
   const hasPatch=(S.eventLog||[]).some(e=>e.txt&&e.txt.indexOf('版本针对')>=0);
   const hasAnnounce=(S.eventLog||[]).some(e=>e.txt&&e.txt.indexOf('版本公告')>=0);
-  out.push('帽冻结='+(S.wageCap===cap0+3?'OK(+'+(S.wageCap-cap0)+'万·连冠减半)':'异常!实际+'+(S.wageCap-cap0))+' 版本针对='+(hasPatch?'OK':(hasAnnounce?'OK(仅版本公告)':'异常!')));
+  out.push('帽冻结='+(S.wageCap===cap0+40?'OK(+'+(S.wageCap-cap0)+'万·连冠减半)':'异常!实际+'+(S.wageCap-cap0))+' 版本针对='+(hasPatch?'OK':(hasAnnounce?'OK(仅版本公告)':'异常!')));
   out.push('新赛季连冠判定='+dynastyStreak(S,'王朝检测')+'（应3）');
   return out.join(' || ');
 })()

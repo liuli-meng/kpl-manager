@@ -31,7 +31,7 @@ function pcard(p,extra){
  const pst=playerStatus(p,S); // 旗标统一走状态出口（pcard 内多处判断共用）
  const appsHtml=(p.apps||pst.transferRequest||pst.kjia||pst.loanOut)?`<div class="p-hero" style="color:var(--dim)">出场 ${p.apps||0} 次${pst.transferRequest?' <span style="color:var(--red)">· 已要求离队</span>':''}${pst.kjia?` <span style="color:var(--cyan)">· K甲锻炼剩 ${pst.kjiaDays} 天${kjStat}</span>`:''}${pst.loanOut?` <span style="color:var(--cyan)">· 租借 ${pst.loanOutTeam} 剩 ${pst.loanOutDays} 天</span>`:''}</div>`:'';
  const capTag=S.captain===p.id?`<span class="p-tag" style="border-color:var(--gold);color:var(--gold)">队长</span>`:'';
- const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*ENDORSE_PER_POP)}万/周 · 人气 ${p.popularity}</div>`:'';
+ const endorseHtml=(p.popularity||0)>0?`<div class="p-hero" style="color:var(--gold)">代言 ${Math.round((p.popularity||0)*ENDORSE_PER_POP)}万 · 人气 ${p.popularity}</div>`:'';
  const disc=p.discount?`<span class="p-disc">特惠${Math.round(p.discount*10)}折</span>`:'';
  return `<div class="pcard ${ovrCls(o)}" data-pos="${p.pos}">
  ${hpCls}
@@ -47,7 +47,7 @@ function pcard(p,extra){
  <span>对线<i>${p.attrs.lane}</i></span><span>运营<i>${p.attrs.farm}</i></span>
  <span>团战<i>${p.attrs.team}</i></span><span>心态<i>${p.attrs.mind}</i></span>
  </div>
- <div class="p-foot"><span>战力 <b>${pow}</b></span><span>身价 <b class="${(p.val||100)>=110?'green':(p.val||100)<90?'red':''}">${sellAskPrice(p)}万</b></span><span>周薪 <b class="p-salary">${p.wage}万</b></span></div>
+ <div class="p-foot"><span>战力 <b>${pow}</b></span><span>身价 <b class="${(p.val||100)>=110?'green':(p.val||100)<90?'red':''}">${sellAskPrice(p)}万</b></span><span>年薪 <b class="p-salary">${p.wage}万</b></span></div>
  ${energyBar(p)}
  <button class="btn sm" style="margin-top:6px" onclick="showCareer(findPlayerCard('${p.id}'))">选手档案</button>
  ${extra||''}
@@ -214,7 +214,7 @@ function renderHeader(){
  <div class="stat k-money"><b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
  <div class="stat k-power"><b data-num="power">${fmt(hdPower)}</b><small>总战力</small></div>
  <div class="stat k-day"><b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
- <div class="stat k-wage ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>周薪/帽</small></div>
+ <div class="stat k-wage ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>年薪/帽</small></div>
  ${S.streak>=3?`<div class="stat gold"><b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red"><b>${-S.streak}连败</b><small>低迷</small></div>`:''}
  <div class="stat k-sponsor"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
  ${S.coach?`<div class="stat gold"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
@@ -649,7 +649,7 @@ function clubFooterPanels(){
  const p=S.players.find(x=>x.id===o.pid);
  let meta='';
  if(p){
- try{meta=`${(POS[p.pos]||['?','?'])[1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 周薪 ${p.wage||0}万`;}
+ try{meta=`${(POS[p.pos]||['?','?'])[1]} · 总值 ${overall(p)} · 表现 ${p.val||100}% · 年薪 ${p.wage||0}万`;}
  catch(_){meta=`${p.name} · 数据不完整`;}
  }
  const final=o.status==='final';
@@ -671,7 +671,7 @@ function clubFooterPanels(){
  <div class="g2">
  <div class="pcard" style="border-color:var(--line)">
  <div style="font-weight:800;margin-bottom:6px">训练</div>
- <div class="hint" style="margin-bottom:10px">选择一名选手专项训练（13万/次，体力-10，属性+1~2）</div>
+ <div class="hint" style="margin-bottom:10px">选择一名选手专项训练（20万/次，体力-10，属性+1~2）</div>
  <button class="btn sm primary" onclick="goPage('train')" ${S.trained?'disabled':''}>前往训练</button>
  </div>
  <div class="pcard" style="border-color:var(--line)">
@@ -689,7 +689,7 @@ function clubFooterPanels(){
  html+=`<div class="panel"><h3>主教练 <span class="tag">${c.rating||80}评分 · ${COACH_STYLE[c.style]||c.style||'—'}型</span></h3>
  <div class="sponsor"><span class="s-icon">教</span>
  <div><div class="s-name">${c.name} <span class="gold">(全队战力+${c.bonus||0}%)</span></div>
- <div class="s-desc"> ${sk.n||'—'}：${sk.d||'—'} · 周薪 ${c.wage||0}万 · ${S.mode==='coach'?'俱乐部自动运作':'转会页可换帅'}</div></div></div></div>`;
+ <div class="s-desc"> ${sk.n||'—'}：${sk.d||'—'} · 年薪 ${c.wage||0}万 · ${S.mode==='coach'?'俱乐部自动运作':'转会页可换帅'}</div></div></div></div>`;
  }
  {
  const cats=[{k:'all',n:'全部'}].concat(LOG_CATS.map(c=>({k:c.k,n:c.n}))).concat([{k:'other',n:'其他动态'}]);
@@ -754,9 +754,9 @@ function renderBiz(){
  const over=ww>cap;
  const pct=Math.min(100,Math.round(ww/cap*100));
  html+=`<div class="panel"><h3>工资帽 <span class="tag">KPL 联盟制度</span></h3>
- <div class="pbar" style="margin-bottom:6px"><span>周薪 ${ww}万</span><div class="progress"><i style="width:${pct}%;background:${over?'var(--red)':'var(--green)'}"></i></div><span>帽 ${cap}万</span></div>
+ <div class="pbar" style="margin-bottom:6px"><span>年薪 ${ww}万</span><div class="progress"><i style="width:${pct}%;background:${over?'var(--red)':'var(--green)'}"></i></div><span>帽 ${cap}万</span></div>
  ${over?`<div class="hint" style="color:var(--red)">超工资帽 ${ww-cap}万！发薪日将缴纳 60% 奢侈税（${Math.round((ww-cap)*0.6)}万）——KPL 限制薪酬无限扩张</div>`
- :`<div class="hint">KPL 工资帽制度：周薪总额上限 ${cap}万，超帽部分发薪日缴纳 60% 奢侈税；联盟每赛季调整帽额</div>`}
+ :`<div class="hint">KPL 工资帽制度：年薪总额上限 ${cap}万，超帽部分发薪日缴纳 60% 奢侈税；联盟每赛季调整帽额</div>`}
  </div>`;
  }
  // 荣誉室（多赛季历史）
@@ -870,7 +870,7 @@ function renderTrain(){
  const ready=total>=300,adult=r.age>=MATCH_MIN_AGE;
  return `<div class="pcard" style="border-color:${ready&&adult?'var(--green)':'var(--line)'}">
  <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos" data-pos="${r.pos}">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
- <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 周薪${r.wage}万</div>
+ <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 年薪${r.wage}万</div>
  <div class="attr" style="margin-top:6px">
  <span>对线<i>${r.attrs.lane}</i></span><span>运营<i>${r.attrs.farm}</i></span>
  <span>团战<i>${r.attrs.team}</i></span><span>心态<i>${r.attrs.mind}</i></span>
@@ -884,7 +884,7 @@ function renderTrain(){
  </div>`;
  }).join('');
  html+=`<div class="panel"><h3>青训营 <span class="tag">低薪高潜 · 自留签 ${rMax-rLeft}/${rMax}</span></h3>
- <div class="hint" style="margin-bottom:10px">招募新秀（50万）→ 每日培养（${ROOKIE_TRAIN_COST}万）→ 四维≥300 后用<b>自留签</b>晋升（每季 ${rMax} 个，用完本季不能再提）。未自留的苗子可在选秀大会被别队点走。周薪仅 2-4万，工资帽友好。</div>
+ <div class="hint" style="margin-bottom:10px">招募新秀（50万）→ 每日培养（${ROOKIE_TRAIN_COST}万）→ 四维≥300 后用<b>自留签</b>晋升（每季 ${rMax} 个，用完本季不能再提）。未自留的苗子可在选秀大会被别队点走。年薪仅 2-4万，工资帽友好。</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
  <button class="btn gold sm" onclick="recruitRookie(S)"> 招募新秀（50万）</button>
  <button class="btn sm primary" onclick="trainAllRookies(S)" ${S.academyTrained||!acaPending?'disabled':''}>一键培养${acaPending?'（'+acaPending+' 人 · '+(acaPending*ROOKIE_TRAIN_COST)+'万）':'（已达标）'}</button>
