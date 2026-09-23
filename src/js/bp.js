@@ -324,8 +324,18 @@ function myOpenPositions(d){
 function bestHeroFor(d,pos,avail){
  const p=(d.ls||[]).find(x=>x.pos===pos);
  if(!p||!avail.length)return null;
- let best=avail[0].n,bp=-1;
- avail.forEach(h=>{const pw=playerPower(p,h.n)+(heroOf(h.n)&&heroOf(h.n).hot?1.5:0);if(pw>bp){bp=pw;best=h.n;}});
+ const s=(typeof S!=='undefined')?S:null;
+ const opts={
+  focusType:tacticFocusType(s),
+  sigW:1.0,
+  enemyPicks:Object.values(d.oppPicks||{}),
+  behind:(d.sr&&d.sr.ow||0)>(d.sr&&d.sr.mw||0),
+ };
+ let best=avail[0].n,bs=-1;
+ avail.forEach(h=>{
+  const v=pickUtility(d,p,h.n,Object.assign({counterW:1.2},opts));
+  if(v>bs){bs=v;best=h.n;}
+ });
  return best;
 }
 /* 威胁值：某英雄对某方阵容的威胁 = 该方能玩此英雄的选手最高战力
@@ -343,14 +353,75 @@ function threatOf(d,h,side){
  });
  return bp;
 }
-/* 我方 BAN 推荐：对方已用的英雄本局选不了，BAN 它=浪费（结算只按池外 -0.5% 计），排到最后 */
-function banScore(d,h){
- const oppUsed=(d.usedOpp||[]).includes(h);
- return (threatOf(d,h,'opp')||0)+((heroOf(h).hot&&!oppUsed)?2:0)+(oppUsed?-1:0);
+/* ================= Utility AI：BP 选人/禁用评分 =================
+ 借鉴 Utility AI（big-brain）：每个候选给多维效用分，取最高；难度用噪声幅度控制，而不是改公式。
+ 英雄倾向 t ∈ lane/farm/team/mind，与战术克制环一致：team▶farm▶mind▶lane▶team */
+function heroTypeOf(h){
+ const d=heroOf(h);
+ return (d&&d.t)||'team';
+}
+function typeBeats(a,b){
+ return (a==='team'&&b==='farm')||(a==='farm'&&b==='mind')
+  ||(a==='mind'&&b==='lane')||(a==='lane'&&b==='team');
+}
+/* 我方战术侧重类型（balanced 均权，无额外加分） */
+function tacticFocusType(s){
+ const id=(s&&s.tactic)||'balanced';
+ if(id==='balanced')return null;
+ return id; // farm/team/lane/mind 与英雄 t 同一套枚举
+}
+/* BAN 效用：威胁 + 版本 + 盯防招牌 + 克制我战术 + 摇摆位 + 对方池深度稀缺
+ threatSide='opp'：我方禁对面强点；'me'：对面禁我强点 */
+function banScore(d,h,opts){
+ opts=opts||{};
+ const threatSide=opts.threatSide||'opp';
+ const denyUsed=threatSide==='opp'?(d.usedOpp||[]).includes(h):(d.used||[]).includes(h);
+ const hd=heroOf(h)||{};
+ const th=threatOf(d,h,threatSide)||0;
+ let score=th;
+ if(hd.hot&&!denyUsed)score+=2;
+ if(denyUsed)score-=1; // 该侧本系列赛已用：本局选不了，BAN=浪费
+ if(opts.watchSig&&opts.sigSet&&opts.sigSet.has(h))score+=opts.watchSig||0;
+ if(opts.focusType&&typeBeats(heroTypeOf(h),opts.focusType))score+=1.5;
+ if((hd.pos||[]).length>1)score+=0.8;
+ if(opts.scarcity&&opts.scarcity[h]!=null)score+=opts.scarcity[h];
+ return score;
+}
+/* 选人效用：熟练战力 + 版本 + 招牌 + 与战术同向 + 克制对面已选 + 抢对面想要的 + 摇摆 */
+function pickUtility(d,p,h,opts){
+ opts=opts||{};
+ const hd=heroOf(h)||{};
+ const myT=heroTypeOf(h);
+ let score=playerPower(p,h);
+ if(hd.hot)score+=1.2;
+ if(h.n===p.sig)score+=opts.sigW||0;
+ const focus=opts.focusType;
+ if(focus&&myT===focus)score+=1.4;
+ if(focus&&typeBeats(myT,focus))score-=0.4; // 被我战术克制的英雄略降（对内不协调）
+ // 克制对面已选英雄类型
+ let counterHits=0;
+ (opts.enemyPicks||[]).forEach(eh=>{
+  const et=heroTypeOf(eh);
+  if(typeBeats(myT,et))counterHits++;
+  if(typeBeats(et,myT))score-=0.6; // 对面已选克制我
+ });
+ score+=counterHits*(opts.counterW||1.2);
+ // 抢走对面还想要的高威胁英雄（deny）
+ if(opts.enemyThreat&&opts.enemyThreat[h]!=null)score+=Math.min(2.5,opts.enemyThreat[h]/25);
+ // 摇摆：多位置英雄后续可换线
+ if((hd.pos||[]).length>1)score+=0.5;
+ if(opts.behind&&hd.hot)score+=(opts.behindBoost||0)*0.5;
+ return score;
 }
 function bestBanFor(d){
+ const s=(typeof S!=='undefined')?S:null;
+ const focusType=tacticFocusType(s);
+ const mySig=new Set((d.ls||[]).map(p=>p&&p.sig).filter(Boolean));
  let best=null,bs=-1;
- banCandidates(d).forEach(h=>{const v=banScore(d,h);if(v>bs){bs=v;best=h;}});
+ banCandidates(d).forEach(h=>{
+  const v=banScore(d,h,{threatSide:'opp',focusType,sigSet:mySig,watchSig:1.2});
+  if(v>bs){bs=v;best=h;}
+ });
  return best;
 }
 /* ---------- AI 逐手决策（统一走 aiBrain 难度系数） ---------- */
@@ -365,19 +436,27 @@ function aiDraftStep(d){
  const noise=Math.max(0.25,1.9-1.2*brain); // 高难度=低噪声=决策更稳
  const behindBoost=behind?Math.max(0,2.8*(brain-0.5)):0;
  const sigW=Math.max(0.4,2.6*(brain-0.45)); // 盯防招牌：低难度几乎不盯
+ const mySig=new Set((d.ls||[]).map(p=>p&&p.sig).filter(Boolean));
+ // 对手侧重：看我方战术反着组，或按其已选英雄类型投票
+ const myFocus=tacticFocusType(s);
+ const oppFocus=myFocus?(Object.keys({team:0,farm:0,lane:0,mind:0}).find(t=>typeBeats(t,myFocus))||null):null;
  if(st.type==='ban'){
+  // 对方 BAN：盯我招牌 + 克制我战术 + 摇摆位；对方已用英雄不 BAN
   const avail=banCandidates(d).filter(h=>!((d.usedOpp||[]).includes(h)));
-  const mySig=new Set((d.ls||[]).map(p=>p&&p.sig).filter(Boolean));
   let best=null,bs=-1;
   avail.forEach(h=>{
-   const th=threatOf(d,h,'me')||0;
-   let score=th+(heroOf(h).hot?2:0)+Math.random()*noise+behindBoost*(th>0?1:0);
-   if(mySig.has(h))score+=sigW;
+   let score=banScore(d,h,{threatSide:'me',focusType:myFocus,sigSet:mySig,watchSig:sigW});
+   score+=Math.random()*noise;
+   if(behind&&(threatOf(d,h,'me')||0)>0)score+=behindBoost;
    if(score>bs){bs=score;best=h;}
   });
   if(best)d.oppBans.push(best);
   return;
  }
+ // 对方选人：Utility = 熟练战力 + 版本/招牌 + 克制我方已选 + 抢我想要的
+ const enemyPicks=Object.values(d.myPicks||{});
+ const enemyThreat={};
+ banCandidates(d).forEach(h=>{const th=threatOf(d,h,'me');if(th!=null)enemyThreat[h]=th;});
  let bestPos=null,bestHero=null,bs=-1;
  POS_ORDER.forEach(pos=>{
   if(pos in d.oppPicks)return;
@@ -387,9 +466,15 @@ function aiDraftStep(d){
   let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
   if(!cand.length)cand=HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0}));
   cand.forEach(h=>{
-   const pw=playerPower(p,h.n);
-   let score=pw+(heroOf(h.n).hot?1.2:0)+(h.n===p.sig?Math.max(0.4,1.6*(brain-0.4)):0)+Math.random()*noise;
-   if(behind&&heroOf(h.n)&&heroOf(h.n).hot)score+=behindBoost*0.5;
+   const score=pickUtility(d,p,h.n,{
+    focusType:oppFocus,
+    sigW:Math.max(0.4,1.6*(brain-0.4)),
+    enemyPicks,
+    enemyThreat,
+    counterW:0.8+1.2*(brain-0.5),
+    behind,
+    behindBoost,
+   })+Math.random()*noise;
    if(score>bs){bs=score;bestPos=pos;bestHero=h.n;}
   });
  });

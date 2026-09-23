@@ -387,39 +387,46 @@ function aiTransferWindow(s){
  });
  // ③.5 赛训成长：补最弱属性（先练短板，再决定要不要买人）
  order.forEach(tn=>aiDevelopStarters(s,tn,map,ovrOf));
- // ④ 明星流转：按档位规划 1~2 个升级位——优先顶替「过黄金期」或明显短板，
- // 来源：自由池最强同位。不是碰运气换一个就完。
+ // ④ 明星流转（Utility 评分）：战力增益 + 老化紧迫 + 年轻红利 + 档位侵略性，过门槛才换人
  const ageOf=def=>{
  const p=genSeasonPlayer(s,def);
  const m=AGE_MODEL[p.pos]||AGE_MODEL.mid;
- return {age:p.age,pastGold:p.age>m.gold};
+ return {age:p.age,pastGold:p.age>m.gold,gold:m.gold,retire:m.retire};
+ };
+ const upgradeScore=(outDef,inDef,tier)=>{
+ const gain=ovrOf(inDef)-ovrOf(outDef);
+ const aOut=ageOf(outDef),aIn=ageOf(inDef);
+ const aggressive=tier==='elite'?1.35:tier==='weak'?0.75:1;
+ const minGain=tier==='elite'?1:tier==='weak'?5:3;
+ if(gain<minGain)return null;
+ let score=gain*aggressive;
+ if(aOut.pastGold)score+=4+(aOut.age-aOut.gold)*0.4;
+ if(aIn.age<=aIn.gold-2)score+=2.5;
+ if(aIn.age>=aIn.retire-1)score-=3;
+ if(ovrOf(inDef)>=88)score+=2;
+ return score;
  };
  order.forEach(tn=>{
  const tier=aiTierOf(s,tn);
  const slots=tier==='elite'?2:1;
- const needGain=tier==='elite'?4:3;
  for(let slot=0;slot<slots;slot++){
  if(map[tn].length<5||!freePool.length)break;
  let best=null;
  map[tn].forEach(pid=>{
  const def=defOf(s,pid);
  if(!def)return;
- const cur=ovrOf(def);
- const ag=ageOf(def);
- const floor=ag.pastGold?Math.max(1,needGain-2):needGain;
  freePool.forEach(d=>{
  if(d.pos!==def.pos)return;
- const gain=ovrOf(d)-cur;
- if(gain<floor)return;
- const score=gain+(ag.pastGold?3:0);
- if(!best||score>best.score)best={score,gain,pid,def,out:def};
+ const sc=upgradeScore(def,d,tier);
+ if(sc==null)return;
+ if(!best||sc>best.score)best={score:sc,pid,def,out:def,in:d,gain:ovrOf(d)-ovrOf(def)};
  });
  });
- if(!best)break;
- freePool=freePool.filter(d=>d!==best.def);
- map[tn]=map[tn].map(id=>id===best.pid?best.def.id:id);
+ if(!best||best.score<6)break;
+ freePool=freePool.filter(d=>d!==best.in);
+ map[tn]=map[tn].map(id=>id===best.pid?best.in.id:id);
  freePool.push(best.out);
- logEvent(s,' 转会：'+best.def.name+' 加盟 '+tn+'，'+best.out.name+' 离队寻找下家'+(ageOf(best.out).pastGold?'（老化顶替）':''));
+ logEvent(s,' 转会：'+best.in.name+' 加盟 '+tn+'（效用 '+Math.round(best.score)+' · 战力+'+best.gain+'），'+best.out.name+' 离队寻找下家'+(ageOf(best.out).pastGold?'（老化顶替）':''));
  }
  });
  // ④.5 豪门跨队挖角：自由池不够时从中游/弱旅抢更好的同位（联赛才有流动）

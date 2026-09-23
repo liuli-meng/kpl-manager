@@ -225,7 +225,8 @@ function simSeriesResult(s,a,b,bo){
  const aEff=powerOf(s,a)*(1+dynastyStreak(s,b)*0.02); // 王朝反制①：对方连冠 → 我方研究加成
  const bEff=powerOf(s,b)*(1+dynastyStreak(s,a)*0.02);
  for(let i=1;i<=bo&&mw<need&&ow<need;i++){
- const w=Math.random()<winChance(aEff,bEff);
+ // 与玩家局同一事件引擎（对线/资源/大团），AI 对 AI 也保持叙事与分差手感一致
+ const w=(typeof singleGame==='function')?singleGame(aEff,bEff).w:(Math.random()<winChance(aEff,bEff));
  if(w)mw++;else ow++;
  }
  return {win:mw>ow,mw,ow};
