@@ -1368,6 +1368,18 @@ function b64e(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEac
 function b64d(s){const bin=atob(s);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder().decode(bytes);}
 let S=null; // 全局状态
 
+function blobDLBlocked(){
+ try{
+  if(typeof navigator==='undefined'||!navigator.userAgent)return false;
+  const ua=navigator.userAgent;
+  if(/MicroMessenger|MQQBrowser|QQBrowser|QQ\/|WeChat|Douyin|Bytedance|Weibo|AlipayClient|DingTalk|baiduboxapp|UCBrowser|Quark/i.test(ua))return true;
+  const iOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(!iOS)return false;
+
+  return !/Version\/[\d.]+ [^)]*Safari\//.test(ua);
+ }catch(_){return false;}
+}
+
 function requireSave(what){
  if(!S||!S.players||!S.players.length){
  try{toast('尚未开局，'+(what||'该操作')+'不可用');}catch(_){}
@@ -8200,6 +8212,35 @@ function _shareWrap(fn){
  document.body.appendChild(a);a.click();document.body.removeChild(a);
  };
 
+ const showInline=url=>{
+ const mb=$('#app-modal-body');
+ if(!mb){toast('分享图已生成，请长按图片保存');return;}
+ mb.innerHTML='<h2>分享图</h2>'
+  +'<div class="hint" style="margin-bottom:8px">在图片上<b>长按 → 存储到照片</b>即可保存，也可长按转发给好友。</div>'
+  +'<div class="center"><img src="'+url+'" alt="KPL 分享图" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:8px"></div>'
+  +'<div class="center mt12"><button class="btn" onclick="closeModal(\'app-modal\')">关闭</button></div>';
+ $('#app-modal').classList.add('on');
+ toast('分享图已生成，长按图片保存');
+ };
+ if(typeof blobDLBlocked==='function'&&blobDLBlocked()){
+  const showData=()=>showInline(cv.toDataURL('image/png'));
+  try{
+   if(navigator.canShare&&typeof File!=='undefined'&&cv.toBlob){
+    cv.toBlob(b=>{
+     if(!b){showData();return;}
+     try{
+      const file=new File([b],fname,{type:'image/png'});
+      if(navigator.canShare({files:[file]})){navigator.share({files:[file],title:'KPL 分享图'}).catch(showData);return;}
+     }catch(e){}
+     showData();
+    },'image/png');
+    return;
+   }
+  }catch(e){}
+  showData();
+  return;
+ }
+
  if(cv.toBlob){
  cv.toBlob(b=>{
  if(!b){doDownload(cv.toDataURL('image/png'));return;}
@@ -12584,6 +12625,177 @@ console.log('[Core State] Loaded successfully');
 
 </script>
 <script>
+const PERF_DASHBOARD = {
+  enabled: false, // 默认关闭，开发者模式下开启
+  refreshInterval: 500, // 刷新频率 (ms)
+  maxHistory: 60, // 历史数据点数量
+
+
+  colors: {
+    fpsGood: '#48bb78',      // FPS ≥ 55 (绿色)
+    fpsWarn: '#ecc94b',      // FPS 30-55 (黄色)
+    fpsBad: '#f56565',       // FPS < 30 (红色)
+    memGood: '#4299e1',      // 内存 ≤ 50MB (蓝色)
+    memWarn: '#d69e2e',      // 内存 50-100MB (橙色)
+    memBad: '#c53030'        // 内存 > 100MB (深红)
+  }
+};
+
+class PerfMonitorDashboard {
+  constructor() {
+    this.history = [];
+    this.lastFPS = 0;
+    this.lastMemory = null;
+    this.renderTimes = [];
+    this.running = false;
+
+
+    this.init();
+  }
+
+  init() {
+    if (document.getElementById('perf-dashboard')) return;
+
+    const dashboard = document.createElement('div');
+    dashboard.id = 'perf-dashboard';
+    dashboard.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(35, 40, 51, 0.95);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--txt);
+      z-index: 9999;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+    `;
+
+    dashboard.innerHTML = `
+      <div style="font-weight: bold; margin-bottom: 8px; color: var(--accent)">📊 性能监控</div>
+      <div class="perf-row"><span>FPS:</span><span id="perf-fps" style="color: var(--fps-good)">--</span></div>
+      <div class="perf-row"><span>内存:</span><span id="perf-memory" style="color: var(--mem-good)">-- MB</span></div>
+      <div class="perf-row"><span>渲染:</span><span id="perf-render">-- ms</span></div>
+      <div class="perf-row"><span>节点:</span><span id="perf-nodes">--</span></div>
+      <button onclick="PerfDashboard.toggle()" style="margin-top:8px; font-size:10px; cursor:pointer;">隐藏</button>
+    `;
+
+    document.body.appendChild(dashboard);
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    document.getElementById('perf-dashboard').style.display = 'block';
+
+    setInterval(() => this.update(), PERF_DASHBOARD.refreshInterval);
+  }
+
+  stop() {
+    this.running = false;
+    document.getElementById('perf-dashboard').style.display = 'none';
+  }
+
+  toggle() {
+    if (this.running) this.stop();
+    else this.start();
+  }
+
+  update() {
+
+    const fps = this.calculateFPS();
+
+
+    let memory = 0;
+    if (performance.memory) {
+      memory = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+    }
+
+
+    const nodeCount = document.getElementsByTagName('*').length;
+
+
+    const renderTime = this.getLastRenderTime();
+
+
+    this.updateDisplay(fps, memory, renderTime, nodeCount);
+
+
+    this.history.push({
+      timestamp: Date.now(),
+      fps: fps,
+      memory: memory,
+      renderTime: renderTime,
+      nodeCount: nodeCount
+    });
+
+    if (this.history.length > PERF_DASHBOARD.maxHistory) {
+      this.history.shift();
+    }
+  }
+
+  calculateFPS() {
+    if (!this.lastFrameTime) {
+      this.lastFrameTime = performance.now();
+      return 0;
+    }
+
+    const delta = performance.now() - this.lastFrameTime;
+    this.lastFrameTime = performance.now();
+
+    const fps = Math.round(1000 / delta);
+    return isNaN(fps) || fps === Infinity ? 0 : fps;
+  }
+
+  getLastRenderTime() {
+    if (window.perfMonitor && window.perfMonitor.lastRenderTime) {
+      return window.perfMonitor.lastRenderTime.toFixed(1);
+    }
+    return '--';
+  }
+
+  updateDisplay(fps, memory, renderTime, nodeCount) {
+
+    const fpsEl = document.getElementById('perf-fps');
+    let fpsColor = PERF_DASHBOARD.colors.fpsBad;
+    if (fps >= 55) fpsColor = PERF_DASHBOARD.colors.fpsGood;
+    else if (fps >= 30) fpsColor = PERF_DASHBOARD.colors.fpsWarn;
+    fpsEl.textContent = `${fps} FPS`;
+    fpsEl.style.color = fpsColor;
+
+
+    const memEl = document.getElementById('perf-memory');
+    let memColor = PERF_DASHBOARD.colors.memBad;
+    if (memory <= 50) memColor = PERF_DASHBOARD.colors.memGood;
+    else if (memory <= 100) memColor = PERF_DASHBOARD.colors.memWarn;
+    memEl.textContent = `${memory} MB`;
+    memEl.style.color = memColor;
+
+
+    document.getElementById('perf-render').textContent = renderTime + ' ms';
+
+
+    document.getElementById('perf-nodes').textContent = nodeCount;
+  }
+}
+
+window.PerfDashboard = new PerfMonitorDashboard();
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'F12') {
+    e.preventDefault();
+    PerfDashboard.toggle();
+  }
+});
+
+console.log('[Perf Dashboard] Initialized (press F12 to toggle)');
+
+</script>
+<script>
 function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
 
 const KM_BUILD='2026-09-19i';
@@ -12875,10 +13087,15 @@ function pickSaveFile(){
  f.click();
 }
 function fallbackDownload(blob,fname,onFail){
+
+ if(typeof blobDLBlocked==='function'&&blobDLBlocked()){
+  if(onFail)onFail();else toast('当前浏览器不支持文件下载，请改用「复制导出」');
+  return;
+ }
  try{
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=fname;a.rel='noopener';
+  a.href=url;a.download=fname;a.rel='noopener';a.target='_self';
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -12901,7 +13118,7 @@ function exportSaveFile(){
  const showFallback=()=>{
   const t=$('#save-io');
   if(t){t.value=json;t.focus();try{t.setSelectionRange(0,Math.min(80,json.length));}catch(e){}}
-  toast('本机浏览器可能拦截了文件下载——存档 JSON 已填入文本框，请全选复制另存为 .json');
+  toast('存档 JSON 已填入文本框：长按全选复制、另存为 .json 即可（微信/抖音等内置浏览器不支持直接下载文件）');
  };
 
  try{
@@ -13655,6 +13872,67 @@ if(load()&&S&&S.teamName){
  initStart();
 }
 playIntro(); // 进场动画（仅首访播放）
+
+(function(){
+ const originalOpenSaveMgmt = window.openSaveMgmt;
+ if(originalOpenSaveMgmt){
+   window.openSaveMgmt = function(){
+
+     originalOpenSaveMgmt();
+
+
+     setTimeout(() => {
+       const modalBody = document.getElementById('app-modal-body');
+       if(modalBody && !modalBody.innerHTML.includes('音效设置')){
+         const html = modalBody.innerHTML;
+         const insertPoint = html.indexOf('<h2>') + '<h2>存档管理</h2>'.length;
+
+         if(insertPoint > 0){
+           const bgmPanelHtml = `
+             <div class="panel mt8" style="background:var(--card2);border-color:var(--accent-primary)">
+               <h3>🎵 音效设置</h3>
+
+               <!-- SFX 开关 -->
+               <div style="margin-bottom:12px">
+                 <label>SFX 音效
+                   <button onclick="toggleSfx()" class="btn sm">${_sfxOn?'gold':'primary'}">${_sfxOn?'关闭':'开启'}</button>
+                 </label>
+                 <div class="hint" style="font-size:11px;margin-top:4px">点击/胜利/失败等短时音效</div>
+               </div>
+
+               <!-- BGM 开关 -->
+               <div style="margin-bottom:12px">
+                 <label>BGM 背景音乐
+                   <button onclick="toggleBGM()" class="btn sm">${_bgmOn?'gold':'primary'}">${_bgmOn?'关闭':'开启'}</button>
+                 </label>
+                 <div class="hint" style="font-size:11px;margin-top:4px">自动播放情景音乐：日常管理 (idle)、胜利庆祝、失利低沉</div>
+               </div>
+
+               <!-- BGM 音量滑块 -->
+               <div>
+                 <label>BGM 音量
+                   <input type="range" min="0" max="100" value="${Math.round(_bgmVolume*100)}"
+                          oninput="setBgmVolume(this.value);document.getElementById('bgm-vol-display').textContent=this.value+'%'">
+                   <span id="bgm-vol-display" style="display:inline-block;width:40px;text-align:right;font-weight:bold;color:var(--accent-primary)">
+                     ${Math.round(_bgmVolume*100)}%
+                   </span>
+                 </label>
+                 <div class="hint" style="font-size:11px;margin-top:4px">拖动滑块实时调整，范围 0-100%</div>
+               </div>
+             </div>`;
+
+           modalBody.innerHTML =
+             html.substring(0, insertPoint) +
+             '\n\n' + bgmPanelHtml +
+             '\n' + html.substring(insertPoint);
+         }
+       }
+     }, 50);
+   };
+
+   console.log('[Main] BGM settings panel injection ready');
+ }
+})();
 
 </script>
 </body>

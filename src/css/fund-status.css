@@ -1,0 +1,109 @@
+/* ================================================
+   资金状态视觉提示系统
+   用于 Header 和关键页面的资金显示
+   ================================================== */
+
+/* ========== 状态颜色定义 ========== */
+.stat.k-money.healthy {
+  color: var(--green);
+}
+
+.stat.k-money.caution {
+  color: var(--gold);
+}
+
+.stat.k-money.warning {
+  color: #ffaa00; /* 橙黄色警告 */
+}
+
+.stat.k-money.danger {
+  color: var(--red);
+}
+
+/* ========== 危险闪烁动画 ========== */
+@keyframes fund-danger-flash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.stat.k-money.flashing {
+  animation: fund-danger-flash 1s ease-in-out infinite;
+}
+
+.stat.k-money.flashing::after {
+  content: '⚠️';
+  margin-left: 8px;
+}
+
+/* ========== 数字渐变效果 ========== */
+.stat.k-money .stat-transition {
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+/* ========== 悬停提示 ========== */
+.stat.k-money:hover {
+  cursor: help;
+  position: relative;
+}
+
+.stat.k-money:hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* ========== 阈值提示文字样式 ========== */
+.fund-text-critical {
+  color: var(--red) !important;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.fund-text-warning {
+  color: #ffaa00 !important;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.fund-text-caution {
+  color: var(--gold) !important;
+  font-size: 13px;
+}
+
+.fund-text-normal {
+  color: var(--green) !important;
+  font-size: 13px;
+}
+
+/* ========== 移动端优化 ========== */
+@media (max-width: 768px) {
+  .stat.k-money:hover::before {
+    /* 移动端不显示悬停提示，避免遮挡内容 */
+    display: none;
+  }
+  
+  .stat.k-money.flashing {
+    /* 移动端减少闪烁频率 */
+    animation-duration: 1.5s;
+  }
+}
+
+/* ========== 打印样式 ========== */
+@media print {
+  .stat.k-money.flashing {
+    animation: none;
+    opacity: 1;
+  }
+}

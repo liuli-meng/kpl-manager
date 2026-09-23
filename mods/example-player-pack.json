@@ -1,0 +1,105 @@
+{
+  "modId": "star-player-importer",
+  "version": "1.0.0",
+  "name": "明星选手包",
+  "author": "KPL Fan Team",
+  "description": "包含 KPL 知名选手数据，支持游戏内自定义导入",
+  "compatibility": {
+    "minGameVersion": "3.0.0",
+    "maxGameVersion": "3.99.0"
+  },
+  "players": [
+    {
+      "importId": "custom_star_001",
+      "imported": true,
+      "source": "fan_collection",
+      "name": "李白",
+      "pos": "mid",
+      "age": 24,
+      "base": [95, 94, 93, 92],
+      "skill": {
+        "n": "中路由之神",
+        "t": "individual",
+        "d": "+5 对线能力"
+      },
+      "sig": "孙膑",
+      "heroPool": [
+        {"n": "孙膑", "lv": 3},
+        {"n": "西施", "lv": 2}
+      ],
+      "stats": {
+        "kda": 5.2,
+        "mvpRate": 0.42,
+        "gamesPlayed": 287,
+        "avgMvp": 0.38
+      },
+      "achievements": [
+        {"season": 3, "title": "常规赛 MVP"},
+        {"season": 5, "title": "FMVP"}
+      ],
+      "contract": {
+        "years": 3,
+        "wagePerWeek": 65,
+        "signingFee": 180
+      }
+    },
+    {
+      "importId": "custom_star_002",
+      "imported": true,
+      "source": "fan_collection",
+      "name": "关羽",
+      "pos": "top",
+      "age": 26,
+      "base": [96, 95, 94, 93],
+      "skill": {
+        "n": "对抗路霸主",
+        "t": "individual",
+        "d": "+6 单挑能力"
+      },
+      "sig": "关羽",
+      "heroPool": [
+        {"n": "关羽", "lv": 3},
+        {"n": "铠", "lv": 2}
+      ],
+      "stats": {
+        "kda": 4.8,
+        "mvpRate": 0.35,
+        "gamesPlayed": 312,
+        "avgDamage": 18500
+      },
+      "achievements": [
+        {"season": 2, "title": "最佳上单"},
+        {"season": 4, "title": "总决赛 FMVP"}
+      ]
+    },
+    {
+      "importId": "custom_star_003",
+      "imported": true,
+      "source": "fan_collection",
+      "name": "亚瑟",
+      "pos": "jg",
+      "age": 23,
+      "base": [93, 93, 92, 91],
+      "skill": {
+        "n": "野区控制大师",
+        "t": "team",
+        "d": "+4 团队支援能力"
+      },
+      "sig": "韩信",
+      "heroPool": [
+        {"n": "韩信", "lv": 3},
+        {"n": "露娜", "lv": 2}
+      ],
+      "stats": {
+        "kda": 6.2,
+        "mvpRate": 0.48,
+        "gamesPlayed": 198,
+        "avgGold": 12800
+      }
+    }
+  ],
+  "installationInstructions": "使用插件系统将此文件导入转会市场 → 自定义选手区域",
+  "permissions": ["read_file"],
+  "requiredMods": [],
+  "optionalMods": []
+}

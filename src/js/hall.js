@@ -116,6 +116,36 @@ function _shareWrap(fn){
  a.href=url;a.download=fname;
  document.body.appendChild(a);a.click();document.body.removeChild(a);
  };
+ /* WKWebView（微信/抖音等内置浏览器）不支持 a[download]+blob，点下去会整页变成
+    WebKitBlobResource 报错页。这里改成「页内显示 + 长按保存」：data: URL 在 WebKit 能正常显示。 */
+ const showInline=url=>{
+ const mb=$('#app-modal-body');
+ if(!mb){toast('分享图已生成，请长按图片保存');return;}
+ mb.innerHTML='<h2>分享图</h2>'
+  +'<div class="hint" style="margin-bottom:8px">在图片上<b>长按 → 存储到照片</b>即可保存，也可长按转发给好友。</div>'
+  +'<div class="center"><img src="'+url+'" alt="KPL 分享图" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:8px"></div>'
+  +'<div class="center mt12"><button class="btn" onclick="closeModal(\'app-modal\')">关闭</button></div>';
+ $('#app-modal').classList.add('on');
+ toast('分享图已生成，长按图片保存');
+ };
+ if(typeof blobDLBlocked==='function'&&blobDLBlocked()){
+  const showData=()=>showInline(cv.toDataURL('image/png'));
+  try{
+   if(navigator.canShare&&typeof File!=='undefined'&&cv.toBlob){
+    cv.toBlob(b=>{
+     if(!b){showData();return;}
+     try{
+      const file=new File([b],fname,{type:'image/png'});
+      if(navigator.canShare({files:[file]})){navigator.share({files:[file],title:'KPL 分享图'}).catch(showData);return;}
+     }catch(e){}
+     showData();
+    },'image/png');
+    return;
+   }
+  }catch(e){}
+  showData();
+  return;
+ }
  // 优先 toBlob：部分移动浏览器对超长 dataURL 下载不友好；失败回退 dataURL
  if(cv.toBlob){
  cv.toBlob(b=>{

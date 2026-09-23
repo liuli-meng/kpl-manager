@@ -300,10 +300,17 @@ function pickSaveFile(){
  f.click();
 }
 function fallbackDownload(blob,fname,onFail){
+ /* WKWebView（微信/抖音等内置浏览器）不支持 a[download]+blob：点下去不是下载，而是把整页
+    换成 WebKitBlobResource 报错页，刷新也回不到游戏（地址栏停在已失效的 blob: 上）。
+    这种环境绝不点这个锚点，直接交给上层的文本复制兜底。 */
+ if(typeof blobDLBlocked==='function'&&blobDLBlocked()){
+  if(onFail)onFail();else toast('当前浏览器不支持文件下载，请改用「复制导出」');
+  return;
+ }
  try{
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=fname;a.rel='noopener';
+  a.href=url;a.download=fname;a.rel='noopener';a.target='_self';
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -326,7 +333,7 @@ function exportSaveFile(){
  const showFallback=()=>{
   const t=$('#save-io');
   if(t){t.value=json;t.focus();try{t.setSelectionRange(0,Math.min(80,json.length));}catch(e){}}
-  toast('本机浏览器可能拦截了文件下载——存档 JSON 已填入文本框，请全选复制另存为 .json');
+  toast('存档 JSON 已填入文本框：长按全选复制、另存为 .json 即可（微信/抖音等内置浏览器不支持直接下载文件）');
  };
  // iOS/部分安卓微信：系统分享文件比 a.download 可靠
  try{
@@ -1100,4 +1107,67 @@ if(load()&&S&&S.teamName){
  initStart();
 }
 playIntro(); // 进场动画（仅首访播放）
+
+// ===================== BGM 设置面板注入 =====================
+// 在存档管理页自动添加音效控制面板
+(function(){
+ const originalOpenSaveMgmt = window.openSaveMgmt;
+ if(originalOpenSaveMgmt){
+   window.openSaveMgmt = function(){
+     // 调用原始函数
+     originalOpenSaveMgmt();
+     
+     // 延迟插入面板（确保模态框已显示）
+     setTimeout(() => {
+       const modalBody = document.getElementById('app-modal-body');
+       if(modalBody && !modalBody.innerHTML.includes('音效设置')){
+         const html = modalBody.innerHTML;
+         const insertPoint = html.indexOf('<h2>') + '<h2>存档管理</h2>'.length;
+         
+         if(insertPoint > 0){
+           const bgmPanelHtml = `
+             <div class="panel mt8" style="background:var(--card2);border-color:var(--accent-primary)">
+               <h3>🎵 音效设置</h3>
+               
+               <!-- SFX 开关 -->
+               <div style="margin-bottom:12px">
+                 <label>SFX 音效
+                   <button onclick="toggleSfx()" class="btn sm">${_sfxOn?'gold':'primary'}">${_sfxOn?'关闭':'开启'}</button>
+                 </label>
+                 <div class="hint" style="font-size:11px;margin-top:4px">点击/胜利/失败等短时音效</div>
+               </div>
+               
+               <!-- BGM 开关 -->
+               <div style="margin-bottom:12px">
+                 <label>BGM 背景音乐
+                   <button onclick="toggleBGM()" class="btn sm">${_bgmOn?'gold':'primary'}">${_bgmOn?'关闭':'开启'}</button>
+                 </label>
+                 <div class="hint" style="font-size:11px;margin-top:4px">自动播放情景音乐：日常管理 (idle)、胜利庆祝、失利低沉</div>
+               </div>
+               
+               <!-- BGM 音量滑块 -->
+               <div>
+                 <label>BGM 音量
+                   <input type="range" min="0" max="100" value="${Math.round(_bgmVolume*100)}" 
+                          oninput="setBgmVolume(this.value);document.getElementById('bgm-vol-display').textContent=this.value+'%'">
+                   <span id="bgm-vol-display" style="display:inline-block;width:40px;text-align:right;font-weight:bold;color:var(--accent-primary)">
+                     ${Math.round(_bgmVolume*100)}%
+                   </span>
+                 </label>
+                 <div class="hint" style="font-size:11px;margin-top:4px">拖动滑块实时调整，范围 0-100%</div>
+               </div>
+             </div>`;
+           
+           modalBody.innerHTML = 
+             html.substring(0, insertPoint) + 
+             '\n\n' + bgmPanelHtml +
+             '\n' + html.substring(insertPoint);
+         }
+       }
+     }, 50);
+   };
+   
+   console.log('[Main] BGM settings panel injection ready');
+ }
+})();
 

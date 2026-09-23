@@ -140,6 +140,21 @@ function slotKey(){return SAVE_KEY+(curSlot>1?'_'+curSlot:'');}
 function b64e(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
 function b64d(s){const bin=atob(s);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder().decode(bytes);}
 let S=null; // 全局状态
+/* blob 下载可用性判定：Safari 本体支持 a[download]+blob:，但**所有 WKWebView 内置浏览器**
+（微信/QQ/抖音/微博/钉钉/支付宝…）不支持（WebKit bug 216918）——它会退化成「打开这个 blob 链接」，
+失败后整页被替换成「Safari浏览器打不开该网页…（WebKitBlobResource错误1）」，而且地址栏会停在
+已失效的 blob: 上，**刷新也回不到游戏**。判定为不可用时，导出改走系统分享 / 文本复制 / 页内长按保存。 */
+function blobDLBlocked(){
+ try{
+  if(typeof navigator==='undefined'||!navigator.userAgent)return false;
+  const ua=navigator.userAgent;
+  if(/MicroMessenger|MQQBrowser|QQBrowser|QQ\/|WeChat|Douyin|Bytedance|Weibo|AlipayClient|DingTalk|baiduboxapp|UCBrowser|Quark/i.test(ua))return true;
+  const iOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(!iOS)return false;
+  /* iOS 上 Safari 本体 UA 带 "Version/x.y … Safari/604.1"；裸 WKWebView 只有 "Mobile/15E148" */
+  return !/Version\/[\d.]+ [^)]*Safari\//.test(ua);
+ }catch(_){return false;}
+}
 
 /* ================= 预防性守卫（防误碰/空档/连点） =================
   UI 入口用：requireSave 挡未开局操作；confirmDanger 挡高代价点击；
