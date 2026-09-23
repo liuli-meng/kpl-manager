@@ -7,7 +7,13 @@
  年总积分：冠军85 / 亚军60 / 第3名40 / 第4名20 / 5-6名10；冠军 300 万奖金 + FMVP。 */
 /* 双败败者落位用的统一取负者：原来在 7 个 *PoStep 函数里各定义一遍（逐字相同）。
    提到文件顶层一份，行为不变，改判定时只有一处要改。 */
-const loserOf=m=>m.r===m.a?m.b:m.a;
+const matchWinner=m=>{
+ if(!m)return null;
+ if(m.r===m.a||m.r===m.b)return m.r;
+ const a=Number(m.ms)||0,b=Number(m.es)||0;
+ return a>=b?m.a:m.b;
+};
+const loserOf=m=>{const w=matchWinner(m);return w===m.a?m.b:m.a;};
 
 const CHALLENGER_TEAMS=[['K甲·苍穹','K甲'],['K甲·星火','K甲'],['K甲·沧澜','K甲'],
  ['全国大赛·破晓','全国大赛'],['青训·晨曦','青训'],['高校·逐梦','高校'],['职工·匠心','职工'],
@@ -110,8 +116,8 @@ function finishChallenger(s){
  logEvent(s,' 挑战者杯落幕：'+c.champ+' 问鼎！（BO9 巅峰对决）'+(c.champ===s.teamName?'挑战者，皆王者！':''));
  // 年总积分：冠军85 / 亚军60 / 第3名40 / 第4名20 / 5-6名10
  const pts={};pts[c.champ]=85;pts[runner]=60;
- if(c.po.lbf.r)pts[loserOf(c.po.lbf)]=40;
- if(c.po.lbs.r)pts[loserOf(c.po.lbs)]=20;
+ if(c.po.lbf.r){const n=loserOf(c.po.lbf);if(pts[n]==null)pts[n]=40;}
+ if(c.po.lbs.r){const n=loserOf(c.po.lbs);if(pts[n]==null)pts[n]=20;}
  Object.keys(pts).forEach(t=>{s.annualPts[t]=(s.annualPts[t]||0)+(pts[t]||0);});
  logEvent(s,' 挑战者杯积分入账：'+s.teamName+' 年总积分累计 '+(s.annualPts[s.teamName]||0)+' 分');
  // 奖金（真实对齐 ÷6：总池 170 万）：冠军500 / 亚军250 / 四强133 / 8强67——按 KPL 规则选手分成 70%

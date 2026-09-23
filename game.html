@@ -5118,12 +5118,14 @@ function leaguePlacements(s){
  const place={};
  const p=s.playoff;
  if(!p||!p.final.r)return place;
- const loserOf=m=>m.r===m.a?m.b:m.a;
- place[p.final.r]='p1';place[loserOf(p.final)]='p2';
- place[loserOf(p.lbf)]='p34';place[loserOf(p.lb4)]='p34';
- [p.lb3[0],p.lb3[1]].forEach(m=>place[loserOf(m)]='p56');
- [p.lb2[0],p.lb2[1]].forEach(m=>place[loserOf(m)]='p78');
- [p.lb[0],p.lb[1]].forEach(m=>place[loserOf(m)]='p910');
+ const matchWinner=m=>{if(!m)return null;if(m.r===m.a||m.r===m.b)return m.r;const a=Number(m.ms)||0,b=Number(m.es)||0;return a>=b?m.a:m.b;};
+ const loserOf=m=>{const w=matchWinner(m);return w===m.a?m.b:m.a;};
+ const champ=matchWinner(p.final)||p.final.r;
+ place[champ]='p1';place[loserOf(p.final)]='p2';
+ if(!place[loserOf(p.lbf)])place[loserOf(p.lbf)]='p34';if(!place[loserOf(p.lb4)])place[loserOf(p.lb4)]='p34';
+ [p.lb3[0],p.lb3[1]].forEach(m=>{const n=loserOf(m);if(n&&!place[n])place[n]='p56';});
+ [p.lb2[0],p.lb2[1]].forEach(m=>{const n=loserOf(m);if(n&&!place[n])place[n]='p78';});
+ [p.lb[0],p.lb[1]].forEach(m=>{const n=loserOf(m);if(n&&!place[n])place[n]='p910';});
  (s.groups.A||[]).slice(4).forEach(n=>{if(!place[n])place[n]='p1112';}); // 第三轮 A组第5/6名（不得覆盖冠亚）
  (s.cardLosers||[]).forEach(n=>{if(!place[n])place[n]='p1112';}); // 卡位赛败者（不得覆盖冠亚）
  (s.eliminated||[]).forEach(n=>{if(!place[n])place[n]='p1318';}); // B组3-6名
@@ -6756,7 +6758,13 @@ function auditSave(s,opts){
 
 </script>
 <script>
-const loserOf=m=>m.r===m.a?m.b:m.a;
+const matchWinner=m=>{
+ if(!m)return null;
+ if(m.r===m.a||m.r===m.b)return m.r;
+ const a=Number(m.ms)||0,b=Number(m.es)||0;
+ return a>=b?m.a:m.b;
+};
+const loserOf=m=>{const w=matchWinner(m);return w===m.a?m.b:m.a;};
 
 const CHALLENGER_TEAMS=[['K甲·苍穹','K甲'],['K甲·星火','K甲'],['K甲·沧澜','K甲'],
  ['全国大赛·破晓','全国大赛'],['青训·晨曦','青训'],['高校·逐梦','高校'],['职工·匠心','职工'],
@@ -6855,8 +6863,8 @@ function finishChallenger(s){
  logEvent(s,' 挑战者杯落幕：'+c.champ+' 问鼎！（BO9 巅峰对决）'+(c.champ===s.teamName?'挑战者，皆王者！':''));
 
  const pts={};pts[c.champ]=85;pts[runner]=60;
- if(c.po.lbf.r)pts[loserOf(c.po.lbf)]=40;
- if(c.po.lbs.r)pts[loserOf(c.po.lbs)]=20;
+ if(c.po.lbf.r){const n=loserOf(c.po.lbf);if(pts[n]==null)pts[n]=40;}
+ if(c.po.lbs.r){const n=loserOf(c.po.lbs);if(pts[n]==null)pts[n]=20;}
  Object.keys(pts).forEach(t=>{s.annualPts[t]=(s.annualPts[t]||0)+(pts[t]||0);});
  logEvent(s,' 挑战者杯积分入账：'+s.teamName+' 年总积分累计 '+(s.annualPts[s.teamName]||0)+' 分');
 

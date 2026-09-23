@@ -888,12 +888,14 @@ function leaguePlacements(s){
  const place={};
  const p=s.playoff;
  if(!p||!p.final.r)return place;
- const loserOf=m=>m.r===m.a?m.b:m.a;
- place[p.final.r]='p1';place[loserOf(p.final)]='p2';
- place[loserOf(p.lbf)]='p34';place[loserOf(p.lb4)]='p34';
- [p.lb3[0],p.lb3[1]].forEach(m=>place[loserOf(m)]='p56');
- [p.lb2[0],p.lb2[1]].forEach(m=>place[loserOf(m)]='p78');
- [p.lb[0],p.lb[1]].forEach(m=>place[loserOf(m)]='p910');
+ const matchWinner=m=>{if(!m)return null;if(m.r===m.a||m.r===m.b)return m.r;const a=Number(m.ms)||0,b=Number(m.es)||0;return a>=b?m.a:m.b;};
+ const loserOf=m=>{const w=matchWinner(m);return w===m.a?m.b:m.a;};
+ const champ=matchWinner(p.final)||p.final.r;
+ place[champ]='p1';place[loserOf(p.final)]='p2';
+ if(!place[loserOf(p.lbf)])place[loserOf(p.lbf)]='p34';if(!place[loserOf(p.lb4)])place[loserOf(p.lb4)]='p34';
+ [p.lb3[0],p.lb3[1]].forEach(m=>{const n=loserOf(m);if(n&&!place[n])place[n]='p56';});
+ [p.lb2[0],p.lb2[1]].forEach(m=>{const n=loserOf(m);if(n&&!place[n])place[n]='p78';});
+ [p.lb[0],p.lb[1]].forEach(m=>{const n=loserOf(m);if(n&&!place[n])place[n]='p910';});
  (s.groups.A||[]).slice(4).forEach(n=>{if(!place[n])place[n]='p1112';}); // 第三轮 A组第5/6名（不得覆盖冠亚）
  (s.cardLosers||[]).forEach(n=>{if(!place[n])place[n]='p1112';}); // 卡位赛败者（不得覆盖冠亚）
  (s.eliminated||[]).forEach(n=>{if(!place[n])place[n]='p1318';}); // B组3-6名
