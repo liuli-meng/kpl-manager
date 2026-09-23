@@ -77,7 +77,7 @@ function draftBlockedFor(s,team,p){
  return !!(p&&p.fromClub&&p.fromClub===team);
 }
 function draftTeamRosterCount(s,team){
- if(team===s.teamName)return (s.players||[]).length;
+ if(team===s.teamName)return (s.players||[]).filter(p=>!(p.kjia>0)).length; // 与 rosterFull 同口径
  try{return (ensureAiRosters(s,team)||[]).length;}catch(e){return 6;}
 }
 function draftPosNeed(s,team,pos){
