@@ -1,6 +1,43 @@
-﻿/* 联赛核心：赛程/赛段/季后赛/日结/工资/王朝/最佳阵容/年度轮换/积分/赛历（season.js 机械拆出） */
+/* 联赛核心：赛程/赛段/季后赛/日结/工资/王朝/最佳阵容/年度轮换/积分/赛历（season.js 机械拆出） */
 
-/* ================= 比赛与联赛（KPL 2025 官方赛制） =================
+/* ================= 真实 KPL 赛制系统 v2.0 =================
+   按年份动态调整赛区制度、规则等 */
+
+// 2016-2020: 东西部赛区
+const EAST_WEST_DIVISION = {
+  years: [2016, 2017, 2018, 2019, 2020],
+  format: '常规赛东西部分组 + 季后赛合并',
+  rules: {
+    regular_season: '同分区内 BO5 双循环，跨分区 BO5 单循环',
+    playoff_qualification: '东西部各前四名晋级季后赛',
+    playoff_format: '10 队 BO7 双败淘汰',
+  }
+};
+
+// 2021-2024: 大分组时代
+const LARGE_GROUPS_SYSTEM = {
+  years: [2021, 2022, 2023, 2024],
+  format: 'S/A/B三组 + 卡位赛 (取消升降级)',
+  rules: {
+    promotion_relegation: false,
+    group_structure: '蛇形分档 (按上赛季成绩)',
+    phases: ['第一轮 (3 组单循环)', '第二轮 (S/A/B)', '卡位赛', '第三轮 (S/A)'],
+  }
+};
+
+// 2025-2026: 最新赛制
+const CURRENT_FORMAT = {
+  years: [2025, 2026],
+  teams: 18,
+  splits: ['春季赛', '夏季赛'],
+  format: '两轮循环赛 + 季后赛 (年度积分制)',
+  rules: {
+    spring_summer: '春夏两赛季独立积分',
+    annual_finals_qualification: '年度积分前 12 入围年总',
+  }
+};
+
+/* ================= 比赛与联赛 =================
  常规赛4阶段：第一轮(3组单循环BO5)→第二轮(S/A/B)→卡位赛(BO5含巅峰对决)→第三轮(S/A单循环BO5)
  季后赛：S组6队(前4进胜者组)+A组前4 → 10队 BO7 双败淘汰，总决赛第7局巅峰对决
  常规赛胜者积1分；2026起奖金按胜小局数结算 */
@@ -23,6 +60,18 @@ const gameYear=s=>{
  return 2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
 };
 const splitLabel=s=>gameYear(s)+' '+(SPLIT_NAME[s.split]||'春季赛');
+
+// 根据年份获取赛区制度
+function get_division_system_for_year(year) {
+  if(EAST_WEST_DIVISION.years.includes(year)) {
+    return EAST_WEST_DIVISION;
+  } else if (LARGE_GROUPS_SYSTEM.years.includes(year)) {
+    return LARGE_GROUPS_SYSTEM;
+  } else {
+    return CURRENT_FORMAT;
+  }
+}
+
 function leaguePayout(s,place){
  const map={'冠军':830,'亚军':500,'四强':250,'八强':133}; // 联盟版权/商务分润（真实对齐 ÷6）：按成绩加权、非平均分配
  const amt=map[place];

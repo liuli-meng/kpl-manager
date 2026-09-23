@@ -5,6 +5,67 @@ const fmtWan=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n))+"万";
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2200);}
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+/* ================= 真实 KPL 经济系统 v2.0 =================
+   对标真实 KPL 2016-2026 年俱乐部运营模式 */
+
+// 年份经济参数 (逐年增长)
+const YEAR_ECONOMY = {
+  2016: { fund_mul: 0.5, wage_mul: 0.4, transfer_cap: 800, inflation: 0.0 },
+  2017: { fund_mul: 0.6, wage_mul: 0.5, transfer_cap: 1000, inflation: 0.02 },
+  2018: { fund_mul: 0.7, wage_mul: 0.6, transfer_cap: 1500, inflation: 0.03 },
+  2019: { fund_mul: 0.8, wage_mul: 0.7, transfer_cap: 2000, inflation: 0.04 },
+  2020: { fund_mul: 0.85, wage_mul: 0.75, transfer_cap: 3000, inflation: 0.05 },
+  2021: { fund_mul: 0.9, wage_mul: 0.8, transfer_cap: 5000, inflation: 0.06 },
+  2022: { fund_mul: 0.95, wage_mul: 0.88, transfer_cap: 7000, inflation: 0.07 },
+  2023: { fund_mul: 1.0, wage_mul: 0.95, transfer_cap: 9000, inflation: 0.08 },
+  2024: { fund_mul: 1.05, wage_mul: 1.0, transfer_cap: 10000, inflation: 0.09 },
+  2025: { fund_mul: 1.1, wage_mul: 1.05, transfer_cap: 11000, inflation: 0.1 },
+  2026: { fund_mul: 1.15, wage_mul: 1.1, transfer_cap: 12000, inflation: 0.12 },
+};
+
+// 俱乐部分级预算标准
+const CLUB_TIERS = {
+  elite: { budget_scale: 1.15, wage_capacity: 'high', transfer_aggression: 0.9, commercial_focus: 0.85 },
+  mid_tier: { budget_scale: 1.0, wage_capacity: 'medium', transfer_aggression: 0.6, commercial_focus: 0.7 },
+  low_tier: { budget_scale: 0.7, wage_capacity: 'low', transfer_aggression: 0.3, commercial_focus: 0.5 },
+};
+
+// 选手真实薪资体系
+const PLAYER_SALARY_REAL = {
+  base_salary: { rookie_17: 15, junior_19: 25, veteran_experienced: 50 }, // 万 RMB/年
+  
+  top_salary_by_rating: {
+    ovr_95_plus: 400, ovr_90_94: 350, ovr_85_89: 250,
+    ovr_80_84: 150, ovr_75_79: 100, ovr_below_75: 60,
+  },
+  
+  calculate_wage: function(overall, age, popularity) {
+    let base = this.get_base_by_rating(overall);
+    let age_factor = this.get_age_factor(age);
+    let pop_factor = 1 + (popularity - 50) / 200;
+    return Math.round(base * age_factor * pop_factor);
+  },
+  
+  get_base_by_rating: function(ovr) {
+    if(ovr >= 95) return this.base_salary.rookie_17 * 15;
+    if(ovr >= 90) return this.base_salary.rookie_17 * 12;
+    if(ovr >= 85) return this.base_salary.junior_19 * 8;
+    if(ovr >= 80) return this.base_salary.veteran_experienced * 3;
+    if(ovr >= 75) return this.base_salary.veteran_experienced * 2;
+    return this.base_salary.veteran_experienced;
+  },
+  
+  get_age_factor: function(age) {
+    if(age <= 18) return 0.6;
+    if(age <= 21) return 0.85;
+    if(age <= 25) return 1.2;
+    if(age <= 27) return 1.1;
+    if(age <= 29) return 0.95;
+    return 0.7;
+  },
+};
+
 const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 
 const POS={top:['对抗路','对'],jg:['打野','野'],mid:['中路','中'],ad:['发育路','发'],sup:['游走','游']};

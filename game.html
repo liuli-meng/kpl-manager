@@ -58,6 +58,61 @@ const fmtWan=n=>n>=10000?(n/10000).toFixed(1)+"亿":String(Math.round(n))+"万";
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2200);}
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+const YEAR_ECONOMY = {
+  2016: { fund_mul: 0.5, wage_mul: 0.4, transfer_cap: 800, inflation: 0.0 },
+  2017: { fund_mul: 0.6, wage_mul: 0.5, transfer_cap: 1000, inflation: 0.02 },
+  2018: { fund_mul: 0.7, wage_mul: 0.6, transfer_cap: 1500, inflation: 0.03 },
+  2019: { fund_mul: 0.8, wage_mul: 0.7, transfer_cap: 2000, inflation: 0.04 },
+  2020: { fund_mul: 0.85, wage_mul: 0.75, transfer_cap: 3000, inflation: 0.05 },
+  2021: { fund_mul: 0.9, wage_mul: 0.8, transfer_cap: 5000, inflation: 0.06 },
+  2022: { fund_mul: 0.95, wage_mul: 0.88, transfer_cap: 7000, inflation: 0.07 },
+  2023: { fund_mul: 1.0, wage_mul: 0.95, transfer_cap: 9000, inflation: 0.08 },
+  2024: { fund_mul: 1.05, wage_mul: 1.0, transfer_cap: 10000, inflation: 0.09 },
+  2025: { fund_mul: 1.1, wage_mul: 1.05, transfer_cap: 11000, inflation: 0.1 },
+  2026: { fund_mul: 1.15, wage_mul: 1.1, transfer_cap: 12000, inflation: 0.12 },
+};
+
+const CLUB_TIERS = {
+  elite: { budget_scale: 1.15, wage_capacity: 'high', transfer_aggression: 0.9, commercial_focus: 0.85 },
+  mid_tier: { budget_scale: 1.0, wage_capacity: 'medium', transfer_aggression: 0.6, commercial_focus: 0.7 },
+  low_tier: { budget_scale: 0.7, wage_capacity: 'low', transfer_aggression: 0.3, commercial_focus: 0.5 },
+};
+
+const PLAYER_SALARY_REAL = {
+  base_salary: { rookie_17: 15, junior_19: 25, veteran_experienced: 50 }, // 万 RMB/年
+
+  top_salary_by_rating: {
+    ovr_95_plus: 400, ovr_90_94: 350, ovr_85_89: 250,
+    ovr_80_84: 150, ovr_75_79: 100, ovr_below_75: 60,
+  },
+
+  calculate_wage: function(overall, age, popularity) {
+    let base = this.get_base_by_rating(overall);
+    let age_factor = this.get_age_factor(age);
+    let pop_factor = 1 + (popularity - 50) / 200;
+    return Math.round(base * age_factor * pop_factor);
+  },
+
+  get_base_by_rating: function(ovr) {
+    if(ovr >= 95) return this.base_salary.rookie_17 * 15;
+    if(ovr >= 90) return this.base_salary.rookie_17 * 12;
+    if(ovr >= 85) return this.base_salary.junior_19 * 8;
+    if(ovr >= 80) return this.base_salary.veteran_experienced * 3;
+    if(ovr >= 75) return this.base_salary.veteran_experienced * 2;
+    return this.base_salary.veteran_experienced;
+  },
+
+  get_age_factor: function(age) {
+    if(age <= 18) return 0.6;
+    if(age <= 21) return 0.85;
+    if(age <= 25) return 1.2;
+    if(age <= 27) return 1.1;
+    if(age <= 29) return 0.95;
+    return 0.7;
+  },
+};
+
 const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 
 const POS={top:['对抗路','对'],jg:['打野','野'],mid:['中路','中'],ad:['发育路','发'],sup:['游走','游']};
@@ -4166,6 +4221,37 @@ function doConvertPos(){
 
 </script>
 <script>
+const EAST_WEST_DIVISION = {
+  years: [2016, 2017, 2018, 2019, 2020],
+  format: '常规赛东西部分组 + 季后赛合并',
+  rules: {
+    regular_season: '同分区内 BO5 双循环，跨分区 BO5 单循环',
+    playoff_qualification: '东西部各前四名晋级季后赛',
+    playoff_format: '10 队 BO7 双败淘汰',
+  }
+};
+
+const LARGE_GROUPS_SYSTEM = {
+  years: [2021, 2022, 2023, 2024],
+  format: 'S/A/B三组 + 卡位赛 (取消升降级)',
+  rules: {
+    promotion_relegation: false,
+    group_structure: '蛇形分档 (按上赛季成绩)',
+    phases: ['第一轮 (3 组单循环)', '第二轮 (S/A/B)', '卡位赛', '第三轮 (S/A)'],
+  }
+};
+
+const CURRENT_FORMAT = {
+  years: [2025, 2026],
+  teams: 18,
+  splits: ['春季赛', '夏季赛'],
+  format: '两轮循环赛 + 季后赛 (年度积分制)',
+  rules: {
+    spring_summer: '春夏两赛季独立积分',
+    annual_finals_qualification: '年度积分前 12 入围年总',
+  }
+};
+
 const PHASE_NAME={r1:'常规赛·第一轮',r2:'常规赛·第二轮',card:'卡位赛',r3:'常规赛·第三轮',playoff:'季后赛',champion:'赛季结束',eliminated:'赛季结束',challenger:'挑战者杯',ewc:'EWC 电竞世界杯',asiad:'亚运会',annual:'KPL 年度总决赛'};
 const isAsiadYear=s=>gameYear(s)%4===2; // 亚运会四年一届（2026 名古屋 / 2030 / 2034…），夏赛后、年总前举行
 
@@ -4181,6 +4267,17 @@ const gameYear=s=>{
  return 2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
 };
 const splitLabel=s=>gameYear(s)+' '+(SPLIT_NAME[s.split]||'春季赛');
+
+function get_division_system_for_year(year) {
+  if(EAST_WEST_DIVISION.years.includes(year)) {
+    return EAST_WEST_DIVISION;
+  } else if (LARGE_GROUPS_SYSTEM.years.includes(year)) {
+    return LARGE_GROUPS_SYSTEM;
+  } else {
+    return CURRENT_FORMAT;
+  }
+}
+
 function leaguePayout(s,place){
  const map={'冠军':830,'亚军':500,'四强':250,'八强':133}; // 联盟版权/商务分润（真实对齐 ÷6）：按成绩加权、非平均分配
  const amt=map[place];
