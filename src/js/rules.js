@@ -44,7 +44,8 @@ function initTempSeats(s){
 function isTempSeat(s,team){
  return !!(s&&s.tempSeats&&s.tempSeats.includes(team));
 }
-/* 年度轮换时结算临时席：垫底临时席收回（含玩家升班马）→ K甲冠军顶上；夺冠可转正固定席 */
+/* 年度轮换时结算临时席：垫底临时席收回（含玩家升班马）→ K甲冠军顶上；
+   夺冠不转正固定席——只是下赛季保留席位、免打席位赛（仍可能在之后年度被收回） */
 function settleTempSeats(s){
  if(!s)return;
  initTempSeats(s);
@@ -52,8 +53,9 @@ function settleTempSeats(s){
  s.tempSeatFixed=s.tempSeatFixed||[];
  (s.titleHistory||[]).forEach(t=>{
   if(t&&t.champ&&isTempSeat(s,t.champ)&&s.tempSeatFixed.indexOf(t.champ)<0&&!isFixedSeatTeam(t.champ)){
+   // 夺冠≠转正固定席：下赛季保留席位、免打席位赛（非永久固定）
    s.tempSeatFixed.push(t.champ);
-   try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——临时席转正为 KPL 固定席位！');}catch(e){}
+   try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——下赛季保留 KPL 席位，免打席位赛（非固定席）');}catch(e){}
   }
  });
  s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t)&&s.tempSeatFixed.indexOf(t)<0);
@@ -109,10 +111,10 @@ function tempSeatsPanelHtml(){
  if(!s||!s.tempSeats||!s.tempSeats.length)return '';
  const atRisk=isTempSeat(s,s.teamName);
  let html=`<div class="panel"><h3>临时席位 <span class="tag">固定 16 + 临时 ${TEMP_SEAT_COUNT} · 只升不降</span></h3>
- <div class="hint" style="margin-bottom:8px"><b>升班马（常山UUG、桐乡情久）挂临时席</b>，年度成绩垫底会被收回，由 K甲/资格赛队伍顶上。老牌豪门（AG/狼队/eStar 等）是固定席，永不降级。${atRisk?'<b class="red">你执教的是升班马临时席——年度垫底有收回风险；夺冠可转正固定席。</b>':'你执教的俱乐部是固定席。'}</div>
+ <div class="hint" style="margin-bottom:8px"><b>升班马（常山UUG、桐乡情久）挂临时席</b>，年度成绩垫底会被收回，由 K甲/资格赛队伍顶上。老牌豪门（AG/狼队/eStar 等）是固定席，永不降级。${atRisk?'<b class="red">你执教的是升班马临时席——年度垫底有收回风险；夺冠可保留下赛季席位（免打席位赛，非固定席）。</b>':'你执教的俱乐部是固定席。'}</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">${s.tempSeats.map(t=>`<span class="tag" style="border-color:var(--gold)">${crest(null,t,14)} ${t} · 临时${t===s.teamName?'（你）':''}</span>`).join('')}</div>`;
  if((s.tempSeatFixed||[]).length){
-  html+=`<div class="hint">已转正固定席：${s.tempSeatFixed.map(t=>_escTxt(t)).join('、')}</div>`;
+  html+=`<div class="hint">夺冠保留下赛季席位（免打席位赛）：${s.tempSeatFixed.map(t=>_escTxt(t)).join('、')}</div>`;
  }
  if((s.tempSeatLog||[]).length){
   html+=`<div class="hint">近年变动：${s.tempSeatLog.slice(0,4).map(l=>_escTxt(l)).join('<br>')}</div>`;

@@ -205,7 +205,9 @@ function draftAiAuction(s){ // AI 叫价直到轮到玩家或签位落定
   if(!next)break;
   if(next===s.teamName)break; // 等玩家
   const max=draftTeamMaxBid(s,next,d.slot);
-  if(max>=d.bid+DRAFT_BID_STEP){
+  // 首拍只需 >=起拍价；有领先者才 +STEP。旧版连首拍也要求 +10，大量 AI 第一轮弃拍
+  const needBid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
+  if(max>=needBid){
    d.bid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
    d.leader=next;
    d.log.push(next+' 叫价 '+d.bid+'万（第'+(d.slot+1)+'签）');
