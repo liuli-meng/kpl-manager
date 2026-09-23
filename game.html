@@ -1,4 +1,3 @@
-<!-- AI生成 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -13,8 +12,6 @@
 </style>
 </head>
 <body>
-<p data-aigc-mark="1" style="margin:0 0 8px;font-size:10px;line-height:1.3;color:#6b6560;font-weight:400;">AI生成</p>
-
 <div class="wrap">
 
 <header id="header"></header>
@@ -3131,6 +3128,7 @@ function endPreseason(s){
  s.preseason=false;
  s.transferWindow=0;
  endTransferWindow(s);
+ try{if(typeof draftForceFinish==='function')draftForceFinish(s);}catch(e){}
  logEvent(s,' 转会期结束！'+s.teamName+' 赛季'+s.season+'阵容锁定，联赛正式开始');
  logEvent(s,' 首战在即：俱乐部页开赛，每场赛前可调整首发、BP 中可换替补');
  save();renderAll();
@@ -4116,6 +4114,7 @@ function nextDay(s){
   logEvent(s,' 转会窗原定关闭，但 '+missPos.map(pos=>POS[pos][0]).join('、')+' 仍无人——自动延长 3 天，请尽快签约');
  }else{
   s.preseason=false;
+  try{if(typeof draftForceFinish==='function')draftForceFinish(s);}catch(e){}
   logEvent(s,' 赛前转会期结束（天数用完），联赛正式开始！');
  }
  }else{
@@ -5021,13 +5020,12 @@ function draftKjiaTier(s){
  return {n:2,base:78};
  }catch(e){return {n:3,base:80};}
 }
-function genDraftProspect(s,i,used,tierHint){
- const name=poolName(DRAFT_NAMES.concat(KJIA_FILLER_NAMES),used);used.add(name);
+function genDraftProspect(s,i,used,namePool){
+ const name=poolName(namePool||DRAFT_NAMES.concat(KJIA_FILLER_NAMES),used);used.add(name);
  const pos=POS_ORDER[i%POS_ORDER.length];
  const kj=draftKjiaTier(s);
  let tier='camp';
- if(tierHint)tier=tierHint;
- else if(i<kj.n)tier='kjia';
+ if(i<kj.n)tier='kjia';
  else if(i%5===4)tier='hot';
  const base=tier==='kjia'?rnd(kj.base,kj.base+6):(tier==='hot'?rnd(78,85):rnd(70,79));
  const tags=['选秀'];
@@ -5059,12 +5057,12 @@ function draftBlockedFor(s,team,p){
  return !!(p&&p.fromClub&&p.fromClub===team);
 }
 function draftTeamRosterCount(s,team){
- if(team===s.teamName)return (s.players||[]).length;
+ if(team===s.teamName)return (s.players||[]).filter(p=>!(p.kjia>0)).length;
  try{return (ensureAiRosters(s,team)||[]).length;}catch(e){return 6;}
 }
 function draftPosNeed(s,team,pos){
  if(team===s.teamName){
- const inLine=(s.lineup||[]).some(id=>{const p=findPlayer(s,id);return p&&p.pos===pos;});
+ const inLine=(s.lineup||[]).some(id=>{const p=s.players.find(x=>x.id===id);return p&&p.pos===pos;});
  const bench=(s.players||[]).filter(p=>p.pos===pos&&!s.lineup.includes(p.id)).length;
  return (inLine?0:3)+Math.max(0,2-bench);
  }
@@ -5085,31 +5083,66 @@ function draftStillWant(s,team){
 }
 
 function draftSlotPrice(slot){return slot<8?DRAFT_BID_TOP:DRAFT_BID_REST;}
-function draftMaxAiBid(s,team,slot){
+function draftAiFund(s,team){
+ const d=s.draft;
+ if(!d)return rnd(400,1600);
+ d.aiFund=d.aiFund||{};
+ if(d.aiFund[team]==null)d.aiFund[team]=rnd(400,1600);
+ return d.aiFund[team];
+}
+
+function draftTeamMaxBid(s,team,slot){
  if(!draftStillWant(s,team))return 0;
- const fund=team===s.teamName?(s.fund||0):rnd(400,1600);
+ const fund=team===s.teamName?(s.fund||0):draftAiFund(s,team);
  const need=POS_ORDER.reduce((t,pos)=>t+draftPosNeed(s,team,pos),0);
  const base=draftSlotPrice(slot);
-
  const tempBoost=(typeof isTempSeat==='function'&&isTempSeat(s,team))?1.25:1;
- return Math.min(Math.round(fund*0.25*tempBoost), Math.round((base+need*12)*tempBoost));
+ return Math.min(Math.round(fund*0.25*tempBoost), Math.round((base+need*12)*tempBoost), Math.floor(fund));
+}
+function draftMaxAiBid(s,team,slot){return draftTeamMaxBid(s,team,slot);}
+
+function draftRepair(s,d){
+ if(!d||typeof d!=='object')return null;
+ d.pool=Array.isArray(d.pool)?d.pool:[];
+ d.log=Array.isArray(d.log)?d.log:[];
+ d.picks=Array.isArray(d.picks)?d.picks:[];
+ d.passed=(d.passed&&typeof d.passed==='object')?d.passed:{};
+ d.aiFund=(d.aiFund&&typeof d.aiFund==='object')?d.aiFund:{};
+ d.order=(Array.isArray(d.order)&&d.order.length)?d.order:draftOrder(s);
+ const slot=Number(d.slot);
+ d.slot=(Number.isFinite(slot)&&slot>=0)?Math.floor(slot):0;
+ const bid=Number(d.bid);
+ d.bid=(Number.isFinite(bid)&&bid>0)?bid:draftSlotPrice(d.slot);
+ if(typeof d.leader!=='string')d.leader=null;
+ if(d.phase!=='auction'&&d.phase!=='pick'&&d.phase!=='done')d.phase=d.picks.length?'done':'auction';
+
+ if(d.phase==='pick'&&!d.pool.length)d.phase='done';
+
+ if(d.done&&d.phase!=='done')d.phase='done';
+ d.done=!!d.done||d.phase==='done';
+ return d;
 }
 function initDraft(s,force){
  if(!s||!s.preseason)return null;
  if(s.mode&&s.mode!=='manager')return null;
- if(!force&&s.draft&&s.draft.season===s.season&&s.draft.split===s.split)return s.draft;
- const used=new Set((s.players||[]).map(p=>p.name));
- (s.academy||[]).forEach(p=>p&&p.name&&used.add(p.name));
+ if(!force&&s.draft&&s.draft.season===s.season&&s.draft.split===s.split)return draftRepair(s,s.draft);
+ const used=typeof rookieUsedNames==='function'?rookieUsedNames(s):new Set((s.players||[]).map(p=>p.name));
  const kj=draftKjiaTier(s);
+ const namePool=shuffle([].concat(DRAFT_NAMES,KJIA_FILLER_NAMES,
+  typeof ERA_GEN_NAMES!=='undefined'?ERA_GEN_NAMES:[],
+  typeof ACADEMY_NAMES!=='undefined'?ACADEMY_NAMES:[],
+  typeof ROOKIE_NAMES!=='undefined'?ROOKIE_NAMES:[]));
  const pool=[];
- for(let i=0;i<DRAFT_SIZE;i++)pool.push(genDraftProspect(s,i,used));
+ for(let i=0;i<DRAFT_SIZE;i++)pool.push(genDraftProspect(s,i,used,namePool));
  const order=draftOrder(s);
  s.draft={
  season:s.season,split:s.split,pool,order,log:[],done:false,
  phase:'auction',slot:0,bid:draftSlotPrice(0),leader:null,passed:{},
  picks:[], // {slot,team,playerId}
+ aiFund:{},
  kjiaTier:kj
  };
+ draftRepair(s,s.draft);
  draftAiAuction(s);
  return s.draft;
 }
@@ -5123,50 +5156,53 @@ function draftAiAuction(s){ // AI 叫价直到轮到玩家或签位落定
  const candidates=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
  if(!candidates.length){
 
+ if(d.leader)draftWinSlot(s,d.leader,d.bid);
+ else{
  const free=d.order.find(t=>!d.picks.some(p=>p.team===t));
- if(free){
- draftWinSlot(s,free,0);
- }else{d.done=true;d.phase='done';}
+ if(free)draftWinSlot(s,free,0);
+ else{d.done=true;d.phase='done';}
+ }
  break;
  }
 
+ if(d.leader&&candidates.length===1&&candidates[0]===d.leader){draftWinSlot(s,d.leader,d.bid);break;}
+
  let next=null;
- for(const t of d.order){
- if(!d.passed[t]&&draftStillWant(s,t)){next=t;break;}
+ for(const t of candidates){if(t===d.leader)continue;next=t;break;}
+ if(!next){
+ if(d.leader)draftWinSlot(s,d.leader,d.bid);
+ break;
  }
- if(!next){d.done=true;d.phase='done';break;}
  if(next===s.teamName)break; // 等玩家
  const max=draftMaxAiBid(s,next,d.slot);
- if(max>=d.bid+DRAFT_BID_STEP&&(d.leader!==next)){
+
+ const needBid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
+ if(max>=needBid){
  d.bid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
  d.leader=next;
  d.log.push(next+' 叫价 '+d.bid+'万（第'+(d.slot+1)+'签）');
  }else{
  d.passed[next]=true;
  }
-
- const alive=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
- if(d.leader&&alive.length===1&&alive[0]===d.leader){
- draftWinSlot(s,d.leader,d.bid);
- break;
- }
- if(alive.length===0&&d.leader){
- draftWinSlot(s,d.leader,d.bid);
- break;
- }
  }
 }
 function draftWinSlot(s,team,cost){
  const d=s.draft;
  if(!d)return;
- if(cost>0){
+
+ const playerFull=(team===s.teamName)&&!draftStillWant(s,team);
+ if(cost>0&&!playerFull){
  if(team===s.teamName)s.fund=Math.max(0,(s.fund||0)-cost);
+ else if(d.aiFund&&d.aiFund[team]!=null)d.aiFund[team]=Math.max(0,d.aiFund[team]-cost);
+ else if(d.aiFund)d.aiFund[team]=Math.max(0,(draftAiFund(s,team)-cost));
  d.log.push(team+' 以 '+cost+'万拍得第'+(d.slot+1)+'签');
+ }else if(cost>0){
+ d.log.push(team+' 拍得第'+(d.slot+1)+'签，但大名单已满（不扣款）');
  }else{
  d.log.push(team+' 顺位获得第'+(d.slot+1)+'签（无人竞拍）');
  }
  if(team===s.teamName){
- if(!draftStillWant(s,team)){
+ if(playerFull){
  d.picks.push({slot:d.slot,team,playerId:null});
  d.slot++;
  draftNextSlot(s);
@@ -5180,18 +5216,23 @@ function draftWinSlot(s,team,cost){
  d.slot++;
  draftNextSlot(s);
 }
-function draftNextSlot(s){
- const d=s.draft;
+function draftFinish(s){
+ const d=s&&s.draft;
  if(!d)return;
- if(d.slot>=d.order.length||!d.pool.length){
  d.done=true;d.phase='done';
  if(!d.pool.length)d.log.push('新秀池已选空');
  logEvent(s,' 选秀大会收官：'+d.picks.filter(x=>x.playerId).length+' 人签约'+(d.pool.length?'（'+d.pool.length+' 人落选进自由市场）':''));
  (d.pool||[]).forEach(p=>{
- p.wage=Math.max(2,DRAFT_WAGE-1);
+ draftFaInit(p);
  try{(s.freeAgents=s.freeAgents||[]).push(p);}catch(e){}
  });
  d.pool=[];
+}
+function draftNextSlot(s){
+ const d=s.draft;
+ if(!d)return;
+ if(d.slot>=d.order.length||!d.pool.length){
+ draftFinish(s);
  save();renderAll();
  return;
  }
@@ -5205,16 +5246,21 @@ function draftBidRaise(s){
  if(s===undefined)s=S;
  const d=s.draft;
  if(!d||d.done||d.phase!=='auction')return;
- if(!Number.isFinite(d.bid))d.bid=draftSlotPrice(d.slot);
 
+ if(!Number.isFinite(d.bid))d.bid=draftSlotPrice(d.slot);
+ if(!draftStillWant(s,s.teamName)){toast('大名单已满（'+ROSTER_MAX+' 人），无法再拍签位');return;}
+ const max=draftTeamMaxBid(s,s.teamName,d.slot);
  const nxt=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
- if(!Number.isFinite(nxt)||nxt<=0){toast('叫价异常，请刷新选秀面板');return;}
+ if(nxt>max){
+ if(nxt>(s.fund||0))toast('资金不足（需 '+nxt+'万，现有 '+Math.floor(s.fund||0)+'万）');
+ else toast('按本队签位预算/意愿封顶，上限 '+max+' 万（需 '+nxt+'万）');
+ return;
+ }
  if(s.fund<nxt){toast('资金不足（需 '+nxt+'万）');return;}
  d.bid=nxt;
  d.leader=s.teamName;
  delete d.passed[s.teamName];
  d.log.push(s.teamName+' 叫价 '+nxt+'万（第'+(d.slot+1)+'签）');
-
  draftAiAuction(s);
  save();renderAll();
 }
@@ -5222,12 +5268,21 @@ function draftBidPass(s){
  if(s===undefined)s=S;
  const d=s.draft;
  if(!d||d.done||d.phase!=='auction')return;
+ if(d.passed[s.teamName])return;
  d.passed[s.teamName]=true;
  d.log.push(s.teamName+' 放弃第'+(d.slot+1)+'签竞拍');
  draftAiAuction(s);
  save();renderAll();
 }
 
+function draftFaInit(p){
+ p.team=null;
+ p.wage=Math.max(2,DRAFT_WAGE-1);
+ p.freeAgent=true;
+ try{p.signCost=Math.round(valueOf(overall(p))*0.58);}catch(e){p.signCost=50;}
+ p.willingness=rnd(70,100);
+ return p;
+}
 function draftAiPick(s,team){
  const d=s.draft;
  if(!d||!d.pool.length)return null;
@@ -5244,18 +5299,66 @@ function draftAiPick(s,team){
  s.players.push(best);
  if(!s.lineup.includes(best.id)&&!s.players.some(x=>x.id!==best.id&&x.pos===best.pos&&s.lineup.includes(x.id)))s.lineup.push(best.id);
  }else{
- try{const r=ensureAiRosters(s,team)||[];if(r.length<8)r.push(best);}catch(e){}
+
+ draftRegisterAiPick(s,team,best);
  }
  d.log.push(team+' 选中 '+best.name+'（'+POS[best.pos][0]+' · 总值'+overall(best)+'）');
  logEvent(s,' 选秀大会：'+team+' 点名 '+best.name+'（'+best.age+'岁 · '+POS[best.pos][0]+(((best.tags||[]).includes('K甲前三'))?' · K甲前三':'')+'）');
  return best;
+}
+function draftRegisterAiPick(s,team,p){
+ try{
+ const map=aiRosterDefMap(s);
+ map[team]=map[team]||[];
+ const cur=ensureAiRosters(s,team)||[];
+ const wouldGrow=cur.some(x=>x.pos===p.pos)?0:1;
+ if(cur.length+wouldGrow>9){
+ (s.freeAgents=s.freeAgents||[]).push(draftFaInit(p));
+ d_logDraftOut(s,team,p);
+ return;
+ }
+ const CAP=6;
+ if(map[team].length>=CAP){
+ const own=map[team].map(id=>defOf(s,id)).filter(d=>d&&d.pos===p.pos);
+ const worst=own.map(d=>({d,o:overall(genSeasonPlayer(s,d))})).sort((a,b)=>a.o-b.o)[0];
+ if(!worst||overall(p)<=worst.o){
+ (s.freeAgents=s.freeAgents||[]).push(draftFaInit(p));
+ d_logDraftOut(s,team,p);
+ return;
+ }
+ map[team]=map[team].filter(id=>id!==worst.d.id);
+ aiDetachDef(s,worst.d.id);
+ logEvent(s,' 选秀连锁：'+team+' 用新秀 '+p.name+' 顶替 '+worst.d.name+'（'+POS[worst.d.pos][0]+'）');
+ }
+ const attrs=p.attrs||{};
+ const def={id:p.id,name:p.name,pos:p.pos,team:null,tags:p.tags||['选秀'],
+  base:[attrs.lane||70,attrs.farm||70,attrs.team||70,attrs.mind||70],
+  skill:p.skill,sig:p.sig,career:p.career||'',age0:18,ageFrom:s.season||1};
+ (s.extraDefs=s.extraDefs||[]).push(def);
+ map[team].push(def.id);
+ s.aiRosters=s.aiRosters||{};
+ delete s.aiRosters[team];
+ ensureAiRosters(s,team);
+ }catch(e){}
+}
+function d_logDraftOut(s,team,p){
+ const d=s.draft;
+ if(d)d.log.push(team+' 阵容已满，'+p.name+' 未被注册（转自由市场）');
+ logEvent(s,' 选秀大会：'+team+' 选中 '+p.name+' 但阵容无位，转入自由市场');
 }
 function draftPick(s,id){
  if(id===undefined){id=s;s=S;}
  s=s||S;
  const d=s.draft;
  if(!d||d.done||d.phase!=='pick'){toast('当前不在点名阶段');return;}
- if(!rosterGuard(s)){draftNextSlot(s);return;}
+ if(!rosterGuard(s)){
+ d.picks.push({slot:d.slot,team:s.teamName,playerId:null});
+ d.log.push(s.teamName+' 大名单已满，第'+(d.slot+1)+'签作废');
+ d.slot++;
+ draftNextSlot(s);
+ if(!d.done){save();renderAll();}
+ return;
+ }
  const p=d.pool.find(x=>x.id===id);
  if(!p){toast('该新秀已不在池中');return;}
  if(draftBlockedFor(s,s.teamName,p)){
@@ -5272,6 +5375,7 @@ function draftPick(s,id){
  toast(' 选秀签下 '+p.name+'！');
  d.slot++;
  draftNextSlot(s);
+ if(!d.done){save();renderAll();} // 点完必须落盘+刷新，否则画面纹丝不动、刷新即丢
 }
 function draftSkip(s){
  if(s===undefined)s=S;
@@ -5281,6 +5385,29 @@ function draftSkip(s){
  d.log.push(s.teamName+' 放弃点名');
  d.slot++;
  draftNextSlot(s);
+ if(!d.done){save();renderAll();}
+}
+
+function draftForceFinish(s){
+ const d=s&&s.draft;
+ if(!d||d.done)return;
+ draftRepair(s,d);
+ if(d.done)return;
+ const before=d.picks.filter(x=>x.playerId).length;
+ let g=0;
+ while(!d.done&&g++<60){
+ d.passed[s.teamName]=true;
+ if(d.phase==='pick'){
+ d.picks.push({slot:d.slot,team:s.teamName,playerId:null});
+ d.log.push(s.teamName+' 放弃点名（转会期结束）');
+ d.slot++;
+ draftNextSlot(s);
+ }else if(d.phase==='auction'){
+ draftAiAuction(s);
+ }else break;
+ }
+ if(!d.done)draftFinish(s);
+ logEvent(s,' 转会期结束：选秀大会自动收官（共 '+d.picks.filter(x=>x.playerId).length+' 人签约 · 你未点完的签位视为放弃，此前已签 '+before+' 人）');
 }
 
 function reserveLeft(s){
@@ -5298,20 +5425,23 @@ function draftPanelHtml(){
  const s=S;
  if(!s.preseason||(s.transferWindow||0)<=0)return '';
  if(s.mode&&s.mode!=='manager')return '';
- const d=s.draft||initDraft(s);
+
+ const d=draftRepair(s,s.draft)||initDraft(s);
  if(!d)return '';
  const kj=d.kjiaTier||draftKjiaTier(s);
  const taken=d.picks.filter(x=>x.playerId).length;
- const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&draftStillWant(s,s.teamName);
+ const rosterNow=(s.players||[]).length;
+ const myFull=!draftStillWant(s,s.teamName);
+ const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&!myFull;
  const mePick=d.phase==='pick'&&!d.done;
  const alive=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
- let html=`<div class="panel ${foldCls('mdraft')}" data-fold="mdraft"><h3>KPL 选秀大会 <span class="tag">${d.done?'已收官':(d.phase==='auction'?'竞拍签位':'点名')} · 已签 ${taken} · 第${Math.min(d.slot+1,d.order.length)}签 · 自留签剩 ${reserveLeft(s)}</span></h3>
- <div class="hint" style="margin-bottom:8px">流程：先<strong>竞拍签位</strong>（前8签 ${DRAFT_BID_TOP}万起 / 后8签 ${DRAFT_BID_REST}万起，加价 ${DRAFT_BID_STEP} 万），拍到再<strong>点名</strong>。池子=训练营+K甲突出者（本届二队名次影响 K甲前三档：${kj.n}人 · 底子${kj.base}+）。<strong>不能选自家青训</strong>；自家苗子用训练页自留签（每季2个）。</div>`;
+ let html=`<div class="panel ${foldCls('mdraft')}" data-fold="mdraft"><h3>KPL 选秀大会 <span class="tag">${d.done?'已收官':(d.phase==='auction'?'竞拍签位':'点名')} · 已签 ${taken} · 第${Math.min(d.slot+1,d.order.length)}签 · 大名单 ${rosterNow}/${ROSTER_MAX} · 自留签剩 ${reserveLeft(s)}</span></h3>
+ <div class="hint" style="margin-bottom:8px">流程：先<strong>竞拍签位</strong>（前8签 ${DRAFT_BID_TOP}万起 / 第9签起 ${DRAFT_BID_REST}万起，加价 ${DRAFT_BID_STEP} 万；叫价受<strong>本队签位预算上限</strong>约束），拍到再<strong>点名</strong>。池子=训练营+K甲突出者（本届二队名次影响 K甲前三档：${kj.n}人 · 底子${kj.base}+）。<strong>不能选自家青训</strong>；自家苗子用训练页自留签（每季2个）；大名单上限 ${ROSTER_MAX} 人。</div>`;
  if(!d.done&&d.phase==='auction'){
  html+=`<div class="match" style="border-color:var(--gold);margin-bottom:8px">
  <div class="vs"><div class="tname">第${d.slot+1}签</div><div class="power">起拍 ${draftSlotPrice(d.slot)}万</div></div>
  <div class="score" style="font-size:14px">当前 <b class="gold">${d.bid}</b>万${d.leader?' · '+d.leader:''}</div>
- <div class="vs" style="justify-content:flex-end"><div class="power">未放弃 ${alive.length} 队</div></div>
+ <div class="vs" style="justify-content:flex-end"><div class="power">共 ${d.order.length} 签 · 未放弃 ${alive.length} 队</div></div>
  </div>`;
  if(meAuction){
  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -5319,23 +5449,43 @@ function draftPanelHtml(){
  <button class="btn sm" onclick="draftBidPass()">放弃本签竞拍</button>
  </div>`;
  }else if(d.phase==='auction'){
- html+=`<div class="hint" style="margin-bottom:8px">等待其他队叫价…（你已放弃或未轮到）</div>`;
+ html+= myFull
+ ?`<div class="hint" style="margin-bottom:8px;color:var(--red)">大名单已满（${rosterNow}/${ROSTER_MAX}）：无法再拍签。先去转会页卖掉或放走选手腾出位置，否则本届剩余签位全部由 AI 分配。</div>`
+ :`<div class="hint" style="margin-bottom:8px">等待其他队叫价…（你已放弃或未轮到）</div>`;
  }
  }
  if(d.phase==='pick'&&!d.done&&mePick){
- html+=`<div class="hint" style="margin-bottom:8px"><b class="gold">轮到你点名</b>（第${d.slot+1}签）</div>`;
+ html+=`<div class="hint" style="margin-bottom:8px"><b class="gold">轮到你点名</b>（第${d.slot+1}签）${d.pool.length?'':'——池子已空，只能放弃本签'}${myFull?`　<b class="red">但大名单已满（${rosterNow}/${ROSTER_MAX}），只能放弃本签</b>`:''}</div>`;
+ }
+ if(d.done&&myFull&&!d.picks.some(x=>x.team===s.teamName&&x.playerId)){
+ html+=`<div class="hint" style="color:var(--red);margin-bottom:8px">本届选秀你未能参与：开始时大名单已满（${rosterNow}/${ROSTER_MAX}）。想选新秀请先在转会页卖掉或放走选手腾位置，下届选秀即可参与。</div>`;
  }
  if(d.pool.length&&(d.phase==='pick'||mePick||d.done===false)){
  const interactive=mePick;
+ if(interactive){
  html+=`<div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
- return pcard(p,interactive
+ const card=pcard(p,interactive
  ?(blocked?`<div class="hint mt8">本队青训 · 不可选</div>`
- :`<button class="btn sm primary mt8" style="width:100%" onclick="draftPick('${p.id}')"> 点名签约</button>`)
+ :`<button class="btn sm primary mt8" style="width:100%"> 点名签约</button>`)
  :'');
+
+ return (interactive&&!blocked)
+ ?`<div onclick="draftPick('${p.id}')" style="cursor:pointer" title="点击签约">${card}</div>`
+ :card;
  }).join('')}</div>`;
- if(interactive)html+=`<button class="btn sm mt8" onclick="draftSkip()">放弃点名</button>`;
+ }else{
+ const src=p=>{const t=(p.tags||[]).filter(x=>x!=='选秀'&&x!=='青训出身');return t.join('/')||'训练营';};
+ html+=`<div class="hint" style="margin-bottom:6px">新秀池 ${d.pool.length} 人 · 轮到你点名时自动展开为可点卡片</div>
+ <div style="max-height:220px;overflow-y:auto">${d.pool.map(p=>`<div class="match" style="margin-bottom:4px;padding:5px 8px">
+ <div class="vs"><span class="tname" style="font-size:12px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.age||18}岁${p.fromClub?' · '+p.fromClub+'青训':''})</span></span></div>
+ <div class="power" style="font-size:10px">${src(p)}</div>
+ <div class="score" style="font-size:12px;min-width:0">总值 ${overall(p)}</div>
+ </div>`).join('')}</div>`;
  }
+ }
+
+ if(mePick)html+=`<button class="btn sm mt8" onclick="draftSkip()">放弃点名</button>`;
  if((d.log||[]).length){
  html+=`<div class="hint" style="margin-top:10px">大会记录：${d.log.slice(-10).map(l=>_escTxt(l)).join('<br>')}</div>`;
  }

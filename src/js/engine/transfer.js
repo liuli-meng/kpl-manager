@@ -1169,6 +1169,7 @@ function endPreseason(s){
  s.preseason=false;
  s.transferWindow=0;
  endTransferWindow(s);
+ try{if(typeof draftForceFinish==='function')draftForceFinish(s);}catch(e){}
  logEvent(s,' 转会期结束！'+s.teamName+' 赛季'+s.season+'阵容锁定，联赛正式开始');
  logEvent(s,' 首战在即：俱乐部页开赛，每场赛前可调整首发、BP 中可换替补');
  save();renderAll();
