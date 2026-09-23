@@ -775,11 +775,11 @@ function tacticById(id){return TACTICS.find(t=>t.id===id)||TACTICS[0];}
 const SCENARIOS=[
  {id:'normal',name:'常规开档',hard:false,desc:'初始资金 1300万 · 工资帽 150万/周 · 标准挑战',
   apply:s=>{}},
- {id:'debt',name:'财政危机',hard:true,desc:'负债累累接手：初始资金 330万 · 工资帽 120万，只能靠成绩翻身',
+ {id:'debt',name:'财政危机',hard:true,desc:'负债累累接手：初始资金 2000万 · 工资帽 1400万，只能靠成绩翻身',
   apply:s=>{s.fund=2000;s.wageCap=1400;}},
  {id:'exodus',name:'核心出走',hard:true,desc:'队内王牌季前被挖走，开局即空一个位置，必须去市场补人',
   apply:s=>dropBestPlayer(s)},
- {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 90万/周，豪华阵容养不起，只能靠青训与规划',
+ {id:'cap',name:'工资帽紧缩',hard:true,desc:'联盟新政：工资帽 1200万/周，豪华阵容养不起，只能靠青训与规划',
   apply:s=>{s.wageCap=1200;}},
  {id:'cursed',name:'无冠魔咒',hard:true,desc:'常年无冠、士气低落：全队属性 -4 · 初始士气 50，等你破咒',
   apply:s=>{s.players.forEach(p=>{['lane','farm','team','mind'].forEach(k=>p.attrs[k]=clamp(p.attrs[k]-4,40,99));p.morale=50;});}},
@@ -790,6 +790,7 @@ function dropBestPlayer(s){
  if(!(s.players||[]).length)return null;
  const best=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
  s.players=s.players.filter(p=>p!==best);
+ if(s.playersById)delete s.playersById[best.id];
  s.lineup=(s.lineup||[]).filter(id=>id!==best.id);
  if(s.pick)delete s.pick[best.pos];
  return best;

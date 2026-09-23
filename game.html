@@ -2468,7 +2468,11 @@ function ensureAiRosters(s,teamName){
  if(roster.some(p=>p.pos===pos))return;
  const usedNames=rookieUsedNames(s);
  roster.forEach(p=>usedNames.add(p.name));
- const p=genSeasonPlayer(s,genAcademyDef(pos,usedNames,s.season));
+ const fill=genAcademyDef(pos,usedNames,s.season);
+
+ s.extraDefs=s.extraDefs||[];
+ if(!s.extraDefs.some(d=>d&&d.id===fill.id))s.extraDefs.push(fill);
+ const p=genSeasonPlayer(s,fill);
  roster.push(p);
  });
  s.aiRosters[teamName]=roster;
@@ -2523,7 +2527,7 @@ function gcDefs(s){
 
 function ensureSeasonRoster(s){
  if(!s)return;
- const used=new Set((s.players||[]).map(p=>p.name));
+ const used=rookieUsedNames(s);
  POS_ORDER.forEach(pos=>{
   if((s.players||[]).some(p=>p.pos===pos&&!p.loan))return;
   const def=genFreeAgentDef(pos,'low',used);
@@ -2539,7 +2543,7 @@ function ensureSeasonRoster(s){
 function emergencyFillRoster(s){
  if(!s)return false;
  let signed=false;
- const used=new Set((s.players||[]).map(p=>p.name));
+ const used=rookieUsedNames(s);
  POS_ORDER.forEach(pos=>{
   const ok=(s.players||[]).some(p=>p.pos===pos&&matchEligible(s,p));
   if(ok)return;
@@ -2784,8 +2788,8 @@ function aiTransferWindow(s){
  let freePool=PLAYER_POOL.concat(s.extraDefs).filter(d=>!assigned.has(d.id)&&!s.retiredDefs.includes(d.id)&&!s.players.some(x=>x.id===d.id)).slice();
 
  const order=teams.slice().sort((a,b)=>(s.aiPower[a]||400)-(s.aiPower[b]||400));
- const usedNames=rookieUsedNames(s); // 全局查重（玩家/青训/市场/各队缓存）
- PLAYER_POOL.concat(s.extraDefs).forEach(d=>usedNames.add(d.name));
+ const usedNames=rookieUsedNames(s); // 全局查重（玩家/青训/市场/各队缓存/选秀池/静态池）
+ PLAYER_POOL.concat(s.extraDefs||[]).forEach(d=>d&&d.name&&usedNames.add(d.name));
  order.forEach(tn=>{
  let guard=0;
  while(map[tn].length<5&&guard++<6){
@@ -3004,9 +3008,9 @@ function aiTransferWindow(s){
 
 function genAiRookieDef(s,teamName){
  const used=rookieUsedNames(s);
- PLAYER_POOL.concat(s.extraDefs).forEach(d=>used.add(d.name));
+ PLAYER_POOL.concat(s.extraDefs||[]).forEach(d=>d&&d.name&&used.add(d.name));
  let name;
- const guard=()=>{let g=0;while(g++<60){const n=Math.random()<0.5?(pick(['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见'])+'·'+teamName.slice(0,2)):(pick(RK_A)+pick(RK_B));if(!used.has(n)){used.add(n);return n;}}return '青训·'+teamName.slice(0,2);};
+ const guard=()=>{let g=0;while(g++<60){const n=Math.random()<0.5?(pick(['小沐','阿泽','子辰','昊然','清扬','星野','无眠','逐梦','南风','初见'])+'·'+teamName.slice(0,2)):(pick(RK_A)+pick(RK_B));if(!used.has(n)){used.add(n);return n;}}return combName(used);};
  name=guard();
  const pos=pick(POS_ORDER);
  const b=v=>clamp(v+rnd(-3,3),58,76);
@@ -3128,10 +3132,18 @@ function negoComplete(s,p,fee){
  delete p.ownerTeam;delete p.untouchable;delete p.freeAgent;delete p.signCost;
  if(fee!=null)p.acqCost=fee; // 买入价锚定（自由球员记 0，转售按保底价压）
  if(p.contract==null)p.contract=2; // 签约即给合同年限
+
+ if(s.players.some(x=>x.id===p.id)){
+  if(isFA)s.freeAgents=(s.freeAgents||[]).filter(x=>x.id!==p.id);
+  s.transferList=(s.transferList||[]).filter(x=>x.id!==p.id);
+  s.market=(s.market||[]).filter(x=>x.id!==p.id);
+  return;
+ }
  s.players.push(p);
  aiDetachDef(s,p.id); // 从 AI 阵容除名（若为 def）：原队下个转会期自动补强
  if(isFA)s.freeAgents=(s.freeAgents||[]).filter(x=>x.id!==p.id);
  s.transferList=(s.transferList||[]).filter(x=>x.id!==p.id);
+ s.market=(s.market||[]).filter(x=>x.id!==p.id);
  s.aiRosters={}; // 玩家签走任何选手后重建全部对手名册（自由球员也可能是他人首发，防同一名选手出现在两队）
 }
 function openNegotiation(s,pid){
@@ -3909,6 +3921,8 @@ function loanPlayer(s,teamName,pid){
  }
  const rent=loanRent(p);
  if(s.fund<rent){toast('资金不足（租金 '+rent+'万）');return;}
+
+ if(s.players.some(x=>x.id===p.id))return;
  s.fund-=rent;
  p.loan={from:teamName,days:LOAN_DAYS};
  s.players.push(p);
@@ -4134,6 +4148,21 @@ function rookieUsedNames(s){
  ['market','transferList','freeAgents'].forEach(k=>(s[k]||[]).forEach(p=>p&&p.name&&used.add(p.name)));
  Object.values(s.aiRosters||{}).forEach(r=>(r||[]).forEach(p=>p&&p.name&&used.add(p.name)));
  (s.extraDefs||[]).forEach(d=>d&&d.name&&used.add(d.name)); // 联盟新星 def 的名字也要占位，否则青训会撞名
+
+ if(s.draft)(s.draft.pool||[]).forEach(p=>p&&p.name&&used.add(p.name));
+ const addRef=x=>{
+  if(x==null)return;
+  if(typeof x==='string'){const d=(typeof defOf==='function')?defOf(s,x):null;if(d&&d.name)used.add(d.name);return;}
+  if(x.name)used.add(x.name);
+  else if(x.id!=null){const d=(typeof defOf==='function')?defOf(s,x.id):null;if(d&&d.name)used.add(d.name);}
+ };
+ ['aiRosterDefs','aiAcademy','challDefMap','ewcDefMap'].forEach(k=>{
+  Object.values(s[k]||{}).forEach(arr=>(arr||[]).forEach(addRef));
+ });
+ Object.values(s.loanBenches||{}).forEach(arr=>(arr||[]).forEach(addRef));
+
+ if(typeof PLAYER_POOL!=='undefined')PLAYER_POOL.forEach(d=>d&&d.name&&used.add(d.name));
+ if(typeof FA_2026!=='undefined')FA_2026.forEach(d=>d&&d.name&&used.add(d.name));
  return used;
 }
 function genRookieName(s){
@@ -5720,9 +5749,24 @@ function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
  s.kjia={teams,powers,rounds,rd:0,day:0,tables,results:[],squad,champ:null,my};
  return s.kjia;
 }
+
+function ensureKjia(s){
+ if(!s)return null;
+ const k=s.kjia;
+ const ok=k&&typeof k==='object'&&Array.isArray(k.rounds)&&k.rounds.length>0&&k.tables&&typeof k.tables==='object'&&Array.isArray(k.teams)&&k.teams.length>0;
+ if(!ok)return initKjia(s);
+ if(typeof k.rd!=='number'||!(k.rd>=0))k.rd=0;
+ if(typeof k.day!=='number'||!(k.day>=0))k.day=0;
+ if(!Array.isArray(k.results))k.results=[];
+ if(!Array.isArray(k.squad))k.squad=[];
+ if(!k.powers||typeof k.powers!=='object')k.powers={};
+ if(!k.my)k.my=kjiaMyName(s);
+ (k.teams||[]).forEach(t=>{if(t&&!k.tables[t])k.tables[t]={w:0,l:0,pts:0,pw:0};});
+ return k;
+}
 function kjiaRank(s){ // K甲积分榜名次（冠军=榜首）
- const k=s.kjia;if(!k)return [];
- return Object.keys(k.tables).sort((a,b)=>k.tables[b].pts-k.tables[a].pts||k.tables[b].pw-k.tables[a].pw);
+ const k=ensureKjia(s);if(!k)return [];
+ return Object.keys(k.tables||{}).sort((a,b)=>(k.tables[b].pts||0)-(k.tables[a].pts||0)||(k.tables[b].pw||0)-(k.tables[a].pw||0));
 }
 function kjiaPerform(s,demoted,won,m,round){ // 二队每场为下放选手结算 KDA/MVP/即时成长
  if(!demoted.length)return;
@@ -5747,38 +5791,53 @@ function kjiaPerform(s,demoted,won,m,round){ // 二队每场为下放选手结�
  });
 }
 function kjiaNextRound(s){
- const k=s.kjia;
+ const k=ensureKjia(s);
+ if(!k)return;
  const rd=k.rounds[k.rd];
- const my=k.my;
+ if(!rd||!rd.length){k.rd=Math.max(k.rd+1,0);if(k.rd>=k.rounds.length)finishKjiaSplit(s);return;}
+ const my=k.my||kjiaMyName(s);
  const demoted=(s.players||[]).filter(p=>p.kjia>0);
  rd.forEach(m=>{
- const pwA=m.a===my?kjiaTeamPower(s):k.powers[m.a];
- const pwB=m.b===my?kjiaTeamPower(s):k.powers[m.b];
+ if(!m||m.r)return; // 已赛/脏场次跳过，避免同轮重入双计积分
+ const pwA=m.a===my?kjiaTeamPower(s):(k.powers[m.a]||300);
+ const pwB=m.b===my?kjiaTeamPower(s):(k.powers[m.b]||300);
  let mw=0,ow=0;
  for(let i=1;i<=5&&mw<3&&ow<3;i++){if(Math.random()<winChance(pwA,pwB))mw++;else ow++;}
  m.ms=mw;m.es=ow;m.r=mw>ow?m.a:m.b;
- const ta=k.tables[m.a],tb=k.tables[m.b];
-
- const aWon=(m.r===m.a)||((m.r==null||m.r===''||m.r==='W'||m.r==='L')&&(m.ms>m.es||((m.ms===m.es)&&m.r!==m.b)));
- if(aWon){ta.w++;ta.pts++;tb.l++;}else{tb.w++;tb.pts++;ta.l++;}
- ta.pw+=m.ms||0;tb.pw+=m.es||0;
- ta.pw+=mw;tb.pw+=ow;
+ const ta=k.tables[m.a]||(k.tables[m.a]={w:0,l:0,pts:0,pw:0});
+ const tb=k.tables[m.b]||(k.tables[m.b]={w:0,l:0,pts:0,pw:0});
+ if(m.r===m.a){ta.w++;ta.pts++;tb.l++;}else{tb.w++;tb.pts++;ta.l++;}
+ ta.pw+=mw;tb.pw+=ow; // 只累计一次净胜局（旧版 m.ms/mw 双计，积分榜净胜局翻倍）
  if(m.a===my||m.b===my)kjiaPerform(s,demoted,m.r===my,m,k.rd+1);
  });
- const rep=rd.map(m=>m.a+' '+m.ms+':'+m.es+' '+m.b).join('；');
+ const rep=rd.map(m=>m.a+' '+(m.ms!=null?m.ms:'—')+':'+(m.es!=null?m.es:'—')+' '+m.b).join('；');
  k.results.unshift({round:k.rd+1,txt:rep});k.results=k.results.slice(0,10);
  logEvent(s,' K甲联赛（第'+(k.rd+1)+'轮）：'+rep);
  k.rd++;
  if(k.rd>=k.rounds.length)finishKjiaSplit(s);
 }
 function kjiaDayTick(s){ // 挂在 nextDay：日历推进 K甲轮次（旧档懒初始化，读档即有联赛）
- if(!s.kjia)initKjia(s);
- if(s.kjia.rd>=s.kjia.rounds.length)return; // 本赛段已收官，等下个赛段重开
- s.kjia.day++;
- if(s.kjia.day%KJIA_EVERY===0)kjiaNextRound(s);
+ try{
+ const k=ensureKjia(s);
+ if(!k)return;
+ if(k.rd>=k.rounds.length){
+
+ if(k.champ){
+ const champ=k.champ;
+ logEvent(s,' K甲新一届开赛（上届冠军 '+champ+'）——二队赛程继续推进');
+ initKjia(s);
+ }
+ return;
+ }
+ k.day++;
+ if(k.day%KJIA_EVERY===0)kjiaNextRound(s);
+ }catch(e){
+ console.warn('kjiaDayTick fail',e);
+ try{initKjia(s);}catch(e2){console.warn('kjia re-init fail',e2);}
+ }
 }
 function finishKjiaSplit(s){
- const k=s.kjia;if(!k||k.champ)return;
+ const k=ensureKjia(s);if(!k||k.champ)return;
  const rank=kjiaRank(s);
  k.champ=rank[0];
  const myRank=rank.indexOf(k.my)+1;
@@ -11222,8 +11281,8 @@ function renderLeague(){
 }
 
 function renderKjia(){
- if(!S.kjia)initKjia(S); // 旧档/新档懒初始化（首次点进二队页就能看到整届联赛）
- const k=S.kjia,my=k.my||kjiaMyName(S);
+ const k=ensureKjia(S); // 旧档/残缺档自愈（rounds 丢失会整页炸、并拖垮 nextDay）
+ const my=k.my||kjiaMyName(S);
  const rank=kjiaRank(S);
  const myRank=rank.indexOf(my)+1;
  const done=k.rd>=k.rounds.length;
@@ -11241,7 +11300,7 @@ function renderKjia(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><div class="tname">${opp}</div><div class="power">战力 ${fmt(k.powers[opp]||0)}</div></div>
  </div>`;
  }else{
- html+=`<div class="hint">本赛段 K甲已收官：冠军 <b class="gold">${k.champ||'—'}</b>——推进赛段后重开新一届</div>`;
+ html+=`<div class="hint">本届 K甲已收官：冠军 <b class="gold">${k.champ||'—'}</b>——推进一天后自动开新一届，二队赛程不会停</div>`;
  }
  html+=`</div>`;
 

@@ -997,8 +997,8 @@ function renderLeague(){
  K甲与 KPL 赛段并行推进：每 2 天一轮（nextDay 结算），下放选手真实出战。
  引擎在 season.js「K甲联赛」区段；本页只读 s.kjia 与 p.kjiaStats/kjiaLog 渲染。 */
 function renderKjia(){
- if(!S.kjia)initKjia(S); // 旧档/新档懒初始化（首次点进二队页就能看到整届联赛）
- const k=S.kjia,my=k.my||kjiaMyName(S);
+ const k=ensureKjia(S); // 旧档/残缺档自愈（rounds 丢失会整页炸、并拖垮 nextDay）
+ const my=k.my||kjiaMyName(S);
  const rank=kjiaRank(S);
  const myRank=rank.indexOf(my)+1;
  const done=k.rd>=k.rounds.length;
@@ -1016,7 +1016,7 @@ function renderKjia(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><div class="tname">${opp}</div><div class="power">战力 ${fmt(k.powers[opp]||0)}</div></div>
  </div>`;
  }else{
- html+=`<div class="hint">本赛段 K甲已收官：冠军 <b class="gold">${k.champ||'—'}</b>——推进赛段后重开新一届</div>`;
+ html+=`<div class="hint">本届 K甲已收官：冠军 <b class="gold">${k.champ||'—'}</b>——推进一天后自动开新一届，二队赛程不会停</div>`;
  }
  html+=`</div>`;
  // 积分榜

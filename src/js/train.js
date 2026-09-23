@@ -69,13 +69,29 @@ function doHeroTrain(s,pid){
 /* ================= 青训体系 ================= */
 /* 名字池（ROOKIE_NAMES / RK_A / RK_B）与 combName() 已上移到 data.js（供自由球员/时代选手共用） */
 let _rkSeq=0;
-/* 收集当前档位已占用的选手名（含市场/挂牌/自由球员/AI阵容缓存），保证新秀名唯一 */
+/* 收集当前档位已占用的选手名（含市场/挂牌/自由球员/AI阵容缓存/选秀池/静态池），保证新秀名唯一。
+   aiRosters 只是展开缓存，清空后名字真相源在 aiRosterDefs 等 def 映射里——漏掉就会跨队撞名。 */
 function rookieUsedNames(s){
  const used=new Set();
  [s.players,s.academy].forEach(l=>(l||[]).forEach(p=>p&&p.name&&used.add(p.name)));
  ['market','transferList','freeAgents'].forEach(k=>(s[k]||[]).forEach(p=>p&&p.name&&used.add(p.name)));
  Object.values(s.aiRosters||{}).forEach(r=>(r||[]).forEach(p=>p&&p.name&&used.add(p.name)));
  (s.extraDefs||[]).forEach(d=>d&&d.name&&used.add(d.name)); // 联盟新星 def 的名字也要占位，否则青训会撞名
+ // 选秀池在签走前也占名：否则青训递补/新援会和待选新秀撞名（fuzz 跨队重名）
+ if(s.draft)(s.draft.pool||[]).forEach(p=>p&&p.name&&used.add(p.name));
+ const addRef=x=>{
+  if(x==null)return;
+  if(typeof x==='string'){const d=(typeof defOf==='function')?defOf(s,x):null;if(d&&d.name)used.add(d.name);return;}
+  if(x.name)used.add(x.name);
+  else if(x.id!=null){const d=(typeof defOf==='function')?defOf(s,x.id):null;if(d&&d.name)used.add(d.name);}
+ };
+ ['aiRosterDefs','aiAcademy','challDefMap','ewcDefMap'].forEach(k=>{
+  Object.values(s[k]||{}).forEach(arr=>(arr||[]).forEach(addRef));
+ });
+ Object.values(s.loanBenches||{}).forEach(arr=>(arr||[]).forEach(addRef));
+ // 静态池名字一律占位：历史明星/自由名单不与生成名撞车
+ if(typeof PLAYER_POOL!=='undefined')PLAYER_POOL.forEach(d=>d&&d.name&&used.add(d.name));
+ if(typeof FA_2026!=='undefined')FA_2026.forEach(d=>d&&d.name&&used.add(d.name));
  return used;
 }
 function genRookieName(s){
