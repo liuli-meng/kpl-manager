@@ -653,6 +653,7 @@ function dropBestPlayer(s){
  if(!(s.players||[]).length)return null;
  const best=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
  s.players=s.players.filter(p=>p!==best);
+ if(s.playersById)delete s.playersById[best.id];
  s.lineup=(s.lineup||[]).filter(id=>id!==best.id);
  if(s.pick)delete s.pick[best.pos];
  return best;

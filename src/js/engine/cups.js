@@ -321,6 +321,7 @@ function finishAsianGames(s){
  if(fills.length){
  fills.forEach(p=>{const li=s.lineup.indexOf(p.id);if(li>=0)s.lineup.splice(li,1);});
  s.players=s.players.filter(p=>!p.natFill);
+ if(s.playersById)fills.forEach(p=>delete s.playersById[p.id]);
  logEvent(s,' 集训借调青训归位：'+fills.map(p=>p.name).join('、')+' 返回青训营，征召选手全员归队备战年总');
  }
  setupAnnual(s);

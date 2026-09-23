@@ -2,6 +2,7 @@
    UI 按钮一律从 nextAction 派生；测试可直接断言 type/fn。 */
 function playerRetired(s){return !!(s&&s.mode==='player'&&s.career&&s.career.retired);}
 function nextAction(s){
+ if(typeof s==='string')s=S; // 兼容历史 onclick 误传动作名
  if(!s||!s.players||!s.players.length)return null;
  if(playerRetired(s))return null;
  if(s.board&&s.board.fired)return null;

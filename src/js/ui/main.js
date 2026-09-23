@@ -379,15 +379,25 @@ function respondCoachOffer(accept){
  if(!tmpl){S.coachOffer=null;return;}
  d.log.unshift({year:gameYear(S),note:'离任 '+S.teamName+'，转投 '+tmpl.name});
  d.log=d.log.slice(0,8);
+ const myCoach=S.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
  S.teamName=tmpl.name;S.icon=tmpl.icon;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
  S.players=[];
  tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
  S.lineup=buildBestLineup(S);
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ if(myCoach)S.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
+ else S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
  S.seedPower=teamPower(S)||tmpl.seed;
  S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
  S.board.warn=0;
+ // 赛制中段换队：分组/赛程/积分/AI名册都绑旧队名，必须重建
+ S.aiRosters={};S.aiInj={};S.series=null;S._afterMatch=null;
+ if(S.playersById)rebuildPlayerIndex(S);
+ try{if(typeof setBoardKpi==='function')setBoardKpi(S);}catch(e){}
+ try{initGroups(S);}catch(e){}
+ if(!S.preseason&&(S.phase==='r1'||S.phase==='r2'||S.phase==='r3')){
+ try{genRoundSchedule(S);}catch(e){}
+ }
  logEvent(S,' 你接受 '+tmpl.name+' 的邀约：新班底战力 '+fmt(teamPower(S))+'——用成绩证明他们的选择');
  }else{
  d.log.unshift({year:gameYear(S),note:'婉拒 '+o.team+' 邀约，留任 '+S.teamName});
@@ -647,6 +657,7 @@ function applyCoachClub(){
  S.lineup=buildBestLineup(S); // 统一可出场过滤（未成年/伤停不进首发）
  S.coachDeal={years:2,honors:[],log:[]}; // 教练合同：2 年起步，成绩决定去留
  S.seedPower=teamPower(S)||tmpl.seed;
+ applyScenario(S); // 开局剧本对教练同样生效（否则 sc_* 成就永不触发）
  initGroups(S);
  S.preseason=false;S.transferWindow=0; // 俱乐部引援自动处理，无需转会期
  setBoardKpi(S);initFans(S);
@@ -670,6 +681,7 @@ function createPlayerCareer(){
  S.mode='player';
  S.era=_eraSelPlayer||null;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
+ applyScenario(S); // 开局剧本对选手同样生效
  S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
  tmpl.players.forEach(pid=>{
  const def=PLAYER_POOL.find(d=>d.id===pid);

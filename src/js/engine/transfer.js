@@ -567,14 +567,14 @@ function buyoutPrice(p){
 /* 非卖品强挖：2.5倍溢价（同样受 1500 封顶，顶星与主力同价时更看意愿/成功率），成功率=意愿缺口，失败意愿-10 */
 function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
-/* 大名单：≥10 人禁止再签（买断/直签/青训提拔共用守卫） */
-function rosterFull(s){return (s.players||[]).length>=ROSTER_MAX;}
+/* 大名单：≥10 人禁止再签（买断/直签/青训提拔共用守卫）；K甲下放不占一线名额 */
+function rosterFull(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length>=ROSTER_MAX;}
 function rosterGuard(s){
  if(!rosterFull(s))return true;
- toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前 '+(s.players||[]).length+' 人）——先卖出或放弃选手再签约');
+ toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前一线 '+(s.players||[]).filter(p=>!(p.kjia>0)).length+' 人）——先卖出或放弃选手再签约');
  return false;
 }
-/* 转会期卖出守卫：本转会期已卖出人数达到现名单一半（向下取整）则禁止再卖 */
+/* 转会期卖出守卫：本转会期已卖出人数达到「现名单一半」（向下取整）则禁止再卖 */
 function sellGuard(s){
  const n=(s.players||[]).length;
  if((s.windowSold||0)>=Math.floor(n/2)){
@@ -597,10 +597,12 @@ function overCapTax(s,extraWage){
  const over=Math.max(0,weeklyWage(s)+(extraWage||0)-s.wageCap);
  return {over,tax:Math.round(over*0.6)};
 }
-function negoCapCheck(s,p){
- const {over,tax}=overCapTax(s,p.wage);
+function negoCapCheck(s,p,offerWage){
+ // 用谈定周薪而非市场对象原薪，否则期望薪更高时会误判「帽内」
+ const w=Math.min(PLAYER_WAGE_MAX,offerWage!=null?offerWage:(p.wage||0));
+ const {over,tax}=overCapTax(s,w);
  if(over<=0)return true;
- return confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？');
+ return confirm(' 超帽签约：签下 '+p.name+' 后周薪 '+(weeklyWage(s)+w)+'万（帽 '+s.wageCap+'万），超出 '+over+'万/周 需每周缴纳 60% 奢侈税（'+tax+'万/周）。\n多花钱可以，确定签下？');
 }
 function negoComplete(s,p,fee){
  const from=p.ownerTeam,isFA=p.freeAgent;
@@ -624,7 +626,8 @@ function openNegotiation(s,pid){
  if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
  window._nego={s,pid,round:1,
  freeAgent:!!p.freeAgent,
- askFee:p.freeAgent?0:negoAskFee(p),
+ // 自由球员无转会费，但有签约费 signCost（UI 标价必须实扣，否则 0 元白嫖）
+ askFee:p.freeAgent?Math.max(0,Math.round(p.signCost||0)):negoAskFee(p),
  askWage:negoWageDemand(p)};
  renderNego();
 }
@@ -640,15 +643,15 @@ function renderNego(){
  <span class="dim">${POS[p.pos][0]} · 总值${overall(p)} · ${p.age}岁 · 战力 ${playerPower(p,p.sig)}</span></div>
  ${negoRow('现效力',p.freeAgent?'自由球员（无球可打）':p.ownerTeam||'—')}
  ${negoRow('本人意愿',effWillingness(p)+' / 100',p.transferRequest?' <span style="color:var(--gold)">（已公开要求离队 · 更容易谈）</span>':(p.willingness<40?' <span style="color:var(--red)">（很可能拒绝）</span>':''))}
- ${negoRow('对方心理价位',n.freeAgent?'—（仅谈薪资）':n.askFee+'万 转会费')}
+ ${negoRow('对方心理价位',n.freeAgent?(n.askFee+'万 签约费'):(n.askFee+'万 转会费'))}
  ${negoRow('期望年薪',n.askWage+'万')}
- ${(()=>{const {over,tax}=overCapTax(s,p.wage);return negoRow('签后周薪',(cur+p.wage)+' / 帽 '+s.wageCap+'万',over>0?` <span style="color:var(--red)">超帽${over}万 · 税${tax}万/周</span>`:' <span style="color:var(--green)">帽内</span>');})()}
+ ${(()=>{const ow=n.askWage||p.wage;const {over,tax}=overCapTax(s,ow);return negoRow('签后周薪',(cur+ow)+' / 帽 '+s.wageCap+'万',over>0?` <span style="color:var(--red)">超帽${over}万 · 税${tax}万/周</span>`:' <span style="color:var(--green)">帽内</span>');})()}
  ${p.untouchable?`<div class="hint" style="color:var(--red)"> 非卖品：需 ${n.askFee}万 溢价强挖，每轮谈判有失败风险</div>`:''}
  </div>
  <div class="hint" style="margin-bottom:8px">报价需同时满足「转会费 ≥ 心理价位」和「年薪 ≥ 期望」，也可压价试探——但每被拒一轮，对方要价上涨，第 3 轮仍不满足则谈判破裂（意愿-10）。</div>
  ${n.msg?`<div class="event-card" style="margin-bottom:10px">${n.msg}</div>`:''}
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
- <label style="flex:1;min-width:120px">转会费(万)<input id="nego-fee" type="number" class="hd-in" value="${n.freeAgent?0:Math.round(n.askFee*0.8)}" ${n.freeAgent?'disabled':''} style="width:100%;margin-top:4px"></label>
+ <label style="flex:1;min-width:120px">${n.freeAgent?'签约费(万)':'转会费(万)'}<input id="nego-fee" type="number" class="hd-in" value="${n.freeAgent?n.askFee:Math.round(n.askFee*0.8)}" style="width:100%;margin-top:4px"></label>
  <label style="flex:1;min-width:120px">年薪(万)<input id="nego-wage" type="number" class="hd-in" value="${n.askWage}" style="width:100%;margin-top:4px"></label>
  </div>
  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -672,9 +675,9 @@ function negoSubmit(){
  const n=window._nego;if(!n)return;
  const s=n.s,p=s.transferList.find(x=>x.id===n.pid)||(s.freeAgents||[]).find(x=>x.id===n.pid);
  if(!p){window._nego=null;closeModal('app-modal');toast('谈判对象已失效（被他人签走或市场刷新）');return;}
- const fee=n.freeAgent?0:Math.max(0,parseInt($('#nego-fee').value,10)||0);
+ const fee=Math.max(0,parseInt($('#nego-fee').value,10)||0);
  const wage=Math.max(1,parseInt($('#nego-wage').value,10)||0);
- if(!n.freeAgent&&fee>s.fund){n.msg=' 俱乐部资金不足（现有 '+fmtWan(s.fund)+'，报价 '+fmtWan(fee)+'）。';renderNego();return;}
+ if(fee>s.fund){n.msg=' 俱乐部资金不足（现有 '+fmtWan(s.fund)+'，报价 '+fmtWan(fee)+'）。';renderNego();return;}
  // 非卖品强挖：每轮都掷成功率，失败=本轮破裂且要价上涨
  if(p.untouchable&&Math.random()>raidChance(p)){
  p.willingness=clamp(p.willingness-10,5,100);
@@ -685,18 +688,18 @@ function negoSubmit(){
  n.msg=' '+p.ownerTeam+' 拒绝放人！对方态度更加强硬（意愿降至 '+p.willingness+'，要价已上调）。';
  renderNego();return;
  }
- // 评估：转会费/年薪是否达到逐轮上涨的要价
- const feeOk=n.freeAgent||fee>=n.askFee;
+ // 评估：转会费/签约费 + 年薪是否达到逐轮上涨的要价
+ const feeOk=fee>=n.askFee;
  const wageOk=wage>=n.askWage;
  const willingOk=p.willingness>=30||fee>=n.askFee*1.3; // 意愿低但要价给足也能打动
  if(feeOk&&wageOk&&willingOk){
- if(!negoCapCheck(s,p))return; // 超帽需确认（奢侈税），取消则留在谈判
- if(!n.freeAgent)s.fund-=fee;
+ if(!negoCapCheck(s,p,wage))return; // 超帽需确认（奢侈税），取消则留在谈判
+ s.fund-=fee;
  p.wage=Math.min(PLAYER_WAGE_MAX,wage); // 个人顶薪封顶
  const fromTeam=n.freeAgent?'自由球员':(p.ownerTeam||'原俱乐部');
- negoComplete(s,p,n.freeAgent?0:fee);
- recordTransfer(s,'in',p,n.freeAgent?0:fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
- logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
+ negoComplete(s,p,fee);
+ recordTransfer(s,'in',p,fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
+ logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（签约费 '+fee+'万 · 年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
  if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
  window._nego=null;closeModal('app-modal');
  try{SFX.gold();}catch(_){}
@@ -705,14 +708,14 @@ function negoSubmit(){
  }
  // 被拒：给还价，要价上涨
  n.round++;
- n.askFee=n.freeAgent?0:Math.round(n.askFee*(feeOk?1:1.12));
+ n.askFee=Math.round(n.askFee*(feeOk?1:1.12));
  n.askWage=Math.round(n.askWage*(wageOk?1:1.1));
  const why=[];
- if(!feeOk)why.push('转会费低于心理价位');
+ if(!feeOk)why.push(n.freeAgent?'签约费低于心理价位':'转会费低于心理价位');
  if(!wageOk)why.push('年薪不够');
  if(!willingOk)why.push('本人无意加盟');
  if(n.round>3){negoBreak(s,p,why.join('、'));return;}
- n.msg=' 对方摇头：'+why.join('、')+'。<br> 经纪人放话——'+(n.freeAgent?'':'转会费至少 <b style="color:var(--gold)">'+n.askFee+'万</b>，')+'年薪 <b style="color:var(--gold)">'+n.askWage+'万</b> 才考虑。';
+ n.msg=' 对方摇头：'+why.join('、')+'。<br> 经纪人放话——'+(n.freeAgent?'签约费至少 <b style="color:var(--gold)">'+n.askFee+'万</b>，':'转会费至少 <b style="color:var(--gold)">'+n.askFee+'万</b>，')+'年薪 <b style="color:var(--gold)">'+n.askWage+'万</b> 才考虑。';
  renderNego();
 }
 function negoBreak(s,p,reason){
@@ -848,6 +851,7 @@ function sellAcceptClub(i){
  const p=findPlayer(s,n.pid);
  if(!p)return;
  const wasStarter=s.lineup.includes(p.id);
+ if(!sellGuard(s))return; // 出售谈判成交同样受卖出半数约束
  completeSale(s,p,fee,team);
  if(wasStarter&&!s.players.some(x=>x.pos===p.pos))toast(' '+POS[p.pos][0]+'位置已无人，记得补签');
  window._sellNego=null;closeModal('app-modal');
@@ -856,17 +860,19 @@ function sellAcceptClub(i){
 function sellQuit(){
  window._sellNego=null;closeModal('app-modal');toast('已停止出售，选手留队');
 }
-/* 成交共用：转会费入账 + 名册/首发/挂牌清理 */
+/* 成交共用：转会费入账 + 名册/首发/挂牌清理（卖出半数守卫由调用方在成交前检查） */
 function completeSale(s,p,fee,team){
  recordTransfer(s,'out',p,fee,team,'转会出售'); // 年度回顾·转会台账
  s.fund+=fee;
  s.windowSold=(s.windowSold||0)+1; // 联盟备案：本转会期卖出计数（卖出≤名单一半守卫用）
  s.maxSale=Math.max(s.maxSale||0,fee); // 单笔出售纪录（成就「天价交易」）
  s.players=s.players.filter(x=>x.id!==p.id);
+ if(s.playersById)delete s.playersById[p.id]; // 同步失效索引，防幽灵对象二次入账
  if(s.lineup.includes(p.id))s.lineup=s.lineup.filter(x=>x!==p.id);
  if(s.pick)delete s.pick[p.pos];
  s.listed=(s.listed||[]).filter(x=>x.id!==p.id);
  s.bids=(s.bids||[]).filter(x=>x.id!==p.id);
+ s.expiring=(s.expiring||[]).filter(x=>x!==p.id);
  // 兜底注册 def：市场/自由签来的选手（genFreeAgentDef）没有 def 存档，出售时必须补建，
  // 否则买入方 AI 队「查无此人」，选手直接从联盟蒸发（转会市场/对手阵容都找不到）
  if(!defOf(s,p.id)){
@@ -984,6 +990,7 @@ function acceptBid(s,id){
  const b=(s.bids||[]).find(x=>x.id===id);
  const p=findPlayer(s,id);
  if(!b||!p)return;
+ if(!sellGuard(s))return; // 挂牌+接受报价同样受卖出半数约束
  completeSale(s,p,b.bid,b.team);
  save();renderAll();toast('转会完成！');
 }
@@ -1125,6 +1132,7 @@ function releasePlayer(s,pid){
  if(p.kjia>0){toast(p.name+' 正在 K甲锻炼（剩余 '+p.kjia+' 天），归队后再操作');return;}
  if(!confirmDanger('确定不续约并放走 '+p.name+'（总值 '+overall(p)+'）？\n选手将进入自由市场，其他队可直签。'))return;
  s.players=s.players.filter(x=>x.id!==pid);
+ if(s.playersById)delete s.playersById[pid];
  const li=s.lineup.indexOf(pid);if(li>=0)s.lineup.splice(li,1);
  if(s.pick)delete s.pick[p.pos];
  p.freeAgent=true;p.willingness=rnd(70,95);
@@ -1336,6 +1344,7 @@ function tickLoans(s){
  const from=p.loan.from;
  logEvent(s,' 租借到期：'+p.name+' 返回 '+from);
  s.players=s.players.filter(x=>x.id!==p.id);
+ if(s.playersById)delete s.playersById[p.id];
  const li=s.lineup.indexOf(p.id);
  if(li>=0)s.lineup.splice(li,1);
  if(s.pick)delete s.pick[p.pos];

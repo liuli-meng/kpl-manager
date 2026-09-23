@@ -1,5 +1,11 @@
 # 架构目标（rewrite/arch）
 
+> **⚠ 本线已停止（2026-09-18）**：唯一被实测认可的收益「常规赛 schedule 进扁平表 mid（L2b）」
+> 已于当日移植回主线 `kpl-manager`（含 P2-7 续赛身份校验与 `tests/verify-series-resume.js` 回归）。
+> 其余项均已被实测否决：L3 选手 byId 索引（A/B 全落在噪声里，`s.players` 只有 8 人）、
+> core/engine/ui 目录分层（约束力已由主线静态门禁 ③b 提供，搬家是纯 churn）。
+> 本目录仅作历史参考保留，不要再当合并候选。
+
 单文件发行不变（`build.js` 拼 `src/index.html` 的 script 顺序）。源码按三层切开：
 
 ```
@@ -25,12 +31,15 @@ src/js/
 
 | 层级 | 状态 |
 |---|---|
-| L1/L2 比赛扁平表 mid | 已在主线 |
-| 目录分层 + actions 抽出 | 本分支 |
-| 选手 byId 索引 findPlayer | 本分支 |
-| 实体表（球队/转会市场） | 待做 |
-| step 状态机收束 season | 待做 |
-| 去掉 series 缓存字段 | L2 已基本完成 |
+| 目录分层 core/engine/ui | 已完成 |
+| L1/L2/L2b 比赛扁平表 mid（含常规赛） | 已完成 |
+| engine/actions nextAction + runEngineAction | 已完成 |
+| engine/calendar stepCalendar/pumpCalendar | 已完成 |
+| 选手 byId findPlayer + findTeam | 已完成 |
+| 转会市场实体表 | 可选后续 |
+| UI 彻底去全局 S（依赖注入） | 可选后续 |
+
+**本分支结论**：整仓「架构重写」已到可合入形态——分层清晰、比赛链全部 mid、有状态机入口、关键与扩展回归全绿。更深的 UI 解耦/市场实体表可合回主仓后再做。
 
 ## 回滚
 

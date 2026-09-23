@@ -72,6 +72,7 @@ function makeDom(opts) {
     performance: { now: () => Date.now() },
   };
   dom.window = dom;
+  dom.kmAutoAdvance = true; // 无头沙箱：结算后立刻推进（与生产版测试基座一致）
   vm.createContext(dom);
   const code = (opts && opts.code != null) ? opts.code : loadCode();
   vm.runInContext(code, dom);

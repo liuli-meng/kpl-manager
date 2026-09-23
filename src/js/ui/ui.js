@@ -269,15 +269,17 @@ function uiAdvanceCalendar(s){
  if(uiGuard())return;
  if(!requireSave('推进赛历'))return;
  const label=calendarNextLabel(s)||'推进赛历';
- // 年度收官/年总会触发年龄结算与新赛季：大步推进确认；简化模式跳过例行确认
+ // 年度收官/年总会触发年龄结算与新赛季：大步推进确认。高代价，不得被简化模式跳过
  if(/年度收官|年度总决赛|新赛季/.test(label)){
- if(!confirmSoft(label.replace(/^[\s]*/,'')+'？\n继续将推进年度赛历（可能直接进入下一年结算）。'))return;
+ if(!confirmDanger(label.replace(/^[\s]*/,'')+'？\n继续将推进年度赛历（可能直接进入下一年结算）。'))return;
  }
  advanceCalendar(s);
 }
 /* nextAction / playerRetired 已迁至 engine/actions.js（UI 只做 guard 与派发） */
 function uiDoNextAction(s){
  if(uiGuard())return;
+ // 参数归一化：兼容历史 onclick 把动作名字符串当状态传入（'startCard'/'startPlayoff'）
+ if(typeof s==='string')s=S;
  const a=nextAction(s||S);
  if(!a){toast('当前没有可进行的比赛');return;}
  if(a.fn==='uiEndPreseason')uiEndPreseason(s||S);
@@ -678,7 +680,7 @@ function renderBiz(){
  <div class="hint" style="margin-bottom:8px">跨设备玩同一档时请各自设置；导出/导入存档不会带走这些开关。</div>
  <div style="display:grid;gap:8px">
  <button class="btn sm ${sp?'gold':'primary'}" onclick="toggleSimpleMode()">${sp?' 关闭简化模式':' 开启简化模式'}</button>
- <div class="hint">简化模式：年度收官等例行确认自动跳过；赛前准备按战力自动优化首发（伤停/集训仍会顶替）。导入覆盖、解雇、放走等高代价操作仍会确认。</div>
+ <div class="hint">简化模式：常规例行确认自动跳过；赛前准备按战力自动优化首发（伤停/集训仍会顶替）。导入覆盖、解雇、放走、年度收官等高代价操作仍会确认。</div>
  <button class="btn sm ${hc?'gold':'primary'}" onclick="toggleHighContrast()">${hc?' 关闭高对比':' 开启高对比'}</button>
  <div class="hint">高对比：加亮边框与正文，胜负场次用边框标记辅助（不只靠红绿色）。适合色弱或强光环境。</div>
  </div></div>`;
@@ -880,8 +882,8 @@ function renderLeague(){
  K甲与 KPL 赛段并行推进：每 2 天一轮（nextDay 结算），下放选手真实出战。
  引擎在 season.js「K甲联赛」区段；本页只读 s.kjia 与 p.kjiaStats/kjiaLog 渲染。 */
 function renderKjia(){
- if(!S.kjia)initKjia(S); // 旧档/新档懒初始化（首次点进二队页就能看到整届联赛）
- const k=S.kjia,my=k.my||kjiaMyName(S);
+ const k=ensureKjia(S); // 旧档/残缺档自愈（rounds 丢失会整页炸、并拖垮 nextDay）
+ const my=k.my||kjiaMyName(S);
  const rank=kjiaRank(S);
  const myRank=rank.indexOf(my)+1;
  const done=k.rd>=k.rounds.length;
@@ -899,7 +901,7 @@ function renderKjia(){
  <div class="vs" style="justify-content:flex-end;text-align:right"><div class="tname">${opp}</div><div class="power">战力 ${fmt(k.powers[opp]||0)}</div></div>
  </div>`;
  }else{
- html+=`<div class="hint">本赛段 K甲已收官：冠军 <b class="gold">${k.champ||'—'}</b>——推进赛段后重开新一届</div>`;
+ html+=`<div class="hint">本届 K甲已收官：冠军 <b class="gold">${k.champ||'—'}</b>——推进一天后自动开新一届，二队赛程不会停</div>`;
  }
  html+=`</div>`;
  // 积分榜

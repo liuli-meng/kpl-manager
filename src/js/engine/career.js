@@ -42,19 +42,21 @@ function playerYearSettle(s){ // 选手模式年度结算：本赛季个人数�
  s.career.seasons.unshift(rec);
  s.career.seasons=s.career.seasons.slice(0,15);
  s.career.titles+=rec.titles;
- me.kTotal=0;me.dTotal=0;me.aTotal=0;me.caps=0;me.mvp=0; // 本赛季计数清零（生涯履历已快照）
+ s.career.lastMvp=rec.mvp; // 供退役转教练评分（me.mvp 马上清零）
+ me.kTotal=0;me.dTotal=0;me.aTotal=0;me.caps=0;me.mvp=0;me.apps=0; // 本赛季计数清零（生涯履历已快照）
  logEvent(s,'【赛季结算】'+rec.year+'：'+rec.team+' · 出场 '+rec.apps+' 次'+(rec.kda?' · 场均 '+rec.kda:'')+' · 总值 '+rec.ovr+' · '+(rec.titles?rec.titles+' 冠':'无冠'));
 }
 function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地为新东家阵容
  const mv=s.career&&s.career.pendingMove;
  if(!mv)return;
  const me=myPlayer(s);
- s.career.pendingMove=null;
- if(!me)return;
+ if(!me||!mv||!mv.team)return; // 先校验再清意向，避免静默蒸发
  const tmpl=CLUB_TEMPLATES.find(c=>c.name===mv.team);
+ s.career.pendingMove=null;
  if(!tmpl){logEvent(s,' 转会取消：'+mv.team+' 注册资格有变');return;}
  s.teamName=tmpl.name;s.icon=tmpl.icon;
  s.players=[me];
+ if(s.playersById)rebuildPlayerIndex(s);
  tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(d=>d.id===pid);if(def)s.players.push(genPlayer(def));});
  me.team=tmpl.name;
  me.wage=Math.max(me.wage,Math.max(5,Math.round(mv.fee/50))); // 报价越高，薪资待遇越好

@@ -244,12 +244,14 @@ function benchMoraleDelta(role,base){
   if(role==='star')return base*2;
   return base;
 }
-/* 赛后钩子：选手模式可能触发媒体 */
-function playerAfterMatch(s,finalWin){
- if(!s||s.mode!=='player')return;
+/* 赛后钩子：选手模式可能触发媒体；sr 用于判定是否决赛夺冠（phase 可能尚未写成 champion） */
+function playerAfterMatch(s,finalWin,sr){
+ if(!s||s.mode!=='player'||!s.career)return;
  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
- s.career.stats.matches++;
- if(finalWin&&s.phase==='champion')maybeOpenMedia(s,'title');
+ const meIn=s.career.me&&rosterLineup(s).some(p=>p.id===s.career.me);
+ if(meIn)s.career.stats.matches++; // 只计「我出场」，球队赛不冒充个人出场
+ const isTitle=finalWin&&(s.phase==='champion'||(sr&&(sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot))));
+ if(isTitle)maybeOpenMedia(s,'title');
  else maybeOpenMedia(s,'match');
 }
 /* ================= 每日成长行动：加练 / 英雄特训 / 休息 =================

@@ -50,9 +50,25 @@ function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
  s.kjia={teams,powers,rounds,rd:0,day:0,tables,results:[],squad,champ:null,my};
  return s.kjia;
 }
+/* 残缺档自愈：rounds/tables 丢失会让 kjiaDayTick 在 .length 上抛错，整条 nextDay 挂掉（赛程与转会期一起卡死）。
+ truthy 但不完整的 s.kjia（如 {rounds:null}）不能走「!s.kjia 才 init」——必须显式验形状。 */
+function ensureKjia(s){
+ if(!s)return null;
+ const k=s.kjia;
+ const ok=k&&typeof k==='object'&&Array.isArray(k.rounds)&&k.rounds.length>0&&k.tables&&typeof k.tables==='object'&&Array.isArray(k.teams)&&k.teams.length>0;
+ if(!ok)return initKjia(s);
+ if(typeof k.rd!=='number'||!(k.rd>=0))k.rd=0;
+ if(typeof k.day!=='number'||!(k.day>=0))k.day=0;
+ if(!Array.isArray(k.results))k.results=[];
+ if(!Array.isArray(k.squad))k.squad=[];
+ if(!k.powers||typeof k.powers!=='object')k.powers={};
+ if(!k.my)k.my=kjiaMyName(s);
+ (k.teams||[]).forEach(t=>{if(t&&!k.tables[t])k.tables[t]={w:0,l:0,pts:0,pw:0};});
+ return k;
+}
 function kjiaRank(s){ // K甲积分榜名次（冠军=榜首）
- const k=s.kjia;if(!k)return [];
- return Object.keys(k.tables).sort((a,b)=>k.tables[b].pts-k.tables[a].pts||k.tables[b].pw-k.tables[a].pw);
+ const k=ensureKjia(s);if(!k)return [];
+ return Object.keys(k.tables||{}).sort((a,b)=>(k.tables[b].pts||0)-(k.tables[a].pts||0)||(k.tables[b].pw||0)-(k.tables[a].pw||0));
 }
 function kjiaPerform(s,demoted,won,m,round){ // 二队每场为下放选手结算 KDA/MVP/即时成长
  if(!demoted.length)return;
@@ -77,35 +93,54 @@ function kjiaPerform(s,demoted,won,m,round){ // 二队每场为下放选手结�
  });
 }
 function kjiaNextRound(s){
- const k=s.kjia;
+ const k=ensureKjia(s);
+ if(!k)return;
  const rd=k.rounds[k.rd];
- const my=k.my;
+ if(!rd||!rd.length){k.rd=Math.max(k.rd+1,0);if(k.rd>=k.rounds.length)finishKjiaSplit(s);return;}
+ const my=k.my||kjiaMyName(s);
  const demoted=(s.players||[]).filter(p=>p.kjia>0);
  rd.forEach(m=>{
- const pwA=m.a===my?kjiaTeamPower(s):k.powers[m.a];
- const pwB=m.b===my?kjiaTeamPower(s):k.powers[m.b];
+ if(!m||m.r)return; // 已赛/脏场次跳过，避免同轮重入双计积分
+ const pwA=m.a===my?kjiaTeamPower(s):(k.powers[m.a]||300);
+ const pwB=m.b===my?kjiaTeamPower(s):(k.powers[m.b]||300);
  let mw=0,ow=0;
  for(let i=1;i<=5&&mw<3&&ow<3;i++){if(Math.random()<winChance(pwA,pwB))mw++;else ow++;}
  m.ms=mw;m.es=ow;m.r=mw>ow?m.a:m.b;
- const ta=k.tables[m.a],tb=k.tables[m.b];
+ const ta=k.tables[m.a]||(k.tables[m.a]={w:0,l:0,pts:0,pw:0});
+ const tb=k.tables[m.b]||(k.tables[m.b]={w:0,l:0,pts:0,pw:0});
  if(m.r===m.a){ta.w++;ta.pts++;tb.l++;}else{tb.w++;tb.pts++;ta.l++;}
  ta.pw+=mw;tb.pw+=ow;
  if(m.a===my||m.b===my)kjiaPerform(s,demoted,m.r===my,m,k.rd+1);
  });
- const rep=rd.map(m=>m.a+' '+m.ms+':'+m.es+' '+m.b).join('；');
+ const rep=rd.map(m=>m.a+' '+(m.ms!=null?m.ms:'—')+':'+(m.es!=null?m.es:'—')+' '+m.b).join('；');
  k.results.unshift({round:k.rd+1,txt:rep});k.results=k.results.slice(0,10);
  logEvent(s,' K甲联赛（第'+(k.rd+1)+'轮）：'+rep);
  k.rd++;
  if(k.rd>=k.rounds.length)finishKjiaSplit(s);
 }
 function kjiaDayTick(s){ // 挂在 nextDay：日历推进 K甲轮次（旧档懒初始化，读档即有联赛）
- if(!s.kjia)initKjia(s);
- if(s.kjia.rd>=s.kjia.rounds.length)return; // 本赛段已收官，等下个赛段重开
- s.kjia.day++;
- if(s.kjia.day%KJIA_EVERY===0)kjiaNextRound(s);
+ try{
+ const k=ensureKjia(s);
+ if(!k)return;
+ if(k.rd>=k.rounds.length){
+ // 本届已收官：若不重开，二队页会一直停在「已收官」直到下赛段——观感就是赛程卡住。
+ // 收官次日自动开新一届（startSplit 仍会整届重开，口径不变：赛段边界仍换届）。
+ if(k.champ){
+ const champ=k.champ;
+ logEvent(s,' K甲新一届开赛（上届冠军 '+champ+'）——二队赛程继续推进');
+ initKjia(s);
+ }
+ return;
+ }
+ k.day++;
+ if(k.day%KJIA_EVERY===0)kjiaNextRound(s);
+ }catch(e){
+ console.warn('kjiaDayTick fail',e);
+ try{initKjia(s);}catch(e2){console.warn('kjia re-init fail',e2);}
+ }
 }
 function finishKjiaSplit(s){
- const k=s.kjia;if(!k||k.champ)return;
+ const k=ensureKjia(s);if(!k||k.champ)return;
  const rank=kjiaRank(s);
  k.champ=rank[0];
  const myRank=rank.indexOf(k.my)+1;
@@ -157,6 +192,7 @@ function kjiaReturnNote(p){ // 归队日志共用后缀
  return '（K甲累计出场 '+(st?st.apps:0)+' 场'+(st&&st.apps?' · 场均 '+Math.round(st.k/st.apps*10)/10+'/'+Math.round(st.d/st.apps*10)/10+'/'+Math.round(st.a/st.apps*10)/10:'')+'）';
 }
 function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉回一队，成长按已练天数折算
+ if(s&&s.mode==='player'){toast('选手生涯不操作二队人事');return false;}
  if(id===undefined){id=s;s=S;}
  s=s||S;
  const p=(s.players||[]).find(x=>x.id===id);
@@ -183,6 +219,7 @@ function kjiaTick(s){ // 每天结算一次；到期归队并成长
 }
 /* K甲班底上调一线队：每赛段自动生成的注册选手，表现合格可提拔（对称青训晋升） */
 function promoteKjiaPlayer(s,id){
+ if(s&&s.mode==='player'){toast('选手生涯不操作二队人事');return false;}
  if(id===undefined){id=s;s=S;}
  s=s||S;
  if(!s.kjia||!s.kjia.squad){toast('本届 K甲尚未开赛');return;}

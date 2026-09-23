@@ -237,6 +237,10 @@ function setupCard(s){
  save();renderAll();
 }
 function playCardNext(s){
+ if(!s||!s.card||!s.card.matches||!s.card.matches.length){
+ if(s){s.phase=s.phase||'r3';toast('卡位赛数据缺失，已跳过本阶段');}
+ return;
+ }
  const m=s.card.matches[s.card.idx];
  if(!m){finishCard(s);return;}
  if(m.a===s.teamName||m.b===s.teamName){
@@ -441,6 +445,23 @@ function poPlace(slot,isFinal){
  if(/^lb[12]$|^lb2_/.test(slot))return '八强';
  return '四强';
 }
+/* 比赛日收尾（finishSeries 调用）：一场系列赛 = 一个比赛日。
+ 此前淘汰赛只挂推进回调、日历不走 → 体力/伤停/行动位整段冻结。 */
+function matchDayTick(s){
+ if(!s)return;
+ s.day=(s.day||0)+1;
+ s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
+ s.players.forEach(p=>{
+  if(!p)return;
+  p.injury=Math.max(0,(p.injury||0)-1);
+  // 赛后回体力；NaN 必须先回满，否则 clamp(NaN) 永远修不回来
+  const e=p.energy;
+  p.energy=(e==null||!isFinite(e))?ENERGY_MAX:clamp(e+35,0,ENERGY_MAX);
+ });
+ try{if(s.day%WAGE_EVERY===0)payWage(s);}catch(e){}
+ try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
+ try{natCampTick(s);}catch(e){}
+}
 function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
  kjiaTick(s); // K甲下放倒计时：到期归队并成长
@@ -560,9 +581,9 @@ function recordSeasonAwards(s){
  first:t1.map(x=>({pos:x.p.pos,name:x.p.name,team:x.team,ovr:overall(x.p)})),
  second:t2.map(x=>({pos:x.p.pos,name:x.p.name,team:x.team,ovr:overall(x.p)}))});
  s.awards=s.awards.slice(0,10);
- if(s.mode==='player'&&s.career&&t1.some(x=>x.p.id===s.career.me)){
+ if(s.mode==='player'&&s.career&&(t1.some(x=>x.p.id===s.career.me)||t2.some(x=>x.p.id===s.career.me))){
  s.career.allstar=(s.career.allstar||0)+1;
- logEvent(s,' 你入选了赛季最佳阵容一阵——生涯履历再添一笔');
+ logEvent(s,' 你入选了赛季最佳阵容——生涯履历再添一笔');
  }
  logEvent(s,' KPL 赛季最佳阵容揭晓：一阵——'+t1.map(x=>POS[x.p.pos][1]+' '+x.p.name+'（'+x.team+'）').join('、'));
  logEvent(s,' 二阵——'+t2.map(x=>POS[x.p.pos][1]+' '+x.p.name+'（'+x.team+'）').join('、'));
@@ -572,7 +593,9 @@ function newSeason(s){
  夏季赛不经过此函数（年中不做年龄与合同结算），由 startSplit 直接开启。 */
  try{localStorage.setItem(slotKey()+'_auto',serializeForSave(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
  try{recordSeasonAwards(s);}catch(e){logEvent(s,' 最佳阵容结算异常：'+(e&&e.message)+'（不影响赛季轮换）');} // 上赛季最佳阵容入册（趁阵容还没跨季老化）；失败不得挡住 newSeason
- s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
+ s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;s.socialUsed=false;
+ s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过
+ if(s.coachDeal){s.coachDeal.years=Math.max(0,(s.coachDeal.years||0)-1);if(s.coachDeal.years===0)s.coachDeal.log.unshift({year:gameYear(s),note:'合同到期，待续约或自由身'});}
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
  s._poError=null; // 季后赛异常标记按赛季归零：干净走完的赛季必须保持为空（诊断用，勿静默）
  s.academyTrained=false;
@@ -642,13 +665,14 @@ function newSeason(s){
  });
  retired.forEach(p=>{
  s.players=s.players.filter(x=>x.id!==p.id);
+ if(s.playersById)delete s.playersById[p.id];
  const li=s.lineup.indexOf(p.id);
  if(li>=0){s.lineup.splice(li,1);if(s.pick)delete s.pick[p.pos];}
  // 本人退役：不进名宿市场；写快照供退役结算屏（me 已从名单移除，不能再靠 myPlayer）
  if(s.mode==='player'&&s.career&&p.id===s.career.me){
  s.career.coachPath=true;
  s.career.legacy={name:p.name,age:p.age,pos:p.pos,ovr:overall(p),
- mvp:p.mvp||0,titles:s.career.titles||0,fmvp:s.career.fmvp||0,
+ mvp:(s.career.lastMvp!=null?s.career.lastMvp:(p.mvp||0)),titles:s.career.titles||0,fmvp:s.career.fmvp||0,
  allstar:s.career.allstar||0,seasons:(s.career.seasons||[]).length};
  logEvent(s,' 教练组向你发出邀请：退役后可转型执教——生涯页可选择「退役转教练」开启执教生涯');
  }else{
@@ -679,6 +703,7 @@ function newSeason(s){
  });
  if((s.players||[]).some(p=>p.loan)){
  s.players=s.players.filter(p=>!p.loan);
+ if(s.playersById)rebuildPlayerIndex(s);
  s.lineup=s.lineup.filter(id=>s.players.some(p=>p.id===id));
  s.aiRosters={};
  }
@@ -773,7 +798,10 @@ function awardFMVP(s,champ,event){
  let winner=null;
  if(champ===s.teamName){
  const cnt={};(s._lastMvps||[]).forEach(id=>cnt[id]=(cnt[id]||0)+1); // 总决赛各局 MVP 票数优先
- winner=s.players.slice().sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0)||overall(b)-overall(a))[0];
+ // 只在本系列赛出场（首发）的选手里评 FMVP——板凳/外租不得躺拿
+ const pool=rosterLineup(s).filter(p=>!p.loanOut&&!p.loan);
+ winner=(pool.length?pool:s.players.filter(p=>!p.loanOut&&!p.loan)).slice()
+  .sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0)||overall(b)-overall(a))[0];
  }else{
  const r=ensureAiRosters(s,champ)||[];
  winner=r.slice().sort((a,b)=>overall(b)-overall(a))[0];
