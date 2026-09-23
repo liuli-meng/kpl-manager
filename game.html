@@ -3092,7 +3092,7 @@ function buyoutPrice(p){
 function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
 
-function rosterFull(s){return (s.players||[]).length>=ROSTER_MAX;}
+function rosterFull(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length>=ROSTER_MAX;} // K甲下放不占一线名额
 function rosterGuard(s){
  if(!rosterFull(s))return true;
  toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前 '+(s.players||[]).length+' 人）——先卖出或放弃选手再签约');
@@ -5124,8 +5124,8 @@ function leaguePlacements(s){
  [p.lb3[0],p.lb3[1]].forEach(m=>place[loserOf(m)]='p56');
  [p.lb2[0],p.lb2[1]].forEach(m=>place[loserOf(m)]='p78');
  [p.lb[0],p.lb[1]].forEach(m=>place[loserOf(m)]='p910');
- (s.groups.A||[]).slice(4).forEach(n=>place[n]='p1112'); // 第三轮 A组第5/6名
- (s.cardLosers||[]).forEach(n=>place[n]='p1112'); // 卡位赛败者
+ (s.groups.A||[]).slice(4).forEach(n=>{if(!place[n])place[n]='p1112';}); // 第三轮 A组第5/6名（不得覆盖冠亚）
+ (s.cardLosers||[]).forEach(n=>{if(!place[n])place[n]='p1112';}); // 卡位赛败者（不得覆盖冠亚）
  (s.eliminated||[]).forEach(n=>{if(!place[n])place[n]='p1318';}); // B组3-6名
  return place;
 }
@@ -5756,7 +5756,10 @@ function kjiaNextRound(s){
  for(let i=1;i<=5&&mw<3&&ow<3;i++){if(Math.random()<winChance(pwA,pwB))mw++;else ow++;}
  m.ms=mw;m.es=ow;m.r=mw>ow?m.a:m.b;
  const ta=k.tables[m.a],tb=k.tables[m.b];
- if(m.r===m.a){ta.w++;ta.pts++;tb.l++;}else{tb.w++;tb.pts++;ta.l++;}
+
+ const aWon=(m.r===m.a)||((m.r==null||m.r===''||m.r==='W'||m.r==='L')&&(m.ms>m.es||((m.ms===m.es)&&m.r!==m.b)));
+ if(aWon){ta.w++;ta.pts++;tb.l++;}else{tb.w++;tb.pts++;ta.l++;}
+ ta.pw+=m.ms||0;tb.pw+=m.es||0;
  ta.pw+=mw;tb.pw+=ow;
  if(m.a===my||m.b===my)kjiaPerform(s,demoted,m.r===my,m,k.rd+1);
  });
@@ -5840,9 +5843,9 @@ function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉
  toast(p.name+' 已召回一队（成长 +'+gain+'）');
  save();renderAll();
 }
-function kjiaTick(s){ // 每天结算一次；到期归队并成长
- (s.players||[]).forEach(p=>{
- if(!p.kjia)return;
+function kjiaTick(s){ // 每天结算一次；到期归队并成长（必须逐人倒计时，否则只有第一名会归队）
+ (s.players||[]).slice().forEach(p=>{
+ if(!p||!(p.kjia>0))return;
  p.kjia--;
  if(p.kjia>0)return;
  p.kjia=0;

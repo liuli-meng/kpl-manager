@@ -894,8 +894,8 @@ function leaguePlacements(s){
  [p.lb3[0],p.lb3[1]].forEach(m=>place[loserOf(m)]='p56');
  [p.lb2[0],p.lb2[1]].forEach(m=>place[loserOf(m)]='p78');
  [p.lb[0],p.lb[1]].forEach(m=>place[loserOf(m)]='p910');
- (s.groups.A||[]).slice(4).forEach(n=>place[n]='p1112'); // 第三轮 A组第5/6名
- (s.cardLosers||[]).forEach(n=>place[n]='p1112'); // 卡位赛败者
+ (s.groups.A||[]).slice(4).forEach(n=>{if(!place[n])place[n]='p1112';}); // 第三轮 A组第5/6名（不得覆盖冠亚）
+ (s.cardLosers||[]).forEach(n=>{if(!place[n])place[n]='p1112';}); // 卡位赛败者（不得覆盖冠亚）
  (s.eliminated||[]).forEach(n=>{if(!place[n])place[n]='p1318';}); // B组3-6名
  return place;
 }

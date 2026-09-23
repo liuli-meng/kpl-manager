@@ -88,7 +88,10 @@ function kjiaNextRound(s){
  for(let i=1;i<=5&&mw<3&&ow<3;i++){if(Math.random()<winChance(pwA,pwB))mw++;else ow++;}
  m.ms=mw;m.es=ow;m.r=mw>ow?m.a:m.b;
  const ta=k.tables[m.a],tb=k.tables[m.b];
- if(m.r===m.a){ta.w++;ta.pts++;tb.l++;}else{tb.w++;tb.pts++;ta.l++;}
+ // m.r 可能缺省/脏值：用小分判定胜者，并累计 pw（旧版只认 m.r，积分榜会一直不加）
+ const aWon=(m.r===m.a)||((m.r==null||m.r===''||m.r==='W'||m.r==='L')&&(m.ms>m.es||((m.ms===m.es)&&m.r!==m.b)));
+ if(aWon){ta.w++;ta.pts++;tb.l++;}else{tb.w++;tb.pts++;ta.l++;}
+ ta.pw+=m.ms||0;tb.pw+=m.es||0;
  ta.pw+=mw;tb.pw+=ow;
  if(m.a===my||m.b===my)kjiaPerform(s,demoted,m.r===my,m,k.rd+1);
  });
@@ -172,9 +175,9 @@ function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉
  toast(p.name+' 已召回一队（成长 +'+gain+'）');
  save();renderAll();
 }
-function kjiaTick(s){ // 每天结算一次；到期归队并成长
- (s.players||[]).forEach(p=>{
- if(!p.kjia)return;
+function kjiaTick(s){ // 每天结算一次；到期归队并成长（必须逐人倒计时，否则只有第一名会归队）
+ (s.players||[]).slice().forEach(p=>{
+ if(!p||!(p.kjia>0))return;
  p.kjia--;
  if(p.kjia>0)return;
  p.kjia=0;
