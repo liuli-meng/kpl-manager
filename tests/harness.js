@@ -46,7 +46,13 @@ function injectHelpers(dom) {
 // opts.code：可选，改跑自定义脚本源（默认 src/js 拼接）；verify-built 用它加载 game.html 内联脚本
 function makeDom(opts) {
   const el = () => ({
-    classList: { add() {}, remove() {}, toggle() {} }, style: {}, innerHTML: '', value: '',
+    classList: (function(){ const s=new Set(); return {
+      add(c){ if(c) s.add(c); },
+      remove(c){ s.delete(c); },
+      toggle(c){ if(s.has(c)) s.delete(c); else if(c) s.add(c); },
+      contains(c){ return s.has(c); },
+      toString(){ return Array.from(s).join(' '); },
+    }; })(), style: {}, innerHTML: '', value: '',
     textContent: '', dataset: {}, disabled: false, addEventListener() {}, appendChild() {},
     select() {}, querySelector() { return null; }, querySelectorAll() { return []; },
   });

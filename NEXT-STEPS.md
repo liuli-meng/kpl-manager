@@ -11,9 +11,9 @@
 | ① | 模块依赖图 + 循环依赖 | ✅ `docs/MODULE_GRAPH.md` 已标已知环 |
 | ② | issue 清单压进仓库 | ✅ 本文件 + `../index.html` |
 | ③ | 迁移样本 + sanitizeImport | ✅ `tests/verify-migrate.js` / `verify-statestore.js` |
-| ④ | Phase1：stateStore 入口 / permission / save 防抖 / mid 红线 | ⬜ |
-| ⑤ | Phase2：phase 守卫 / nextDay / 转会拆分 / aiCoach 等价 | ⬜ |
-| ⑥ | Phase3：modal 栈 / 模板 / 事件委托 | ⬜ |
+| ④ | Phase1：stateStore 入口 / permission / save 防抖 / mid 红线 | ✅ save 同步+scheduleSave 旁路 · canBuy · 崩溃快照 · verify-series-resume 必跑 |
+| ⑤ | Phase2：phase 守卫 / nextDay / 转会拆分 / aiCoach 等价 | ✅ setPhase/Commands/nextDayStep/aiCoach + verify-phase2 |
+| ⑥ | Phase3：modal 栈 / 模板 / 事件委托 | ✅ ModalStack/openModal · pcard 纯函数 · 点击委托已有 · verify-modal-stack |
 | ⑦ | `window._nego` 去 `s` 引用 | ✅ `negoState()` + `verify-nego` 断言 |
 
 ---

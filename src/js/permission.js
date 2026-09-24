@@ -163,5 +163,6 @@ const Permissions = (function () {
 })();
 
 function canOperate(action, s) { return Permissions.canOperate(action, s); }
+function canBuy(action, s) { return Permissions.canOperate(action || 'buyPlayer', s); }
 function blockReason(action, s) { return Permissions.blockReason(action, s); }
 function denyIfBlocked(action, s) { return Permissions.denyIfBlocked(action, s); }

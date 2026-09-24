@@ -81,6 +81,7 @@ const SUITES = [
   { id: 'verify-statestore', file: 'tests/verify-statestore.js', label: '状态门面/权限/导入schema' },
   { id: 'verify-phase2', file: 'tests/verify-phase2.js', label: 'phase守卫/日结分层/Command/aiCoach' },
   { id: 'verify-nego', file: 'tests/verify-nego.js', label: '谈判讲价可成交' },
+  { id: 'verify-modal-stack', file: 'tests/verify-modal-stack.js', label: 'modal栈/保存合并/权限门面' },
   { id: 'verify-storage-fallback', file: 'tests/verify-storage-fallback.js', label: '存储不可用启动兜底' },
   { id: 'verify-ios-export', file: 'tests/verify-ios-export.js', label: 'iOS内置浏览器导出兜底' },
   { id: 'verify-built', file: 'tests/verify-built.js', label: '构建产物校验' },

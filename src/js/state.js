@@ -604,9 +604,13 @@ function save(){
  if(!S)return false;
  try{checkAchievements(S);}catch(e){}
  let payload=null;
- try{payload=serializeForSave(S);}catch(e){console.warn('save serialize fail',e);}
+ try{payload=serializeForSave(S);}catch(e){console.warn('save serialize fail',e);try{writeCrashSnapshot('save-serialize',e);}catch(_){}}
  if(payload===null){try{toast(' 存档失败：数据无法序列化');}catch(_){}return false;}
- if(storeSet(slotKey(),payload)){try{_touchTabLock();}catch(_){}return true;}
+ if(storeSet(slotKey(),payload)){
+  try{if(typeof StateStore!=='undefined'&&StateStore)StateStore.logChange({who:'save',note:slotKey()},['*']);}catch(_){}
+  try{_touchTabLock();}catch(_){}
+  return true;
+ }
  /* 存储不可用（无痕 / 阻止 Cookie / 配额写满）：已降级为内存存档，只提示一次，别每次保存都弹 */
  storeWarnOnce();
  return false;

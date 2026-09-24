@@ -1,4 +1,39 @@
-function closeModal(id){$('#'+id).classList.remove('on');$('#'+id).classList.remove('wide');}
+function closeModal(id){
+ const el=$('#'+id);if(!el)return;
+ el.classList.remove('on');el.classList.remove('wide');
+ if(typeof ModalStack!=='undefined'&&ModalStack)ModalStack.remove(id);
+}
+/* ModalStack — 统一 modal 栈（Phase3）：防叠层/防嵌套关错、ESC 只关最上层 */
+const ModalStack=(function(){
+ const _ids=[];
+ return {
+  open(id){
+   if(!id)return;
+   const i=_ids.indexOf(id);
+   if(i>=0)_ids.splice(i,1);
+   _ids.push(id);
+  },
+  remove(id){
+   const i=_ids.indexOf(id);
+   if(i>=0)_ids.splice(i,1);
+  },
+  top(){return _ids.length?_ids[_ids.length-1]:null;},
+  size(){return _ids.length;},
+  clear(){_ids.length=0;},
+ };
+})();
+function openModal(id,opt){
+ const el=$('#'+id);if(!el)return;
+ if(opt&&opt.wide)el.classList.add('wide');
+ el.classList.add('on');
+ if(typeof ModalStack!=='undefined'&&ModalStack)ModalStack.open(id);
+}
+function scheduleSave(ms){
+ if(!S)return;
+ if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}
+ _saveTimer=setTimeout(function(){_saveTimer=null;try{save();}catch(e){console.warn('scheduleSave',e);}}, ms==null?50:ms);
+}
+let _saveTimer=null;
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
 const KM_BUILD='2026-09-19i';
 

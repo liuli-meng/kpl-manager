@@ -392,7 +392,7 @@ function ensureLeagueChampion(s){
   p.champ=p.final.r;
   s.champion=p.final.r===s.teamName;
   const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
-  if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
+  if(s.champion||ourFinal){if(s.phase!=='eliminated')setPhase(s,'champion',{who:'finishTitle',force:true});}
   else setPhase(s,'eliminated',{who:'season',force:true});
   try{logEvent(s,' 季后赛残局补完：'+p.final.r+' 夺得 '+splitLabel(s)+' 冠军'+(s._poError?'（推进异常：'+s._poError+'）':''));}catch(e){}
  }
@@ -454,7 +454,7 @@ function playoffStep(s){
  s.champion=p.final.r===s.teamName;
  const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
  // 玩家未进决赛=赛季止步；打进决赛无论冠亚都是「赛季结束」
- if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
+ if(s.champion||ourFinal){if(s.phase!=='eliminated')setPhase(s,'champion',{who:'finishTitle',force:true});}
  else setPhase(s,'eliminated',{who:'season',force:true});
  if(s.champion||ourFinal)recordSeason(s); // 冠军/亚军均入册荣誉室
  if(s.champion){
