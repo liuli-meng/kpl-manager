@@ -569,6 +569,9 @@ function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
 /* 大名单：≥10 人禁止再签（买断/直签/青训提拔共用守卫）；K甲下放不占一线名额 */
 function rosterFull(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length>=ROSTER_MAX;}
+/* 一线大名单人数：K甲下放不占名额——所有「X/10」展示必须走这里，禁止再用 s.players.length */
+function rosterCount(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length;}
+
 function rosterGuard(s){
  if(!rosterFull(s))return true;
  toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前一线 '+(s.players||[]).filter(p=>!(p.kjia>0)).length+' 人）——先卖出或放弃选手再签约');

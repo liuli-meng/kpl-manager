@@ -1104,7 +1104,7 @@ function showSquad(teamName){
  </div>`;
  }).join('');
  $('#app-modal-body').innerHTML=`
- <h2>${crest(icon,teamName,22)} ${teamName} · 全队阵容 <span class="tag">${roster.length} 人</span></h2>
+ <h2>${crest(icon,teamName,22)} ${teamName} · 全队阵容 <span class="tag">${roster.filter(p=>!(p.kjia>0)).length} 人${roster.some(p=>p.kjia>0)?' + K甲'+roster.filter(p=>p.kjia>0).length:''}</span></h2>
  <div class="hint" style="margin-bottom:8px">总值=按位置加权四维实时计算 · 战力=招牌英雄结算${mine?'（本队选手可在转会页挂牌/出售）':''}</div>
  ${rows||'<div class="hint">该队暂无注册选手</div>'}
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;

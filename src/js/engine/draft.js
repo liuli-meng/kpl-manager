@@ -451,7 +451,7 @@ function draftPanelHtml(){
  if(!d)return '';
  const kj=d.kjiaTier||draftKjiaTier(s);
  const taken=d.picks.filter(x=>x.playerId).length;
- const rosterNow=(s.players||[]).length;
+ const rosterNow=typeof rosterCount==='function'?rosterCount(s):(s.players||[]).filter(p=>!(p.kjia>0)).length; // 与 rosterFull 同口径：K甲下放不占一线
  const myFull=!draftStillWant(s,s.teamName);
  const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&!myFull;
  const mePick=d.phase==='pick'&&!d.done;
