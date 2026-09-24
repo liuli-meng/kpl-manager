@@ -3106,9 +3106,11 @@ function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
 
 function rosterFull(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length>=ROSTER_MAX;} // K甲下放不占一线名额
+
+function rosterCount(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length;}
 function rosterGuard(s){
  if(!rosterFull(s))return true;
- toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前 '+(s.players||[]).length+' 人）——先卖出或放弃选手再签约');
+ toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前一线 '+rosterCount(s)+' 人）——先卖出或放弃选手再签约');
  return false;
 }
 
@@ -6421,7 +6423,8 @@ function draftPanelHtml(){
  if(!d)return '';
  const kj=d.kjiaTier||draftKjiaTier(s);
  const taken=d.picks.filter(x=>x.playerId).length;
- const rosterNow=(s.players||[]).length;
+ const rosterCount=s=>(s.players||[]).filter(p=>!(p.kjia>0)).length;
+  const rosterNow=rosterCount(s); // 与 rosterFull 同口径：K甲下放不占一线名额（显示 s.players.length 会把下放算成第 10 人）
  const myFull=!draftStillWant(s,s.teamName);   // 大名单满 → 既不能拍签也不能点名，界面必须说清楚
  const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&!myFull;
  const mePick=d.phase==='pick'&&!d.done;
@@ -11686,7 +11689,7 @@ function showSquad(teamName){
  </div>`;
  }).join('');
  $('#app-modal-body').innerHTML=`
- <h2>${crest(icon,teamName,22)} ${teamName} · 全队阵容 <span class="tag">${roster.length} 人</span></h2>
+ <h2>${crest(icon,teamName,22)} ${teamName} · 全队阵容 <span class="tag">${roster.filter(p=>!(p.kjia>0)).length} 人${roster.some(p=>p.kjia>0)?' + K甲'+roster.filter(p=>p.kjia>0).length:''}</span></h2>
  <div class="hint" style="margin-bottom:8px">总值=按位置加权四维实时计算 · 战力=招牌英雄结算${mine?'（本队选手可在转会页挂牌/出售）':''}</div>
  ${rows||'<div class="hint">该队暂无注册选手</div>'}
  <div class="center mt16"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
@@ -11884,7 +11887,7 @@ function renderLineup(){
  if(!p)return `<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;
  return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div>${(S.mode||'manager')==='manager'?`<button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`:''}`);
  }).join('')}</div></div>`;
- html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
+ html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.filter(p=>!(p.kjia>0)).length}人${bn.some(p=>p.kjia>0)?' + K甲'+bn.filter(p=>p.kjia>0).length:''}</span></h3>
  <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长；练满 ${KJIA_MIN_RECALL} 天可提前召回。</div>
  ${bn.length?`<div class="grid g4">${bn.map(p=>{
  const lo=p.loanOut;

@@ -500,7 +500,8 @@ function draftPanelHtml(){
  if(!d)return '';
  const kj=d.kjiaTier||draftKjiaTier(s);
  const taken=d.picks.filter(x=>x.playerId).length;
- const rosterNow=(s.players||[]).length;
+ const rosterCount=s=>(s.players||[]).filter(p=>!(p.kjia>0)).length;
+  const rosterNow=rosterCount(s); // 与 rosterFull 同口径：K甲下放不占一线名额（显示 s.players.length 会把下放算成第 10 人）
  const myFull=!draftStillWant(s,s.teamName);   // 大名单满 → 既不能拍签也不能点名，界面必须说清楚
  const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&!myFull;
  const mePick=d.phase==='pick'&&!d.done;

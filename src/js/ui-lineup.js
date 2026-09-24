@@ -22,7 +22,7 @@ function renderLineup(){
  if(!p)return `<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;
  return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div>${(S.mode||'manager')==='manager'?`<button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`:''}`);
  }).join('')}</div></div>`;
- html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.length}人</span></h3>
+ html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.filter(p=>!(p.kjia>0)).length}人${bn.some(p=>p.kjia>0)?' + K甲'+bn.filter(p=>p.kjia>0).length:''}</span></h3>
  <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长；练满 ${KJIA_MIN_RECALL} 天可提前召回。</div>
  ${bn.length?`<div class="grid g4">${bn.map(p=>{
  const lo=p.loanOut;
