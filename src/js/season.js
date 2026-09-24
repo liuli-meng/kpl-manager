@@ -144,7 +144,7 @@ function initGroups(s){
  const g2=all.slice(6,12).map(x=>x.name);
  const g3=all.slice(12,18).map(x=>x.name);
  s.groups={G1:g1,G2:g2,G3:g3};
- s.phase='r1';
+ setPhase(s,'r1',{who:'initGroups',force:true});
  s.aiPower={};
  aiList.forEach(t=>{
  const r=s.aiRosters[t.name];
@@ -243,13 +243,13 @@ function advancePhase(s){
  bTeams.push(rank[4],rank[5]);
  });
  s.groups={S:sTeams,A:aTeams,B:bTeams};
- s.phase='r2';
+ setPhase(s,'r2',{who:'advancePhase'});
  initTables(s);
  genRoundSchedule(s);
  const g=myGroup(s);
  logEvent(s,' 第一轮结束！'+s.teamName+' 进入'+(g==='S'?'S组':g==='A'?'A组':'B组')+'（第二轮）');
  }else if(s.phase==='r2'){
- s.phase='card';
+ setPhase(s,'card',{who:'advancePhase'});
  setupCard(s);
  }else if(s.phase==='r3'){
  buildPlayoff(s);
@@ -270,7 +270,7 @@ function setupCard(s){
  s.eliminated=[...(s.eliminated||[]),...bRank.slice(2)]; // B3-B6 淘汰
  const myR=bRank.indexOf(s.teamName);
  if(myGroup(s)==='B'&&myR>=2){
- s.phase='eliminated';
+ setPhase(s,'eliminated',{who:'season',force:true});
  logEvent(s,' 第二轮 B 组排名 3-6，无缘本赛季后续比赛');
  // 联盟照常打完本赛季：补完卡位赛与季后赛，产生冠军（王朝统计/连冠反制需要）
  s.card.matches.forEach(m=>{if(!m.r){const r=simSeriesResult(s,m.a,m.b,KPL.CARD);m.r=r.win?m.a:m.b;}});
@@ -342,13 +342,13 @@ function finishCard(s){
  const alive=new Set([...sNew,...aNew]);
  s.eliminated=AI_TEAMS.map(t=>t.name).filter(n=>!alive.has(n));
  if(!alive.has(s.teamName)){
- s.phase='eliminated';
+ setPhase(s,'eliminated',{who:'season',force:true});
  logEvent(s,' 卡位赛未能突围，本赛季止步');
  buildPlayoff(s); // 联盟照常打完季后赛，产生本赛季冠军（王朝统计/连冠反制需要）
  save();renderAll();
  return;
  }
- s.phase='r3';
+ setPhase(s,'r3',{who:'finishCard',force:true});
  initTables(s);
  genRoundSchedule(s);
  logEvent(s,' 卡位赛结束！'+s.teamName+' 进入第三轮'+(myGroup(s)==='S'?'S组':'A组'));
@@ -393,7 +393,7 @@ function ensureLeagueChampion(s){
   s.champion=p.final.r===s.teamName;
   const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
   if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
-  else s.phase='eliminated';
+  else setPhase(s,'eliminated',{who:'season',force:true});
   try{logEvent(s,' 季后赛残局补完：'+p.final.r+' 夺得 '+splitLabel(s)+' 冠军'+(s._poError?'（推进异常：'+s._poError+'）':''));}catch(e){}
  }
  return (p&&p.final&&p.final.r)?p:null;
@@ -401,7 +401,7 @@ function ensureLeagueChampion(s){
 function buildPlayoff(s){
  // 旧版残留的 simulateGroupAI 调用已删：r3 的 AI 场次由 simulateAiRound 逐轮模拟 + advancePhase 兜底补完，此处重跑会重复计分（且该函数在重构时已丢失导致进季后赛必崩）
  const sRank=sortGroup(s,'S'),aRank=sortGroup(s,'A');
- if(!sRank.length){s.phase='eliminated';save();renderAll();return;}
+ if(!sRank.length){setPhase(s,'eliminated',{who:'season',force:true});save();renderAll();return;}
  s.playoff={
  wb:[{a:sRank[0],b:sRank[3],r:null},{a:sRank[1],b:sRank[2],r:null}], // 胜者组R1: S1vS4,S2vS3
  lb:[{a:aRank[0],b:aRank[3],r:null},{a:aRank[1],b:aRank[2],r:null}], // 败者组R1: A1vA4,A2vA3
@@ -412,7 +412,7 @@ function buildPlayoff(s){
  lbf:{a:null,b:null,r:null}, // 败者组决赛: wf败者 vs lb4胜者
  final:{a:null,b:null,r:null},champ:null
  };
- s.phase=(s.phase==='eliminated')?s.phase:'playoff'; // 玩家已出局时保留"止步"状态
+ if(s.phase!=='eliminated')setPhase(s,'playoff',{who:'buildPlayoff',force:true}); // 玩家已出局时保留"止步"状态
  const inPlayoff=s.groups.S.includes(s.teamName)||aRank.slice(0,4).includes(s.teamName);
  logEvent(s,' 季后赛开启！10强 BO7 双败淘汰');
  if(!inPlayoff){
@@ -455,7 +455,7 @@ function playoffStep(s){
  const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
  // 玩家未进决赛=赛季止步；打进决赛无论冠亚都是「赛季结束」
  if(s.champion||ourFinal){if(s.phase!=='eliminated')s.phase='champion';}
- else s.phase='eliminated';
+ else setPhase(s,'eliminated',{who:'season',force:true});
  if(s.champion||ourFinal)recordSeason(s); // 冠军/亚军均入册荣誉室
  if(s.champion){
  // 夺冠人气暴涨：全队商业价值提升（代言收入增加）
@@ -534,7 +534,7 @@ function matchDayTick(s){
  try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
  try{natCampTick(s);}catch(e){}
 }
-function nextDay(s){
+function nextDayStep(s){
  s.day++;
  // 怠政判定必须排在清旗标之前：四个每日行动位 + 当天打过比赛，是「玩家这一天动没动手」的全部痕迹。
  // 放在 reset 之后就永远读到 false，等于把所有玩家都判成挂机。
@@ -611,9 +611,16 @@ function nextDay(s){
   logEvent(s,' 【'+ev.t+'】'+(ev.desc||'').replace('{p}',()=>tp?tp.name:'队内核心'));
   ev.fn(s,tp);
  }
- if(s._quietSave)return; // 批量跳过（转会期 skip）：由外层统一 save，避免 30 次全量序列化
+ /* 副作用（save/render）由 nextDay / Command 负责 */
+}
+
+/** 日结入口：只做状态推进；save/render 由此处收口（Command 可改调 nextDayStep） */
+function nextDay(s){
+ nextDayStep(s);
+ if(s&&s._quietSave)return; // 批量跳过（转会期 skip）：由外层统一 save
  save();
 }
+
 function payWage(s){
  try{scrubWages(s);}catch(e){}
  const annual=weeklyWage(s); // 年薪合计

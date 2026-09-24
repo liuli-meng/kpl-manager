@@ -150,6 +150,7 @@ function draftRepair(s,d){
  return d;
 }
 function initDraft(s,force){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s))return;
  if(!s||!s.preseason)return null;
  if(s.mode&&s.mode!=='manager')return null;
  if(!force&&s.draft&&s.draft.season===s.season&&s.draft.split===s.split)return draftRepair(s,s.draft);
@@ -275,6 +276,7 @@ function draftFinish(s){
  d.pool=[];
 }
 function draftBidRaise(s){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s))return;
  if(s===undefined)s=S;
  const d=s.draft;
  if(!d||d.done||d.phase!=='auction')return;
@@ -334,6 +336,7 @@ function draftAiPick(s,team){
   d.log.push(s.teamName+' 大名单已满，点名作废');
   return null;
  }
+ if(s.players.some(x=>x.id===best.id)){d.log.push(best.name+' 已在一队，点名作废');return null;}
  s.players.push(best);
  if(!s.lineup.includes(best.id)&&!s.players.some(x=>x.id!==best.id&&x.pos===best.pos&&s.lineup.includes(x.id)))s.lineup.push(best.id);
  }else{
@@ -405,6 +408,7 @@ function draftFaInit(p){
  return p;
 }
 function draftPick(s,id){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s))return;
  if(id===undefined){id=s;s=S;}
  s=s||S;
  const d=s.draft;
@@ -428,6 +432,7 @@ function draftPick(s,id){
   return;
  }
  d.pool=d.pool.filter(x=>x.id!==id);
+ if(s.players.some(x=>x.id===p.id)){d.log.push(p.name+' 已在一队，点名作废');return null;}
  p.team=s.teamName;
  s.players.push(p);
  if(!s.lineup.includes(p.id)&&!s.players.some(x=>x.id!==p.id&&x.pos===p.pos&&s.lineup.includes(x.id)))s.lineup.push(p.id);

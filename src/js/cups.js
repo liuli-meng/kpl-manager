@@ -59,7 +59,7 @@ function setupChallenger(s){
  const teams=[champ,...rest.slice(0,15),runner,...rest.slice(15)]; // 32 队，种子分列 idx0/idx16 两个半区
  s.challenger={stage:'single',r1:[],r2:null,po:null,final:null,champ:null,teams};
  for(let i=0;i<16;i++)s.challenger.r1.push({a:teams[i],b:teams[31-i],r:null}); // 单败首轮 BO5
- s.phase='challenger';
+ setPhase(s,'challenger',{who:'setupChallenger',force:true});
  logEvent(s,' '+gameYear(s)+' 挑战者杯开幕（32队·八大赛道）！'+champ+'（1号种子）与 '+runner+'（2号种子）分列两半区');
  const myIn=teams.includes(s.teamName);
  if(!myIn){simCup('challenger',s);finishChallenger(s);return;}
@@ -200,7 +200,7 @@ function setupEWC(s){
  const teams=shuffle([champ,runner,...overs]);
  s.ewc={teams,qf:[0,1,2,3].map(i=>({a:teams[i*2],b:teams[i*2+1],r:null})),
  sf:[{a:null,b:null,r:null},{a:null,b:null,r:null}],final:{a:null,b:null,r:null},champ:null};
- s.phase='ewc';
+ setPhase(s,'ewc',{who:'setupEWC',force:true});
  const myIn=teams.includes(s.teamName);
  logEvent(s,' '+gameYear(s)+' EWC 电竞世界杯（利雅得）开幕！'+champ+'（KPL直邀）与 '+runner+'（英雄亚冠ACL）代表 KPL 出战');
  if(myIn)logEvent(s,' 你队以「'+(champ===s.teamName?'KPL 春季赛冠军':'英雄亚冠 ACL')+'」身份直邀 8 强淘汰赛！');
@@ -285,7 +285,7 @@ function setupAsianGames(s){
  s.ag={squad:squad.map(p=>({name:p.name,pos:p.pos,mine:ownedIds.has(p.id),ovr:overall(p)})),
  myPow,qf:[{a:'中国代表队',b:others[0],r:null},{a:others[2],b:others[3],r:null},{a:others[4],b:others[5],r:null},{a:'韩国',b:others[1],r:null}],
  sf:[{a:null,b:null,r:null},{a:null,b:null,r:null}],final:{a:null,b:null,r:null},champ:null,mvp:null,medal:null};
- s.phase='asiad';
+ setPhase(s,'asiad',{who:'setupAsianGames',force:true});
  const mineCnt=s.ag.squad.filter(x=>x.mine).length;
  logEvent(s,' '+gameYear(s)+' '+AG_CITY+'亚运会开幕！中国代表队由 KPL 各位置当季最强组成（战力 '+myPow+'）');
  logEvent(s,' 中国代表队名单：'+s.ag.squad.map(x=>POS[x.pos][1]+' '+x.name+(x.mine?'（本队）':'')).join('、')+' —— 最强对手：韩国');
@@ -489,7 +489,7 @@ function setupAnnual(s){
  for(let i=0;i<6;i++)ms.push({a:s.annual.masters[i],b:s.annual.elites[(i+r)%6],r:null});
  s.annual.rounds.push(ms);
  }
- s.phase='annual';
+ setPhase(s,'annual',{who:'setupAnnual',force:true});
  const myRank=all.indexOf(s.teamName);
  if(myRank<0||myRank>=12){
  logEvent(s,' 年度积分 '+(s.annualPts[s.teamName]||0)+' 分（第'+(myRank+1)+'），无缘年度总决赛（前12）——春夏赛季继续攒分');

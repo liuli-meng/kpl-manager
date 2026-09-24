@@ -50,9 +50,9 @@ function renderMarket(){
  return `<div class="pcard ${ovrCls(a.rating||75)}" style="text-align:center">
  <div style="margin:6px 0;color:var(--faint)"></div>
  <div class="p-name" style="font-weight:800">${a.name}</div>
- <div class="p-rarity" style="color:${oc};letter-spacing:0">${a.rating}评分 · ${COACH_STYLE[a.style]||'—'}型</div>
+ <div class="p-rarity" style="color:${oc}"><span class="pr-label">评分</span><b class="pr-num">${a.rating}</b><span class="pr-meta">${COACH_STYLE[a.style]||'—'}型</span></div>
  <div class="p-skill"> ${(a.skill&&a.skill.d)||'—'}</div>
- <div class="p-foot"><span>签约费 <b>${a.cost}万</b></span><span>年薪 <b>${a.wage}万</b></span></div>
+ <div class="p-foot"><span class="pf"><i>签约费</i><b>${a.cost}万</b></span><span class="pf"><i>年薪</i><b>${a.wage}万</b></span></div>
  <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
  </div>`;
  }).join('')}</div>`;
@@ -62,13 +62,13 @@ function renderMarket(){
  return `<div class="pcard ${ovrCls(c.rating||80)}" style="text-align:center">
  <div style="margin:6px 0;color:var(--faint)"></div>
  <div class="p-name" style="font-weight:800">${c.name}</div>
- <div class="p-rarity" style="color:${oc};letter-spacing:0">${c.rating||80}评分 · ${COACH_STYLE[c.style]||'—'}型</div>
+ <div class="p-rarity" style="color:${oc}"><span class="pr-label">评分</span><b class="pr-num">${c.rating||80}</b><span class="pr-meta">${COACH_STYLE[c.style]||'—'}型</span></div>
  <div class="p-skill"> ${(c.skill&&c.skill.n)||'—'}<br><b style="font-size:10px">${(c.skill&&c.skill.d)||'—'}</b></div>
  <div class="attr" style="grid-template-columns:1fr;text-align:center;font-size:11px">
  <span>全队战力 <i style="color:var(--gold)">+${c.bonus||0}%</i></span>
  <span>${COACH_STYLE[c.style]||'—'}属性 <i style="color:var(--gold)">+${c.styleBonus||0}%</i></span>
  </div>
- <div class="p-foot"><span>签约费 <b>${c.cost}万</b></span><span>年薪 <b>${c.wage}万</b></span></div>
+ <div class="p-foot"><span class="pf"><i>签约费</i><b>${c.cost}万</b></span><span class="pf"><i>年薪</i><b>${c.wage}万</b></span></div>
  <button class="btn sm primary" onclick="signCoach(S,S.coachMarket.find(x=>x.id==='${c.id}'))">${S.coach&&S.coach.id===c.id?'现任':'签约执教'}</button>
  </div>`;
  }).join('')}</div>`;

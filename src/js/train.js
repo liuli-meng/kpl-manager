@@ -121,6 +121,7 @@ function genRookie(s){
  mvp:0,retiring:false,age:rnd(16,17),popularity:rnd(3,8),willingness:rnd(60,90),potential,isRookie:true,contract:2};
 }
 function recruitRookie(s){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('recruitRookie',s))return;
  if(s.fund<50){toast('招募青训需 50万');return;}
  s.fund-=50;
  const r=genRookie(s);
@@ -139,6 +140,7 @@ function applyRookieTrain(r){
  return {key,gain,label:(TRAIN_ITEMS.find(t=>t.k===key)||{}).n||'属性'};
 }
 function trainRookie(s,id){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('trainRookie',s))return;
  if(s.academyTrained){toast('今日已培养过青训选手');return;}
  const r=(s.academy||[]).find(x=>x.id===id);
  if(!r)return;
@@ -180,6 +182,7 @@ function rookieReady(r){
  return ['lane','farm','team','mind'].reduce((t,k)=>t+r.attrs[k],0)>=300;
 }
 function promoteRookie(s,id){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('promoteRookie',s))return;
  const r=(s.academy||[]).find(x=>x.id===id);
  if(!r)return;
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
@@ -210,6 +213,7 @@ function promoteRookie(s,id){
  现实中职业选手会转型换位置；游戏内用于解决特定位置断档。
  重构英雄池：新旧位置通用英雄保留熟练度，招牌不通用则重立，属性不变。 */
 function convertPos(s,pid,newPos){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('convertPos',s))return;
  const p=s.players.find(x=>x.id===pid);
  if(!p)return;
  if(p.pos===newPos){toast('已经是该位置');return;}

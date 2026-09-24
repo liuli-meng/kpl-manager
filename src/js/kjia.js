@@ -45,7 +45,7 @@ function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
  arr.unshift(arr.pop());
  }
  const tables={};teams.forEach(t=>tables[t]={w:0,l:0,pts:0,pw:0});
- const used=new Set((s.players||[]).map(p=>p.name));
+ const used=typeof rookieUsedNames==='function'?rookieUsedNames(s):new Set((s.players||[]).map(p=>p.name));
  const squad=POS_ORDER.map(pos=>kjiaFiller(s,pos,used));
  s.kjia={teams,powers,rounds,rd:0,day:0,tables,results:[],squad,champ:null,my};
  return s.kjia;

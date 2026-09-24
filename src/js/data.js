@@ -1146,3 +1146,21 @@ function installEra(id){
  CLUB_TEMPLATES.length=0;era.clubs.forEach(c=>CLUB_TEMPLATES.push(c));
  _eraActive=id;
 }
+
+/* ================= 静态表冻结（Phase0） =================
+ * 只冻「运行期绝不该改」的配置。以下可变池【禁止冻结】——installEra 会原地改写：
+ *   PLAYER_POOL / AI_TEAMS / AI_ROSTERS / CLUB_TEMPLATES / FA_2026 / COACH_POOL / TEAM_BONDS
+ */
+;(function freezeDataStatics(){
+  const objs=[ECON,YEAR_ECONOMY,CLUB_TIERS,PLAYER_SALARY_REAL,POS,POS_ORDER,
+    CREST_SHAPES,CREST_SHAPE_LIST,CREST_SWATCHES,AVATAR_HUES,POS_HUE,POS_W,
+    VALUE_PTS,WAGE_PTS,TRAIN_ITEMS,SPONSORS,HEROES,HERO_BY_NAME,TYPE_NAME,
+    KPL,COACH_STYLE,ASSISTANT_POOL,KPL_HISTORY,EVENTS,IDLE_EVENTS,
+    CASTER,BASE_W,TACTICS,SCENARIOS,ACHIEVEMENTS,ROOKIE_NAMES,RK_A,RK_B,ERA_GEN_NAMES];
+  // KPL_ERAS / KPL_FORMAT 故意不冻：installEra 会挂 __test 时代并改写赛制旋钮（globalBp 等）
+  // 注意：本文件先于 stateStore.js 加载，禁止在此引用 StateStore（const TDZ 会抛并被吞掉，导致永远冻不上）
+  for(let i=0;i<objs.length;i++){
+    const o=objs[i];
+    try{if(o&&typeof o==='object')Object.freeze(o);}catch(e){}
+  }
+})();

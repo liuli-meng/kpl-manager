@@ -283,7 +283,7 @@ function auditSave(s,opts){
   drop.forEach(p=>{
    s.freeAgents=s.freeAgents||[];
    if(!s.freeAgents.some(x=>x.id===p.id)){
-    s.freeAgents.push({...p,team:null,willingness:Math.max(p.willingness||50,55),loanOut:null,kjia:0});
+    if(!(s.freeAgents||[]).some(x=>x.id===p.id))s.freeAgents.push({...p,team:null,willingness:Math.max(p.willingness||50,55),loanOut:null,kjia:0});
    }
    repairs.push(nLabel(p)+' 因名单超编转入自由市场');
   });

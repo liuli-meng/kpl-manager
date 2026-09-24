@@ -240,6 +240,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
      if(fa&&s.fund>(fa.signCost||0)&&!rosterFull(s)){
       const cost=Math.max(0,Math.round(fa.signCost||valueOf(overall(fa))));
       if(s.fund>=cost){
+       if(s.players.some(x=>x.id===fa.id))return;
        s.fund-=cost;fa.acqCost=cost;fa.contract=2;fa.loan=null;
        delete fa.freeAgent;delete fa.signCost;
        s.players.push(fa);
@@ -256,6 +257,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
      if(s.players.some(p=>p.pos===need&&matchEligible(s,p)))return;
      const fa=(s.freeAgents||[]).filter(p=>p.pos===need).sort((a,b)=>overall(b)-overall(a))[0];
      if(fa&&s.fund>=(fa.signCost||80)&&!rosterFull(s)){
+      if(s.players.some(x=>x.id===fa.id))return;
       const cost=Math.max(0,Math.round(fa.signCost||80));
       s.fund-=cost;fa.acqCost=cost;fa.contract=2;
       delete fa.freeAgent;delete fa.signCost;
@@ -289,7 +291,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
    }catch(e){}
   });
  }
- const u=new Set(s.players.map(p=>p.name));
+ const u=typeof rookieUsedNames==='function'?rookieUsedNames(s):new Set(s.players.map(p=>p.name));
  let g=0;
  while((s.players.length<7||need.length)&&g++<10){
  const pos=need.length?need[0]:pick(POS_ORDER);

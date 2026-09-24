@@ -380,11 +380,19 @@ function cleanImportStr(v,short){
 function sanitizeImport(obj){
 	if(!obj||typeof obj!=='object')return obj;
 	const seen=new Set();
+	const dropped=[];
+	const FORBID=new Set(['__proto__','constructor','prototype']);
 	(function walk(o,depth){
 		if(!o||typeof o!=='object'||depth>8||seen.has(o))return;
 		seen.add(o);
 		Object.keys(o).forEach(k=>{
+			if(FORBID.has(k)){try{delete o[k];}catch(_){}dropped.push(k);return;}
 			const v=o[k];
+			if(typeof v==='function'||typeof v==='symbol'||typeof v==='undefined'){
+				try{delete o[k];}catch(_){}
+				dropped.push(k);
+				return;
+			}
 			if(typeof v==='string'){
 				o[k]=(k==='id'||/Id$/.test(k))
 					?cleanImportStr(v,false).replace(IMPORT_ID_RE,'')
@@ -392,6 +400,20 @@ function sanitizeImport(obj){
 			}else if(v&&typeof v==='object')walk(v,depth+1);
 		});
 	})(obj,0);
+	if(!Array.isArray(obj.players)){
+		obj.players=[];
+		dropped.push('players:not-array');
+	}else{
+		obj.players=obj.players.filter(p=>p&&typeof p==='object'&&typeof p.id==='string'&&p.id);
+	}
+	if(obj.lineup!=null&&!Array.isArray(obj.lineup)){obj.lineup=[];dropped.push('lineup:not-array');}
+	['fund','wageCap','day','season','matchIdx','fans'].forEach(k=>{
+		if(obj[k]!=null&&typeof obj[k]==='number'&&!isFinite(obj[k])){delete obj[k];dropped.push(k+':NaN');}
+	});
+	if(dropped.length){
+		try{gameLog.warn('import','sanitize dropped keys',{dropped:dropped.slice(0,40)});}catch(_){}
+		try{console.warn('[import] sanitized dropped:',dropped.slice(0,20));}catch(_){}
+	}
 	return obj;
 }
 /* 导入共用：清洗→解包→版本校验→注入→迁移→落盘（剪贴板代码与文件导入共用） */
@@ -448,6 +470,7 @@ function setCaptain(id){
  save();renderAll();
 }
 function upgradeSponsor(){
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('upgradeSponsor',S))return;
  const next=SPONSORS[S.sponsorLv+1];
  if(!next)return;
  if(S.fund<next.cost){toast('资金不足（需 '+next.cost+'万）');return;}
@@ -1089,8 +1112,10 @@ function _reportErr(tag,msg){
  window.__errLog.push({t:Date.now(),tag,m});
  window.__errLog=window.__errLog.slice(-20);
  console.error('['+tag+']',msg);
+ try{if(typeof gameLog!=='undefined')gameLog.error(tag,m);}catch(_){}
+ try{if(typeof writeCrashSnapshot==='function')writeCrashSnapshot(tag,msg);}catch(_){}
  if(S)try{logEvent(S,' 程序异常：'+m.slice(0,80));}catch(_){}
- toast(' 出现异常：'+m.slice(0,60)+'（建议先导出存档）');
+ toast(' 出现异常：'+m.slice(0,60)+'（已尝试保存崩溃快照，建议先导出存档）');
  }catch(_){}
 }
 window.addEventListener('error', e => _reportErr('全局异常', e.message||'未知错误'));

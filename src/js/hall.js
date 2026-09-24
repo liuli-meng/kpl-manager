@@ -162,18 +162,18 @@ function _shareWrap(fn){
  }catch(e){toast(' 生成失败：'+(e.message||e));}
 }
 function _shareBg(ctx){
- ctx.fillStyle='#1b1f27';ctx.fillRect(0,0,750,1200);
+ ctx.fillStyle='#0B0910';ctx.fillRect(0,0,750,1200);
  // 顶部金线
- ctx.fillStyle='#f0bb60';ctx.fillRect(0,0,750,6);
- ctx.fillStyle='#232833';ctx.fillRect(24,28,702,1144);
+ ctx.fillStyle='#E8C34A';ctx.fillRect(0,0,750,6);
+ ctx.fillStyle='#161222';ctx.fillRect(24,28,702,1144);
  ctx.strokeStyle='#3a4150';ctx.lineWidth=2;ctx.strokeRect(24,28,702,1144);
- ctx.fillStyle='#f0bb60';ctx.fillRect(24,28,702,4);
+ ctx.fillStyle='#E8C34A';ctx.fillRect(24,28,702,4);
 }
 function _shareLine(ctx,y,label,value,gold){
  ctx.font='500 22px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#c5cdd9';ctx.textAlign='left';ctx.fillText(label,56,y);
+ ctx.fillStyle='#B8A88A';ctx.textAlign='left';ctx.fillText(label,56,y);
  ctx.font='700 28px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle=gold?'#f0bb60':'#f3f6fb';ctx.textAlign='right';
+ ctx.fillStyle=gold?'#E8C34A':'#F7F1E3';ctx.textAlign='right';
  ctx.fillText(String(value),694,y);
  ctx.strokeStyle='#3a4150';ctx.lineWidth=1;
  ctx.beginPath();ctx.moveTo(56,y+16);ctx.lineTo(694,y+16);ctx.stroke();
@@ -187,13 +187,13 @@ function shareHonorCard(){
  const fm=(S.fmvpHonor||[]).filter(f=>f.team===S.teamName);
  ctx.textAlign='center';
  ctx.font='700 42px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#f3f6fb';
+ ctx.fillStyle='#F7F1E3';
  ctx.fillText(S.teamName,375,110);
  ctx.font='500 20px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#f0bb60';
+ ctx.fillStyle='#E8C34A';
  ctx.fillText('荣 誉 战 报',375,150);
  ctx.font='400 18px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#c5cdd9';
+ ctx.fillStyle='#B8A88A';
  ctx.fillText(gameYear(S)+' 赛季 · 王者电竞经理',375,182);
  let y=250;
  _shareLine(ctx,y,'总冠军',myHon.length,true);y+=72;
@@ -204,21 +204,21 @@ function shareHonorCard(){
  // 最近三冠
  ctx.textAlign='left';
  ctx.font='700 24px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#f3f6fb';
+ ctx.fillStyle='#F7F1E3';
  ctx.fillText('最近荣誉',56,y);y+=40;
  const recent=myHon.slice(-3).reverse(); // honors 按时间序 push：取末 3 条倒序=最近三冠
  if(!recent.length){
  ctx.font='400 20px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#adb7c5';
+ ctx.fillStyle='#7A6E58';
  ctx.fillText('奖杯柜还在等第一座冠军',56,y);y+=40;
  }else{
  recent.forEach(h=>{
  ctx.font='600 22px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#f0bb60';
+ ctx.fillStyle='#E8C34A';
  ctx.fillText('★ '+(h.title||'冠军'),56,y);y+=34;
  if(h.roster){
  ctx.font='400 18px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#c5cdd9';
+ ctx.fillStyle='#B8A88A';
  const t=String(h.roster);
  ctx.fillText(t.length>28?t.slice(0,28)+'…':t,56,y);y+=30;
  }
@@ -228,7 +228,7 @@ function shareHonorCard(){
  // 页脚
  ctx.textAlign='center';
  ctx.font='400 16px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#adb7c5';
+ ctx.fillStyle='#7A6E58';
  ctx.fillText('单机存档 · 数据来自本地赛季记录',375,1120);
  });
 }
@@ -241,13 +241,13 @@ function shareCareerCard(){
  const age=(c.legacy&&c.legacy.age)||((myPlayer(S)||{}).age)||'—';
  ctx.textAlign='center';
  ctx.font='700 40px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#f3f6fb';
+ ctx.fillStyle='#F7F1E3';
  ctx.fillText(me,375,110);
  ctx.font='500 20px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle=c.retired?'#c5cdd9':'#79aaff';
+ ctx.fillStyle=c.retired?'#B8A88A':'#E8C34A';
  ctx.fillText(c.retired?'职业生涯已退役':'选手生涯进行中',375,148);
  ctx.font='400 18px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#c5cdd9';
+ ctx.fillStyle='#B8A88A';
  ctx.fillText(S.teamName+' · '+age+' 岁',375,180);
  let y=250;
  _shareLine(ctx,y,'赛季数',(c.seasons||[]).length);y+=72;
@@ -257,19 +257,19 @@ function shareCareerCard(){
  _shareLine(ctx,y,'国家队',c.nat||0,(c.nat||0)>0);y+=90;
  ctx.textAlign='left';
  ctx.font='700 24px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#f3f6fb';
+ ctx.fillStyle='#F7F1E3';
  ctx.fillText('赛季履历',56,y);y+=38;
  (c.seasons||[]).slice(0,5).forEach(r=>{
  ctx.font='600 20px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#f3f6fb';
+ ctx.fillStyle='#F7F1E3';
  ctx.fillText(r.year+' · '+(r.team||'')+(r.titles?' · '+r.titles+'冠':''),56,y);y+=30;
  ctx.font='400 17px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#c5cdd9';
+ ctx.fillStyle='#B8A88A';
  ctx.fillText('出场 '+(r.apps||0)+' · '+(r.kda||'—')+' · 总值 '+(r.ovr||'—'),56,y);y+=36;
  });
  ctx.textAlign='center';
  ctx.font='400 16px "Segoe UI","Microsoft YaHei",sans-serif';
- ctx.fillStyle='#adb7c5';
+ ctx.fillStyle='#7A6E58';
  ctx.fillText('王者电竞经理 · KPL 篇',375,1120);
  });
 }

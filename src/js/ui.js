@@ -36,7 +36,7 @@ function pcard(p,extra){
  return `<div class="pcard ${ovrCls(o)}" data-pos="${p.pos}">
  ${hpCls}
  <div class="p-top">${avatar(p,34)}<span class="p-name">${p.name}${capTag}${tags}${campTag}</span><span class="p-pos" data-pos="${p.pos}" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span></div>
- <div class="p-rarity" style="color:${oc};letter-spacing:0">总值 <b>${o}</b> · ${POS[p.pos][0]}${teamHtml}${potHtml}${disc}</div>
+ <div class="p-rarity" style="color:${oc}"><span class="pr-label">总值</span><b class="pr-num">${o}</b><span class="pr-meta">${POS[p.pos][0]}${teamHtml}${potHtml}</span>${disc}</div>
  ${stageHtml}
  ${contractHtml}
  ${appsHtml}
@@ -47,7 +47,7 @@ function pcard(p,extra){
  <span>对线<i>${p.attrs.lane}</i></span><span>运营<i>${p.attrs.farm}</i></span>
  <span>团战<i>${p.attrs.team}</i></span><span>心态<i>${p.attrs.mind}</i></span>
  </div>
- <div class="p-foot"><span>战力 <b>${pow}</b></span><span>身价 <b class="${(p.val||100)>=110?'green':(p.val||100)<90?'red':''}">${sellAskPrice(p)}万</b></span><span>年薪 <b class="p-salary">${p.wage}万</b></span></div>
+ <div class="p-foot"><span class="pf"><i>战力</i><b>${pow}</b></span><span class="pf"><i>身价</i><b class="${(p.val||100)>=110?'green':(p.val||100)<90?'red':''}">${sellAskPrice(p)}万</b></span><span class="pf"><i>年薪</i><b class="p-salary">${p.wage}万</b></span></div>
  ${energyBar(p)}
  <button class="btn sm" style="margin-top:6px" onclick="showCareer(findPlayerCard('${p.id}'))">选手档案</button>
  ${extra||''}
@@ -208,7 +208,7 @@ function renderHeader(){
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
  const hdPower=teamPower(S),hdWage=weeklyWage(S); // 各算一次：本函数内三处复用
  $('#header').innerHTML=`
- <div class="logo">${crest(S.icon,S.teamName,32)}</div>
+ <div class="logo">${crest(S.icon,S.teamName,44)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>
  <div class="stats">
  <div class="stat k-money"><b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
@@ -217,7 +217,7 @@ function renderHeader(){
  <div class="stat k-wage ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>年薪/帽</small></div>
  ${S.streak>=3?`<div class="stat gold"><b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red"><b>${-S.streak}连败</b><small>低迷</small></div>`:''}
  <div class="stat k-sponsor"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
- ${S.coach?`<div class="stat gold"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
+ ${S.coach?`<div class="stat k-coach"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
  </div>
  <button class="hd-btn" onclick="uiSave()">存档</button>
  <button class="hd-btn" onclick="openSaveMgmt()">管理</button>
@@ -870,12 +870,12 @@ function renderTrain(){
  const ready=total>=300,adult=r.age>=MATCH_MIN_AGE;
  return `<div class="pcard" style="border-color:${ready&&adult?'var(--green)':'var(--line)'}">
  <div class="p-top"><span class="p-name">${r.name}<span class="p-tag">青训</span></span><span class="p-pos" data-pos="${r.pos}">${POS[r.pos][0]} ${POS[r.pos][1]}</span></div>
- <div class="p-rarity" style="letter-spacing:0">总值${overall(r)} · ${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 年薪${r.wage}万</div>
+ <div class="p-rarity" style="letter-spacing:0"><span class="pr-label">总值</span><b class="pr-num">${overall(r)}</b><span class="pr-meta">${r.age}岁 · 潜力${'★'.repeat(r.potential)} · 年薪${r.wage}万</span></div>
  <div class="attr" style="margin-top:6px">
  <span>对线<i>${r.attrs.lane}</i></span><span>运营<i>${r.attrs.farm}</i></span>
  <span>团战<i>${r.attrs.team}</i></span><span>心态<i>${r.attrs.mind}</i></span>
  </div>
- <div class="p-foot"><span>四维 <b class="${ready?'green':'gold'}">${total}/300</b></span><span> ${r.sig}</span></div>
+ <div class="p-foot"><span class="pf"><i>四维</i><b class="${ready?'green':'gold'}">${total}/300</b></span><span class="pf"><i>绝活</i><b>${r.sig}</b></span></div>
  <div style="display:flex;gap:6px;margin-top:8px">
  <button class="btn sm" style="flex:1" onclick="trainRookie(S,'${r.id}')" ${S.academyTrained?'disabled':''}>培养 ${ROOKIE_TRAIN_COST}万</button>
  <button class="btn sm primary" style="flex:1" onclick="promoteRookie(S,'${r.id}')" ${ready&&adult?'':'disabled'}>${ready&&adult?' 晋升一线':(ready?'未满'+MATCH_MIN_AGE+'岁':'未达标')}</button>
