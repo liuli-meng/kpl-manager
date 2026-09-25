@@ -461,6 +461,9 @@ function matchDayTick(s){
  try{if(s.day%WAGE_EVERY===0)payWage(s);}catch(e){}
  try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
  try{natCampTick(s);}catch(e){}
+ try{kjiaTick(s);}catch(e){}
+ try{kjiaDayTick(s);}catch(e){}
+ try{if(typeof loanOutTick==='function')loanOutTick(s);}catch(e){}
 }
 function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;

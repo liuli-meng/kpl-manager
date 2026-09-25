@@ -4088,6 +4088,9 @@ function matchDayTick(s){
  try{if(s.day%WAGE_EVERY===0)payWage(s);}catch(e){}
  try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
  try{natCampTick(s);}catch(e){}
+ try{kjiaTick(s);}catch(e){}
+ try{kjiaDayTick(s);}catch(e){}
+ try{if(typeof loanOutTick==='function')loanOutTick(s);}catch(e){}
 }
 function nextDay(s){
  s.day++;s.trained=false;s.marketRefreshed=false;s.academyTrained=false;s.socialUsed=false;
@@ -5427,7 +5430,10 @@ function useReserveSlot(s){
 function draftPanelHtml(){
  const s=S;
  if(!s.preseason||(s.transferWindow||0)<=0)return '';
- if(s.mode&&s.mode!=='manager')return '';
+ if(s.mode&&s.mode!=='manager'){
+  return `<div class="panel"><h3>KPL 选秀大会 <span class="tag">俱乐部运作</span></h3>
+  <div class="hint">选秀大会由俱乐部管理层点名。你在${s.mode==='player'?'选手生涯':'教练生涯'}不能选人；点名入口在经理模式的转会页。</div></div>`;
+ }
 
  const d=draftRepair(s,s.draft)||initDraft(s);
  if(!d)return '';

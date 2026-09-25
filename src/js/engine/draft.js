@@ -445,7 +445,10 @@ function useReserveSlot(s){
 function draftPanelHtml(){
  const s=S;
  if(!s.preseason||(s.transferWindow||0)<=0)return '';
- if(s.mode&&s.mode!=='manager')return '';
+ if(s.mode&&s.mode!=='manager'){
+  return `<div class="panel"><h3>KPL 选秀大会 <span class="tag">俱乐部运作</span></h3>
+  <div class="hint">选秀大会由俱乐部管理层点名。你在${s.mode==='player'?'选手生涯':'教练生涯'}不能选人；点名入口在经理模式的转会页。</div></div>`;
+ }
  // 渲染期只修不建：initDraft 在 season/split 不匹配时会重建整场选秀
  const d=draftRepair(s,s.draft)||initDraft(s);
  if(!d)return '';
