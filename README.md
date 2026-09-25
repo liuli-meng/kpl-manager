@@ -2,8 +2,9 @@
 
 LOL 电竞经理式的 KPL 俱乐部经营游戏：签约/转会谈判、训练青训、联赛征程、真实 KPL 两段式 BP。
 
-![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-market.png)
+![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-club.png)
 ![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-bp.png)
+![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-market.png)
 ![Screenshot](https://raw.githubusercontent.com/liuli-meng/kpl-manager/main/screenshot-league.png)
 
 > **声明**：本项目为粉丝自制的**非官方同人作品**，仅供学习交流，与腾讯《王者荣耀》、KPL 联盟及各俱乐部官方均无关联。游戏内选手/战队信息基于公开赛事资料整理，数值、玩法与文案均为原创虚构设计。请勿用于任何商业用途；如内容涉及侵权，联系即删。
@@ -11,11 +12,11 @@ LOL 电竞经理式的 KPL 俱乐部经营游戏：签约/转会谈判、训练�
 ## 📊 技术亮点
 
 - **纯前端单文件**：0 依赖，双击即玩，GitHub Pages 一键部署
-- **全量测试门禁**:64 项回归/平衡/冒烟测试，CI 自动运行（100% 通过率）
+- **全量测试门禁**：72 项回归/平衡/冒烟/怠政/BGM 测试，CI 自动运行
+- **工程规模**：`src` 约 1.8 万行 · 产物 `game.html` 约 800 KB · 零外部资源
 - **实时渲染优化**：长列表截断 + 脏文本守卫，手机也能丝滑
-- **BGM 情景感知播放**：idle/win/lose智能场景识别 + 音量控制 + 持久化设置
-- **程序化音效**：SFX+BGM 全部 WebAudio 合成，零资源占用
-- **代码精简优化**：v1.0 版本精简 -27K+ 行代码，效率提升显著
+- **BGM 情景感知播放**：轻循环 pad + 胜/负/夺冠和弦，音量可调、默认关闭
+- **程序化音效**：SFX+BGM 全部 WebAudio 合成，无音频文件
 - **现代化 UI/UX**：数字滚动动画、3D 倾斜效果、BP 动态交互、进场动画系统
 
 ## 🎮 在线试玩（GitHub Pages）
