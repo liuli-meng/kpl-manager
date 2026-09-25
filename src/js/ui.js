@@ -1055,7 +1055,7 @@ function renderKjia(){
  return `<tr><td><b>${p.name}</b></td><td>${POS[p.pos][1]}</td><td>${st.apps}</td><td>${avg}</td><td>${st.mvp||0}</td><td>${wr}</td><td class="gold">+${p.kjiaGain||0}</td></tr>`;
  }).join('')}</table>
   <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">已练 ${kjiaDaysServed(p)}/${KJIA_DAYS} 天 · 剩 ${p.kjia} 天<br>${(p.kjiaLog||[]).slice(0,2).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>
-  <button class="btn sm primary mt8" style="width:100%" onclick="recallKjia('${p.id}')" title="提前召回一队：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`)).join('')}</div>`;
+  ${(typeof canOperate==='function'&&canOperate('kjiaRecall',S))?`<button class="btn sm primary mt8" style="width:100%" onclick="recallKjia('${p.id}')" title="提前召回一队：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`:''}`)).join('')}</div>`;
  }else{
  html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 ${KJIA_DAYS} 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长；练满 ${KJIA_MIN_RECALL} 天后可在本页或阵容页「提前召回」。</div>`;
  }
@@ -1063,7 +1063,7 @@ function renderKjia(){
  // 二队班底（K甲注册选手）
  html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段重建 · 可提拔一线队</span></h3>
  <div class="hint" style="margin-bottom:8px">每赛段自动补充的次级联赛注册选手。年龄达标且大名单未满时，可直接「提拔一线队」——适合伤停缺人时应急，或低价补深度。</div>
- <div class="grid g4">${k.squad.map(p=>pcard(p,`<button class="btn sm primary mt8" style="width:100%" onclick="promoteKjiaPlayer('${p.id}')" title="提拔进一队：占用大名单名额（≤${ROSTER_MAX}），满 ${MATCH_MIN_AGE} 岁">↑ 提拔一线队</button>`)).join('')}</div></div>`;
+ <div class="grid g4">${k.squad.map(p=>pcard(p,(typeof canOperate==='function'&&canOperate('promoteRookie',S))?`<button class="btn sm primary mt8" style="width:100%" onclick="promoteKjiaPlayer('${p.id}')" title="提拔进一队：占用大名单名额（≤${ROSTER_MAX}），满 ${MATCH_MIN_AGE} 岁">↑ 提拔一线队</button>`:'')).join('')}</div></div>`;
  $('#page-kjia').innerHTML=html;
 }
 /* ================= 联盟页（战队总览 / 阵容浏览 / 选手榜单） ================= */

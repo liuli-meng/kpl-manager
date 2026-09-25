@@ -70,6 +70,47 @@ const out = vm.runInContext(`
   }catch(e){R.push('respondCoachOffer 抛错: '+e.message);}
   ok(!S.coachOffer,'缺模板时 coachOffer 未被清除');
   ok((S.eventLog||S.logs||[]).length>=0,'日志结构异常');
+  // 缺模板必须留痕（不能静默吞掉）：eventLog 里要有「无法接受/作废」字样
+  const elogs=((S.eventLog||[]).map(x=>x.t||x.msg||x.text||x).join(' ')+' '+JSON.stringify(S.eventLog||[]));
+  ok(/无法接受|作废|不在当前联盟/.test(elogs),'缺模板邀约未留痕（静默吞掉）: '+elogs.slice(0,120));
+
+  // ⑥b 选手模式 sendKjia 下放队友被拦（自请下放仍放行）
+  S=newState('下放门禁','⚔');S.mode='player';
+  fillRoster(S,'low');
+  const meK=genPlayer({id:'me_k',name:'我',pos:'mid',team:S.teamName,tags:[],base:[80,80,80,80],skill:{n:'x',t:'team',d:''},sig:'王昭君',career:''});
+  S.players.push(meK);
+  S.career={me:meK.id,seasons:[],titles:0,fmvp:0,retired:false,pendingMove:null};
+  const mate=S.players.find(p=>p.id!==meK.id);
+  const beforeMate=mate.kjia||0;
+  sendKjia(S,mate.id);
+  ok((mate.kjia||0)===beforeMate,'选手模式把队友下放 K甲（门禁失效）');
+  // 自请路径：playerRequestKjia 应仍能下放自己
+  if(S.lineup.includes(meK.id))S.lineup=S.lineup.filter(id=>id!==meK.id);
+  const okSelf=playerRequestKjia(S);
+  ok(okSelf&&(meK.kjia||0)>0,'选手自请下放被误伤: ok='+okSelf+' kjia='+(meK.kjia||0));
+
+  // ⑥c 教练模式提拔/召回 K甲被拦（俱乐部人事权）
+  S=newState('教练提拔','⚔');S.mode='coach';
+  fillRoster(S,'mid');
+  S.coachDeal={years:1,honors:[],log:[]};
+  S.kjia={my:'教练提拔二队',rd:0,rounds:[[{a:'教练提拔二队',b:'X',r:null}]],tables:{},powers:{},champ:null,
+    squad:[{id:'kx_c',name:'小将C',pos:'mid',base:[70,70,70,70],attrs:{lane:70,farm:70,team:70,mind:70},age:19,skill:{n:'x',t:'lane',d:''},sig:'海月',heroPool:[{n:'海月',lv:2}]}]};
+  const nC0=(S.players||[]).length;
+  promoteKjiaPlayer(S,'kx_c');
+  ok((S.players||[]).length===nC0,'教练模式提拔 K甲成功（应走俱乐部人事权）');
+
+  // ⑥d kjia 页对选手不渲染提拔按钮
+  S=newState('二队UI','⚔');S.mode='player';
+  fillRoster(S,'low');
+  const meU=genPlayer({id:'me_u',name:'我U',pos:'mid',team:S.teamName,tags:[],base:[80,80,80,80],skill:{n:'x',t:'team',d:''},sig:'王昭君',career:''});
+  S.players.push(meU);
+  S.career={me:meU.id,seasons:[],titles:0,fmvp:0,retired:false,pendingMove:null};
+  S.kjia={my:'二队UI二队',rd:0,rounds:[[{a:'二队UI二队',b:'X',r:null}]],tables:{},powers:{},champ:null,
+    squad:[{id:'kx_u',name:'小将U',pos:'mid',base:[70,70,70,70],attrs:{lane:70,farm:70,team:70,mind:70},age:19,skill:{n:'x',t:'lane',d:''},sig:'海月',heroPool:[{n:'海月',lv:2}]}]};
+  let kjiaHtml='';
+  try{renderKjia();kjiaHtml=(document.getElementById('page-kjia')||{}).innerHTML||'';}catch(e){kjiaHtml='ERR:'+e.message;}
+  ok(kjiaHtml.indexOf('promoteKjiaPlayer')<0,'选手模式二队页仍渲染提拔按钮');
+  ok(kjiaHtml.indexOf('recallKjia')<0,'选手模式二队页仍渲染召回按钮');
 
   // ⑦ playCardNext 空 card 不抛错
   S=newState('空卡','⚔');fillRoster(S);S.phase='card';S.card=null;S.preseason=false;

@@ -44,9 +44,9 @@ const Permissions = (function () {
     promoteRookie: ['manager'],
     convertPos: ['manager'],
     draft: ['manager'],
-    // K甲 / 国家队
-    kjiaDown: ['manager'],
-    kjiaRecall: ['manager'],
+    // K甲 / 国家队（下放/召回是竞技练级，教练可操作；提拔一线=人事权仍归经理）
+    kjiaDown: ['manager', 'coach'],
+    kjiaRecall: ['manager', 'coach'],
     natCampPick: ['manager', 'coach'],
     // 商业 / 董事会
     upgradeSponsor: ['manager'],

@@ -413,7 +413,10 @@ footer{background:transparent;border-top:1px solid var(--line);
   .sponsor{padding:9px}
   .event-card{padding:9px 11px}
   .pbar{font-size:10px}
-  .toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0))}
+  .toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0));max-width:min(94vw,560px);line-height:1.45}
+  /* 市场/转会卡：元数据与队名允许换行，避免移动端挤爆不可见 */
+  .match .vs .tname{white-space:normal;word-break:break-word;overflow:visible;text-overflow:clip}
+  .match .vs .tname span{white-space:normal;word-break:break-word}
   footer{padding:8px;font-size:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}
   #tab-self-body .btn,#tab-club-body .btn{width:100%}
   /* 2026-09 移动端 pass：触控目标 / 安全区 / 表格横滑 / 弹窗手感 */

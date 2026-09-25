@@ -159,6 +159,11 @@ function renderPage(name){
  else if(name==='biz')renderBiz();
  // 面板标题语义标记：一处覆盖 10 页 88 个面板的色标/图标，不必逐个渲染函数改
  if(typeof decoratePanelMarks==='function'){try{decoratePanelMarks(document.getElementById('page-'+name));}catch(e){}}
+ // 排序/筛选 chips 行：把当前选中 chip 滚进视口（否则默认排序「总值」在横滑容器里可能看不见）
+ try{
+  const row=document.querySelector('#page-'+name+' .sort-row');
+  if(row){const on=row.querySelector('.s-chip.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'nearest'});}
+ }catch(e){}
 }
 function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
 
@@ -522,7 +527,13 @@ function respondCoachOffer(accept){
  const d=S.coachDeal=S.coachDeal||{years:0,honors:[],log:[]};
  if(accept){
  const tmpl=CLUB_TEMPLATES.find(c=>c.name===o.team);
- if(!tmpl){S.coachOffer=null;return;}
+ if(!tmpl){
+  // 队名不在模板表（导入档/时代池残留）：必须给用户反馈，静默吞掉会像“点了没反应”
+  logEvent(S,' 豪门邀约「'+o.team+'」无法接受——该俱乐部不在当前联盟名单，邀约作废');
+  S.coachOffer=null;save();renderAll();
+  toast(' 邀约球队「'+o.team+'」不在当前联盟，邀约已作废');
+  return;
+ }
  d.log.unshift({year:gameYear(S),note:'离任 '+S.teamName+'，转投 '+tmpl.name});
  d.log=d.log.slice(0,8);
  const myCoach=S.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
@@ -704,6 +715,7 @@ const PLAYER_ARCHETYPES=[
  {id:'returnee',n:'海归选手',age:21,base:[77,76,78,75],wageMul:1.6,pop:26,career:'海外赛区归来，身价不菲',desc:'21岁 · 高起点高薪资，即插即用'},
 ];
 function pickPlayerPos(p){
+ if(!(POS_ORDER||[]).includes(p)){toast('无效位置');return;}
  _pcPos=p;
  POS_ORDER.forEach(x=>{const b=document.getElementById('pc-pos-'+x);if(b)b.className='btn sm'+(x===_pcPos?' primary':'');});
 }
@@ -964,6 +976,7 @@ function createTeam(){
  logEvent(S,' 赛前转会期开启（7天）：买断/直签/挂牌自由组队，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
  logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
+ applyModeNav(); // 新建经理档：清掉开局 tab 残留的生涯/教练页签（与 createPlayerCareer/applyCoachClub 对齐）
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');
  save();
@@ -1001,6 +1014,7 @@ function applyClub(){
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'：联盟成员与阵容回到当年（明星按史实，部分席位演绎）；赛制沿用现行年度赛历');
  else logEvent(S,' KPL 现行赛制（据 2026 公开报道）：第一轮3组单循环 → S/A/B → 卡位赛(BO5) → 第三轮 → 10强双败季后赛');
  $('#start-modal').classList.remove('on');
+ applyModeNav(); // 执教原版俱乐部同属经理档：开档后立即按 MODE_PAGES 收口导航
  goPage('market');
  toast(' 赛前转会期开启（7天）：先组队，再开赛');
  save();

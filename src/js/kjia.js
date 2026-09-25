@@ -155,6 +155,10 @@ function sendKjia(s,id){
  // 兼容两种调用：sendKjia(S,id)（引擎/测试）与 sendKjia(id)（阵容页按钮）
  if(id===undefined){id=s;s=S;}
  s=s||S;
+ // 俱乐部下放权（阵容页）走 permission；选手自请下放（playerRequestKjia）传的是自己，不能被经理门禁误伤
+ const me=(s.mode==='player'&&typeof myPlayer==='function')?myPlayer(s):null;
+ const isSelf=!!(me&&me.id===id);
+ if(!isSelf&&typeof denyIfBlocked==='function'&&denyIfBlocked('kjiaDown',s))return;
  const p=(s.players||[]).find(x=>x.id===id);
  if(!p){toast('选手不在阵中');return;}
  if(p.kjia){toast(p.name+' 已在 K甲锻炼（剩余 '+p.kjia+' 天）');return;}
@@ -194,6 +198,7 @@ function kjiaReturnNote(p){ // 归队日志共用后缀
 function recallKjia(s,id){ // 提前召回：练满 KJIA_MIN_RECALL 天后可拉回一队，成长按已练天数折算
  if(id===undefined){id=s;s=S;}
  s=s||S;
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('kjiaRecall',s))return;
  if(s.mode==='player'){toast('选手生涯没有俱乐部人事权——召回由俱乐部运作');return;}
  const p=(s.players||[]).find(x=>x.id===id);
  if(!p){toast('选手不在阵中');return;}
@@ -219,6 +224,8 @@ function kjiaTick(s){ // 每天结算一次；到期归队并成长（必须逐�
 }
 /* K甲班底上调一线队：每赛段自动生成的注册选手，表现合格可提拔（对称青训晋升） */
 function promoteKjiaPlayer(s,id){
+ // 俱乐部人事权：走 permission（manager 专属），选手/教练都不能提拔——UI 也按此隐藏按钮
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('promoteRookie',s))return;
  if(id===undefined){id=s;s=S;}
  s=s||S;
  if(s.mode==='player'){toast('选手生涯没有俱乐部人事权——提拔由俱乐部运作');return;}

@@ -144,7 +144,8 @@ function playerTrain(k){
  const r=playerTrainDay(S,k);
  if(!r.ok){if(r.reason)toast(r.reason);return;}
  save();renderAll();
- if(r.gain<=0)toast(r.note);
+ // 零收益也要说清练了什么、为什么没涨，不能只甩一个状态词
+ if(r.gain<=0)toast(' 加练'+({lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k]||'属性')+'：'+(r.note||'状态不佳')+'，今天没有提升');
 }
 function playerHeroTrain(){
  const r=playerHeroTrainDay(S);
