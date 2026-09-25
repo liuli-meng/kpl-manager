@@ -34,6 +34,8 @@ const out = vm.runInContext(`
   ok(S.series&&S.series.mid==='reg_r1_1','② 读档后 series.mid 保留（实际 '+(S.series&&S.series.mid)+'）');
   ok((S.schedule[0]||{}).mid==='reg_r1_1','② 读档后 schedule mid 保留');
   ok(resolveSeriesMatch(S,S.series)===S.schedule[0],'② 读档后 mid 解析落回首场对阵对象');
+  // 先清掉上一局遗留标题，否则断言读到的是「第1局」旧值（CI 上偶发假红）
+  window._prepTitle='';
   startMatch();
   ok(S.series&&S.series.mw===1&&S.series.mid==='reg_r1_1','② 续赛保持比分 1:0 与 mid');
   ok((window._prepTitle||'').indexOf('第2局')>=0,'② 续赛标题应为第2局（实际：'+window._prepTitle+'）');
@@ -44,7 +46,8 @@ const out = vm.runInContext(`
   startMatch();
   ok(S.series&&S.series.mid==='reg_r1_1','③ 僵尸系列赛废弃、落在当前对阵（实际 mid='+(S.series&&S.series.mid)+'）');
   ok(S.series&&S.series.mw===0&&S.series.ow===0,'③ 僵尸比分不得带入新系列赛');
-  ok(S.eventLog.length>logN&&S.eventLog.slice(0,6).some(l=>/赛程修复/.test(l.txt||l)),'③ 废弃必须 logEvent 留痕');
+  // logEvent 是 unshift，后续动作会把「赛程修复」挤出前几条——扫全表，不要 slice(0,6)
+  ok(S.eventLog.length>logN&&(S.eventLog||[]).some(l=>/赛程修复/.test(l&&l.txt?l.txt:l)),'③ 废弃必须 logEvent 留痕');
 
   // ---------- ④ 完赛写回：经 mid 解析落到正确 schedule 条目 ----------
   S.series.mw=3;S.series.ow=1;
