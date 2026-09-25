@@ -443,7 +443,7 @@ function renderPreMatch(){
  </div>`).join('');
  $('#app-modal-body').innerHTML=`
  <h2>赛前准备 <span class="tag">${sr.max===7?'BO7 · 含巅峰对决':'BO5 · 全局BP'}</span></h2>
- <div class="hint" style="text-align:center;margin-bottom:8px">${window._prepTitle}${midSeries?` · 当前比分 <b>${sr.mw}:${sr.ow}</b>（<span style="cursor:help" title="我方已用：${(sr.used||[]).join('、')||'无'}
+ <div class="hint" style="text-align:center;margin-bottom:8px">${window._prepTitle||(S.teamName+' vs '+(sr.opName||'对手'))}${midSeries?` · 当前比分 <b>${sr.mw}:${sr.ow}</b>（<span style="cursor:help" title="我方已用：${(sr.used||[]).join('、')||'无'}
 对方已用：${(sr.usedOpp||[]).join('、')||'无'}">全局BP已用 · 我方 ${(sr.used||[]).length} / 对方 ${(sr.usedOpp||[]).length}</span>）`:''}</div>
  ${poster}
  ${tactHtml||''}
@@ -485,6 +485,7 @@ function prepSwapIn(pid){
 }
 function playGame(){
  const sr=S.series;
+ if(!sr){toast('没有进行中的系列赛');return;} // 结算弹窗未点就重入 / 残缺档：不能在 sr.max 上炸
  // 有效战力结算：BAN/选人质量/红蓝 counter 全部折算进胜负（详见 bpEffective）
  const isLastPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：无 BP，不吃任何修正（BO7 第7局 / BO9 第9局）
  const v=bpEffective({myBans:sr.myBans,oppBans:sr.oppBans,oppPicks:sr.oppPicks,side:sr.side,isPeak:isLastPeak,opName:sr.opName,opRoster:ensureAiRosters(S,sr.opName)||[],used:sr.used,usedOpp:sr.usedOpp});

@@ -582,6 +582,8 @@ function autoPlayNext(){
  playGame();
 }
 function applyBp(sels){
+ // 沙箱/旧回调可能传入 undefined——再往下读 sels[pos] 会整段 BP 抛错
+ if(!sels||typeof sels!=='object'){sels={};}
  S.pick=sels;
  if(S.series){
  const sr=S.series;

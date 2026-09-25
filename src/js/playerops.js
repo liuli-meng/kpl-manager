@@ -238,7 +238,9 @@ function trainOutcome(role,p,k){
   }
   if(pastGold&&gain>0&&Math.random()<0.5)gain=0; // 下滑期再砍半
   if(gain>room)gain=room;
-  return {gain,form,peak,note:formLabel(form)};
+  // note 要能独立说明结果：零收益时不能只丢一个状态词（UI toast / 日志 / 探针都读它）
+  const base=formLabel(form);
+  return {gain,form,peak,note:gain>0?base:base+'，今天没有提升'};
 }
 function benchMoraleDelta(role,base){
   if(role==='star')return base*2;
@@ -283,7 +285,7 @@ function playerTrainDay(s,k){
  const label={lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k]||'属性';
  logEvent(s, r.gain>0
   ?(' 加练'+label+'：'+me.name+' '+r.note+'，属性 +'+r.gain+'（状态 '+r.form+' · 天花板 '+(r.peak||'—')+'）')
-  :(' 加练'+label+'：'+me.name+' '+r.note+'（状态 '+r.form+'），今天没有提升'));
+  :(' 加练'+label+'：'+me.name+' '+r.note+'（状态 '+r.form+'）'));
  return {ok:true,gain:r.gain,note:r.note};
 }
 function playerHeroTrainDay(s){

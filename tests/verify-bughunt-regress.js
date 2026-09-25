@@ -99,6 +99,27 @@ const out = vm.runInContext(`
   promoteKjiaPlayer(S,'kx_c');
   ok((S.players||[]).length===nC0,'教练模式提拔 K甲成功（应走俱乐部人事权）');
 
+  // ⑥e applyBp/playGame 空引用不抛错
+  S=newState('空引用','⚔');fillRoster(S);S.preseason=false;S.series=null;
+  let abErr=null,pgErr=null;
+  try{applyBp(undefined);}catch(e){abErr=e.message;}
+  try{playGame();}catch(e){pgErr=e.message;}
+  ok(!abErr,'applyBp(undefined) 抛错: '+abErr);
+  ok(!pgErr,'playGame(无 series) 抛错: '+pgErr);
+
+  // ⑥f 加练零收益 note 自说明
+  S=newState('note','⚔');S.mode='player';
+  const meN=genPlayer({id:'me_n',name:'我N',pos:'mid',team:S.teamName,tags:[],base:[80,80,80,80],skill:{n:'x',t:'team',d:''},sig:'王昭君',career:''});
+  meN.attrs={lane:70,farm:70,team:70,mind:70};meN.energy=80;
+  S.players.push(meN);S.career={me:meN.id,seasons:[],titles:0,fmvp:0,retired:false,pendingMove:null};
+  let gotNote='';
+  for(let i=0;i<12&&(!gotNote||gotNote.indexOf('今天没有提升')<0);i++){
+    S.trained=false;meN.energy=80;
+    const r=trainOutcome('rot',meN,'lane');
+    if(r.gain<=0)gotNote=r.note||'';
+  }
+  ok(gotNote.indexOf('今天没有提升')>=0,'零收益 note 不自说明: '+gotNote);
+
   // ⑥d kjia 页对选手不渲染提拔按钮
   S=newState('二队UI','⚔');S.mode='player';
   fillRoster(S,'low');
