@@ -32,6 +32,7 @@ const HERO_LV={
 function heroLv(p,heroId){const h=(p.heroPool||[]).find(x=>x.n===heroId);return h?h.lv:1;}
 /* 英雄熟练度：绝活+8% / 熟练+4% / 一般0% / 生疏-8% */
 function buyPlayer(s,p){
+ if(!p){toast('选手已被签走');return false;}
  if(typeof canSign==='function'){
   const chk=canSign(s,p,{actor:'player'});
   if(!chk.ok){toast(chk.reason||'不能签约');return false;}

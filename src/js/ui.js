@@ -158,7 +158,7 @@ function showYearReview(idx){
  $('#app-modal').classList.add('wide');
  if(S._reviewNew===r.year){S._reviewNew=null;save();} // 首次查看后清除俱乐部页提示
 }
-function showCareer(p){
+function showCareer(p){if(!p){toast('选手已不在');return;}
  if(!p||!p.name){toast('档案暂不可用');return;}
  const lvDesc=(p.heroPool||[]).map(h=>`${h.n}(${HERO_LV[h.lv].n})`).join('、');
  $('#app-modal-body').innerHTML=`
@@ -449,7 +449,7 @@ function clubLeaguePhasePanel(){
  if(!m)return '';
  const oppIcon=(AI_TEAMS.find(t=>t.name===m.opp)||{}).icon||'';
  let html=`<div class="panel">
- <h3>下一场比赛 <span class="tag">${PHASE_NAME[S.phase]} · ${g}组 第${m.round}/${KPL.ROUNDS}轮</span></h3>
+ <h3>下一场比赛 <span class="tag">${(PHASE_NAME[S.phase]||S.phase)} · ${g}组 第${m.round}/${KPL.ROUNDS}轮</span></h3>
  <div class="match">
  <div class="vs"><div>${crest(S.icon,S.teamName,38)}</div><div><div class="tname">${S.teamName}</div><div class="power">战力 ${fmt(teamPower(S))}</div></div></div>
  <div style="color:var(--dim);font-weight:900">VS</div>
@@ -721,7 +721,7 @@ function renderClub(){
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
- <div class="dim" style="font-size:12px">${splitLabel(S)} · 第${S.day}天 · ${PHASE_NAME[S.phase]||S.phase}${myGroup(S)?' · '+myGroup(S)+'组':''}${(S.phase==='playoff'||S.phase==='annual'&&S.annual&&S.annual.stage==='po')?' · 双败淘汰':''}${S.phase==='ewc'?' · 8强单败':''}${scenarioById(S.scenario||'normal').hard?' · <span class="gold">剧本：'+scenarioById(S.scenario).name+'</span>':''}</div></div>
+ <div class="dim" style="font-size:12px">${splitLabel(S)} · 第${S.day}天 · ${(PHASE_NAME[S.phase]||S.phase)}${myGroup(S)?' · '+myGroup(S)+'组':''}${(S.phase==='playoff'||S.phase==='annual'&&S.annual&&S.annual.stage==='po')?' · 双败淘汰':''}${S.phase==='ewc'?' · 8强单败':''}${scenarioById(S.scenario||'normal').hard?' · <span class="gold">剧本：'+scenarioById(S.scenario).name+'</span>':''}</div></div>
  ${(S&&S.mode)!=='player'?`<button class="btn sm" style="margin-left:4px;flex:none" onclick="openCrestEdit()" title="自选外形/配色/缩写，风格同 18 支真实俱乐部">改队徽</button>`:''}
  <div style="margin-left:auto;text-align:right">
  <div class="gold" style="font-size:18px;font-weight:800">${fmt(S.fund)}</div>
@@ -910,7 +910,7 @@ function renderLeague(){
  try{if(typeof markSeasonQuestSeen==='function')markSeasonQuestSeen('seenLeague_'+((S&&S.season)||1));}catch(_){}
  const groups=phaseGroups(S);
  const myG=myGroup(S);
- let html=pageHint('league')+(typeof yearCalendarHtml==='function'?yearCalendarHtml(S):'')+`<div class="panel"><h3>${splitLabel(S)} · ${PHASE_NAME[S.phase]||S.phase} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
+ let html=pageHint('league')+(typeof yearCalendarHtml==='function'?yearCalendarHtml(S):'')+`<div class="panel"><h3>${splitLabel(S)} · ${(PHASE_NAME[S.phase]||S.phase)} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
  <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运会（亚运年）→ 年度总决赛</div></div>`;
  // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
@@ -949,7 +949,7 @@ function renderLeague(){
  }
  // 赛程
  if(S.schedule&&S.schedule.length){
- html+=`<div class="panel"><h3>本队赛程（${PHASE_NAME[S.phase]}）</h3>${(()=>{const myPw=fmt(teamPower(S));return S.schedule.map(m=>{
+ html+=`<div class="panel"><h3>本队赛程（${(PHASE_NAME[S.phase]||S.phase)}）</h3>${(()=>{const myPw=fmt(teamPower(S));return S.schedule.map(m=>{
  const cls=m.result==='W'?'win':m.result==='L'?'lose':'';
  const isNext=m===S.schedule[S.matchIdx];
  const oppIcon=(AI_TEAMS.find(t=>t.name===m.opp)||{}).icon||'剑';

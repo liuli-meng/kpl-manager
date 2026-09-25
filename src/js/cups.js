@@ -89,9 +89,9 @@ function cup8PoStep(s,p,cfg){
  for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'lb1_'+(i+1),'·败者组首轮');return;}}
  for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'wb2_'+(i+1),'·胜者组半决赛');return;}}
  for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'lb2_'+(i+1),'·败者组第二轮');return;}}
- if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
+ if(p.wf.a===null){const _b0=p.wb2&&p.wb2[0],_b1=p.wb2&&p.wb2[1];if(_b0&&_b1){p.wf.a=_b0.r;p.wf.b=_b1.r;}}
  if(!p.wf.r){P(p.wf,'wf','·胜者组决赛');return;}
- if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
+ if(p.lbs.a===null){const _c0=p.lb2&&p.lb2[0],_c1=p.lb2&&p.lb2[1];if(_c0&&_c1){p.lbs.a=_c0.r;p.lbs.b=_c1.r;}}
  if(!p.lbs.r){P(p.lbs,'lbs','·败者组半决赛');return;}
  if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
  if(!p.lbf.r){P(p.lbf,'lbf','·败者组决赛');return;}

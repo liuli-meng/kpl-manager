@@ -291,7 +291,7 @@ function setupCard(s){
 }
 function playCardNext(s){
  if(!s||!s.card||!s.card.matches||!s.card.matches.length){
-  if(s){s.phase=s.phase||'r3';toast('卡位赛数据缺失，已跳过本阶段');}
+  if(s){if(s.phase==='card'&&!s.card)setPhase(s,'r3',{who:'playCardNext-empty',force:true});else s.phase=s.phase||'r3';toast('卡位赛数据缺失，已跳过本阶段');}
   return;
  }
  const m=s.card.matches[s.card.idx];
@@ -433,7 +433,7 @@ function playoffStep(s){
  if(m.b===null&&p.lb[i].r)m.b=p.lb[i].r;
  if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'lb2_'+(i+1));return;}
  }
- if(p.wf.a===null){p.wf.a=p.wb[0].r;p.wf.b=p.wb[1].r;}
+ if(p.wf.a===null){const _w0=p.wb&&p.wb[0],_w1=p.wb&&p.wb[1];if(_w0&&_w1){p.wf.a=_w0.r;p.wf.b=_w1.r;}}
  if(p.wf.r===null&&p.wf.a&&p.wf.b){playPoMatch(s,p.wf,'胜者组决赛');return;}
  for(let i=0;i<2;i++){
  const m=p.lb3[i];
@@ -441,7 +441,7 @@ function playoffStep(s){
  if(m.b===null&&p.lb2[i].r)m.b=p.lb2[i].r;
  if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'lb3_'+(i+1));return;}
  }
- if(p.lb4.a===null){p.lb4.a=p.lb3[0].r;p.lb4.b=p.lb3[1].r;}
+ if(p.lb4.a===null){const _l30=p.lb3&&p.lb3[0],_l31=p.lb3&&p.lb3[1];if(_l30&&_l31){p.lb4.a=_l30.r;p.lb4.b=_l31.r;}}
  if(p.lb4.r===null&&p.lb4.a&&p.lb4.b){playPoMatch(s,p.lb4,'败者组半决赛');return;}
  // 败者组决赛：胜者组决赛败者 vs 败者组半决赛胜者（双败制关键）
  if(p.lbf.a===null){p.lbf.a=p.wf.r===p.wf.a?p.wf.b:p.wf.a;p.lbf.b=p.lb4.r;}

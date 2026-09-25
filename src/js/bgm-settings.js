@@ -8,13 +8,13 @@ function bgmSettingsPanelHtml(){
   <h3>音效设置</h3>
   <div style="margin-bottom:12px">
    <label>SFX 音效
-    <button onclick="toggleSfx()" class="btn sm">${_sfxOn?'gold':'primary'}">${sfxStatus}</button>
+    <button onclick="toggleSfx()" class="btn sm ${_sfxOn?'gold':'primary'}">${sfxStatus}</button>
    </label>
    <div class="hint" style="font-size:11px;margin-top:4px">点击/胜利/失败等短时音效</div>
   </div>
   <div style="margin-bottom:12px">
    <label>BGM 背景音乐
-    <button onclick="toggleBGM()" class="btn sm">${_bgmOn?'gold':'primary'}">${bgmStatus}</button>
+    <button onclick="toggleBGM()" class="btn sm ${_bgmOn?'gold':'primary'}">${bgmStatus}</button>
    </label>
    <div class="hint" style="font-size:11px;margin-top:4px">日常管理轻循环 pad + 胜/负/夺冠情境和弦（默认关，音量极低）</div>
   </div>

@@ -277,7 +277,8 @@ function toggleSaveHowto(){
    调用点：setSlot / applyImport / restoreAutoBackup（均在拿到新 S 之后、渲染之前）。 */
 function resetRuntimeGlobals(){
  try{
-  _nego=null;                                   // 转会话术上下文（transfer.js）
+  _nego=null;
+  try{window._nego=null;window._sellNego=null;window._draft=null;window._prepPos=null;}catch(_){}                                   // 转会话术上下文（transfer.js）
   _clubPick=-1;_eraSel=null;_scenario='normal';  // 开局俱乐部/时代/剧本选择
   _pcPos='mid';_pcArch=0;_pcTeam=null;_coachPick=-1;_eraSelCoach=null;_eraSelPlayer=null;
   for(const k in _uiArm)delete _uiArm[k];        // 连点节流时间戳：不清会让新档第一次点击被判成连点
@@ -446,6 +447,13 @@ function sanitizeImport(obj){
 		dropped.push('players:not-array');
 	}else{
 		obj.players=obj.players.filter(p=>p&&typeof p==='object'&&typeof p.id==='string'&&p.id);
+		// 数字脏值：NaN/Inf 写回 0，防止战力/工资计算连锁炸
+		obj.players.forEach(p=>{
+			['age','energy','wage','morale','popularity','val','injury','contract','apps'].forEach(k=>{
+				if(p[k]!=null&&typeof p[k]==='number'&&!isFinite(p[k])){p[k]=0;dropped.push('players.'+k+':NaN');}
+			});
+		});
+		if(obj.players.length>80){obj.players=obj.players.slice(0,80);dropped.push('players:len');}
 	}
 	if(obj.lineup!=null&&!Array.isArray(obj.lineup)){obj.lineup=[];dropped.push('lineup:not-array');}
 	['fund','wageCap','day','season','matchIdx','fans'].forEach(k=>{

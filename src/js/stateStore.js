@@ -87,7 +87,16 @@ const StateStore = (function () {
       }
       const raw = JSON.stringify(payload);
       localStorage.setItem(CRASH_KEY, raw);
-      try { localStorage.setItem(CRASH_KEY + '_' + _now(), raw); } catch (_) {}
+      // 只保留最近 3 份时间戳快照，防止吃满 quota
+      try {
+        const stamp = CRASH_KEY + '_' + _now();
+        localStorage.setItem(stamp, raw);
+        const keys = Object.keys(localStorage).filter(k => k.indexOf(CRASH_KEY + '_') === 0).sort();
+        while (keys.length > 3) {
+          const k = keys.shift();
+          try { localStorage.removeItem(k); } catch (_) {}
+        }
+      } catch (_) {}
       return true;
     } catch (_) {
       return false;
