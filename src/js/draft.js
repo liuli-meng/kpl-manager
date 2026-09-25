@@ -276,9 +276,9 @@ function draftFinish(s){
  d.pool=[];
 }
 function draftBidRaise(s){
- if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s))return;
  if(s===undefined)s=S;
- const d=s.draft;
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s||S))return;
+ const d=(s||S).draft;
  if(!d||d.done||d.phase!=='auction')return;
  // 当前价必须是 d.bid（选秀自己的竞拍价）；以前误写成 s.bid（转会报价字段，选秀里恒为 undefined）
  // → NaN 万叫价，连锁把领先者/成交价全污染。这里再兜一层，坏档也拉得回来。
@@ -408,9 +408,9 @@ function draftFaInit(p){
  return p;
 }
 function draftPick(s,id){
- if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s))return;
- if(id===undefined){id=s;s=S;}
+ if(id===undefined){id=s;s=S;} // onclick 传 id，先归一化再做权限判断
  s=s||S;
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s))return;
  const d=s.draft;
  if(!d||d.done||d.phase!=='pick'){toast('当前不在点名阶段');return;}
  if(!rosterGuard(s)){ // 大名单已满：这一签作废（不能再走 draftNextSlot 原地重拍，否则签位卡在同一步）
@@ -498,7 +498,10 @@ function draftForceFinish(s){
 function draftPanelHtml(){
  const s=S;
  if(!s.preseason||(s.transferWindow||0)<=0)return '';
- if(s.mode&&s.mode!=='manager')return '';
+ if(s.mode&&s.mode!=='manager'){
+  return `<div class="panel"><h3>KPL 选秀大会 <span class="tag">俱乐部运作</span></h3>
+  <div class="hint">选秀大会（竞拍签位 + 点名）由俱乐部管理层操作。你在${s.mode==='player'?'选手生涯':'教练生涯'}里${s.mode==='player'?'专注个人表现，表现好会被俱乐部/经纪签约':'可用转会页的引援申请/应急租借'}；点名入口只在经理模式的转会页。</div></div>`;
+ }
  // 渲染期只修不建：initDraft(s) 在 season/split 不匹配时会重建整场选秀，
  // 在 render 里重建会吞掉进行中的竞拍；坏值交给 draftRepair 归一化即可。
  const d=draftRepair(s,s.draft)||initDraft(s);
