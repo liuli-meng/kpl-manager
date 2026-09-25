@@ -3497,7 +3497,7 @@ function aiTransferWindow(s){
  const trainMax=tier==='elite'?5:4;
  r.base[idx]=clamp((r.base[idx]||70)+rnd(2,trainMax),40,95);
  const rSum=sumBase(r);
- logEvent(s,' '+tn+' 培养青训 '+r.name+'（'+POS[r.pos][0]+'）「'+TRAIN_ITEMS.find(x=>x.k===key).n+'」+2~'+trainMax);
+ logEvent(s,' '+tn+' 培养青训 '+r.name+'（'+POS[r.pos][0]+'）「'+(TRAIN_ITEMS.find(x=>x.k===key)||{n:key||'训练'}).n+'」+2~'+trainMax);
 
  if(rSum>=300){
  const rOvr=overall(genSeasonPlayer(s,r));
