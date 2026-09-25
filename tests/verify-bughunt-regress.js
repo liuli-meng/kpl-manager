@@ -111,6 +111,8 @@ const out = vm.runInContext(`
   try{renderKjia();kjiaHtml=(document.getElementById('page-kjia')||{}).innerHTML||'';}catch(e){kjiaHtml='ERR:'+e.message;}
   ok(kjiaHtml.indexOf('promoteKjiaPlayer')<0,'选手模式二队页仍渲染提拔按钮');
   ok(kjiaHtml.indexOf('recallKjia')<0,'选手模式二队页仍渲染召回按钮');
+  ok(kjiaHtml.indexOf('提拔一线队')<0,'选手模式二队页仍出现经理向「提拔一线队」文案');
+  ok(/生涯/.test(kjiaHtml)&&/申请下放/.test(kjiaHtml),'选手模式二队页未指向「生涯」自请下放路径');
 
   // ⑦ playCardNext 空 card 不抛错
   S=newState('空卡','⚔');fillRoster(S);S.phase='card';S.card=null;S.preseason=false;

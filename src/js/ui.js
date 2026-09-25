@@ -1003,8 +1003,11 @@ function renderKjia(){
  const myRank=rank.indexOf(my)+1;
  const done=k.rd>=k.rounds.length;
  const next=done?null:k.rounds[k.rd].find(m=>m.a===my||m.b===my);
+ const isPlayer=S.mode==='player';
  let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
- <div class="hint">次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。</div></div>`;
+ <div class="hint">${isPlayer
+  ?'次级联赛与 KPL 赛段并行推进：俱乐部把替补/青训下放二队真实出战（不占你的 KPL 出场），表现数据在本页累计；归队时带属性成长。你可在「生涯」页申请下放练级。'
+  :'次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。'}</div></div>`;
  // 二队概况 + 下一场
  const demoted=(S.players||[]).filter(p=>p.kjia>0);
  html+=`<div class="panel"><h3>二队概况 <span class="tag">${crest(S.icon,my,18)} ${my} · 战力 ${fmt(kjiaTeamPower(S))} · 联赛第${myRank||'—'}名 · 下放选手 ${demoted.length} 人</span></h3>`;
@@ -1057,13 +1060,20 @@ function renderKjia(){
   <div class="grid g4" style="margin-top:10px">${demoted.map(p=>pcard(p,`<div class="hint" style="margin-top:6px">已练 ${kjiaDaysServed(p)}/${KJIA_DAYS} 天 · 剩 ${p.kjia} 天<br>${(p.kjiaLog||[]).slice(0,2).map(l=>_escTxt(l)).join('<br>')||'尚未出战'}</div>
   ${(typeof canOperate==='function'&&canOperate('kjiaRecall',S))?`<button class="btn sm primary mt8" style="width:100%" onclick="recallKjia('${p.id}')" title="提前召回一队：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`:''}`)).join('')}</div>`;
  }else{
- html+=`<div class="hint">暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 ${KJIA_DAYS} 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长；练满 ${KJIA_MIN_RECALL} 天后可在本页或阵容页「提前召回」。</div>`;
+ html+=`<div class="hint">${isPlayer
+  ?'暂无下放选手。你可在「生涯」页申请下放 K甲练级 '+KJIA_DAYS+' 天：二队每场为你结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长。'
+  :'暂无下放选手——「阵容」页替补卡上有「下放 K甲」按钮。下放 '+KJIA_DAYS+' 天：二队每场为选手结算 KDA/MVP，赢球有小概率即时 +1 属性，归队时再结算一笔成长；练满 '+KJIA_MIN_RECALL+' 天后可在本页或阵容页「提前召回」。'}</div>`;
  }
  html+=`</div>`;
  // 二队班底（K甲注册选手）
- html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段重建 · 可提拔一线队</span></h3>
- <div class="hint" style="margin-bottom:8px">每赛段自动补充的次级联赛注册选手。年龄达标且大名单未满时，可直接「提拔一线队」——适合伤停缺人时应急，或低价补深度。</div>
- <div class="grid g4">${k.squad.map(p=>pcard(p,(typeof canOperate==='function'&&canOperate('promoteRookie',S))?`<button class="btn sm primary mt8" style="width:100%" onclick="promoteKjiaPlayer('${p.id}')" title="提拔进一队：占用大名单名额（≤${ROSTER_MAX}），满 ${MATCH_MIN_AGE} 岁">↑ 提拔一线队</button>`:'')).join('')}</div></div>`;
+ const canPromote=typeof canOperate==='function'&&canOperate('promoteRookie',S);
+ html+=`<div class="panel"><h3>二队班底 <span class="tag">K甲注册选手 · 每赛段重建${canPromote?' · 可提拔一线队':''}</span></h3>
+ <div class="hint" style="margin-bottom:8px">${canPromote
+  ?'每赛段自动补充的次级联赛注册选手。年龄达标且大名单未满时，可直接「提拔一线队」——适合伤停缺人时应急，或低价补深度。'
+  :(isPlayer
+   ?'俱乐部每赛段自动补充的次级联赛注册选手——人事提拔由俱乐部运作，你可以在这里观察潜在队友。'
+   :'每赛段自动补充的次级联赛注册选手——提拔一线队由俱乐部管理层办理。')}</div>
+ <div class="grid g4">${k.squad.map(p=>pcard(p,canPromote?`<button class="btn sm primary mt8" style="width:100%" onclick="promoteKjiaPlayer('${p.id}')" title="提拔进一队：占用大名单名额（≤${ROSTER_MAX}），满 ${MATCH_MIN_AGE} 岁">↑ 提拔一线队</button>`:'')).join('')}</div></div>`;
  $('#page-kjia').innerHTML=html;
 }
 /* ================= 联盟页（战队总览 / 阵容浏览 / 选手榜单） ================= */

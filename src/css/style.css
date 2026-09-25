@@ -258,6 +258,11 @@ section.page.on{display:block;animation:fadein .18s ease}
 .page-hint span{flex:1;min-width:0}
 .ph-x{background:none;border:none;color:var(--faint);font-size:14px;cursor:pointer;padding:2px 6px;line-height:1.2;flex:none;font-family:inherit;min-width:28px;min-height:28px}
 .ph-x:hover{color:var(--txt)}
+/* 开局弹窗：页签触控高度 + 主 CTA 粘底（长表单滚不到底也能一键开档） */
+.start-tabs .btn{min-height:36px}
+.start-cta{position:sticky;bottom:0;z-index:2;margin:12px 0 4px;padding:10px 0 4px;
+  background:linear-gradient(180deg,transparent,var(--surface) 28%)}
+.start-cta .btn{min-height:46px}
 /* 卡片列表排序 + 位置筛选 chips */
 .sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:9px;padding-bottom:2px}
 .sort-row::-webkit-scrollbar{display:none}
@@ -422,6 +427,8 @@ footer{background:transparent;border-top:1px solid var(--line);
   /* 2026-09 移动端 pass：触控目标 / 安全区 / 表格横滑 / 弹窗手感 */
   .btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}
   .btn.sm{min-height:38px}
+  .start-tabs .btn{min-height:42px}
+  .ph-x{min-width:36px;min-height:36px}
   nav button{min-height:52px}
   .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
   .tbl th,.tbl td{white-space:nowrap}
@@ -477,7 +484,7 @@ a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
 .pcard .p-top .p-pos{margin-left:auto}
 .vs-poster{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(232,195,74,.10),rgba(232,195,74,.03));border:1px solid var(--line2);border-radius:8px;padding:14px 12px;margin-bottom:12px}
 .vs-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
-.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vs-tname{font-weight:800;font-size:14px;max-width:100%;overflow-wrap:anywhere;word-break:break-word;line-height:1.3}
 .vs-pow{font-size:20px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
 .vs-pow.op{color:var(--red)}
 .vs-mid{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;width:118px}

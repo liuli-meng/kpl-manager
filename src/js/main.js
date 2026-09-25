@@ -608,7 +608,7 @@ function initStart(){
  const eraBtns=Object.keys(KPL_ERAS).map(id=>`<button class="btn sm" id="era-btn-${id}" onclick="pickEra('${id}')">${KPL_ERAS[id].name}</button>`).join('');
  $('#start-modal-body').innerHTML=`
  <h2>王者电竞经理 · KPL 篇</h2> <div class="center dim" style="font-size:12px;margin-bottom:14px">化身战队经理：签约选手、经营俱乐部、征战联赛、冲击总冠军</div>
- <div class="center" style="margin-bottom:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+ <div class="center start-tabs" style="margin-bottom:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn sm" id="tab-player" onclick="switchStartTab('player')">选手生涯</button>
  <button class="btn sm" id="tab-coach" onclick="switchStartTab('coach')">教练生涯</button>
  <button class="btn sm primary" id="tab-self" onclick="switchStartTab('self')">经理模式</button>
@@ -633,7 +633,7 @@ function initStart(){
  <div class="center dim" style="font-size:12px;margin:6px 0">选择加盟球队（签 2 年合同，队内同位置需要竞争首发）</div>
  <div class="grid g3" id="pc-teams" style="gap:8px"></div>
  <div class="center mt8"><button class="btn sm" onclick="rollPlayerTeams()">换一批球队</button></div>
- <div class="center" style="margin:12px 0"><button class="btn primary" style="padding:12px 40px;font-size:15px" onclick="createPlayerCareer()">开启选手生涯</button></div>
+ <div class="center start-cta"><button class="btn primary" style="padding:12px 40px;font-size:15px" onclick="createPlayerCareer()">开启选手生涯</button></div>
  </div>
  <div id="tab-coach-body" style="display:none">
  <div class="hint" style="margin-bottom:10px;text-align:center">只管竞技的执教生涯：BP/战术/训练/首发全权负责，转会与资金由俱乐部打理——成绩好被豪门挖角，连年失利会被解约（从任意一队起步）</div>
@@ -642,7 +642,7 @@ function initStart(){
  <div class="center hint" id="coach-era-desc" style="margin-bottom:10px"></div>
  <div class="grid g4" id="coach-clubs" style="gap:8px">${CLUB_TEMPLATES.map((c,i)=>coachCardHTML(c,i)).join('')}</div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="coach-pick-tip"> 点击选择执教的俱乐部</div>
- <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyCoachClub()" id="coach-apply-btn" disabled>开始执教生涯</button></div>
+ <div class="center start-cta"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyCoachClub()" id="coach-apply-btn" disabled>开始执教生涯</button></div>
  </div>
  <div id="tab-self-body">
  <div class="center" style="margin-bottom:12px">
@@ -650,13 +650,13 @@ function initStart(){
  </div>
  <div class="cr-builder">${crestBuilderHTML('')}</div>
  <div class="hint" style="margin:6px 0 14px;text-align:center">初始资金 1300万 · 工资帽 150万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
- <div class="center"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
+ <div class="center start-cta"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
  </div>
  <div id="tab-club-body" style="display:none">
  <div class="hint" style="margin-bottom:10px;text-align:center">直接执教一支现役 KPL 俱乐部——豪门预算拉满，草根从零挑战，继承该队首发阵容与主教练</div>
  <div class="grid g4" style="gap:8px">${clubs}</div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="club-pick-tip"> 点击选择俱乐部</div>
- <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyClub()" id="club-apply-btn" disabled>执教所选俱乐部</button></div>
+ <div class="center start-cta"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyClub()" id="club-apply-btn" disabled>执教所选俱乐部</button></div>
  </div>
  <div id="tab-era-body" style="display:none">
  <div class="hint" style="margin-bottom:10px;text-align:center">2K 经典球队式开档：选择一个 KPL 时代，扮演那个时代的真实俱乐部——联盟对手、阵容、教练全部回到当年（明星阵容按史实收录，年代久远的席位由游戏演绎；赛制沿用现行年度赛历）</div>
@@ -664,7 +664,7 @@ function initStart(){
  <div class="hint" id="era-desc" style="margin:0 0 10px;text-align:center;color:var(--cyan)">点击上方选择时代</div>
  <div class="grid g4" id="era-clubs" style="gap:8px"></div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="era-pick-tip"> 先选时代，再选俱乐部</div>
- <div class="center"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyEraClub()" id="era-apply-btn" disabled>执教所选时代俱乐部</button></div>
+ <div class="center start-cta"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyEraClub()" id="era-apply-btn" disabled>执教所选时代俱乐部</button></div>
  </div>`;
  $('#start-modal').classList.add('on');
  renderEraBtns('pc-era-btns',_eraSelPlayer,'pickPlayerEra');
