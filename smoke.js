@@ -301,7 +301,7 @@ const r8 = vm.runInContext(`
 console.log(r8);
 
 // ---- 页面骨架结构回归：每个导航页必须有对应 section 容器（防"按钮有、容器无"白屏）----
-const idxSrc = fs.readFileSync('src/index.html', 'utf8');
+const idxSrc = fs.readFileSync(require('path').join(__dirname, 'src', 'index.html'), 'utf8');
 const navPages = [...idxSrc.matchAll(/data-page="([^"]+)"/g)].map(m => m[1]);
 const missing = navPages.filter(p => !idxSrc.includes('id="page-' + p + '"'));
 const skelOk = !missing.length;

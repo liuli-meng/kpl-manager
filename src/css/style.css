@@ -264,7 +264,8 @@ section.page.on{display:block;animation:fadein .18s ease}
   background:linear-gradient(180deg,transparent,var(--surface) 28%)}
 .start-cta .btn{min-height:46px}
 /* 卡片列表排序 + 位置筛选 chips */
-.sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:9px;padding-bottom:2px}
+.sort-row{display:flex;gap:5px;align-items:center;overflow-x:auto;scrollbar-width:none;margin-bottom:9px;padding-bottom:2px;scroll-behavior:smooth}
+.sort-row .s-chip.on{scroll-snap-align:center;flex:none}
 .sort-row::-webkit-scrollbar{display:none}
 .s-chip{flex:none;min-height:28px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface2);color:var(--dim);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}
 .s-chip:hover{border-color:var(--line2);color:var(--txt)}
@@ -457,7 +458,7 @@ footer{background:transparent;border-top:1px solid var(--line);
 }
 
 /* ===== 交互过渡基调（150ms，克制） ===== */
-a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{
+a,button,.btn,.pcard,.match,.event-card,.stat,.hd-btn{touch-action:manipulation;
   transition:border-color 150ms ease,background 150ms ease,color 150ms ease,transform 150ms ease;
 }
 @media (prefers-reduced-motion:reduce){

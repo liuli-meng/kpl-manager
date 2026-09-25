@@ -1366,7 +1366,7 @@ function _sortPrefs(){
 function _saveSortPrefs(p){_sortCache=p;try{localStorage.setItem('km_sort',JSON.stringify(p));}catch(_){}}
 function getSortKey(key){return _sortPrefs()[key]||'ovr';}
 function getPosFilter(key){return _sortPrefs()[key+'|pos']||'';}
-function setSortKey(key,v){const p=_sortPrefs();p[key]=v;_saveSortPrefs(p);goPage(curPageName());}
+function setSortKey(key,v){const p=_sortPrefs();p[key]=v;_saveSortPrefs(p);goPage(curPageName());try{const on=document.querySelector('.sort-row .s-chip.on');if(on&&on.scrollIntoView)on.scrollIntoView({inline:'center',block:'nearest'});}catch(_){}}
 function setPosFilter(key,v){const p=_sortPrefs();p[key+'|pos']=v;_saveSortPrefs(p);goPage(curPageName());}
 function curPageName(){const c=document.querySelector('nav button.on');return c&&c.dataset&&c.dataset.page?c.dataset.page:'club';}
 const SORTERS={
