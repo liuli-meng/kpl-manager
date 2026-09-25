@@ -24,7 +24,7 @@ function doTrain(s,pid,attr){
  s.fund-=20;p.energy=clamp((p.energy==null||!isFinite(p.energy)?100:p.energy)-10,0,ENERGY_MAX);s.trained=true;
  p.attrs[attr]=clamp(p.attrs[attr]+r.gain,40,99);
  p.morale=clamp(p.morale-2,20,100);
- if(r.gain>0)logEvent(s,` 训练完成：${p.name} 的「${TRAIN_ITEMS.find(t=>t.k===attr).n}」提升 ${r.gain} 点（${r.note||'状态'}）`);
+ if(r.gain>0)logEvent(s,` 训练完成：${p.name} 的「${(TRAIN_ITEMS.find(t=>t.k===attr)||{n:attr||'属性'}).n}」提升 ${r.gain} 点（${r.note||'状态'}）`);
  else logEvent(s,` 训练完成：${p.name} ${r.note||'状态不佳'}，今天没有提升`);
  save();renderAll();
 }

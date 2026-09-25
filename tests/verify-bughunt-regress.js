@@ -107,6 +107,12 @@ const out = vm.runInContext(`
   ok(!abErr,'applyBp(undefined) 抛错: '+abErr);
   ok(!pgErr,'playGame(无 series) 抛错: '+pgErr);
 
+  // ⑥e2 coachDef / TRAIN_ITEMS 缺省回退
+  const cd=coachDef('不存在的教练');
+  ok(cd&&cd.name,'coachDef 未命中无回退');
+  const ti=(TRAIN_ITEMS.find(t=>t.k==='不存在')||{n:'属性'}).n;
+  ok(ti,'TRAIN_ITEMS 缺省回退失败');
+
   // ⑥f 加练零收益 note 自说明
   S=newState('note','⚔');S.mode='player';
   const meN=genPlayer({id:'me_n',name:'我N',pos:'mid',team:S.teamName,tags:[],base:[80,80,80,80],skill:{n:'x',t:'team',d:''},sig:'王昭君',career:''});

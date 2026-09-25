@@ -555,6 +555,10 @@ const COACH_POOL=[
 ];
 const COACH_STYLE={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
 
+function coachDef(id){
+ return COACH_POOL.find(c=>c.id===id)||COACH_POOL.find(c=>c.id==='co12')||COACH_POOL[0]||{id:'co0',name:'助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:12,cost:83,skill:{n:'新人培养',d:'全队战力+2%'}};
+}
+
 const ASSISTANT_POOL=[
  {id:'as1',name:'数据分析师·阿珂',rating:85,style:'farm',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'数据建模',d:'全队战力+2%，运营属性额外+3%（复盘数据专家）'}},
  {id:'as2',name:'心理辅导师·苏眠',rating:85,style:'mind',bonus:2,styleBonus:3,wage:10,cost:150,skill:{n:'心态疏导',d:'全队战力+2%，心态属性额外+3%（大赛心理建设）'}},
@@ -4696,7 +4700,7 @@ function doTrain(s,pid,attr){
  s.fund-=20;p.energy=clamp((p.energy==null||!isFinite(p.energy)?100:p.energy)-10,0,ENERGY_MAX);s.trained=true;
  p.attrs[attr]=clamp(p.attrs[attr]+r.gain,40,99);
  p.morale=clamp(p.morale-2,20,100);
- if(r.gain>0)logEvent(s,` 训练完成：${p.name} 的「${TRAIN_ITEMS.find(t=>t.k===attr).n}」提升 ${r.gain} 点（${r.note||'状态'}）`);
+ if(r.gain>0)logEvent(s,` 训练完成：${p.name} 的「${(TRAIN_ITEMS.find(t=>t.k===attr)||{n:attr||'属性'}).n}」提升 ${r.gain} 点（${r.note||'状态'}）`);
  else logEvent(s,` 训练完成：${p.name} ${r.note||'状态不佳'}，今天没有提升`);
  save();renderAll();
 }
@@ -8194,7 +8198,7 @@ function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地�
  me.contract=2;me.morale=clamp(me.morale+8,20,100);me.val=clamp((me.val||100)+4,70,150);
  me.loanOut=null;me.kjia=0; // 转会落地：结束租借/K甲状态，直接进新东家竞争
  if(s.career){s.career.benchDays=0;}
- s.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ s.coach={...coachDef(tmpl.coach)};
  s.lineup=buildBestLineup(s); // 统一可出场过滤排满首发
  s.pick={};
  s.seedPower=teamPower(s)||300;
@@ -14414,7 +14418,7 @@ function respondCoachOffer(accept){
  tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
  S.lineup=buildBestLineup(S);
  if(myCoach)S.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
- else S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ else S.coach={...coachDef(tmpl.coach)};
  S.seedPower=teamPower(S)||tmpl.seed;
  S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
  S.board.warn=0;
@@ -14674,7 +14678,7 @@ function applyCoachClub(){
  S.mode='coach';
  S.era=_eraSelCoach||null;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ S.coach={...coachDef(tmpl.coach)};
  tmpl.players.forEach(pid=>{
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));
@@ -14705,7 +14709,7 @@ function createPlayerCareer(){
  S.mode='player';
  S.era=_eraSelPlayer||null;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ S.coach={...coachDef(tmpl.coach)};
  tmpl.players.forEach(pid=>{
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));
@@ -14828,7 +14832,7 @@ function createTeam(){
  S.lineup=lineup;
  applyScenario(S); // 开局剧本：可能削属性/砍工资帽/挖走主力——必须在 seedPower 与 initGroups 之前
 
- S.coach={...COACH_POOL.find(c=>c.id==='co12')};
+ S.coach={...coachDef('co12')};
  S.seedPower=teamPower(S)||280; // 种子=开局真实战力（决定分组落位）
  initGroups(S); // KPL 2025 官方赛制：18队 S/A/B 分组
 
@@ -14855,7 +14859,7 @@ function applyClub(){
  S.era=_eraSel||null; // 历代联盟时代标记（读档时重装该时代联盟）
  S.fund=tmpl.budget;
  S.wageCap=tmpl.cap;
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ S.coach={...coachDef(tmpl.coach)};
  tmpl.players.forEach(pid=>{
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));

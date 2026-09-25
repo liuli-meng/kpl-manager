@@ -543,7 +543,7 @@ function respondCoachOffer(accept){
  tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
  S.lineup=buildBestLineup(S);
  if(myCoach)S.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
- else S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ else S.coach={...coachDef(tmpl.coach)};
  S.seedPower=teamPower(S)||tmpl.seed;
  S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
  S.board.warn=0;
@@ -806,7 +806,7 @@ function applyCoachClub(){
  S.mode='coach';
  S.era=_eraSelCoach||null;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ S.coach={...coachDef(tmpl.coach)};
  tmpl.players.forEach(pid=>{
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));
@@ -837,7 +837,7 @@ function createPlayerCareer(){
  S.mode='player';
  S.era=_eraSelPlayer||null;
  S.fund=tmpl.budget;S.wageCap=tmpl.cap;
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ S.coach={...coachDef(tmpl.coach)};
  tmpl.players.forEach(pid=>{
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));
@@ -962,7 +962,7 @@ function createTeam(){
  S.lineup=lineup;
  applyScenario(S); // 开局剧本：可能削属性/砍工资帽/挖走主力——必须在 seedPower 与 initGroups 之前
  // 新手教练：青训助教
- S.coach={...COACH_POOL.find(c=>c.id==='co12')};
+ S.coach={...coachDef('co12')};
  S.seedPower=teamPower(S)||280; // 种子=开局真实战力（决定分组落位）
  initGroups(S); // KPL 2025 官方赛制：18队 S/A/B 分组
  // 赛前转会期：先组队再开赛
@@ -989,7 +989,7 @@ function applyClub(){
  S.era=_eraSel||null; // 历代联盟时代标记（读档时重装该时代联盟）
  S.fund=tmpl.budget;
  S.wageCap=tmpl.cap;
- S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ S.coach={...coachDef(tmpl.coach)};
  tmpl.players.forEach(pid=>{
  const def=PLAYER_POOL.find(d=>d.id===pid);
  if(def)S.players.push(genPlayer(def));

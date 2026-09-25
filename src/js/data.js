@@ -543,6 +543,10 @@ const COACH_POOL=[
  {id:'co12',name:'青训助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:12,cost:83,skill:{n:'新人培养',d:'全队战力+2%，运营属性额外+2%'}},
 ];
 const COACH_STYLE={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
+/* 教练定义取值：id 缺失/时代池未命中时回退青训助教，禁止 {...find()} 展开出 undefined */
+function coachDef(id){
+ return COACH_POOL.find(c=>c.id===id)||COACH_POOL.find(c=>c.id==='co12')||COACH_POOL[0]||{id:'co0',name:'助教',rating:70,style:'farm',bonus:2,styleBonus:2,wage:12,cost:83,skill:{n:'新人培养',d:'全队战力+2%'}};
+}
 
 /* ================= 助教池（教练组第二块拼图，最多聘 2 名，加成与主教练叠加） =================
  幅度小于主教练；退役名宿教练也可 6 折转任助教 */

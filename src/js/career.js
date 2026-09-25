@@ -61,7 +61,7 @@ function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地�
  me.contract=2;me.morale=clamp(me.morale+8,20,100);me.val=clamp((me.val||100)+4,70,150);
  me.loanOut=null;me.kjia=0; // 转会落地：结束租借/K甲状态，直接进新东家竞争
  if(s.career){s.career.benchDays=0;}
- s.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
+ s.coach={...coachDef(tmpl.coach)};
  s.lineup=buildBestLineup(s); // 统一可出场过滤排满首发
  s.pick={};
  s.seedPower=teamPower(s)||300;
