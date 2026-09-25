@@ -1217,7 +1217,16 @@ const StateStore = (function () {
       }
       const raw = JSON.stringify(payload);
       localStorage.setItem(CRASH_KEY, raw);
-      try { localStorage.setItem(CRASH_KEY + '_' + _now(), raw); } catch (_) {}
+
+      try {
+        const stamp = CRASH_KEY + '_' + _now();
+        localStorage.setItem(stamp, raw);
+        const keys = Object.keys(localStorage).filter(k => k.indexOf(CRASH_KEY + '_') === 0).sort();
+        while (keys.length > 3) {
+          const k = keys.shift();
+          try { localStorage.removeItem(k); } catch (_) {}
+        }
+      } catch (_) {}
       return true;
     } catch (_) {
       return false;
@@ -1959,7 +1968,7 @@ function applySaveDefaults(s){
  });
 
  if(!s.wageCap)s.wageCap=0; // 缺失留给 migrateEconV2 定单位；此处只挡 undefined
- if(s.streak)s.streak=0;
+
  if(s.mode==='player'&&!s.career)s.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
  if(s.mode==='player'&&s.career){
   s.career.role=s.career.role||'rot';
@@ -2218,7 +2227,7 @@ function tacticWeights(){
  const t=(typeof S!=='undefined'&&S&&S.tacticW)?S.tacticW:null;
  return t||BASE_W;
 }
-function playerPower(p,heroId){
+function playerPower(p,heroId){if(!p)return 0;
  const a=p&&p.attrs?{lane:p.attrs.lane||70,farm:p.attrs.farm||70,team:p.attrs.team||70,mind:p.attrs.mind||70}:{lane:70,farm:70,team:70,mind:70};
  const w=tacticWeights();
  let pow=a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind;
@@ -2694,7 +2703,7 @@ function migrateSave(){
   if(needCh||needEwc||needAg||needAnn){
    if(needCh&&typeof setupChallenger==='function'){setupChallenger(S);}
    else if(needEwc&&typeof setupEWC==='function'){try{setupEWC(S);}catch(e){S.phase='champion';}}
-   else if(needAg&&typeof setupAsianGames==='function'){try{setupAsianGames(S);}catch(e){S.phase='annual'||'champion';if(!S.annual&&typeof setupAnnual==='function')setupAnnual(S);}}
+   else if(needAg&&typeof setupAsianGames==='function'){try{setupAsianGames(S);}catch(e){S.phase=S.annual?'annual':'champion';if(!S.annual&&typeof setupAnnual==='function')setupAnnual(S);}}
    else if(needAnn&&typeof setupAnnual==='function'){setupAnnual(S);}
    else S.phase='champion';
    logEvent(S,'读档修复：赛段结构缺失已尝试重建（phase='+S.phase+'）');
@@ -2927,6 +2936,7 @@ const HERO_LV={
 function heroLv(p,heroId){const h=(p.heroPool||[]).find(x=>x.n===heroId);return h?h.lv:1;}
 
 function buyPlayer(s,p){
+ if(!p){toast('选手已被签走');return false;}
  if(typeof canSign==='function'){
   const chk=canSign(s,p,{actor:'player'});
   if(!chk.ok){toast(chk.reason||'不能签约');return false;}
@@ -3677,7 +3687,7 @@ function sellGuard(s){
 }
 
 function negoWageDemand(p){
- return Math.min(PLAYER_WAGE_MAX,Math.max(2,Math.round(p.wage*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)))); // 个人顶薪封顶
+ return Math.min(PLAYER_WAGE_MAX,Math.max(2,Math.round(((typeof p.wage==='number'&&isFinite(p.wage))?p.wage:2)*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)))); // 个人顶薪封顶
 }
 function negoAskFee(p){
  return p.untouchable?untouchablePrice(p):buyoutPrice(p);
@@ -4182,7 +4192,9 @@ function openRenewNego(s,pid){
 }
 function renewNegoYears(y){
  if(!_nego)return;
- _nego.years=y;_nego.offer=null;_nego.ask=renewAskWage(S.players.find(x=>x.id===_nego.pid),y);
+ _nego.years=y;_nego.offer=null;const _rp=S.players.find(x=>x.id===_nego.pid);
+ if(!_rp){_nego=null;closeModal('app-modal');toast('选手已不在，续约中止');return;}
+ _nego.ask=renewAskWage(_rp,y);
  renderRenewNego();
 }
 function renewNegoOffer(d){
@@ -5185,7 +5197,7 @@ function setupCard(s){
 }
 function playCardNext(s){
  if(!s||!s.card||!s.card.matches||!s.card.matches.length){
-  if(s){s.phase=s.phase||'r3';toast('卡位赛数据缺失，已跳过本阶段');}
+  if(s){if(s.phase==='card'&&!s.card)setPhase(s,'r3',{who:'playCardNext-empty',force:true});else s.phase=s.phase||'r3';toast('卡位赛数据缺失，已跳过本阶段');}
   return;
  }
  const m=s.card.matches[s.card.idx];
@@ -5323,7 +5335,7 @@ function playoffStep(s){
  if(m.b===null&&p.lb[i].r)m.b=p.lb[i].r;
  if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'lb2_'+(i+1));return;}
  }
- if(p.wf.a===null){p.wf.a=p.wb[0].r;p.wf.b=p.wb[1].r;}
+ if(p.wf.a===null){const _w0=p.wb&&p.wb[0],_w1=p.wb&&p.wb[1];if(_w0&&_w1){p.wf.a=_w0.r;p.wf.b=_w1.r;}}
  if(p.wf.r===null&&p.wf.a&&p.wf.b){playPoMatch(s,p.wf,'胜者组决赛');return;}
  for(let i=0;i<2;i++){
  const m=p.lb3[i];
@@ -5331,7 +5343,7 @@ function playoffStep(s){
  if(m.b===null&&p.lb2[i].r)m.b=p.lb2[i].r;
  if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'lb3_'+(i+1));return;}
  }
- if(p.lb4.a===null){p.lb4.a=p.lb3[0].r;p.lb4.b=p.lb3[1].r;}
+ if(p.lb4.a===null){const _l30=p.lb3&&p.lb3[0],_l31=p.lb3&&p.lb3[1];if(_l30&&_l31){p.lb4.a=_l30.r;p.lb4.b=_l31.r;}}
  if(p.lb4.r===null&&p.lb4.a&&p.lb4.b){playPoMatch(s,p.lb4,'败者组半决赛');return;}
 
  if(p.lbf.a===null){p.lbf.a=p.wf.r===p.wf.a?p.wf.b:p.wf.a;p.lbf.b=p.lb4.r;}
@@ -7527,9 +7539,9 @@ function cup8PoStep(s,p,cfg){
  for(let i=0;i<2;i++){const m=p.lb1[i];if(m.a===null)m.a=loserOf(p.wb1[i*2]);if(m.b===null)m.b=loserOf(p.wb1[i*2+1]);if(!m.r){P(m,'lb1_'+(i+1),'·败者组首轮');return;}}
  for(let i=0;i<2;i++){const m=p.wb2[i];if(m.a===null)m.a=p.wb1[i*2].r;if(m.b===null)m.b=p.wb1[i*2+1].r;if(!m.r){P(m,'wb2_'+(i+1),'·胜者组半决赛');return;}}
  for(let i=0;i<2;i++){const m=p.lb2[i];if(m.a===null)m.a=p.lb1[i].r;if(m.b===null)m.b=loserOf(p.wb2[i]);if(!m.r){P(m,'lb2_'+(i+1),'·败者组第二轮');return;}}
- if(p.wf.a===null){p.wf.a=p.wb2[0].r;p.wf.b=p.wb2[1].r;}
+ if(p.wf.a===null){const _b0=p.wb2&&p.wb2[0],_b1=p.wb2&&p.wb2[1];if(_b0&&_b1){p.wf.a=_b0.r;p.wf.b=_b1.r;}}
  if(!p.wf.r){P(p.wf,'wf','·胜者组决赛');return;}
- if(p.lbs.a===null){p.lbs.a=p.lb2[0].r;p.lbs.b=p.lb2[1].r;}
+ if(p.lbs.a===null){const _c0=p.lb2&&p.lb2[0],_c1=p.lb2&&p.lb2[1];if(_c0&&_c1){p.lbs.a=_c0.r;p.lbs.b=_c1.r;}}
  if(!p.lbs.r){P(p.lbs,'lbs','·败者组半决赛');return;}
  if(p.lbf.a===null){p.lbf.a=loserOf(p.wf);p.lbf.b=p.lbs.r;}
  if(!p.lbf.r){P(p.lbf,'lbf','·败者组决赛');return;}
@@ -10583,7 +10595,7 @@ function startMatch(){
 
  if(S.series&&S.series.stage==='regular'){
  if(!S.series.mid||S.series.mid===mid){
- showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第'+(S.series.mw+S.series.ow+1)+'局（'+S.series.mw+':'+S.series.ow+'）');
+ showPreMatch(PHASE_NAME[S.phase]||S.phase+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第'+(S.series.mw+S.series.ow+1)+'局（'+S.series.mw+':'+S.series.ow+'）');
  return;
  }
  logEvent(S,'⚠ 赛程修复：废弃未同步的常规赛残影（vs '+S.series.opName+' '+(S.series.mw||0)+':'+(S.series.ow||0)+'），本场重新开打');
@@ -10601,7 +10613,7 @@ function startMatch(){
  autoFillLineup(S);
  S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',mid,logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
  resetOppEnergy(S,m.opp); // 对手体力回满：衰减只在系列赛内累积
- showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
+ showPreMatch(PHASE_NAME[S.phase]||S.phase+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
 }
 
 function showPreMatch(title){
@@ -10710,6 +10722,7 @@ function renderPreMatch(){
 function prepChoosePos(pos){window._prepPos=pos;renderPreMatch();}
 function prepSwapIn(pid){
  const p=S.players.find(x=>x.id===pid);
+ if(!p){toast('选手已不在阵中');renderPreMatch();return;}
  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
  const cur=rosterLineup(S).find(x=>x.pos===p.pos);
  if(!cur)return;
@@ -10729,7 +10742,7 @@ function playGame(){
  const g=singleGame(v.my,v.op);
 
  const opR=ensureAiRosters(S,sr.opName)||[];
- rosterLineup(S).forEach(p=>{p.energy=clamp(p.energy-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;}); // caps：出场记录（转售保护期解锁用）
+ rosterLineup(S).forEach(p=>{p.energy=clamp(((p.energy==null||!isFinite(p.energy))?100:p.energy)-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;}); // caps：出场记录（转售保护期解锁用）
  opR.forEach(p=>p.energy=clamp(p.energy-8,0,ENERGY_MAX));
  if(g.w)sr.mw++;else sr.ow++;
  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
@@ -10754,7 +10767,7 @@ function playGame(){
 
  if(typeof annualAutoRotate==='function'){try{annualAutoRotate(S,sr);}catch(e){}}
 
- const nextTitle=(sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot==='总决赛'?'总决赛':'季后赛'):PHASE_NAME[S.phase])+' · 第'+(sr.mw+sr.ow+1)+'局（当前 '+sr.mw+':'+sr.ow+'）';
+ const nextTitle=(sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot==='总决赛'?'总决赛':'季后赛'):PHASE_NAME[S.phase]||S.phase)+' · 第'+(sr.mw+sr.ow+1)+'局（当前 '+sr.mw+':'+sr.ow+'）';
  if(S.seriesAuto){
  autoPlayNext(); // 本系列赛自动BP模式
  }else if(!g.w){
@@ -10866,7 +10879,7 @@ function finishSeries(finalWin){
  S.fund+=bonus;
  if(finalWin&&Math.random()<REG_WIN_EXTRA_CHANCE)S.fund+=REG_WIN_EXTRA;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
- logEvent(S,' '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
+ logEvent(S,' '+PHASE_NAME[S.phase]||S.phase+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
  simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
@@ -10917,7 +10930,7 @@ function finishSeries(finalWin){
  });
  }
  const r={win:finalWin,logs:sr.logs,opName:sr.opName,
- stageTxt:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
+ stageTxt:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase]||S.phase,
  score:sr.mw+':'+sr.ow,
  mvps:(sr.mvpIds||[]).map((id,i)=>{const p=S.players.find(x=>x.id===id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
  };
@@ -10943,7 +10956,7 @@ function finishSeries(finalWin){
  S.history=S.history||[];
  S.history.unshift({
  yr:gameYear(S), // 年度归属（赛季回顾·关键战役按年筛选用）
- opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
+ opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase]||S.phase,
  score:sr.mw+':'+sr.ow,win:finalWin,logs:sr.logs,
  peak:isPeak // 打满最后一局（BO7 4:3 / BO9 5:4）= 巅峰对决名场面
  });
@@ -11291,7 +11304,7 @@ function showYearReview(idx){
  $('#app-modal').classList.add('wide');
  if(S._reviewNew===r.year){S._reviewNew=null;save();} // 首次查看后清除俱乐部页提示
 }
-function showCareer(p){
+function showCareer(p){if(!p){toast('选手已不在');return;}
  if(!p||!p.name){toast('档案暂不可用');return;}
  const lvDesc=(p.heroPool||[]).map(h=>`${h.n}(${HERO_LV[h.lv].n})`).join('、');
  $('#app-modal-body').innerHTML=`
@@ -11571,7 +11584,7 @@ function clubLeaguePhasePanel(){
  if(!m)return '';
  const oppIcon=(AI_TEAMS.find(t=>t.name===m.opp)||{}).icon||'';
  let html=`<div class="panel">
- <h3>下一场比赛 <span class="tag">${PHASE_NAME[S.phase]} · ${g}组 第${m.round}/${KPL.ROUNDS}轮</span></h3>
+ <h3>下一场比赛 <span class="tag">${PHASE_NAME[S.phase]||S.phase} · ${g}组 第${m.round}/${KPL.ROUNDS}轮</span></h3>
  <div class="match">
  <div class="vs"><div>${crest(S.icon,S.teamName,38)}</div><div><div class="tname">${S.teamName}</div><div class="power">战力 ${fmt(teamPower(S))}</div></div></div>
  <div style="color:var(--dim);font-weight:900">VS</div>
@@ -12070,7 +12083,7 @@ function renderLeague(){
  }
 
  if(S.schedule&&S.schedule.length){
- html+=`<div class="panel"><h3>本队赛程（${PHASE_NAME[S.phase]}）</h3>${(()=>{const myPw=fmt(teamPower(S));return S.schedule.map(m=>{
+ html+=`<div class="panel"><h3>本队赛程（${PHASE_NAME[S.phase]||S.phase}）</h3>${(()=>{const myPw=fmt(teamPower(S));return S.schedule.map(m=>{
  const cls=m.result==='W'?'win':m.result==='L'?'lose':'';
  const isNext=m===S.schedule[S.matchIdx];
  const oppIcon=(AI_TEAMS.find(t=>t.name===m.opp)||{}).icon||'剑';
@@ -12797,7 +12810,7 @@ function renderMarket(){
  ${sortChips('sign')}
  <div class="g2">${applySortPref('sign',S.market).map(p=>{
  const c=costOf(p);
- return pcard(p,`<button class="btn sm primary" onclick="buyPlayer(S,S.market.find(x=>x.id==='${p.id}'))">签约 ${p.discount?`<s>${valueOf(overall(p))}万</s> ${c}万`:c+'万'}</button>`);
+ return pcard(p,`<button class="btn sm primary" onclick="buyPlayer(S,(function(){var m=S.market.find(x=>x.id==='${p.id}');if(!m){renderAll();toast('选手已被签走');return null;}return m;})())">签约 ${p.discount?`<s>${valueOf(overall(p))}万</s> ${c}万`:c+'万'}</button>`);
  }).join('')||'<div class="hint">市场空空如也，刷新一下吧</div>'}</div>
  <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${marketRefreshFree(S)?'（今日免费）':'（'+MARKET_REFRESH_COST+'万）'}</button>
  </div>`;
@@ -13197,13 +13210,13 @@ function bgmSettingsPanelHtml(){
   <h3>音效设置</h3>
   <div style="margin-bottom:12px">
    <label>SFX 音效
-    <button onclick="toggleSfx()" class="btn sm">${_sfxOn?'gold':'primary'}">${sfxStatus}</button>
+    <button onclick="toggleSfx()" class="btn sm ${_sfxOn?'gold':'primary'}">${sfxStatus}</button>
    </label>
    <div class="hint" style="font-size:11px;margin-top:4px">点击/胜利/失败等短时音效</div>
   </div>
   <div style="margin-bottom:12px">
    <label>BGM 背景音乐
-    <button onclick="toggleBGM()" class="btn sm">${_bgmOn?'gold':'primary'}">${bgmStatus}</button>
+    <button onclick="toggleBGM()" class="btn sm ${_bgmOn?'gold':'primary'}">${bgmStatus}</button>
    </label>
    <div class="hint" style="font-size:11px;margin-top:4px">日常管理轻循环 pad + 胜/负/夺冠情境和弦（默认关，音量极低）</div>
   </div>
@@ -14205,7 +14218,8 @@ function toggleSaveHowto(){
 
 function resetRuntimeGlobals(){
  try{
-  _nego=null;                                   // 转会话术上下文（transfer.js）
+  _nego=null;
+  try{window._nego=null;window._sellNego=null;window._draft=null;window._prepPos=null;}catch(_){}                                   // 转会话术上下文（transfer.js）
   _clubPick=-1;_eraSel=null;_scenario='normal';  // 开局俱乐部/时代/剧本选择
   _pcPos='mid';_pcArch=0;_pcTeam=null;_coachPick=-1;_eraSelCoach=null;_eraSelPlayer=null;
   for(const k in _uiArm)delete _uiArm[k];        // 连点节流时间戳：不清会让新档第一次点击被判成连点
@@ -14364,6 +14378,13 @@ function sanitizeImport(obj){
 		dropped.push('players:not-array');
 	}else{
 		obj.players=obj.players.filter(p=>p&&typeof p==='object'&&typeof p.id==='string'&&p.id);
+
+		obj.players.forEach(p=>{
+			['age','energy','wage','morale','popularity','val','injury','contract','apps'].forEach(k=>{
+				if(p[k]!=null&&typeof p[k]==='number'&&!isFinite(p[k])){p[k]=0;dropped.push('players.'+k+':NaN');}
+			});
+		});
+		if(obj.players.length>80){obj.players=obj.players.slice(0,80);dropped.push('players:len');}
 	}
 	if(obj.lineup!=null&&!Array.isArray(obj.lineup)){obj.lineup=[];dropped.push('lineup:not-array');}
 	['fund','wageCap','day','season','matchIdx','fans'].forEach(k=>{

@@ -346,7 +346,7 @@ function startMatch(){
  // 续打它会用旧比分污染当前对阵，按僵尸系列赛废弃重开
  if(S.series&&S.series.stage==='regular'){
  if(!S.series.mid||S.series.mid===mid){
- showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第'+(S.series.mw+S.series.ow+1)+'局（'+S.series.mw+':'+S.series.ow+'）');
+ showPreMatch(PHASE_NAME[S.phase]||S.phase+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第'+(S.series.mw+S.series.ow+1)+'局（'+S.series.mw+':'+S.series.ow+'）');
  return;
  }
  logEvent(S,'⚠ 赛程修复：废弃未同步的常规赛残影（vs '+S.series.opName+' '+(S.series.mw||0)+':'+(S.series.ow||0)+'），本场重新开打');
@@ -364,7 +364,7 @@ function startMatch(){
  autoFillLineup(S);
  S.series={used:[],usedOpp:[],mw:0,ow:0,max:5,stage:'regular',mid,logs:[],myName:S.teamName,opName:m.opp,side:firstSide(S,'regular')};S.seriesAuto=false;
  resetOppEnergy(S,m.opp); // 对手体力回满：衰减只在系列赛内累积
- showPreMatch(PHASE_NAME[S.phase]+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
+ showPreMatch(PHASE_NAME[S.phase]||S.phase+' 第'+m.round+'/'+KPL.ROUNDS+'轮 vs '+m.opp+' · 第1局（BO5 全局BP）');
 }
 
 /* ================= 赛前准备（调整首发 → 对手情报 → 进入 BP） ================= */
@@ -474,6 +474,7 @@ function renderPreMatch(){
 function prepChoosePos(pos){window._prepPos=pos;renderPreMatch();}
 function prepSwapIn(pid){
  const p=S.players.find(x=>x.id===pid);
+ if(!p){toast('选手已不在阵中');renderPreMatch();return;}
  if(p.injury>0){toast(p.name+' 伤停中（还剩'+p.injury+'天），无法登场');return;}
  const cur=rosterLineup(S).find(x=>x.pos===p.pos);
  if(!cur)return;
@@ -493,7 +494,7 @@ function playGame(){
  const g=singleGame(v.my,v.op);
  // 每小局双方消耗体力（8/局）：系列赛越深越考验轮换——替补体力满员是翻盘资本
  const opR=ensureAiRosters(S,sr.opName)||[];
- rosterLineup(S).forEach(p=>{p.energy=clamp(p.energy-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;}); // caps：出场记录（转售保护期解锁用）
+ rosterLineup(S).forEach(p=>{p.energy=clamp(((p.energy==null||!isFinite(p.energy))?100:p.energy)-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;}); // caps：出场记录（转售保护期解锁用）
  opR.forEach(p=>p.energy=clamp(p.energy-8,0,ENERGY_MAX));
  if(g.w)sr.mw++;else sr.ow++;
  const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
@@ -518,7 +519,7 @@ function playGame(){
  // 年总大师组：每局后按官方「名单全员出场」推进轮换
  if(typeof annualAutoRotate==='function'){try{annualAutoRotate(S,sr);}catch(e){}}
  // 进入下一局：败方选边（KPL 规则：第2-6局败方选边；第7局巅峰对决由第6局败方选边）
- const nextTitle=(sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot==='总决赛'?'总决赛':'季后赛'):PHASE_NAME[S.phase])+' · 第'+(sr.mw+sr.ow+1)+'局（当前 '+sr.mw+':'+sr.ow+'）';
+ const nextTitle=(sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot==='总决赛'?'总决赛':'季后赛'):PHASE_NAME[S.phase]||S.phase)+' · 第'+(sr.mw+sr.ow+1)+'局（当前 '+sr.mw+':'+sr.ow+'）';
  if(S.seriesAuto){
  autoPlayNext(); // 本系列赛自动BP模式
  }else if(!g.w){
@@ -635,7 +636,7 @@ function finishSeries(finalWin){
  S.fund+=bonus;
  if(finalWin&&Math.random()<REG_WIN_EXTRA_CHANCE)S.fund+=REG_WIN_EXTRA;
  S.players.forEach(p=>p.morale=clamp(p.morale+(finalWin?8:-8),20,100));
- logEvent(S,' '+PHASE_NAME[S.phase]+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
+ logEvent(S,' '+PHASE_NAME[S.phase]||S.phase+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
  simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
  if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
@@ -686,7 +687,7 @@ function finishSeries(finalWin){
  });
  }
  const r={win:finalWin,logs:sr.logs,opName:sr.opName,
- stageTxt:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
+ stageTxt:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase]||S.phase,
  score:sr.mw+':'+sr.ow,
  mvps:(sr.mvpIds||[]).map((id,i)=>{const p=S.players.find(x=>x.id===id);return (p?p.name:'选手')+(sr.mvpKda&&sr.mvpKda[i]?'（'+sr.mvpKda[i]+'）':'');})
  };
@@ -712,7 +713,7 @@ function finishSeries(finalWin){
  S.history=S.history||[];
  S.history.unshift({
  yr:gameYear(S), // 年度归属（赛季回顾·关键战役按年筛选用）
- opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase],
+ opp:sr.opName,stage:sr.stage==='card'?'卡位赛':sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='cup'?sr.cupLabel:PHASE_NAME[S.phase]||S.phase,
  score:sr.mw+':'+sr.ow,win:finalWin,logs:sr.logs,
  peak:isPeak // 打满最后一局（BO7 4:3 / BO9 5:4）= 巅峰对决名场面
  });

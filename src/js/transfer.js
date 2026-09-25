@@ -736,7 +736,7 @@ function sellGuard(s){
  超帽不拒签：允许超工资帽签约，超出部分每周缴纳 60% 奢侈税（发薪日结算，经营页可见）。
  口径统一：p.wage 一律是年薪（顶薪 400），谈判/续约/发薪/工资帽同一单位——UI 不得再写「年薪」。 */
 function negoWageDemand(p){
- return Math.min(PLAYER_WAGE_MAX,Math.max(2,Math.round(p.wage*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)))); // 个人顶薪封顶
+ return Math.min(PLAYER_WAGE_MAX,Math.max(2,Math.round(((typeof p.wage==='number'&&isFinite(p.wage))?p.wage:2)*(1.15+(100-(p.willingness||0))/120)*(p.transferRequest?0.9:1)))); // 个人顶薪封顶
 }
 function negoAskFee(p){
  return p.untouchable?untouchablePrice(p):buyoutPrice(p);
@@ -1255,7 +1255,9 @@ function openRenewNego(s,pid){
 }
 function renewNegoYears(y){
  if(!_nego)return;
- _nego.years=y;_nego.offer=null;_nego.ask=renewAskWage(S.players.find(x=>x.id===_nego.pid),y);
+ _nego.years=y;_nego.offer=null;const _rp=S.players.find(x=>x.id===_nego.pid);
+ if(!_rp){_nego=null;closeModal('app-modal');toast('选手已不在，续约中止');return;}
+ _nego.ask=renewAskWage(_rp,y);
  renderRenewNego();
 }
 function renewNegoOffer(d){

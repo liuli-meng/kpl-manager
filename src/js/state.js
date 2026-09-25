@@ -124,7 +124,8 @@ function applySaveDefaults(s){
  //   移到迁移后：合法迁移出的 30 会被抬成 150（把迁移结果改掉）。
  // 结论是有意保持现状。真要动这条，先想清楚「缺失 cap」和「合法的小 cap」如何区分。
  if(!s.wageCap)s.wageCap=0; // 缺失留给 migrateEconV2 定单位；此处只挡 undefined
- if(s.streak)s.streak=0;
+ // streak 跨读档保留：连胜/连败是赛季状态，不应每次 load 抹掉
+	// (removed: if(s.streak)s.streak=0)
  if(s.mode==='player'&&!s.career)s.career={me:null,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
  if(s.mode==='player'&&s.career){
   s.career.role=s.career.role||'rot';
@@ -413,7 +414,7 @@ function tacticWeights(){
  const t=(typeof S!=='undefined'&&S&&S.tacticW)?S.tacticW:null;
  return t||BASE_W;
 }
-function playerPower(p,heroId){
+function playerPower(p,heroId){if(!p)return 0;
  const a=p&&p.attrs?{lane:p.attrs.lane||70,farm:p.attrs.farm||70,team:p.attrs.team||70,mind:p.attrs.mind||70}:{lane:70,farm:70,team:70,mind:70};
  const w=tacticWeights();
  let pow=a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind;
@@ -911,7 +912,7 @@ function migrateSave(){
   if(needCh||needEwc||needAg||needAnn){
    if(needCh&&typeof setupChallenger==='function'){setupChallenger(S);}
    else if(needEwc&&typeof setupEWC==='function'){try{setupEWC(S);}catch(e){S.phase='champion';}}
-   else if(needAg&&typeof setupAsianGames==='function'){try{setupAsianGames(S);}catch(e){S.phase='annual'||'champion';if(!S.annual&&typeof setupAnnual==='function')setupAnnual(S);}}
+   else if(needAg&&typeof setupAsianGames==='function'){try{setupAsianGames(S);}catch(e){S.phase=S.annual?'annual':'champion';if(!S.annual&&typeof setupAnnual==='function')setupAnnual(S);}}
    else if(needAnn&&typeof setupAnnual==='function'){setupAnnual(S);}
    else S.phase='champion';
    logEvent(S,'读档修复：赛段结构缺失已尝试重建（phase='+S.phase+'）');
