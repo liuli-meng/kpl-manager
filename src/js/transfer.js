@@ -304,6 +304,39 @@ function aiDevelopStarters(s,tn,map,ovrOf){
   if(used)logEvent(s,' '+tn+' 赛训加练：'+def.name+' 最弱项 +'+used+'（教练组特训）');
  });
 }
+
+/* AI 缺位补强（P2-9 抽出）：弱队/收尾共用——按位置签自由池最强，池空则引进新援。
+   minLen=5 为一线满编；releasedFrom[pid] 标记本队刚放走的不签回。 */
+function aiFillGaps(s,map,teamName,freePool,usedNames,ovrOf,opts){
+  opts=opts||{};
+  const minLen=opts.minLen==null?5:opts.minLen;
+  const releasedFrom=opts.releasedFrom||{};
+  const tag=opts.tag||'';
+  let guard=0,guardMax=opts.guardMax||6;
+  while(((map[teamName]||[]).length)<minLen&&guard++<guardMax){
+    const ids=map[teamName]||[];
+    const have=new Set(ids.map(id=>defOf(s,id)).filter(Boolean).map(d=>d.pos));
+    const need=POS_ORDER.find(pos=>!have.has(pos));
+    if(!need)break;
+    const cands=freePool.filter(d=>d.pos===need&&releasedFrom[d.id]!==teamName);
+    let def;
+    if(cands.length){
+      def=cands.sort((a,b)=>ovrOf(b)-ovrOf(a))[0];
+      const idx=freePool.indexOf(def);
+      if(idx>=0)freePool.splice(idx,1);
+      logEvent(s,' 转会：'+def.name+' 加盟 '+teamName+'（'+POS[def.pos][0]+(tag?' · '+tag:'')+'）');
+    }else{
+      def=genStarDef(s,usedNames,need);
+      s.extraDefs.push(def);
+      logEvent(s,' 补强：'+teamName+' 引进 '+def.name+'（'+POS[def.pos][0]+(tag?' · '+tag:'次级联赛引援')+'）');
+    }
+    aiDetachDef(s,def.id);
+    map[teamName]=map[teamName]||[];
+    map[teamName].push(def.id);
+  }
+  return freePool;
+}
+
 function aiTransferWindow(s){
  try{if(typeof gameLog!=='undefined')gameLog.ai('aiTransferWindow start');}catch(e){}
  const map=aiRosterDefMap(s);
@@ -366,25 +399,7 @@ function aiTransferWindow(s){
  const usedNames=rookieUsedNames(s); // 全局查重（玩家/青训/市场/各队缓存/选秀池/静态池）
  PLAYER_POOL.concat(s.extraDefs||[]).forEach(d=>d&&d.name&&usedNames.add(d.name));
  order.forEach(tn=>{
- let guard=0;
- while(map[tn].length<5&&guard++<6){
- const have=new Set(map[tn].map(id=>defOf(s,id)).filter(Boolean).map(d=>d.pos));
- const need=POS_ORDER.find(pos=>!have.has(pos));
- if(!need)break;
- const cands=freePool.filter(d=>d.pos===need&&releasedFrom[d.id]!==tn); // 本队不签回刚放走的
- let def;
- if(cands.length){
- def=cands.sort((a,b)=>ovrOf(b)-ovrOf(a))[0];
- freePool=freePool.filter(d=>d!==def);
- logEvent(s,' 转会：'+def.name+' 加盟 '+tn+'（'+POS[def.pos][0]+'）');
- }else{
- def=genStarDef(s,usedNames,need); // 自由池无人可签：按缺位引进新援（对位培养，底子随赛季水涨船高）
- s.extraDefs.push(def);
- logEvent(s,' 补强：'+tn+' 引进 '+def.name+'（'+POS[def.pos][0]+' · 次级联赛引援）');
- }
- aiDetachDef(s,def.id); // 全局除名后再入册，杜绝同一 def 双挂
- map[tn].push(def.id);
- }
+  freePool=aiFillGaps(s,map,tn,freePool,usedNames,ovrOf,{releasedFrom});
  });
  // ③.5 赛训成长：补最弱属性（先练短板，再决定要不要买人）
  order.forEach(tn=>aiDevelopStarters(s,tn,map,ovrOf));
@@ -475,25 +490,7 @@ function aiTransferWindow(s){
  }
  // ⑤.5 挖角/放人收尾补位：豪门抢人后源队不能空位过夜——立刻从自由池/新援补齐
  teams.forEach(tn=>{
- let guard=0;
- while((map[tn]||[]).length<5&&guard++<6){
- const have=new Set((map[tn]||[]).map(id=>defOf(s,id)).filter(Boolean).map(d=>d.pos));
- const need=POS_ORDER.find(pos=>!have.has(pos));
- if(!need)break;
- const cands=freePool.filter(d=>d.pos===need);
- let def;
- if(cands.length){
- def=cands.sort((a,b)=>ovrOf(b)-ovrOf(a))[0];
- freePool=freePool.filter(d=>d!==def);
- logEvent(s,' 转会：'+def.name+' 加盟 '+tn+'（'+POS[def.pos][0]+' · 挖角后补位）');
- }else{
- def=genStarDef(s,usedNames,need);
- s.extraDefs.push(def);
- logEvent(s,' 补强：'+tn+' 紧急引进 '+def.name+'（'+POS[def.pos][0]+'）');
- }
- map[tn]=map[tn]||[];
- map[tn].push(def.id);
- }
+  freePool=aiFillGaps(s,map,tn,freePool,usedNames,ovrOf,{tag:'挖角后补位'});
  });
  // ⑥ 教练组流动：AI 队也会换帅——从名宿市场挖更好的教练（与玩家抢人），旧帅下岗回流市场
  // 弱队优先、只升不降；换帅概率按难度分层
