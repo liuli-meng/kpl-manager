@@ -1,177 +1,177 @@
-/* ================= 背景音乐（BGM）系统（程序化合成，无资源文件；默认关闭）================== */
-// 策略：极简环境音 + 情境和弦，全部 WebAudio 实时合成。与 SFX 共用同一开关，默认音量极低不打扰。
-let _bgmOn=false, _bgmNode=null; // 通过 localStorage 'km_bgm'控制
-try{_bgmOn=localStorage.getItem('km_bgm')==='1';}catch(_){}
+/* ================= 背景音乐（BGM）系统（程序化合成，无资源文件；默认关闭）==================
+ 目标（P2「从有音效到有表演」）：极轻循环 pad + 胜/负/夺冠三段和弦。
+ 约束：零外部素材、默认音量低、无 AudioContext 时静默降级；开关独立于 SFX，互不拖累。 */
+let _bgmOn=false,_bgmNode=null,_bgmVolume=0.35,_bgmAc=null,_bgmTimer=null;
+try{
+ _bgmOn=localStorage.getItem('km_bgm')==='1';
+ const v=parseFloat(localStorage.getItem('km_bgm_vol'));
+ if(isFinite(v))_bgmVolume=Math.max(0,Math.min(1,v/100));
+}catch(_){}
 
-const BGM = {
-  // idle: 持续的低频 Pad（C 大调和弦分解），营造“思考/管理”氛围
-  idle:{freqs:[261.63,329.63,392.00],type:'sine',dur:0.5,vol:0.008},
-  // win: 胜利时的大三度和弦（C-E-G），明亮上升
-  win:{chords:[[523.25,659.25,783.99],[659.25,783.99,987.77]],delays:[0,120]},
-  // lose: 小调下行（C-Bb-A），低沉但不过度悲观
-  lose:{chords:[[261.63,311.13,392.00],[246.94,293.66,369.99]],delays:[0,100]}
+const BGM={
+ // idle：C 大调分解 pad，持续极低音量，营造“思考/管理”
+ idle:{freqs:[261.63,329.63,392.00,392.00*1.003],type:'sine',vol:0.006},
+ // win：大三和弦上行（C-E-G → E-G-B）
+ win:{chords:[[523.25,659.25,783.99],[659.25,783.99,987.77]],delays:[0,160],vol:0.035},
+ // lose：小调下行，低沉但不绝望
+ lose:{chords:[[261.63,311.13,392.00],[246.94,293.66,369.99]],delays:[0,140],vol:0.03},
+ // title：夺冠/王朝明亮琶音
+ title:{chords:[[523.25,659.25,783.99],[659.25,783.99,987.77],[783.99,987.77,1174.66],[1046.50,1318.51,1567.98]],delays:[0,120,240,380],vol:0.04}
 };
 
+function _bgmEnsureAc(){
+ try{
+  if(!_bgmAc)_bgmAc=new (window.AudioContext||window.webkitAudioContext)();
+  if(_bgmAc.state==='suspended')_bgmAc.resume();
+  return _bgmAc;
+ }catch(_){return null;}
+}
+function _bgmOk(){return !!( _bgmOn && (window.AudioContext||window.webkitAudioContext));}
+
+/* 停掉当前 pad（含淡出） */
+function stopBGM(fadeMs){
+ if(_bgmTimer){clearTimeout(_bgmTimer);_bgmTimer=null;}
+ if(!_bgmNode)return;
+ try{
+  const t=fadeMs==null?280:fadeMs;
+  if(_bgmNode.oscs&&_bgmNode.oscs.length)fadeControl(false,t);
+  else if(_bgmNode.stop)try{_bgmNode.stop();}catch(_){}
+  setTimeout(()=>{
+   if(_bgmNode&&_bgmNode.oscs){
+    _bgmNode.oscs.forEach(x=>{try{x.o.stop();}catch(_){}});
+    _bgmNode.oscs=[];
+   }
+   if(_bgmNode&&_bgmNode.mode==='idle')_bgmNode=null;
+  },t+40);
+ }catch(_){_bgmNode=null;}
+}
+
+/* 持续 pad：振荡器常驻，音量 _bgmVolume 实时可调 */
+function playIdlePad(){
+ if(!_bgmOk())return;
+ const ac=_bgmEnsureAc();if(!ac)return;
+ if(_bgmNode&&_bgmNode.mode==='idle'&&_bgmNode.oscs&&_bgmNode.oscs.length)return;
+ if(_bgmNode&&_bgmNode.mode!=='idle')stopBGM(120);
+ try{
+  const now=ac.currentTime,oscs=[];
+  BGM.idle.freqs.forEach(f=>{
+   const o=ac.createOscillator(),g=ac.createGain();
+   o.type=BGM.idle.type;o.frequency.value=f;
+   const target=Math.max(0.0002,BGM.idle.vol*_bgmVolume);
+   g.gain.setValueAtTime(0,now);
+   g.gain.linearRampToValueAtTime(target,now+1.1);
+   o.connect(g);g.connect(ac.destination);
+   o.start(now);
+   oscs.push({o,g,baseVol:BGM.idle.vol});
+  });
+  _bgmNode={ac,mode:'idle',oscs};
+ }catch(e){try{console.warn('BGM idle fail',e&&e.message);}catch(_){}}
+}
+
+/* 情境和弦：win / lose / title */
+function playChordBGM(mode){
+ if(!_bgmOk())return;
+ const ac=_bgmEnsureAc();if(!ac)return;
+ const cfg=BGM[mode];if(!cfg)return;
+ try{
+  // 和弦叠在 pad 上，不打断 idle
+  cfg.chords.forEach((chord,i)=>{
+   const delay=cfg.delays[i]||0;
+   _bgmTimer=setTimeout(()=>{
+    if(!_bgmOn)return;
+    const t0=ac.currentTime;
+    chord.forEach((f,j)=>{
+     const o=ac.createOscillator(),g=ac.createGain();
+     o.type='triangle';o.frequency.value=f;
+     const peak=Math.max(0.0003,(cfg.vol||0.03)*_bgmVolume);
+     const at=t0+j*0.02;
+     g.gain.setValueAtTime(0.0001,at);
+     g.gain.exponentialRampToValueAtTime(peak,at+0.03);
+     g.gain.exponentialRampToValueAtTime(0.0001,at+0.55);
+     o.connect(g);g.connect(ac.destination);
+     o.start(at);o.stop(at+0.6);
+    });
+   },delay);
+  });
+ }catch(e){try{console.warn('BGM chord fail',e&&e.message);}catch(_){}}
+}
+
 /**
- * 播放情境音
- * @param {'idle'|'win'|'lose'} mode
+ * 播放情境音。idle=循环 pad；win/lose/title=短和弦（可叠在 pad 上）
  */
 function playBGM(mode){
-  if(!_bgmOn||!window.AudioContext)return;
-  try{
-    const ac=_bgmNode?_bgmNode.ac:(new (window.AudioContext||window.webkitAudioContext)());
-    if(ac.state==='suspended')ac.resume();
-    
-    if(mode==='idle'){
-      // 持续 pad：低频正弦波循环播放，音量极小不打扰
-      if(_bgmNode&&_bgmNode.mode==='idle')return; // 已在播放则不重复
-      
-      const now=ac.currentTime;
-      const oscs=[];
-      
-      BGM.idle.freqs.forEach((f, index) => {
-        const o=ac.createOscillator(),g=ac.createGain();
-        o.type=BGM.idle.type;o.frequency.value=f;
-        
-        // 淡入效果：0 → 目标音量
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(BGM.idle.vol * _bgmVolume, now + 0.5);
-        g.gain.exponentialRampToValueAtTime(0.0001, now+2.0);
-        
-        o.connect(g);g.connect(ac.destination);
-        o.start(now);o.stop(now+2.0);
-        
-        oscs.push({o, g, baseVol: BGM.idle.vol});
-      });
-      
-      _bgmNode={ac,mode:'idle',oscs,stop:()=>oscs.forEach(x=>x.o.stop())};
-    }else if(mode==='win'||mode==='lose'){
-      // 情境和弦：短暂触发特定情绪的和弦序列
-      const cfg=mode==='win'?BGM.win:BGM.lose;
-      cfg.chords.forEach((c,i)=>{
-        setTimeout(()=>{
-          c.forEach((f,delayOffset)=>{
-            const o=ac.createOscillator(),g=ac.createGain();
-            o.type='sine';o.frequency.value=f;
-            g.gain.setValueAtTime(BGM.idle.vol*0.02,ac.currentTime+delayOffset/1000);
-            g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+(delayOffset+200)/1000);
-            o.connect(g);g.connect(ac.destination);
-            o.start();o.stop(ac.currentTime+0.5);
-          });
-        },cfg.delays[i]||0);
-      });
-    }
-  }catch(e){console.warn('BGM fail:',e.message);}
+ if(!_bgmOk())return;
+ if(mode==='idle'){playIdlePad();return;}
+ if(mode==='win'||mode==='lose'||mode==='title')playChordBGM(mode);
 }
 
-/**
- * 切换 BGM 开关
- */
 function toggleBGM(){
-  _bgmOn=!_bgmOn;
-  try{localStorage.setItem('km_bgm',_bgmOn?'1':'0');if(_bgmNode)_bgmNode.stop();}catch(_){}
-  toast(_bgmOn?'BGM 已开启':'BGM 已关闭');
-  
-  // 更新 header 按钮状态
-  try{if(S)renderHeader();}catch(_){}
-  
-  // 如果开启，立即播放当前页面对应的情景音
-  if(_bgmOn) detectAndPlayBGM();
+ _bgmOn=!_bgmOn;
+ try{localStorage.setItem('km_bgm',_bgmOn?'1':'0');}catch(_){}
+ if(_bgmOn){playIdlePad();toast(' BGM 已开启');}
+ else{stopBGM();toast(' BGM 已关闭');}
+ try{if(S)renderHeader();}catch(_){}
 }
 
-/**
- * 情景感知：根据页面类型自动播放
- */
-function detectAndPlayBGM() {
-  if (!_bgmOn || !window.AudioContext) return;
-  
-  const currentPage = document.querySelector('.page.on');
-  const pageId = currentPage ? currentPage.id.replace('page-', '') : '';
-  
-  // 先淡出旧 BGM（如果有）
-  if(_bgmNode && _bgmNode.oscs && _bgmNode.oscs.length > 0) {
-    fadeControl(false, 300);
-  }
-  
-  switch(pageId) {
-    case 'club':
-    case 'biz':
-    case 'hall':
-      // 管理/荣誉页面：idle pad
-      playBGM('idle');
-      break;
-      
-    case 'match-result':
-      // 比赛结算：根据胜负
-      let isWin;try{isWin=JSON.parse(storeGet('kw_last_match_result') || '{}').isWin;}catch(_){isWin=undefined;}
-      if(isWin !== undefined) {
-        setTimeout(() => playBGM(isWin ? 'win' : 'lose'), 350);
-      }
-      break;
-  }
-}
-
-// 页面加载后自动检测
-document.addEventListener('DOMContentLoaded', () => {
-  // 延迟确保所有模块已加载
-  setTimeout(detectAndPlayBGM, 1000);
-});
-
-/**
- * 设置 BGM 音量 (0-100)
- * @param {number} percent - 0 to 100
- */
-function setBgmVolume(percent) {
-  _bgmVolume = Math.max(0, Math.min(1, percent/100));
-  try{localStorage.setItem('km_bgm_vol', Math.round(_bgmVolume*100));}catch(_){}
-  toast(`BGM 音量已调整为 ${Math.round(_bgmVolume*100)}%`);
-  
-  // 动态调整当前播放的 BGM 音量（平滑过渡）
-  if(_bgmNode && _bgmNode.oscs) {
-    const now = _bgmNode.ac.currentTime;
-    _bgmNode.oscs.forEach(osc => {
-      osc.g.gain.setTargetAtTime(
-        osc.baseVol * _bgmVolume,
-        now,
-        0.1
-      );
-    });
-  }
-}
-
-/**
- * 淡入淡出控制
- * @param {boolean} fadeIn - true: 淡入，false: 淡出
- * @param {number} duration - 持续时间 (ms)，默认 500ms
- */
-function fadeControl(fadeIn, duration=500) {
-  if(!_bgmNode || !_bgmNode.ac || !_bgmNode.oscs || _bgmNode.oscs.length === 0) return;
-  
-  const now = _bgmNode.ac.currentTime;
-  const targetGain = fadeIn ? _bgmVolume : 0;
-  const currentGain = _bgmNode.oscs[0].g.gain.value;
-  
-  // 取消之前的自动化曲线
-  _bgmNode.oscs.forEach(osc => {
-    osc.g.gain.cancelScheduledValues(now);
-    
-    // 使用线性或指数 ramp 实现平滑过渡
-    osc.g.gain.setValueAtTime(currentGain, now);
-    osc.g.gain.exponentialRampToValueAtTime(
-      targetGain > 0 ? targetGain * osc.baseVol : 0.0001,
-      now + duration / 1000
-    );
+function setBgmVolume(percent){
+ const p=Math.max(0,Math.min(100,Number(percent)||0));
+ _bgmVolume=p/100;
+ try{localStorage.setItem('km_bgm_vol',String(p));}catch(_){}
+ // 已在播的 pad 平滑跟手（滑杆拖动不 toast，免得刷屏）
+ if(_bgmNode&&_bgmNode.oscs&&_bgmNode.ac){
+  const now=_bgmNode.ac.currentTime;
+  _bgmNode.oscs.forEach(osc=>{
+   try{osc.g.gain.setTargetAtTime(Math.max(0.0002,osc.baseVol*_bgmVolume),now,0.08);}catch(_){}
   });
-  
-  // 淡出完成后停止所有振荡器
-  if(!fadeIn) {
-    setTimeout(() => {
-      if(_bgmNode && _bgmNode.oscs) {
-        _bgmNode.oscs.forEach(osc => {
-          try { osc.o.stop(); } catch(_) {}
-        });
-        _bgmNode.oscs = [];
-      }
-    }, duration);
-  }
+ }
+ try{const el=document.getElementById('bgm-vol-display');if(el)el.textContent=p+'%';}catch(_){}
 }
+
+/* 淡入淡出（供停 pad / 换景用） */
+function fadeControl(fadeIn,duration){
+ if(!_bgmNode||!_bgmNode.ac||!_bgmNode.oscs||!_bgmNode.oscs.length)return;
+ const dur=duration||500,now=_bgmNode.ac.currentTime;
+ _bgmNode.oscs.forEach(osc=>{
+  try{
+   const cur=osc.g.gain.value;
+   osc.g.gain.cancelScheduledValues(now);
+   osc.g.gain.setValueAtTime(cur,now);
+   const target=fadeIn?Math.max(0.0002,osc.baseVol*_bgmVolume):0.0001;
+   osc.g.gain.exponentialRampToValueAtTime(target,now+dur/1000);
+  }catch(_){}
+ });
+}
+
+/* 情景感知：日常 pad + 赛果和弦 */
+function detectAndPlayBGM(){
+ if(!_bgmOk())return;
+ try{
+  const cur=document.querySelector('.page.on');
+  const id=cur&&cur.id?cur.id.replace('page-',''):'';
+  if(id==='club'||id==='biz'||id==='hall'||id==='career'||id==='league')playIdlePad();
+ }catch(_){playIdlePad();}
+}
+
+/* 演出钩子：夺冠/胜负叠和弦（SFX 照旧，BGM 独立开关） */
+function bgmOnMoment(sfxKey){
+ if(!_bgmOn)return;
+ try{
+  if(sfxKey==='title'||sfxKey==='fmvp'||sfxKey==='dynasty')playBGM('title');
+  else if(sfxKey==='win'||sfxKey==='gold')playBGM('win');
+  else if(sfxKey==='lose')playBGM('lose');
+  else if(sfxKey==='comeback'||sfxKey==='peak')playBGM('win');
+ }catch(_){}
+}
+
+// 首次用户手势后才能起 AudioContext（浏览器自动播放策略）
+function _bgmUnlock(){
+ if(_bgmOn)playIdlePad();
+ document.removeEventListener('pointerdown',_bgmUnlock);
+ document.removeEventListener('keydown',_bgmUnlock);
+}
+document.addEventListener('pointerdown',_bgmUnlock);
+document.addEventListener('keydown',_bgmUnlock);
+try{
+ if(document.readyState==='complete')setTimeout(detectAndPlayBGM,600);
+ else document.addEventListener('DOMContentLoaded',()=>setTimeout(detectAndPlayBGM,600));
+}catch(_){}

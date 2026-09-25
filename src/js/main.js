@@ -144,6 +144,7 @@ function goPage(name){
  renderHeader();
  renderPage(name);
  syncPageDock();
+ try{if(typeof detectAndPlayBGM==='function')detectAndPlayBGM();}catch(_){}
  maybeStartTour(); // 首访自动开引导（km_tour 标记只弹一次；引导内部导航由 _tour.on 守卫）
 }
 function renderPage(name){
@@ -1062,6 +1063,7 @@ function toggleSfx(){
 function playMoment(level,title,sub,sfxKey){
  try{
  if(sfxKey&&SFX[sfxKey])SFX[sfxKey]();
+ if(typeof bgmOnMoment==='function')bgmOnMoment(sfxKey);
  }catch(_){}
  try{toast((level>=2?' ':'')+title+(sub?' · '+sub:''));}catch(_){}
  if(level<2)return;
@@ -1183,65 +1185,25 @@ if(load()&&S&&S.teamName){
 playIntro(); // 进场动画（仅首访播放）
 
 // ===================== BGM 设置面板注入 =====================
-// 在存档管理页自动添加音效控制面板
+// 共用 bgm-settings.js 的面板 HTML，避免 main/panel/settings 三份文案漂移
 (function(){
  const originalOpenSaveMgmt = window.openSaveMgmt;
- if(originalOpenSaveMgmt){
-   window.openSaveMgmt = function(){
-     // 调用原始函数
-     originalOpenSaveMgmt();
-     
-     // 延迟插入面板（确保模态框已显示）
-     setTimeout(() => {
-       const modalBody = document.getElementById('app-modal-body');
-       if(modalBody && !modalBody.innerHTML.includes('音效设置')){
-         const html = modalBody.innerHTML;
-         const insertPoint = html.indexOf('<h2>') + '<h2>存档管理</h2>'.length;
-         
-         if(insertPoint > 0){
-           const bgmPanelHtml = `
-             <div class="panel mt8" style="background:var(--card2);border-color:var(--accent-primary)">
-               <h3>🎵 音效设置</h3>
-               
-               <!-- SFX 开关 -->
-               <div style="margin-bottom:12px">
-                 <label>SFX 音效
-                   <button onclick="toggleSfx()" class="btn sm">${_sfxOn?'gold':'primary'}">${_sfxOn?'关闭':'开启'}</button>
-                 </label>
-                 <div class="hint" style="font-size:11px;margin-top:4px">点击/胜利/失败等短时音效</div>
-               </div>
-               
-               <!-- BGM 开关 -->
-               <div style="margin-bottom:12px">
-                 <label>BGM 背景音乐
-                   <button onclick="toggleBGM()" class="btn sm">${_bgmOn?'gold':'primary'}">${_bgmOn?'关闭':'开启'}</button>
-                 </label>
-                 <div class="hint" style="font-size:11px;margin-top:4px">自动播放情景音乐：日常管理 (idle)、胜利庆祝、失利低沉</div>
-               </div>
-               
-               <!-- BGM 音量滑块 -->
-               <div>
-                 <label>BGM 音量
-                   <input type="range" min="0" max="100" value="${Math.round(_bgmVolume*100)}" 
-                          oninput="setBgmVolume(this.value);document.getElementById('bgm-vol-display').textContent=this.value+'%'">
-                   <span id="bgm-vol-display" style="display:inline-block;width:40px;text-align:right;font-weight:bold;color:var(--accent-primary)">
-                     ${Math.round(_bgmVolume*100)}%
-                   </span>
-                 </label>
-                 <div class="hint" style="font-size:11px;margin-top:4px">拖动滑块实时调整，范围 0-100%</div>
-               </div>
-             </div>`;
-           
-           modalBody.innerHTML = 
-             html.substring(0, insertPoint) + 
-             '\n\n' + bgmPanelHtml +
-             '\n' + html.substring(insertPoint);
-         }
-       }
-     }, 50);
-   };
-   
-   console.log('[Main] BGM settings panel injection ready');
- }
+ if(!originalOpenSaveMgmt)return;
+ window.openSaveMgmt = function(){
+  originalOpenSaveMgmt();
+  setTimeout(() => {
+   const modalBody = document.getElementById('app-modal-body');
+   if(!modalBody || modalBody.innerHTML.indexOf('音效设置') >= 0) return;
+   try{
+    const html = modalBody.innerHTML;
+    const insertPoint = html.indexOf('<h2>') + '<h2>存档管理</h2>'.length;
+    const panel = (typeof bgmSettingsPanelHtml==='function') ? bgmSettingsPanelHtml() : '';
+    if(insertPoint > 0 && panel){
+     modalBody.innerHTML = html.substring(0, insertPoint) + panel + html.substring(insertPoint);
+    }else if(panel){
+     modalBody.insertAdjacentHTML('afterbegin', panel);
+    }
+   }catch(e){}
+  }, 50);
+ };
 })();
-

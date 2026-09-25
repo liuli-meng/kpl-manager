@@ -13021,160 +13021,201 @@ function playerRest(){
 
 </script>
 <script>
-let _bgmOn=false, _bgmNode=null; // 通过 localStorage 'km_bgm'控制
-try{_bgmOn=localStorage.getItem('km_bgm')==='1';}catch(_){}
+let _bgmOn=false,_bgmNode=null,_bgmVolume=0.35,_bgmAc=null,_bgmTimer=null;
+try{
+ _bgmOn=localStorage.getItem('km_bgm')==='1';
+ const v=parseFloat(localStorage.getItem('km_bgm_vol'));
+ if(isFinite(v))_bgmVolume=Math.max(0,Math.min(1,v/100));
+}catch(_){}
 
-const BGM = {
+const BGM={
 
-  idle:{freqs:[261.63,329.63,392.00],type:'sine',dur:0.5,vol:0.008},
+ idle:{freqs:[261.63,329.63,392.00,392.00*1.003],type:'sine',vol:0.006},
 
-  win:{chords:[[523.25,659.25,783.99],[659.25,783.99,987.77]],delays:[0,120]},
+ win:{chords:[[523.25,659.25,783.99],[659.25,783.99,987.77]],delays:[0,160],vol:0.035},
 
-  lose:{chords:[[261.63,311.13,392.00],[246.94,293.66,369.99]],delays:[0,100]}
+ lose:{chords:[[261.63,311.13,392.00],[246.94,293.66,369.99]],delays:[0,140],vol:0.03},
+
+ title:{chords:[[523.25,659.25,783.99],[659.25,783.99,987.77],[783.99,987.77,1174.66],[1046.50,1318.51,1567.98]],delays:[0,120,240,380],vol:0.04}
 };
 
+function _bgmEnsureAc(){
+ try{
+  if(!_bgmAc)_bgmAc=new (window.AudioContext||window.webkitAudioContext)();
+  if(_bgmAc.state==='suspended')_bgmAc.resume();
+  return _bgmAc;
+ }catch(_){return null;}
+}
+function _bgmOk(){return !!( _bgmOn && (window.AudioContext||window.webkitAudioContext));}
+
+function stopBGM(fadeMs){
+ if(_bgmTimer){clearTimeout(_bgmTimer);_bgmTimer=null;}
+ if(!_bgmNode)return;
+ try{
+  const t=fadeMs==null?280:fadeMs;
+  if(_bgmNode.oscs&&_bgmNode.oscs.length)fadeControl(false,t);
+  else if(_bgmNode.stop)try{_bgmNode.stop();}catch(_){}
+  setTimeout(()=>{
+   if(_bgmNode&&_bgmNode.oscs){
+    _bgmNode.oscs.forEach(x=>{try{x.o.stop();}catch(_){}});
+    _bgmNode.oscs=[];
+   }
+   if(_bgmNode&&_bgmNode.mode==='idle')_bgmNode=null;
+  },t+40);
+ }catch(_){_bgmNode=null;}
+}
+
+function playIdlePad(){
+ if(!_bgmOk())return;
+ const ac=_bgmEnsureAc();if(!ac)return;
+ if(_bgmNode&&_bgmNode.mode==='idle'&&_bgmNode.oscs&&_bgmNode.oscs.length)return;
+ if(_bgmNode&&_bgmNode.mode!=='idle')stopBGM(120);
+ try{
+  const now=ac.currentTime,oscs=[];
+  BGM.idle.freqs.forEach(f=>{
+   const o=ac.createOscillator(),g=ac.createGain();
+   o.type=BGM.idle.type;o.frequency.value=f;
+   const target=Math.max(0.0002,BGM.idle.vol*_bgmVolume);
+   g.gain.setValueAtTime(0,now);
+   g.gain.linearRampToValueAtTime(target,now+1.1);
+   o.connect(g);g.connect(ac.destination);
+   o.start(now);
+   oscs.push({o,g,baseVol:BGM.idle.vol});
+  });
+  _bgmNode={ac,mode:'idle',oscs};
+ }catch(e){try{console.warn('BGM idle fail',e&&e.message);}catch(_){}}
+}
+
+function playChordBGM(mode){
+ if(!_bgmOk())return;
+ const ac=_bgmEnsureAc();if(!ac)return;
+ const cfg=BGM[mode];if(!cfg)return;
+ try{
+
+  cfg.chords.forEach((chord,i)=>{
+   const delay=cfg.delays[i]||0;
+   _bgmTimer=setTimeout(()=>{
+    if(!_bgmOn)return;
+    const t0=ac.currentTime;
+    chord.forEach((f,j)=>{
+     const o=ac.createOscillator(),g=ac.createGain();
+     o.type='triangle';o.frequency.value=f;
+     const peak=Math.max(0.0003,(cfg.vol||0.03)*_bgmVolume);
+     const at=t0+j*0.02;
+     g.gain.setValueAtTime(0.0001,at);
+     g.gain.exponentialRampToValueAtTime(peak,at+0.03);
+     g.gain.exponentialRampToValueAtTime(0.0001,at+0.55);
+     o.connect(g);g.connect(ac.destination);
+     o.start(at);o.stop(at+0.6);
+    });
+   },delay);
+  });
+ }catch(e){try{console.warn('BGM chord fail',e&&e.message);}catch(_){}}
+}
+
 function playBGM(mode){
-  if(!_bgmOn||!window.AudioContext)return;
-  try{
-    const ac=_bgmNode?_bgmNode.ac:(new (window.AudioContext||window.webkitAudioContext)());
-    if(ac.state==='suspended')ac.resume();
-
-    if(mode==='idle'){
-
-      if(_bgmNode&&_bgmNode.mode==='idle')return; // 已在播放则不重复
-
-      const now=ac.currentTime;
-      const oscs=[];
-
-      BGM.idle.freqs.forEach((f, index) => {
-        const o=ac.createOscillator(),g=ac.createGain();
-        o.type=BGM.idle.type;o.frequency.value=f;
-
-
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(BGM.idle.vol * _bgmVolume, now + 0.5);
-        g.gain.exponentialRampToValueAtTime(0.0001, now+2.0);
-
-        o.connect(g);g.connect(ac.destination);
-        o.start(now);o.stop(now+2.0);
-
-        oscs.push({o, g, baseVol: BGM.idle.vol});
-      });
-
-      _bgmNode={ac,mode:'idle',oscs,stop:()=>oscs.forEach(x=>x.o.stop())};
-    }else if(mode==='win'||mode==='lose'){
-
-      const cfg=mode==='win'?BGM.win:BGM.lose;
-      cfg.chords.forEach((c,i)=>{
-        setTimeout(()=>{
-          c.forEach((f,delayOffset)=>{
-            const o=ac.createOscillator(),g=ac.createGain();
-            o.type='sine';o.frequency.value=f;
-            g.gain.setValueAtTime(BGM.idle.vol*0.02,ac.currentTime+delayOffset/1000);
-            g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+(delayOffset+200)/1000);
-            o.connect(g);g.connect(ac.destination);
-            o.start();o.stop(ac.currentTime+0.5);
-          });
-        },cfg.delays[i]||0);
-      });
-    }
-  }catch(e){console.warn('BGM fail:',e.message);}
+ if(!_bgmOk())return;
+ if(mode==='idle'){playIdlePad();return;}
+ if(mode==='win'||mode==='lose'||mode==='title')playChordBGM(mode);
 }
 
 function toggleBGM(){
-  _bgmOn=!_bgmOn;
-  try{localStorage.setItem('km_bgm',_bgmOn?'1':'0');if(_bgmNode)_bgmNode.stop();}catch(_){}
-  toast(_bgmOn?'BGM 已开启':'BGM 已关闭');
-
-
-  try{if(S)renderHeader();}catch(_){}
-
-
-  if(_bgmOn) detectAndPlayBGM();
+ _bgmOn=!_bgmOn;
+ try{localStorage.setItem('km_bgm',_bgmOn?'1':'0');}catch(_){}
+ if(_bgmOn){playIdlePad();toast(' BGM 已开启');}
+ else{stopBGM();toast(' BGM 已关闭');}
+ try{if(S)renderHeader();}catch(_){}
 }
 
-function detectAndPlayBGM() {
-  if (!_bgmOn || !window.AudioContext) return;
+function setBgmVolume(percent){
+ const p=Math.max(0,Math.min(100,Number(percent)||0));
+ _bgmVolume=p/100;
+ try{localStorage.setItem('km_bgm_vol',String(p));}catch(_){}
 
-  const currentPage = document.querySelector('.page.on');
-  const pageId = currentPage ? currentPage.id.replace('page-', '') : '';
-
-
-  if(_bgmNode && _bgmNode.oscs && _bgmNode.oscs.length > 0) {
-    fadeControl(false, 300);
-  }
-
-  switch(pageId) {
-    case 'club':
-    case 'biz':
-    case 'hall':
-
-      playBGM('idle');
-      break;
-
-    case 'match-result':
-
-      let isWin;try{isWin=JSON.parse(storeGet('kw_last_match_result') || '{}').isWin;}catch(_){isWin=undefined;}
-      if(isWin !== undefined) {
-        setTimeout(() => playBGM(isWin ? 'win' : 'lose'), 350);
-      }
-      break;
-  }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-
-  setTimeout(detectAndPlayBGM, 1000);
-});
-
-function setBgmVolume(percent) {
-  _bgmVolume = Math.max(0, Math.min(1, percent/100));
-  try{localStorage.setItem('km_bgm_vol', Math.round(_bgmVolume*100));}catch(_){}
-  toast(`BGM 音量已调整为 ${Math.round(_bgmVolume*100)}%`);
-
-
-  if(_bgmNode && _bgmNode.oscs) {
-    const now = _bgmNode.ac.currentTime;
-    _bgmNode.oscs.forEach(osc => {
-      osc.g.gain.setTargetAtTime(
-        osc.baseVol * _bgmVolume,
-        now,
-        0.1
-      );
-    });
-  }
-}
-
-function fadeControl(fadeIn, duration=500) {
-  if(!_bgmNode || !_bgmNode.ac || !_bgmNode.oscs || _bgmNode.oscs.length === 0) return;
-
-  const now = _bgmNode.ac.currentTime;
-  const targetGain = fadeIn ? _bgmVolume : 0;
-  const currentGain = _bgmNode.oscs[0].g.gain.value;
-
-
-  _bgmNode.oscs.forEach(osc => {
-    osc.g.gain.cancelScheduledValues(now);
-
-
-    osc.g.gain.setValueAtTime(currentGain, now);
-    osc.g.gain.exponentialRampToValueAtTime(
-      targetGain > 0 ? targetGain * osc.baseVol : 0.0001,
-      now + duration / 1000
-    );
+ if(_bgmNode&&_bgmNode.oscs&&_bgmNode.ac){
+  const now=_bgmNode.ac.currentTime;
+  _bgmNode.oscs.forEach(osc=>{
+   try{osc.g.gain.setTargetAtTime(Math.max(0.0002,osc.baseVol*_bgmVolume),now,0.08);}catch(_){}
   });
+ }
+ try{const el=document.getElementById('bgm-vol-display');if(el)el.textContent=p+'%';}catch(_){}
+}
 
+function fadeControl(fadeIn,duration){
+ if(!_bgmNode||!_bgmNode.ac||!_bgmNode.oscs||!_bgmNode.oscs.length)return;
+ const dur=duration||500,now=_bgmNode.ac.currentTime;
+ _bgmNode.oscs.forEach(osc=>{
+  try{
+   const cur=osc.g.gain.value;
+   osc.g.gain.cancelScheduledValues(now);
+   osc.g.gain.setValueAtTime(cur,now);
+   const target=fadeIn?Math.max(0.0002,osc.baseVol*_bgmVolume):0.0001;
+   osc.g.gain.exponentialRampToValueAtTime(target,now+dur/1000);
+  }catch(_){}
+ });
+}
 
-  if(!fadeIn) {
-    setTimeout(() => {
-      if(_bgmNode && _bgmNode.oscs) {
-        _bgmNode.oscs.forEach(osc => {
-          try { osc.o.stop(); } catch(_) {}
-        });
-        _bgmNode.oscs = [];
-      }
-    }, duration);
-  }
+function detectAndPlayBGM(){
+ if(!_bgmOk())return;
+ try{
+  const cur=document.querySelector('.page.on');
+  const id=cur&&cur.id?cur.id.replace('page-',''):'';
+  if(id==='club'||id==='biz'||id==='hall'||id==='career'||id==='league')playIdlePad();
+ }catch(_){playIdlePad();}
+}
+
+function bgmOnMoment(sfxKey){
+ if(!_bgmOn)return;
+ try{
+  if(sfxKey==='title'||sfxKey==='fmvp'||sfxKey==='dynasty')playBGM('title');
+  else if(sfxKey==='win'||sfxKey==='gold')playBGM('win');
+  else if(sfxKey==='lose')playBGM('lose');
+  else if(sfxKey==='comeback'||sfxKey==='peak')playBGM('win');
+ }catch(_){}
+}
+
+function _bgmUnlock(){
+ if(_bgmOn)playIdlePad();
+ document.removeEventListener('pointerdown',_bgmUnlock);
+ document.removeEventListener('keydown',_bgmUnlock);
+}
+document.addEventListener('pointerdown',_bgmUnlock);
+document.addEventListener('keydown',_bgmUnlock);
+try{
+ if(document.readyState==='complete')setTimeout(detectAndPlayBGM,600);
+ else document.addEventListener('DOMContentLoaded',()=>setTimeout(detectAndPlayBGM,600));
+}catch(_){}
+
+</script>
+<script>
+function bgmSettingsPanelHtml(){
+ const sfxStatus=_sfxOn?'关闭':'开启';
+ const bgmStatus=_bgmOn?'关闭':'开启';
+ const volPercent=Math.round((_bgmVolume||0)*100);
+ return `
+ <div class="panel mt8" id="audio-settings-panel" style="background:var(--card2)">
+  <h3>音效设置</h3>
+  <div style="margin-bottom:12px">
+   <label>SFX 音效
+    <button onclick="toggleSfx()" class="btn sm">${_sfxOn?'gold':'primary'}">${sfxStatus}</button>
+   </label>
+   <div class="hint" style="font-size:11px;margin-top:4px">点击/胜利/失败等短时音效</div>
+  </div>
+  <div style="margin-bottom:12px">
+   <label>BGM 背景音乐
+    <button onclick="toggleBGM()" class="btn sm">${_bgmOn?'gold':'primary'}">${bgmStatus}</button>
+   </label>
+   <div class="hint" style="font-size:11px;margin-top:4px">日常管理轻循环 pad + 胜/负/夺冠情境和弦（默认关，音量极低）</div>
+  </div>
+  <div>
+   <label>BGM 音量
+    <input type="range" min="0" max="100" value="${volPercent}"
+     oninput="setBgmVolume(this.value)">
+    <span id="bgm-vol-display" style="display:inline-block;width:40px;text-align:right;font-weight:bold;color:var(--accent)">${volPercent}%</span>
+   </label>
+   <div class="hint" style="font-size:11px;margin-top:4px">拖动滑块实时调整 0-100%</div>
+  </div>
+ </div>`;
 }
 
 </script>
@@ -14037,6 +14078,7 @@ function goPage(name){
  renderHeader();
  renderPage(name);
  syncPageDock();
+ try{if(typeof detectAndPlayBGM==='function')detectAndPlayBGM();}catch(_){}
  maybeStartTour(); // 首访自动开引导（km_tour 标记只弹一次；引导内部导航由 _tour.on 守卫）
 }
 function renderPage(name){
@@ -14929,6 +14971,7 @@ function toggleSfx(){
 function playMoment(level,title,sub,sfxKey){
  try{
  if(sfxKey&&SFX[sfxKey])SFX[sfxKey]();
+ if(typeof bgmOnMoment==='function')bgmOnMoment(sfxKey);
  }catch(_){}
  try{toast((level>=2?' ':'')+title+(sub?' · '+sub:''));}catch(_){}
  if(level<2)return;
@@ -15048,63 +15091,24 @@ playIntro(); // 进场动画（仅首访播放）
 
 (function(){
  const originalOpenSaveMgmt = window.openSaveMgmt;
- if(originalOpenSaveMgmt){
-   window.openSaveMgmt = function(){
-
-     originalOpenSaveMgmt();
-
-
-     setTimeout(() => {
-       const modalBody = document.getElementById('app-modal-body');
-       if(modalBody && !modalBody.innerHTML.includes('音效设置')){
-         const html = modalBody.innerHTML;
-         const insertPoint = html.indexOf('<h2>') + '<h2>存档管理</h2>'.length;
-
-         if(insertPoint > 0){
-           const bgmPanelHtml = `
-             <div class="panel mt8" style="background:var(--card2);border-color:var(--accent-primary)">
-               <h3>🎵 音效设置</h3>
-
-               <!-- SFX 开关 -->
-               <div style="margin-bottom:12px">
-                 <label>SFX 音效
-                   <button onclick="toggleSfx()" class="btn sm">${_sfxOn?'gold':'primary'}">${_sfxOn?'关闭':'开启'}</button>
-                 </label>
-                 <div class="hint" style="font-size:11px;margin-top:4px">点击/胜利/失败等短时音效</div>
-               </div>
-
-               <!-- BGM 开关 -->
-               <div style="margin-bottom:12px">
-                 <label>BGM 背景音乐
-                   <button onclick="toggleBGM()" class="btn sm">${_bgmOn?'gold':'primary'}">${_bgmOn?'关闭':'开启'}</button>
-                 </label>
-                 <div class="hint" style="font-size:11px;margin-top:4px">自动播放情景音乐：日常管理 (idle)、胜利庆祝、失利低沉</div>
-               </div>
-
-               <!-- BGM 音量滑块 -->
-               <div>
-                 <label>BGM 音量
-                   <input type="range" min="0" max="100" value="${Math.round(_bgmVolume*100)}"
-                          oninput="setBgmVolume(this.value);document.getElementById('bgm-vol-display').textContent=this.value+'%'">
-                   <span id="bgm-vol-display" style="display:inline-block;width:40px;text-align:right;font-weight:bold;color:var(--accent-primary)">
-                     ${Math.round(_bgmVolume*100)}%
-                   </span>
-                 </label>
-                 <div class="hint" style="font-size:11px;margin-top:4px">拖动滑块实时调整，范围 0-100%</div>
-               </div>
-             </div>`;
-
-           modalBody.innerHTML =
-             html.substring(0, insertPoint) +
-             '\n\n' + bgmPanelHtml +
-             '\n' + html.substring(insertPoint);
-         }
-       }
-     }, 50);
-   };
-
-   console.log('[Main] BGM settings panel injection ready');
- }
+ if(!originalOpenSaveMgmt)return;
+ window.openSaveMgmt = function(){
+  originalOpenSaveMgmt();
+  setTimeout(() => {
+   const modalBody = document.getElementById('app-modal-body');
+   if(!modalBody || modalBody.innerHTML.indexOf('音效设置') >= 0) return;
+   try{
+    const html = modalBody.innerHTML;
+    const insertPoint = html.indexOf('<h2>') + '<h2>存档管理</h2>'.length;
+    const panel = (typeof bgmSettingsPanelHtml==='function') ? bgmSettingsPanelHtml() : '';
+    if(insertPoint > 0 && panel){
+     modalBody.innerHTML = html.substring(0, insertPoint) + panel + html.substring(insertPoint);
+    }else if(panel){
+     modalBody.insertAdjacentHTML('afterbegin', panel);
+    }
+   }catch(e){}
+  }, 50);
+ };
 })();
 
 </script>

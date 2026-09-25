@@ -67,6 +67,7 @@ const SUITES = [
   { id: 'verify-guide', file: 'tests/verify-guide.js', label: '新手引导' },
   { id: 'verify-moment', file: 'tests/verify-moment.js', label: '演出与赛季主线' },
   { id: 'verify-idle', file: 'tests/verify-idle.js', label: '怠政经济门禁' },
+  { id: 'verify-bgm', file: 'tests/verify-bgm.js', label: 'BGM 系统' },
   { id: 'verify-playoff-entry', file: 'tests/verify-playoff-entry.js', label: '季后赛/卡位赛入口' },
   { id: 'verify-bughunt-regress', file: 'tests/verify-bughunt-regress.js', label: 'bug-hunt 回归' },
   { id: 'verify-coachloan', file: 'tests/verify-coachloan.js', label: '教练租借与引援' },
