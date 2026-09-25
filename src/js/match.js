@@ -386,6 +386,7 @@ function playerBest(p){
 }
 function renderPreMatch(){
  const sr=S.series;if(!sr)return;
+ if(!window._prepTitle)window._prepTitle=S.teamName+' vs '+(sr.opName||'对手');
  const ls=rosterLineup(S),bn=rosterBench(S);
  const opR=ensureAiRosters(S,sr.opName)||[];
  const my=teamPower(S)*(1+seriesTacticEdge(S,sr)),op=powerOf(S,sr.opName); // 战术克制 ±3% 在此生效
