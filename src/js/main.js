@@ -292,8 +292,8 @@ function restoreAutoBackup(){
  if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
  if(!confirm('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
  try{
- const cur=localStorage.getItem(slotKey());
- if(cur)localStorage.setItem(slotKey()+'_pre_restored',cur);
+ const cur=storeGet(slotKey());
+ if(cur)storeSet(slotKey()+'_pre_restored',cur);
  S=JSON.parse(raw);
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
  resetRuntimeGlobals();
@@ -487,8 +487,8 @@ function resetGame(){
  if(uiDebounce('reset',800))return;
  // 重开前自动备份当前槽（误点也能在下次用「从文件导入」或手动恢复找回）
  try{
- const raw=localStorage.getItem(slotKey());
- if(raw)localStorage.setItem(slotKey()+'_pre_reset',raw);
+ const raw=storeGet(slotKey());
+ if(raw)storeSet(slotKey()+'_pre_reset',raw);
  }catch(e){}
  const season=(S&&S.season)?('第'+S.season+'赛季'):('空档');
  const team=(S&&S.teamName)||'当前槽';
@@ -740,7 +740,7 @@ function rollPlayerTeams(){
  for(let i=0;i<3&&pool.length;i++)window._pcTeams.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
  if(!_pcTeam||!window._pcTeams.some(c=>c.name===_pcTeam))_pcTeam=window._pcTeams[0].name;
  const box=$('#pc-teams');
- if(box)box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${c.name}')">
+ if(box)box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${_escAttr(c.name)}')">
  ${crest(c.icon,c.name,30)}<div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
  <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
 }
@@ -748,7 +748,7 @@ function pickPlayerTeam(n){ // 只改选中态，禁止整批重掷——否则�
   _pcTeam=n;
   const box=$('#pc-teams');
   if(box&&window._pcTeams){
-    box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${c.name}')">
+    box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${_escAttr(c.name)}')">
     ${crest(c.icon,c.name,30)}<div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
     <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
   }

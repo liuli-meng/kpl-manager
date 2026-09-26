@@ -196,6 +196,7 @@ const CREST_SWATCHES=[
  ['#0E8A6A','#05332A','#BFE8D8'],['#FF7A00','#241100','#FFFFFF'],['#16346E','#081226','#E0A93B'],
 ];
 const _escTxt=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const _escAttr=s=>_escTxt(s).replace(/'/g,'&#39;'); // onclick='...' 属性内插值必须再转单引号
 const _lum=hex=>{ // 0..1 近似亮度，决定纹章文字用白还是深墨
  const n=parseInt(hex.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;
  return 0.2126*r+0.7152*g+0.0722*b;
@@ -1959,6 +1960,22 @@ const SAVE_DEFAULTS=[
  ['marketRefreshed',false,'当日市场已刷新'],
  ['academyTrained',false,'当日青训已培养'],
  ['champion',false,'本赛季夺冠'],
+ ['ewcDone',false,'本年 EWC 已打完'],
+ ['agDone',false,'本年亚运已打完'],
+ ['tactic','balanced','当前战术'],
+ ['tacticW',null,'战术研究权重'],
+ ['tempSeats',[],'临时席位'],
+ ['tempSeatFixed',[],'夺冠保留下季席位'],
+ ['tempSeatLog',[],'临时席位变动'],
+ ['natAnnounced',false,'亚运征召已宣布'],
+ ['natSquad',null,'国家队名单'],
+ ['natCampIds',[],'集训选手 id'],
+ ['natCampDay',0,'集训日计数'],
+ ['ag',null,'亚运赛段'],
+ ['windowSold',0,'转会窗已卖人数'],
+ ['transferWindowStart',0,'转会窗起始日'],
+ ['_actedDay',-1,'当日行动日戳'],
+ ['tacticPatch',null,'版本补丁记录'],
 ];
 function applySaveDefaults(s){
  SAVE_DEFAULTS.forEach(([k,d])=>{
@@ -2224,8 +2241,9 @@ function heroOf(heroId){return HERO_BY_NAME[heroId]||null;} // Map 索引（data
 function heroAtPos(heroId,pos){const h=heroOf(heroId);return h&&h.pos.includes(pos)?h:null;}
 
 function tacticWeights(){
- const t=(typeof S!=='undefined'&&S&&S.tacticW)?S.tacticW:null;
- return t||BASE_W;
+ const t=(typeof S!=='undefined'&&S)?S.tacticW:null;
+
+ return (t&&typeof t.lane==='number'&&isFinite(t.lane))?t:BASE_W;
 }
 function playerPower(p,heroId){if(!p)return 0;
  const a=p&&p.attrs?{lane:p.attrs.lane||70,farm:p.attrs.farm||70,team:p.attrs.team||70,mind:p.attrs.mind||70}:{lane:70,farm:70,team:70,mind:70};
@@ -2793,7 +2811,8 @@ function migrateFixZeroZero(s){
 }
 function migrateSeasonShape(s){
  if(!seasonShapeOk(s)){
- s.phase='r1';s.matchIdx=0;
+ if(typeof setPhase==='function')setPhase(s,'r1',{who:'newSeason',force:true});else s.phase='r1';
+s.matchIdx=0;
  s.groups={};s.tables={};s.aiPower={};s.card=null;s.playoff=null;s.eliminated=[];
  s.stage='regular';s.champion=false;
  }
@@ -2870,7 +2889,7 @@ function ensureSeason(s){
  }
 }
 function load(){
- try{const d=localStorage.getItem(slotKey());if(d){S=JSON.parse(d);
+ try{const d=storeGet(slotKey());if(d){S=JSON.parse(d);
 
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
  migrateSave();return true;}}
@@ -5607,7 +5626,7 @@ function recordSeasonAwards(s){
 }
 function newSeason(s){
 
- try{localStorage.setItem(slotKey()+'_auto',serializeForSave(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
+ try{storeSet(slotKey()+'_auto',serializeForSave(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
  try{recordSeasonAwards(s);}catch(e){logEvent(s,' 最佳阵容结算异常：'+(e&&e.message)+'（不影响赛季轮换）');} // 上赛季最佳阵容入册（趁阵容还没跨季老化）；失败不得挡住 newSeason
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
@@ -9369,7 +9388,7 @@ function missionStrip(s){
  const list=activeMissions(s);
  const seasonBar=seasonQuestStrip(s);
  if(!list.length&&!seasonBar)return '';
- const dayTag=list.length?`<span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${m.text}">${m.title}</button>`).join('')}</span>`:'';
+ const dayTag=list.length?`<span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${_escAttr(m.text)}">${m.title}</button>`).join('')}</span>`:'';
  return dayTag+seasonBar;
 }
 
@@ -12323,7 +12342,7 @@ function renderUnion(){
  const row=(S.tables[g]||{})[t.name];
  if(row)rec=row.w+'胜'+row.l+'负 · '+row.pts+'分';
  });
- return `<tr class="${t.mine?'me':''}" style="cursor:pointer" onclick="showSquad('${t.name}')">
+ return `<tr class="${t.mine?'me':''}" style="cursor:pointer" onclick="showSquad('${_escAttr(t.name)}')">
  <td>${i+1}</td><td>${crest(t.icon,t.name,18)} ${t.name}${t.mine?' ★':''}${dst?` <span class="tag" style="color:var(--gold)">${dst}连冠</span>`:''}</td>
  <td><b class="cyan">${fmt(t.power)}</b></td><td>${avg}</td>
  <td>${core?core.name+' <b style="color:'+ovrColor(overall(core))+'">'+overall(core)+'</b>':'—'}</td>
@@ -12806,7 +12825,7 @@ function renderMarket(){
   <div style="max-height:300px;overflow-y:auto">${cands.map(c=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
   <div class="vs"><span class="tname" style="font-size:13px">${c.p.name} <span style="color:var(--dim);font-size:10px">(${c.from} · ${POS[c.p.pos][0]} · 总值${overall(c.p)} · ${c.p.age}岁)${gaps.includes(c.p.pos)?' <b class="red">缺位优先</b>':''}</span></span></div>
   <div class="score" style="font-size:13px;min-width:0">租金 ${c.rent}万</div>
-  <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${c.from}','${c.p.id}')">租借 ${LOAN_DAYS}天</button>
+  <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${_escAttr(c.from)}','${c.p.id}')">租借 ${LOAN_DAYS}天</button>
   </div>`).join('')||'<div class="hint">联盟暂无可租借的选手</div>'}</div>
   </div>`;
  }
@@ -12881,7 +12900,7 @@ function renderCoachMarket(){
   <div class="vs"><span class="tname" style="font-size:13px">${c.name} <span class="dim" style="font-size:10px">(${c.from} · ${POS[c.pos][0]} · 总值${c.ovr}${c.gap?' · <b class="red">缺位优先</b>':''})</span></span></div>
   <div class="score" style="font-size:13px">租金 ${c.rent}万</div>
   <div style="display:flex;gap:4px">
-   <button class="btn sm primary" onclick="loanPlayer(S,'${c.from}','${c.id}')">立即租借</button>
+   <button class="btn sm primary" onclick="loanPlayer(S,'${_escAttr(c.from)}','${c.id}')">立即租借</button>
    <button class="btn sm" onclick="coachRequest(S,'loan','${c.id}')">申请租借</button>
   </div>
   </div>`).join('')||'<div class="hint">联盟暂无可租借选手</div>'}</div>
@@ -12985,7 +13004,7 @@ function renderCareer(){
  html+=`<div class="panel" style="border-color:var(--gold)"><h3>媒体采访 <span class="tag" style="color:var(--gold)">待答复${mediaAge>0?' · 已等 '+mediaAge+' 天':''}</span></h3>
  <div class="hint" style="margin-bottom:8px">${c.media.q}${c.mediaBuff==='train'?'<br><span class="dim">上次采访加成仍有效：下次加练 +1</span>':''}</div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
- ${(c.media.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="playerRespondMedia(S,${i})" title="${o.tip}">${o.l}</button>`).join('')}
+ ${(c.media.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="playerRespondMedia(S,${i})" title="${_escAttr(o.tip)}">${o.l}</button>`).join('')}
  </div>
  </div>`;
  }
@@ -14264,8 +14283,8 @@ function restoreAutoBackup(){
  if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
  if(!confirm('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
  try{
- const cur=localStorage.getItem(slotKey());
- if(cur)localStorage.setItem(slotKey()+'_pre_restored',cur);
+ const cur=storeGet(slotKey());
+ if(cur)storeSet(slotKey()+'_pre_restored',cur);
  S=JSON.parse(raw);
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
  resetRuntimeGlobals();
@@ -14449,8 +14468,8 @@ function resetGame(){
  if(uiDebounce('reset',800))return;
 
  try{
- const raw=localStorage.getItem(slotKey());
- if(raw)localStorage.setItem(slotKey()+'_pre_reset',raw);
+ const raw=storeGet(slotKey());
+ if(raw)storeSet(slotKey()+'_pre_reset',raw);
  }catch(e){}
  const season=(S&&S.season)?('第'+S.season+'赛季'):('空档');
  const team=(S&&S.teamName)||'当前槽';
@@ -14699,7 +14718,7 @@ function rollPlayerTeams(){
  for(let i=0;i<3&&pool.length;i++)window._pcTeams.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
  if(!_pcTeam||!window._pcTeams.some(c=>c.name===_pcTeam))_pcTeam=window._pcTeams[0].name;
  const box=$('#pc-teams');
- if(box)box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${c.name}')">
+ if(box)box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${_escAttr(c.name)}')">
  ${crest(c.icon,c.name,30)}<div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
  <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
 }
@@ -14707,7 +14726,7 @@ function pickPlayerTeam(n){ // 只改选中态，禁止整批重掷——否则�
   _pcTeam=n;
   const box=$('#pc-teams');
   if(box&&window._pcTeams){
-    box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${c.name}')">
+    box.innerHTML=window._pcTeams.map(c=>`<div class="club-card" style="cursor:pointer;border-color:${c.name===_pcTeam?'var(--cyan)':'var(--line)'}" onclick="pickPlayerTeam('${_escAttr(c.name)}')">
     ${crest(c.icon,c.name,30)}<div style="font-weight:800;font-size:13px;margin:4px 0">${c.name}</div>
     <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
   }

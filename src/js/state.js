@@ -111,6 +111,22 @@ const SAVE_DEFAULTS=[
  ['marketRefreshed',false,'当日市场已刷新'],
  ['academyTrained',false,'当日青训已培养'],
  ['champion',false,'本赛季夺冠'],
+ ['ewcDone',false,'本年 EWC 已打完'],
+ ['agDone',false,'本年亚运已打完'],
+ ['tactic','balanced','当前战术'],
+ ['tacticW',null,'战术研究权重'],
+ ['tempSeats',[],'临时席位'],
+ ['tempSeatFixed',[],'夺冠保留下季席位'],
+ ['tempSeatLog',[],'临时席位变动'],
+ ['natAnnounced',false,'亚运征召已宣布'],
+ ['natSquad',null,'国家队名单'],
+ ['natCampIds',[],'集训选手 id'],
+ ['natCampDay',0,'集训日计数'],
+ ['ag',null,'亚运赛段'],
+ ['windowSold',0,'转会窗已卖人数'],
+ ['transferWindowStart',0,'转会窗起始日'],
+ ['_actedDay',-1,'当日行动日戳'],
+ ['tacticPatch',null,'版本补丁记录'],
 ];
 function applySaveDefaults(s){
  SAVE_DEFAULTS.forEach(([k,d])=>{
@@ -411,8 +427,9 @@ function heroAtPos(heroId,pos){const h=heroOf(heroId);return h&&h.pos.includes(p
 /* 当前战术权重：玩家在战术板选了战术就用它的权重（四维总和恒 1），否则用标准权重。
  S.tacticW 只由战术板写入——平衡门禁的模拟不设置，战力体系对门禁保持原样。 */
 function tacticWeights(){
- const t=(typeof S!=='undefined'&&S&&S.tacticW)?S.tacticW:null;
- return t||BASE_W;
+ const t=(typeof S!=='undefined'&&S)?S.tacticW:null;
+ // 空对象/缺字段都回落基础权重，否则 w.lane=undefined -> 全队战力 NaN
+ return (t&&typeof t.lane==='number'&&isFinite(t.lane))?t:BASE_W;
 }
 function playerPower(p,heroId){if(!p)return 0;
  const a=p&&p.attrs?{lane:p.attrs.lane||70,farm:p.attrs.farm||70,team:p.attrs.team||70,mind:p.attrs.mind||70}:{lane:70,farm:70,team:70,mind:70};
@@ -1003,7 +1020,8 @@ function migrateFixZeroZero(s){
 }
 function migrateSeasonShape(s){
  if(!seasonShapeOk(s)){
- s.phase='r1';s.matchIdx=0;
+ if(typeof setPhase==='function')setPhase(s,'r1',{who:'newSeason',force:true});else s.phase='r1';
+s.matchIdx=0;
  s.groups={};s.tables={};s.aiPower={};s.card=null;s.playoff=null;s.eliminated=[];
  s.stage='regular';s.champion=false;
  }
@@ -1087,7 +1105,7 @@ function ensureSeason(s){
  }
 }
 function load(){
- try{const d=localStorage.getItem(slotKey());if(d){S=JSON.parse(d);
+ try{const d=storeGet(slotKey());if(d){S=JSON.parse(d);
  // 时代联盟按档重装：era 档装该时代；现代档也必须还原默认联盟（否则上一档的时代数据残留错装）
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
  migrateSave();return true;}}

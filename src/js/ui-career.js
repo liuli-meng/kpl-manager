@@ -79,7 +79,7 @@ function renderCareer(){
  html+=`<div class="panel" style="border-color:var(--gold)"><h3>媒体采访 <span class="tag" style="color:var(--gold)">待答复${mediaAge>0?' · 已等 '+mediaAge+' 天':''}</span></h3>
  <div class="hint" style="margin-bottom:8px">${c.media.q}${c.mediaBuff==='train'?'<br><span class="dim">上次采访加成仍有效：下次加练 +1</span>':''}</div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
- ${(c.media.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="playerRespondMedia(S,${i})" title="${o.tip}">${o.l}</button>`).join('')}
+ ${(c.media.opts||[]).map((o,i)=>`<button class="btn sm ${i===0?'primary':''}" onclick="playerRespondMedia(S,${i})" title="${_escAttr(o.tip)}">${o.l}</button>`).join('')}
  </div>
  </div>`;
  }

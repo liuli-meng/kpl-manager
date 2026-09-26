@@ -75,7 +75,7 @@ function missionStrip(s){
  const list=activeMissions(s);
  const seasonBar=seasonQuestStrip(s);
  if(!list.length&&!seasonBar)return '';
- const dayTag=list.length?`<span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${m.text}">${m.title}</button>`).join('')}</span>`:'';
+ const dayTag=list.length?`<span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${_escAttr(m.text)}">${m.title}</button>`).join('')}</span>`:'';
  return dayTag+seasonBar;
 }
 /* ================= 第一赛季主线（5 件事） =================

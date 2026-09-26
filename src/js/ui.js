@@ -1168,7 +1168,7 @@ function renderUnion(){
  const row=(S.tables[g]||{})[t.name];
  if(row)rec=row.w+'胜'+row.l+'负 · '+row.pts+'分';
  });
- return `<tr class="${t.mine?'me':''}" style="cursor:pointer" onclick="showSquad('${t.name}')">
+ return `<tr class="${t.mine?'me':''}" style="cursor:pointer" onclick="showSquad('${_escAttr(t.name)}')">
  <td>${i+1}</td><td>${crest(t.icon,t.name,18)} ${t.name}${t.mine?' ★':''}${dst?` <span class="tag" style="color:var(--gold)">${dst}连冠</span>`:''}</td>
  <td><b class="cyan">${fmt(t.power)}</b></td><td>${avg}</td>
  <td>${core?core.name+' <b style="color:'+ovrColor(overall(core))+'">'+overall(core)+'</b>':'—'}</td>

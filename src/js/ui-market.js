@@ -149,7 +149,7 @@ function renderMarket(){
   <div style="max-height:300px;overflow-y:auto">${cands.map(c=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
   <div class="vs"><span class="tname" style="font-size:13px">${c.p.name} <span style="color:var(--dim);font-size:10px">(${c.from} · ${POS[c.p.pos][0]} · 总值${overall(c.p)} · ${c.p.age}岁)${gaps.includes(c.p.pos)?' <b class="red">缺位优先</b>':''}</span></span></div>
   <div class="score" style="font-size:13px;min-width:0">租金 ${c.rent}万</div>
-  <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${c.from}','${c.p.id}')">租借 ${LOAN_DAYS}天</button>
+  <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${_escAttr(c.from)}','${c.p.id}')">租借 ${LOAN_DAYS}天</button>
   </div>`).join('')||'<div class="hint">联盟暂无可租借的选手</div>'}</div>
   </div>`;
  }
@@ -224,7 +224,7 @@ function renderCoachMarket(){
   <div class="vs"><span class="tname" style="font-size:13px">${c.name} <span class="dim" style="font-size:10px">(${c.from} · ${POS[c.pos][0]} · 总值${c.ovr}${c.gap?' · <b class="red">缺位优先</b>':''})</span></span></div>
   <div class="score" style="font-size:13px">租金 ${c.rent}万</div>
   <div style="display:flex;gap:4px">
-   <button class="btn sm primary" onclick="loanPlayer(S,'${c.from}','${c.id}')">立即租借</button>
+   <button class="btn sm primary" onclick="loanPlayer(S,'${_escAttr(c.from)}','${c.id}')">立即租借</button>
    <button class="btn sm" onclick="coachRequest(S,'loan','${c.id}')">申请租借</button>
   </div>
   </div>`).join('')||'<div class="hint">联盟暂无可租借选手</div>'}</div>

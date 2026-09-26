@@ -155,6 +155,7 @@ const CREST_SWATCHES=[
  ['#0E8A6A','#05332A','#BFE8D8'],['#FF7A00','#241100','#FFFFFF'],['#16346E','#081226','#E0A93B'],
 ];
 const _escTxt=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const _escAttr=s=>_escTxt(s).replace(/'/g,'&#39;'); // onclick='...' 属性内插值必须再转单引号
 const _lum=hex=>{ // 0..1 近似亮度，决定纹章文字用白还是深墨
  const n=parseInt(hex.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;
  return 0.2126*r+0.7152*g+0.0722*b;
