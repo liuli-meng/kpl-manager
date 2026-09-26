@@ -448,6 +448,30 @@ function playoffStep(s){
  if(p.lbf.r===null&&p.lbf.a&&p.lbf.b){playPoMatch(s,p.lbf,'败者组决赛');return;}
  if(p.final.a===null){p.final.a=p.wf.r;p.final.b=p.lbf.r;}
  if(p.final.r===null&&p.final.a&&p.final.b){playPoMatch(s,p.final,'总决赛');return;}
+ // 对阵残缺：只从已有赛果回填 a/b，禁止填假队名（会把整届季后赛一口气打完）
+ let repaired=false;
+ const fillFrom=(m,a,b)=>{
+  if(!m||m.r!==null)return;
+  if(m.a==null&&a){m.a=a;repaired=true;}
+  if(m.b==null&&b){m.b=b;repaired=true;}
+ };
+ for(let i=0;i<2;i++){
+  if(p.lb&&p.lb[i]&&p.wb&&p.wb[i]&&p.wb[i].r){
+   fillFrom(p.lb[i],p.wb[i].r===p.wb[i].a?p.wb[i].b:p.wb[i].a,p.wb[1-i]&&p.wb[1-i].r?p.wb[1-i].r:null);
+  }
+  if(p.lb2&&p.lb2[i]&&p.lb&&p.lb[i]&&p.lb[i].r)fillFrom(p.lb2[i],null,p.lb[i].r);
+  if(p.lb3&&p.lb3[i]&&p.wb&&p.wb[i]&&p.wb[i].r)fillFrom(p.lb3[i],p.wb[i].r===p.wb[i].a?p.wb[i].b:p.wb[i].a,p.lb2&&p.lb2[i]&&p.lb2[i].r?p.lb2[i].r:null);
+ }
+ if(p.wf&&p.wb&&p.wb[0]&&p.wb[1]&&p.wb[0].r&&p.wb[1].r)fillFrom(p.wf,p.wb[0].r,p.wb[1].r);
+ if(repaired){playoffStep(s);return;}
+ // 仍有进行中系列赛：交给续赛入口
+ if(s.series)return;
+ // 真的无赛可打且未出冠军：只留痕，不编造冠军/不强制淘汰（避免误杀正常季后赛收尾）
+ if(!p.final.r){
+  logEvent(s,'⚠ 季后赛对阵数据不完整，暂无法继续——可读档恢复或等待下一赛段');
+  save();renderAll();
+  return;
+ }
  if(p.final.r){
  p.champ=p.final.r;
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split||'spring',event:SPLIT_NAME[s.split]||'春季赛',champ:p.final.r}]).slice(-48); // 王朝统计（连冠反制用，一年两冠按时间序）

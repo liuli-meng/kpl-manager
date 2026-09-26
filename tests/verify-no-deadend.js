@@ -61,6 +61,11 @@ const stateSig = dom => vm.runInContext(`JSON.stringify([S.day,S.season,S.phase,
   S.matchIdx,(S.playoff&&S.playoff.final&&S.playoff.final.r)||'',S.champion?1:0,S.eliminated?S.eliminated.length:0,
   Object.keys(S.achieved||{}).length,S.board&&S.board.fired?1:0,
   S.preseason?1:0,S.transferWindow||0,
+  (S.ag&&S.ag.champ)||'',(S.annual&&S.annual.champ)||'',
+  S.ag?[].concat(S.ag.qf||[],S.ag.sf||[],[S.ag.final]).filter(m=>m&&m.r).length:0,
+  S.annual&&S.annual.po?[].concat(S.annual.po.masters||[],S.annual.po.elites||[],[S.annual.po.final]).filter(m=>m&&m.r).length:0,
+  S.challenger?[].concat(S.challenger.qf||[],S.challenger.sf||[],[S.challenger.final]).filter(m=>m&&m.r).length:0,
+  S.ewc?[].concat(S.ewc.qf||[],S.ewc.sf||[],[S.ewc.final]).filter(m=>m&&m.r).length:0,
   window._draft?['d'+window._draft.idx,'p'+Object.keys(window._draft.myPicks||{}).length,'b'+(window._draft.myBans||[]).length].join('_'):'nodraft'])`, dom);
 const modalState = dom => vm.runInContext(`(function(){
   const ids=['app-modal','start-modal'].filter(id=>document.getElementById(id).classList.contains('on'));

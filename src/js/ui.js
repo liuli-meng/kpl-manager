@@ -352,6 +352,11 @@ function nextAction(s){
  }
  if(p==='playoff'){
  const pf=s.playoff;
+ // 已有进行中的系列赛：走 startPlayoff→playPoMatch→showPreMatch 续赛。
+ // 不能指到 uiStartMatch/startMatch——那条路只认常规赛 schedule，季后赛会「赛程已结束」空转。
+ if(s.series&&s.series.stage==='po'){
+  return {type:'startPlayoff',label:' 继续季后赛 · BP 开赛',fn:'startPlayoff'};
+ }
  if(!pf||!pf.final)return null;
  // 决赛已打完但年度结算未跑（读档丢 _afterMatch）：仍给收尾入口
  if(pf.final.r&&!pf.champ)return {type:'startPlayoff',label:' 季后赛结算 · 推进赛历',fn:'startPlayoff'};

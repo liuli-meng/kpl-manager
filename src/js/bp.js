@@ -525,6 +525,8 @@ function bpAutoAll(){
  if(!confirm('开启后本系列赛剩余局次将自动 BP 并直接开赛，不再弹 BP 界面（想手动参与就别开）。确定开启？'))return;
  S.seriesAuto=true;
  closeModal('app-modal');
+ // 草稿已损坏（idx 走完却 0 选人）时也走无 UI 自动局，避免确认按钮点了没反应
+ if(window._draft&&!window._draft.myPicks)window._draft=null;
  autoPlayNext();
 }
 /* 无 UI 自动跑完一整局 BP（系列赛自动模式） */
@@ -626,10 +628,22 @@ function bpSwapIn(pid){
  renderBP();
 }
 function bpConfirm(){
- const d=window._draft;if(!d){toast('未找到BP状态');return;}
+ const d=window._draft;
+ if(!d){
+  // 草稿丢失但系列赛还在：直接无 UI 打完本局，避免「未找到BP状态」后原地卡死
+  if(S&&S.series){toast('BP 状态丢失，已自动完成本局');S.seriesAuto=true;closeModal('app-modal');autoPlayNext();return;}
+  toast('未找到BP状态');return;
+ }
  if(d.stage!=='done')bpSuggest();
- const sels={...d.myPicks};
- if(POS_ORDER.some(pos=>!sels[pos])){toast('还有位置没选英雄');return;}
+ let sels={...d.myPicks};
+ if(POS_ORDER.some(pos=>!sels[pos])){
+  // 坏草稿（半截/被还原清空）：补自动选人再确认，仍不行就交给 autoPlayNext
+  try{bpSuggest();sels={...d.myPicks};}catch(e){}
+ }
+ if(POS_ORDER.some(pos=>!sels[pos])){
+  if(S&&S.series){toast('BP 未完成，已自动接管本局');S.seriesAuto=true;closeModal('app-modal');window._draft=null;autoPlayNext();return;}
+  toast('还有位置没选英雄');return;
+ }
  const sr=d.sr;
  if(sr){sr.myBans=(d.myBans||[]).slice(0,4);sr.oppBans=(d.oppBans||[]).slice(0,4);sr.oppPicks={...d.oppPicks};}
  applyBp(sels);

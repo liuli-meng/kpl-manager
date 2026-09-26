@@ -115,6 +115,40 @@ const scored = p => [p.wb, p.lb, p.lb2, p.lb3].flat().concat([p.wf, p.lb4, p.lbf
   check(after.noGo === 0, `⑥ 紧急补签后仍缺位 ${after.noGo} 个位置`);
   check(after.draft, '⑥ 补齐阵容后 BP 仍未打开（玩家还是打不了这场）');
 
+  // ⑦ 季后赛已有进行中系列赛：nextAction 必须走 startPlayoff 续赛，不能指到 startMatch
+  //    （startMatch 只认常规赛 schedule，季后赛会「赛程已结束」空转 → 死按钮）
+  {
+    const r = vm.runInContext(`(function(){
+      S=newState('续赛队','⚔');fillRoster(S,'mid','star');
+      S.coach={...coachDef('co12')};S.lineup=S.players.map(p=>p.id);
+      S.preseason=false;S.transferWindow=0;S.phase='playoff';
+      S.playoff={wb:[{a:S.teamName,b:'甲',r:null},{a:'乙',b:'丙',r:null}],lb:[{a:null,b:null,r:null},{a:null,b:null,r:null}],
+        lb2:[],lb3:[],wf:{a:null,b:null,r:null},lb4:{a:null,b:null,r:null},lbf:{a:null,b:null,r:null},final:{a:null,b:null,r:null},champ:null};
+      S.series={used:[],usedOpp:[],mw:1,ow:0,max:7,stage:'po',mid:'po_wb1',poSlot:'wb1',logs:[],myName:S.teamName,opName:'甲',side:'blue'};
+      return JSON.stringify(nextAction(S));
+    })()`, dom);
+    const a = JSON.parse(r || '{}');
+    check(a && a.fn === 'startPlayoff', `⑦ 季后续赛入口应为 startPlayoff，实际 ${r}`);
+  }
+
+  // ⑧ BP 草稿丢失/半截时 bpConfirm 不得空转：应自动接管本局
+  {
+    const r = vm.runInContext(`(function(){
+      S=newState('BP自愈','⚔');fillRoster(S,'mid','star');
+      S.coach={...coachDef('co12')};S.lineup=S.players.map(p=>p.id);
+      S.preseason=false;S.transferWindow=0;initGroups(S);
+      startMatch();
+      if(!S.series)return 'no-series';
+      window._draft=null;
+      const before=(S.series.mw||0)+(S.series.ow||0);
+      try{bpConfirm();}catch(e){return 'throw:'+e.message;}
+      const after2=S.series?((S.series.mw||0)+(S.series.ow||0)):before+1;
+      return after2>before? 'ok '+before+'->'+after2 : 'stuck '+before+'->'+after2;
+    })()`, dom);
+    check(r && String(r).startsWith('ok'),
+      `⑧ bpConfirm 在草稿丢失时应自动打完本局，实际 ${r}`);
+  }
+
 }
 
 if (errors.length) {
