@@ -319,9 +319,15 @@ const out = vm.runInContext(`
     try{S=s17;goPage('market');h17=document.querySelector('#page-market').innerHTML;}catch(e){fail('⑰ 渲染异常 '+e.message);}
     const wrap=(h17.match(/onclick="draftPick\\('/g)||[]).length;
     const btn=(h17.match(/<button[^>]*onclick="draftPick\\('/g)||[]).length;
+    const prof=(h17.match(/showCareer\\(findPlayerCard/g)||[]).length;
     if(!wrap)fail('⑰ 池卡片外层没有 onclick（点卡片本体没反应 → 会被当成选不了人）');
     else if(btn)fail('⑰ 内层按钮也挂了 onclick：点击会冒泡触发两次 draftPick');
-    else log('⑰ 点名阶段 '+wrap+' 张卡整卡可点（onclick 只在容器上，单次触发）');
+    else if(prof)fail('⑰ 选秀卡仍带「选手档案」按钮（会弹「选手已不在」并干扰点名）');
+    else log('⑰ 点名阶段 '+wrap+' 张卡整卡可点（onclick 只在容器上，无档案按钮干扰）');
+    // 选秀池 id 必须能被 findPlayerCard 找到（档案/其它入口共用）
+    const pid17=d17.pool[0]&&d17.pool[0].id;
+    if(pid17&&!findPlayerCard(pid17))fail('⑰ 选秀池选手 findPlayerCard 查不到（档案入口坏）');
+    else log('⑰b findPlayerCard 能命中选秀池');
   }
 
   // ⑱ 老档 done/phase 不一致 → 归一化，否则面板显示进行中却一个按钮都不给

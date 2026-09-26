@@ -7017,7 +7017,7 @@ function draftPick(s,id){
  toast(' 选秀签下 '+p.name+'！');
  d.slot++;
  draftNextSlot(s);
- if(!d.done){save();renderAll();} // 以前这里既不复盘也不刷新：点完「点名签约」画面纹丝不动、还没落盘
+ save();renderAll(); // 收官也要刷新：最后一签点完画面不更新会被当成「点了没反应」
 }
 function draftSkip(s){
  if(s===undefined)s=S;
@@ -7114,10 +7114,11 @@ function draftPanelHtml(){
  if(interactive){
  html+=`<div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
+
  const card=pcard(p,interactive
  ?(blocked?`<div class="hint mt8">本队青训 · 不可选</div>`
  :`<button class="btn sm primary mt8" style="width:100%"> 点名签约</button>`)
- :'');
+ :'',{hideProfile:true});
 
  return (interactive&&!blocked)
  ?`<div onclick="draftPick('${p.id}')" style="cursor:pointer" title="点击签约">${card}</div>`
@@ -7126,7 +7127,7 @@ function draftPanelHtml(){
  }else{
 
  const src=p=>{const t=(p.tags||[]).filter(x=>x!=='选秀'&&x!=='青训出身');return t.join('/')||'训练营';};
- html+=`<div class="hint" style="margin-bottom:6px">新秀池 ${d.pool.length} 人 · 轮到你点名时自动展开为可点卡片</div>
+ html+=`<div class="hint" style="margin-bottom:6px"><b>要先「叫价」拍下签位，才能点名选人</b>（当前是竞拍阶段）。新秀池 ${d.pool.length} 人 · 轮到你点名时会展开为可点卡片</div>
  <div style="max-height:220px;overflow-y:auto">${d.pool.map(p=>`<div class="match" style="margin-bottom:4px;padding:5px 8px">
  <div class="vs"><span class="tname" style="font-size:12px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.age||18}岁${p.fromClub?' · '+p.fromClub+'青训':''})</span></span></div>
  <div class="power" style="font-size:10px">${src(p)}</div>
@@ -11176,8 +11177,9 @@ function playerAutoSeries(s,opName,bo){ // 自动打完整场系列赛，返回 
 
 </script>
 <script>
-function pcard(p,extra){
+function pcard(p,extra,opts){
  if(!p)return '<div class="pcard r"><div class="p-name">选手数据缺失</div></div>';
+ opts=opts||{};
 
  if(!p.attrs)p.attrs={lane:70,farm:70,team:70,mind:70};
  if(!p.skill)p.skill={n:'—',d:'—',t:'team'};
@@ -11221,11 +11223,18 @@ function pcard(p,extra){
  </div>
  <div class="p-foot"><span class="pf"><i>战力</i><b>${pow}</b></span><span class="pf"><i>身价</i><b class="${(p.val||100)>=110?'green':(p.val||100)<90?'red':''}">${sellAskPrice(p)}万</b></span><span class="pf"><i>年薪</i><b class="p-salary">${p.wage}万</b></span></div>
  ${energyBar(p)}
- <button class="btn sm" style="margin-top:6px" onclick="showCareer(findPlayerCard('${p.id}'))">选手档案</button>
+ ${opts.hideProfile?'':`<button class="btn sm" style="margin-top:6px" onclick="event.stopPropagation();showCareer(findPlayerCard('${p.id}'))">选手档案</button>`}
  ${extra||''}
  </div>`;
 }
-function findPlayerCard(id){return S.players.find(x=>x.id===id)||S.market.find(x=>x.id===id)||null;}
+function findPlayerCard(id){
+
+  return (S.players||[]).find(x=>x.id===id)
+    ||(S.market||[]).find(x=>x.id===id)
+    ||(S.draft&&S.draft.pool||[]).find(x=>x.id===id)
+    ||(S.freeAgents||[]).find(x=>x.id===id)
+    ||null;
+}
 
 function showReplay(h){
  if(!h||!h.logs)return;

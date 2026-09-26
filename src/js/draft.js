@@ -442,7 +442,7 @@ function draftPick(s,id){
  toast(' 选秀签下 '+p.name+'！');
  d.slot++;
  draftNextSlot(s);
- if(!d.done){save();renderAll();} // 以前这里既不复盘也不刷新：点完「点名签约」画面纹丝不动、还没落盘
+ save();renderAll(); // 收官也要刷新：最后一签点完画面不更新会被当成「点了没反应」
 }
 function draftSkip(s){
  if(s===undefined)s=S;
@@ -549,12 +549,14 @@ function draftPanelHtml(){
  if(interactive){
  html+=`<div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
+ // 选秀卡不带「选手档案」按钮：它会截走点名点击并弹「选手已不在」，玩家以为选不了人
+ // 「点名签约」按钮不挂 onclick：靠外层容器冒泡触发 draftPick，保证一次点击只点一次（见 verify-draft ⑰）
  const card=pcard(p,interactive
  ?(blocked?`<div class="hint mt8">本队青训 · 不可选</div>`
  :`<button class="btn sm primary mt8" style="width:100%"> 点名签约</button>`)
- :'');
+ :'',{hideProfile:true});
  /* 整张卡可点：只把小按钮做成热区时，玩家点卡片本体没反应，会被当成「选不了人」。
-    onclick 只挂在外层容器上（内层按钮靠冒泡触发，避免一次点击调用两次 draftPick）。 */
+    档案按钮 stopPropagation，避免一次点击既弹档案又点名。 */
  return (interactive&&!blocked)
  ?`<div onclick="draftPick('${p.id}')" style="cursor:pointer" title="点击签约">${card}</div>`
  :card;
@@ -565,7 +567,7 @@ function draftPanelHtml(){
     这里压成紧凑行（约 3 KB），信息一条不少；轮到自己点名时仍走上面的完整卡片路径，
     「整卡可点」和满员提示（0aeaf0b）都不受影响。 */
  const src=p=>{const t=(p.tags||[]).filter(x=>x!=='选秀'&&x!=='青训出身');return t.join('/')||'训练营';};
- html+=`<div class="hint" style="margin-bottom:6px">新秀池 ${d.pool.length} 人 · 轮到你点名时自动展开为可点卡片</div>
+ html+=`<div class="hint" style="margin-bottom:6px"><b>要先「叫价」拍下签位，才能点名选人</b>（当前是竞拍阶段）。新秀池 ${d.pool.length} 人 · 轮到你点名时会展开为可点卡片</div>
  <div style="max-height:220px;overflow-y:auto">${d.pool.map(p=>`<div class="match" style="margin-bottom:4px;padding:5px 8px">
  <div class="vs"><span class="tname" style="font-size:12px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.age||18}岁${p.fromClub?' · '+p.fromClub+'青训':''})</span></span></div>
  <div class="power" style="font-size:10px">${src(p)}</div>

@@ -3,8 +3,9 @@
 /* ============ PART3 ============ */
 
 /* ================= 卡牌渲染 ================= */
-function pcard(p,extra){
+function pcard(p,extra,opts){
  if(!p)return '<div class="pcard r"><div class="p-name">选手数据缺失</div></div>';
+ opts=opts||{};
  // 残缺档兜底：attrs/skill/pos 任一缺失都不能把阵容/转会整页打崩
  if(!p.attrs)p.attrs={lane:70,farm:70,team:70,mind:70};
  if(!p.skill)p.skill={n:'—',d:'—',t:'team'};
@@ -49,11 +50,18 @@ function pcard(p,extra){
  </div>
  <div class="p-foot"><span class="pf"><i>战力</i><b>${pow}</b></span><span class="pf"><i>身价</i><b class="${(p.val||100)>=110?'green':(p.val||100)<90?'red':''}">${sellAskPrice(p)}万</b></span><span class="pf"><i>年薪</i><b class="p-salary">${p.wage}万</b></span></div>
  ${energyBar(p)}
- <button class="btn sm" style="margin-top:6px" onclick="showCareer(findPlayerCard('${p.id}'))">选手档案</button>
+ ${opts.hideProfile?'':`<button class="btn sm" style="margin-top:6px" onclick="event.stopPropagation();showCareer(findPlayerCard('${p.id}'))">选手档案</button>`}
  ${extra||''}
  </div>`;
 }
-function findPlayerCard(id){return S.players.find(x=>x.id===id)||S.market.find(x=>x.id===id)||null;}
+function findPlayerCard(id){
+  // 选秀池/自由市场也要能打开档案：原来只查 players/market，选秀卡上点「选手档案」永远「选手已不在」
+  return (S.players||[]).find(x=>x.id===id)
+    ||(S.market||[]).find(x=>x.id===id)
+    ||(S.draft&&S.draft.pool||[]).find(x=>x.id===id)
+    ||(S.freeAgents||[]).find(x=>x.id===id)
+    ||null;
+}
 /* 选手档案弹窗 */
 /* 比赛复盘：回放历史比赛逐局日志 */
 function showReplay(h){
