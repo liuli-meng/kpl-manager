@@ -258,11 +258,112 @@ function uiStartCup(s){if(uiGuard())return;startCup(s);}
 function uiSkipTransfer(s){if(uiGuard())return;skipTransferWindow(s);}
 function uiEndPreseason(s){if(uiGuard())return;endPreseason(s);}
 /* 杯赛/淘汰赛共用：对阵行 + 我方是否还有待打场次（原先每个面板各自复制一份） */
-function cupMatchRow(m,tag){
- return `<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:13px">${tag?tag+'：':''}${m.a?m.a:'待定'} vs ${m.b?m.b:'待定'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+function cupMatchRow(m,tag,opts){
+ opts=opts||{};
+ const me=opts.me||null;
+ const isMine=!!(me&&m&&(m.a===me||m.b===me));
+ const isNext=!!opts.next;
+ const border=isNext?'border-color:var(--cyan);box-shadow:0 0 0 1px rgba(60,200,220,.35)':(isMine?'border-color:var(--accent)':'');
+ const mark=isNext?' <span class="tag" style="margin-left:4px">下一场</span>':(isMine&&!m.r?' <span class="tag">我方</span>':'');
+ const left=m&&m.a?m.a:'待定',right=m&&m.b?m.b:'待定';
+ const score=m&&m.r?(m.r+' 晋级'):(m&&m.a&&m.b?'待赛':'等待对手决出');
+ return `<div class="match" style="margin-bottom:6px;${border}"><div class="vs"><span class="tname" style="font-size:13px${isMine?';font-weight:700':''}">${tag?tag+'：':''}${left} vs ${right}${mark}</span></div><div class="score" style="font-size:12px">${score}</div></div>`;
 }
 function hasMyPending(list,team){
  return (list||[]).some(m=>m&&!m.r&&(m.a===team||m.b===team));
+}
+/* 季后赛全量对阵（俱乐部页/联赛页共用）：按双败推进顺序列出，带轮次标签 */
+function poAllMatches(pf){
+ const list=[];
+ if(!pf)return list;
+ const push=(m,tag)=>{if(m)list.push({m,tag});};
+ (pf.wb||[]).forEach((m,i)=>push(m,'胜者组R'+(i+1)));
+ push(pf.wf,'胜者组决赛');
+ (pf.lb||[]).forEach((m,i)=>push(m,'败者组R'+(i+1)));
+ (pf.lb2||[]).forEach((m,i)=>push(m,'败者组R2·'+(i+1)));
+ (pf.lb3||[]).forEach((m,i)=>push(m,'败者组R3·'+(i+1)));
+ push(pf.lb4,'败者组半决赛');
+ push(pf.lbf,'败者组决赛');
+ push(pf.final,' 总决赛');
+ return list;
+}
+/* 我方下一场：优先「双方齐且未打」，其次「已挂进树但对手未定」 */
+function poMyNext(pf,team){
+ const all=poAllMatches(pf);
+ let n=all.find(x=>x.m&&!x.m.r&&(x.m.a===team||x.m.b===team)&&x.m.a&&x.m.b);
+ if(n)return {tag:n.tag,m:n.m,op:n.m.a===team?n.m.b:n.m.a,status:'ready'};
+ n=all.find(x=>x.m&&!x.m.r&&(x.m.a===team||x.m.b===team));
+ if(n)return {tag:n.tag,m:n.m,op:(n.m.a===team?n.m.b:n.m.a)||null,status:'wait'};
+ return null;
+}
+/* 杯赛/淘汰赛统一：全量对阵 + 我方下一场置顶（空轮次也占位，避免后半程「看不到打谁」） */
+function cupListNext(list,team){
+ const arr=(list||[]).filter(Boolean);
+ let n=arr.find(x=>x.m&&!x.m.r&&(x.m.a===team||x.m.b===team)&&x.m.a&&x.m.b);
+ if(n)return {tag:n.tag,m:n.m,op:n.m.a===team?n.m.b:n.m.a,status:'ready'};
+ n=arr.find(x=>x.m&&!x.m.r&&(x.m.a===team||x.m.b===team));
+ if(n)return {tag:n.tag,m:n.m,op:(n.m.a===team?n.m.b:n.m.a)||null,status:'wait'};
+ return null;
+}
+function cupNextBanner(nx,me,extraDone){
+ if(nx&&nx.status==='ready'){
+  return `<div class="match" style="border-color:var(--cyan);margin-bottom:10px">
+   <div class="vs"><div class="tname"><b>下一场：</b>${nx.tag} · 对手：${nx.op}</div></div>
+   <div class="score">点下方按钮开赛 / BP</div></div>`;
+ }
+ if(nx&&nx.status==='wait'){
+  return `<div class="match" style="margin-bottom:10px">
+   <div class="vs"><div class="tname"><b>下一场：</b>${nx.tag} · 对手待定</div></div>
+   <div class="score">等待前轮赛果决出对手</div></div>`;
+ }
+ return extraDone||'<div class="hint" style="margin-bottom:10px">我方暂无待打场次 · 可快进剩余对阵</div>';
+}
+function cupRows(list,me,nx){
+ const nextId=nx?nx.m:null;
+ return (list||[]).filter(Boolean).map(x=>cupMatchRow(x.m,x.tag,{me,next:nextId&&x.m===nextId})).join('');
+}
+function clubPlayoffPanel(){
+ const pf=S.playoff;
+ if(!pf||!pf.wb||!pf.lb||!pf.final)return '';
+ const me=S.teamName;
+ const myPending=hasMyPending(poAllMatches(pf).map(x=>x.m),me);
+ const nx=poMyNext(pf,me);
+ const all=poAllMatches(pf);
+ const nextId=nx?nx.m:null;
+ const row=(m,tag)=>cupMatchRow(m,tag,{me,next:nextId&&m===nextId});
+ const wbRows=(pf.wb||[]).map((m,i)=>row(m,'胜者组R'+(i+1))).join('')
+  +row(pf.wf,'胜者组决赛');
+ const lbRows=(pf.lb||[]).map((m,i)=>row(m,'败者组R'+(i+1))).join('')
+  +(pf.lb2||[]).map((m,i)=>row(m,'败者组R2·'+(i+1))).join('')
+  +(pf.lb3||[]).map((m,i)=>row(m,'败者组R3·'+(i+1))).join('')
+  +row(pf.lb4,'败者组半决赛')
+  +row(pf.lbf,'败者组决赛');
+ const finalRow=row(pf.final,' 总决赛');
+ let nextCard='';
+ if(nx&&nx.status==='ready'){
+  nextCard=`<div class="match" style="border-color:var(--cyan);margin-bottom:10px">
+   <div class="vs"><div class="tname">${nx.tag} · 对手：${nx.op}</div></div>
+   <div class="score">BO7 含巅峰对决 · 点下方按钮开赛 / BP</div></div>`;
+ }else if(nx&&nx.status==='wait'){
+  const other=nx.m.a===me?nx.m.b:nx.m.a;
+  nextCard=`<div class="match" style="margin-bottom:10px">
+   <div class="vs"><div class="tname">${nx.tag} · 对手待定</div></div>
+   <div class="score">等待 ${other||'前轮'} 赛果决出对手</div></div>`;
+ }else if(pf.final.r){
+  nextCard=`<div class="hint" style="margin-bottom:10px">本赛季季后赛已收官 · 冠军：<b>${pf.champ||pf.final.r}</b></div>`;
+ }else if(myPending){
+  nextCard=`<div class="hint" style="margin-bottom:10px">我方仍有待赛场次（见下方高亮对阵）</div>`;
+ }else{
+  nextCard=`<div class="hint" style="margin-bottom:10px">我方暂无待打场次 · 可快进剩余对阵</div>`;
+ }
+ return `<div class="panel"><h3>季后赛 <span class="tag">10强 BO7 双败淘汰</span></h3>
+ ${nextCard}
+ <div class="hint" style="margin:4px 0 6px">胜者组</div>${wbRows}
+ <div class="hint" style="margin:10px 0 6px">败者组</div>${lbRows}
+ <div class="hint" style="margin:10px 0 6px">冠军战</div>${finalRow}
+ ${!pf.final.r?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiDoNextAction(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进季后赛'}</button>`
+ :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%;margin-top:8px" onclick="uiDoNextAction(S)"> 季后赛结算 · 推进赛历</button>`:'')}
+ </div>`;
 }
 /* 选手当前不可操作（下放/外租/伤停/集训）——阵容卡按钮禁用共用 */
 function playerBusy(s,p){
@@ -480,56 +581,51 @@ function clubLeaguePhasePanel(){
  return html+`</div>`;
 }
 function clubCardPanel(){
- const myCard=S.card&&S.card.matches&&S.card.matches.find(m=>m.a===S.teamName||m.b===S.teamName);
- return `<div class="panel"><h3>卡位赛 <span class="tag">BO${KPL.CARD} · 含巅峰对决</span></h3>
- ${((S.card&&S.card.matches)||[]).map(m=>{
- const done=!!m.r;
- const me=m.a===S.teamName||m.b===S.teamName;
- return `<div class="match ${done?'':''}" style="margin-bottom:8px">
- <div class="vs"><span class="tname">${m.a}</span></div>
- <div class="score" style="font-size:13px">${done?`${m.r} 晋级`:'待赛'}</div>
- <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname">${m.b}</span></div>
- ${me?'<div class="hint" style="margin-left:8px">本队</div>':''}</div>`;
- }).join('')}
- ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)"> 进行卡位赛</button>`:''}
- <div class="hint mt8">S5 vs A2、S6 vs A1（胜者升S）；A5 vs B2、A6 vs B1（胜者进A）· 败者进低组或淘汰</div>
- </div>`;
-}
-function clubPlayoffPanel(){
- const pf=S.playoff;
- if(!pf||!pf.wb||!pf.lb||!pf.final)return '';
- // 我方是否还有待打的季后赛场次（双败制：wb/wf 失利后仍在败者组，不能只看总决赛）
- const myPending=hasMyPending([...(pf.wb||[]),...(pf.lb||[]),...(pf.lb2||[]),...(pf.lb3||[]),pf.wf,pf.lb4,pf.lbf,pf.final].filter(Boolean),S.teamName);
- const bracket=(pf.wb||[]).map(m=>cupMatchRow(m,'胜者组')).join('')
- +(pf.lb||[]).map(m=>cupMatchRow(m,'败者组')).join('');
- return `<div class="panel"><h3>季后赛 <span class="tag">10强 BO7 双败淘汰</span></h3>${bracket}
- ${!pf.final.r?`<button class="btn primary" style="width:100%" onclick="uiDoNextAction(S)">${myPending?'进行下一场':'快进季后赛'}</button>`
- :(pf.final.r&&!pf.champ?`<button class="btn gold" style="width:100%" onclick="uiDoNextAction(S)"> 季后赛结算 · 推进赛历</button>`:'')}
- ${pf.final.r?`<div class="hint mt8">总决赛：${pf.final.a} vs ${pf.final.b} · 冠军：${pf.final.r}</div>`:`<div class="hint mt8">总决赛：${pf.final.a?pf.final.a:'胜者组冠军'} vs ${pf.final.b?pf.final.b:'败者组冠军'}</div>`}
+ const matches=(S.card&&S.card.matches)||[];
+ const list=matches.map((m,i)=>({m,tag:'卡位赛·'+(i+1)}));
+ const nx=cupListNext(list,S.teamName);
+ const myCard=nx?nx.m:(matches.find(m=>m.a===S.teamName||m.b===S.teamName)||null);
+ return `<div class="panel"><h3>卡位赛 <span class="tag">BO${KPL.CARD} · 全局BP</span></h3>
+ ${cupNextBanner(nx,S.teamName)}
+ ${cupRows(list,S.teamName,nx)}
+ ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiDoNextAction(S)"> 进行卡位赛</button>`:''}
+ <div class="hint mt8">S5 vs A2、S6 vs A1（胜者升S）；A5 vs B2、A6 vs B1（胜者进A）· 败者进低组或淘汰<br><span style="opacity:.75">A↔B 卡位与 B3-B6 直接淘汰为游戏化演绎（官方明确的是 S↔A 卡位）</span></div>
  </div>`;
 }
 function clubChallengerPanel(){
  const c=S.challenger;
  if(!c)return '';
- const cupRow=m=>cupMatchRow(m);
  let body='';
  if(c.stage==='single'&&c.r1){
- const myPending=hasMyPending([...c.r1,...(c.r2||[])],S.teamName);
- body=`${c.r1.filter(m=>m.r||m.a===S.teamName||m.b===S.teamName).map(m=>cupRow(m)).join('')}
- ${c.r2?`<div class="hint" style="margin:6px 0">16强（BO7）：</div>${c.r2.map(cupRow).join('')}`:''}
- ${!c.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}`;
+  const list=[
+   ...(c.r1||[]).map((m,i)=>({m,tag:'入围/32强'+(c.r1.length>4?'·'+(i+1):'')})),
+   ...((c.r2||[]).map((m,i)=>({m,tag:'16强（BO7）'+(c.r2.length>1?'·'+(i+1):'')}))),
+  ];
+  const nx=cupListNext(list,S.teamName);
+  const myPending=hasMyPending(list.map(x=>x.m),S.teamName);
+  body=`${cupNextBanner(nx,S.teamName)}${cupRows(list,S.teamName,nx)}
+  ${!c.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}`;
  }else if(c.po&&c.po.wb1){
- const p=c.po;
- const myPending=p&&!c.final&&hasMyPending([...(p.wb1||[]),...(p.lb1||[]),...(p.wb2||[]),...(p.lb2||[]),p.wf,p.lbs,p.lbf].filter(Boolean),S.teamName);
- const mrow=(m,tag)=>cupMatchRow(m,tag);
- body=`<div class="hint" style="margin-bottom:6px">8 强双败（BO7）：</div>
- ${(p.wb1||[]).map(m=>mrow(m,'胜者组R1')).join('')}${(p.wb2||[]).map(m=>mrow(m,'胜者组SF')).join('')}${p.wf&&p.wf.a?mrow(p.wf,'胜者组决赛'):''}
- ${(p.lb1||[]).map(m=>mrow(m,'败者组R1')).join('')}${(p.lb2||[]).map(m=>mrow(m,'败者组R2')).join('')}${p.lbs&&p.lbs.a?mrow(p.lbs,'败者组SF'):''}${p.lbf&&p.lbf.a?mrow(p.lbf,'败者组决赛'):''}
- ${c.final&&c.final.a?`<div class="hint" style="margin:6px 0">总决赛（BO9 · 第9局巅峰对决）：</div>${mrow(c.final,'决赛')}`:''}
- ${!c.champ&&c.final&&!c.final.r?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场':'进行总决赛（BO9）'}</button>`:!c.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场':'快进赛程'}</button>`:''}
- ${c.champ?`<div class="hint mt8">冠军：${c.champ} —— 挑战者，皆王者！</div>`:''}`;
+  const p=c.po;
+  const list=[
+   ...(p.wb1||[]).map((m,i)=>({m,tag:'胜者组R1·'+(i+1)})),
+   ...(p.wb2||[]).map((m,i)=>({m,tag:'胜者组SF·'+(i+1)})),
+   {m:p.wf,tag:'胜者组决赛'},
+   ...(p.lb1||[]).map((m,i)=>({m,tag:'败者组R1·'+(i+1)})),
+   ...(p.lb2||[]).map((m,i)=>({m,tag:'败者组R2·'+(i+1)})),
+   {m:p.lbs,tag:'败者组SF'},
+   {m:p.lbf,tag:'败者组决赛'},
+   {m:c.final,tag:'总决赛（BO9）'},
+  ].filter(x=>x.m);
+  const nx=cupListNext(list,S.teamName);
+  const myPending=hasMyPending(list.map(x=>x.m),S.teamName);
+  body=`${cupNextBanner(nx,S.teamName)}
+  <div class="hint" style="margin-bottom:6px">8 强双败（BO7）</div>
+  ${cupRows(list,S.teamName,nx)}
+  ${!c.champ?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':(c.final&&!c.final.r?'进行总决赛（BO9）':'快进赛程')}</button>`:''}
+  ${c.champ?`<div class="hint mt8">冠军：${c.champ} —— 挑战者，皆王者！</div>`:''}`;
  }else{
- body=`<div class="hint">挑战者杯数据加载中…若持续空白请推进赛历或导出存档反馈</div>`;
+  body=`<div class="hint">挑战者杯数据加载中…若持续空白请推进赛历或导出存档反馈</div>`;
  }
  return `<div class="panel"><h3>挑战者杯 <span class="tag">32队 · 八大赛道 · 单败+双败</span></h3>
  ${body}
@@ -539,42 +635,63 @@ function clubChallengerPanel(){
 function clubEwcPanel(){
  const e=S.ewc;
  if(!e||!e.qf)return '';
- const cupRow=m=>cupMatchRow(m);
- const myPending=hasMyPending([...e.qf,...(e.sf||[]),e.final].filter(Boolean),S.teamName);
+ const list=[
+  ...(e.qf||[]).map((m,i)=>({m,tag:'八强·'+(i+1)})),
+  ...((e.sf||[]).map((m,i)=>({m,tag:'半决赛'+(e.sf.length>1?'·'+(i+1):'')}))),
+  {m:e.final,tag:'决赛'},
+ ].filter(x=>x.m);
+ const nx=cupListNext(list,S.teamName);
+ const myPending=hasMyPending(list.map(x=>x.m),S.teamName);
  return `<div class="panel"><h3>EWC 电竞世界杯 <span class="tag">利雅得 · 8强 BO7 单败</span></h3>
- ${e.qf.map(cupRow).join('')}${(e.sf||[]).filter(m=>m.a).map(cupRow).join('')}${e.final&&e.final.a?cupRow(e.final):''}
- ${!e.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:`<div class="hint mt8">冠军：${e.champ}${e.champ===S.teamName?' ——世界之巅！':''} · 赛后进入夏季赛转会期</div>`}
+ ${cupNextBanner(nx,S.teamName,e.champ?`<div class="hint" style="margin-bottom:10px">冠军：${e.champ}${e.champ===S.teamName?' ——世界之巅！':''}</div>`:null)}
+ ${cupRows(list,S.teamName,nx)}
+ ${!e.champ?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:`<div class="hint mt8">冠军：${e.champ}${e.champ===S.teamName?' ——世界之巅！':''} · 赛后进入夏季赛转会期</div>`}
  <div class="hint mt8">KPL 春季赛冠亚军（直邀，冠军=KPL名额/亚军=英雄亚冠ACL名额）+ 6 支海外劲旅 · 冠军奖金 540 万并评 FMVP</div>
  </div>`;
 }
 function clubAsiadPanel(){
  const a=S.ag;
  if(!a||!a.qf)return '';
- const row=m=>cupMatchRow(m);
+ const list=[
+  ...(a.qf||[]).map((m,i)=>({m,tag:'八强·'+(i+1)})),
+  ...((a.sf||[]).map((m,i)=>({m,tag:'半决赛'+(a.sf.length>1?'·'+(i+1):'')}))),
+  {m:a.final,tag:'决赛'},
+ ].filter(x=>x.m);
+ const nx=cupListNext(list,'中国队'); // 亚运以国家队身份推进，不按俱乐部队名找场
  return `<div class="panel"><h3>亚运会 · 王者荣耀项目 <span class="tag">${gameYear(S)} 名古屋 · 8强 BO7 单败</span></h3>
  <div class="hint" style="margin-bottom:8px"><b>中国代表队</b>（KPL 各位置当季最强，战力 ${a.myPow}）：${(a.squad||[]).map(x=>`<span class="tag" style="margin-right:4px${x.mine?';border-color:var(--gold);color:var(--gold)':''}">${POS[x.pos]?POS[x.pos][1]:'?'} ${x.name}${x.mine?' ★':''}</span>`).join('')}</div>
- ${a.qf.map(row).join('')}${(a.sf||[]).filter(m=>m.a).map(row).join('')}${a.final&&a.final.a?row(a.final):''}
- ${a.champ?`<div class="hint mt8">冠军：<b class="gold">${a.champ}</b> —— 中国队成绩：${a.medal}${a.mvp?' · MVP '+a.mvp:''} · 随后进入年度总决赛</div>`
- :`<button class="btn primary" style="width:100%" onclick="uiAsiadStep(S)">推进亚运会赛程（BO7 单败）</button>`}
+ ${a.champ?`<div class="hint" style="margin-bottom:10px">冠军：<b class="gold">${a.champ}</b> —— 中国队成绩：${a.medal}${a.mvp?' · MVP '+a.mvp:''}</div>`:cupNextBanner(nx,'中国队')}
+ ${cupRows(list,'中国队',nx)}
+ ${a.champ?`<div class="hint mt8">随后进入年度总决赛</div>`
+ :`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiAsiadStep(S)">推进亚运会赛程（BO7 单败）</button>`}
  <div class="hint mt8">教练席在国家队手里，你只负责放人：麾下入选选手按奖牌档位回流人气/身价/士气（金牌 +8/+6、银牌 +5/+4、铜牌 +3/+2），协会另发奖金；代价是年总开局体力不满。最强对手：韩国。</div>
  </div>`;
 }
 function clubAnnualPanel(){
  const a=S.annual;
  if(!a)return '';
- const cupRow=m=>cupMatchRow(m);
  if(a.stage==='arena'){
  let st={M:{},E:{}};
  try{st=arenaStandings(S)||st;}catch(e){}
  const rd=(a.rounds||[])[a.roundIdx];
- const myNext=rd?rd.find(m=>m.a===S.teamName||m.b===S.teamName):null;
- const myPending=rd?rd.find(m=>(m.a===S.teamName||m.b===S.teamName)&&!m.r):null;
+ // 全轮次列出 + 跨轮「我的下一场」（本轮没我队时不能只显示空卡）
+ const allRounds=[];
+ (a.rounds||[]).forEach((round,ri)=>{
+  (round||[]).forEach((m,mi)=>{
+   if(m&&(m.a===S.teamName||m.b===S.teamName))allRounds.push({m,tag:'第'+(ri+1)+'轮'});
+  });
+ });
+ const list=(rd||[]).map((m,i)=>({m,tag:'第'+(a.roundIdx+1)+'轮·'+(i+1)}));
+ const nx=cupListNext(allRounds,S.teamName)||cupListNext(list,S.teamName);
+ const myPending=allRounds.some(x=>x.m&&!x.m.r&&(x.m.a===S.teamName||x.m.b===S.teamName));
  const rankLine=(tbl,teams)=>(teams||[]).slice().sort((x,y)=>((tbl&&tbl[y]&&tbl[y].pts)||0)-((tbl&&tbl[x]&&tbl[x].pts)||0)||((tbl&&tbl[y]&&tbl[y].pw)||0)-((tbl&&tbl[x]&&tbl[x].pw)||0)).map(t=>t+' '+((tbl&&tbl[t]&&tbl[t].pts)||0)+'分').join(' · ');
- // 按钮始终在：本轮无我队/我队已赛时点「推进本轮」走 annualArenaNext，避免「本轮赛程进行中」卡死
  const btnTxt=myPending?'进行擂台赛 · 调整阵容 / BP 开赛':(rd?'推进本轮 · 补完赛程':'推进擂台赛');
  return `<div class="panel"><h3>年度总决赛·擂台赛 <span class="tag">第${Math.min(a.roundIdx+1,6)}/6轮 · BO5 组外单循环</span></h3>
- ${myNext?`<div class="match"><div class="vs"><span class="tname">${myNext.a} vs ${myNext.b}</span><span class="score" style="font-size:12px">${myNext.a===S.teamName||myNext.b===S.teamName?'本队':'—'}</span></div></div>`:''}
- <button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${btnTxt}</button>
+ ${cupNextBanner(nx,S.teamName)}
+ <div class="hint" style="margin:4px 0 6px">本轮对阵</div>
+ ${cupRows(list,S.teamName,nx)}
+ ${allRounds.length?`<div class="hint" style="margin:8px 0 4px">我方全部轮次</div>${cupRows(allRounds,S.teamName,nx)}`:''}
+ <button class="btn primary" style="width:100%;margin-top:8px" onclick="uiStartCup(S)">${btnTxt}</button>
  <div class="hint mt8"><b>大师组</b>（积分前6）：${rankLine(st.M,a.masters)}</div>
  <div class="hint"><b>精英组</b>（积分7-12）：${rankLine(st.E,a.elites)}</div>
  <div class="hint mt8">大师组前4 + 精英组第1 直进淘汰赛；大师5/6 与精英2-5 打突围赛；精英第6名直接出局</div>
@@ -582,21 +699,34 @@ function clubAnnualPanel(){
  </div>`;
  }
  if(a.stage==='breakthrough'){
+ const list=(a.brk||[]).map((m,i)=>({m,tag:'突围赛·'+(i+1)}));
+ const nx=cupListNext(list,S.teamName);
  const myPending=hasMyPending(a.brk,S.teamName);
  const brkDone=(a.brk||[]).every(m=>m&&m.r);
  return `<div class="panel"><h3>年度总决赛·突围赛 <span class="tag">6队 BO7 单败 · 3队晋级</span></h3>
- ${a.brk.map(cupRow).join('')}
- ${brkDone?'<div class="hint mt8">晋级淘汰赛：'+a.brk.map(m=>m.r).join('、')+' · 点按钮进入淘汰赛</div>':''}
- <button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行突围赛':(brkDone?'进入淘汰赛':'快进赛程')}</button>
+ ${cupNextBanner(nx,S.teamName,brkDone?`<div class="hint" style="margin-bottom:10px">晋级淘汰赛：${a.brk.map(m=>m.r).join('、')}</div>`:null)}
+ ${cupRows(list,S.teamName,nx)}
+ ${brkDone?'<div class="hint mt8">点按钮进入淘汰赛</div>':''}
+ <button class="btn primary" style="width:100%;margin-top:8px" onclick="uiStartCup(S)">${myPending?'进行突围赛':(brkDone?'进入淘汰赛':'快进赛程')}</button>
  </div>`;
  }
  const p=a.po;
- const myPending=p&&!p.final.r&&hasMyPending([...p.wb1,...p.lb1,...p.wb2,...p.lb2,p.wf,p.lbs,p.lbf,p.final],S.teamName);
- const mrow=(m,tag)=>cupMatchRow(m,tag);
+ const list=p?[
+  ...(p.wb1||[]).map((m,i)=>({m,tag:'胜者组R1·'+(i+1)})),
+  ...(p.wb2||[]).map((m,i)=>({m,tag:'胜者组SF·'+(i+1)})),
+  {m:p.wf,tag:'胜者组决赛'},
+  ...(p.lb1||[]).map((m,i)=>({m,tag:'败者组R1·'+(i+1)})),
+  ...(p.lb2||[]).map((m,i)=>({m,tag:'败者组R2·'+(i+1)})),
+  {m:p.lbs,tag:'败者组SF'},
+  {m:p.lbf,tag:'败者组决赛'},
+  {m:p.final,tag:'总决赛'},
+ ].filter(x=>x.m):[];
+ const nx=cupListNext(list,S.teamName);
+ const myPending=p&&hasMyPending(list.map(x=>x.m),S.teamName);
  return `<div class="panel"><h3>年度总决赛·淘汰赛 <span class="tag">8强 BO7 双败 · 圣龙杯</span></h3>
- ${p?p.wb1.map(m=>mrow(m,'胜者组R1')).join('')+p.wb2.map(m=>mrow(m,'胜者组SF')).join('')+(p.wf.a?mrow(p.wf,'胜者组决赛'):'')+p.lb1.map(m=>mrow(m,'败者组R1')).join('')+p.lb2.map(m=>mrow(m,'败者组R2')).join('')+(p.lbs.a?mrow(p.lbs,'败者组SF'):'')+(p.lbf.a?mrow(p.lbf,'败者组决赛'):'')+(p.final.a?mrow(p.final,'总决赛'):'')
- :'<div class="hint">待突围赛结束</div>'}
- ${p&&!p.champ?`<button class="btn primary" style="width:100%" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}
+ ${p?cupNextBanner(nx,S.teamName,p.champ?`<div class="hint" style="margin-bottom:10px">年度总冠军：${p.champ} —— 圣龙杯！</div>`:null):'<div class="hint">待突围赛结束</div>'}
+ ${cupRows(list,S.teamName,nx)}
+ ${p&&!p.champ?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiStartCup(S)">${myPending?'进行下一场 · 调整阵容 / BP 开赛':'快进赛程'}</button>`:''}
  ${p&&p.champ?`<div class="hint mt8">年度总冠军：${p.champ} —— 圣龙杯！</div>`:''}
  ${yearRollPending(S)?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiFinishAnnual(S)"> 进入新赛季 · 年度轮换</button>
  <div class="hint mt8">年总已收官，点此完成年龄/合同结算并开启下一年春季赛（可重复点击）</div>`:''}
@@ -924,7 +1054,7 @@ function renderLeague(){
  const groups=phaseGroups(S);
  const myG=myGroup(S);
  let html=pageHint('league')+(typeof yearCalendarHtml==='function'?yearCalendarHtml(S):'')+`<div class="panel"><h3>${splitLabel(S)} · ${(PHASE_NAME[S.phase]||S.phase)} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
- <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 含巅峰对决 · 季后赛 10队双败 · 年度赛历：春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运会（亚运年）→ 年度总决赛</div></div>`;
+ <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 全局BP · 季后赛 10队双败（第7局巅峰对决） · 年度赛历：春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运会（亚运年）→ 年度总决赛</div></div>`;
  // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
  const rank=annualRank(S);
@@ -932,7 +1062,7 @@ function renderLeague(){
  const maxPts=Math.max(1,...rank.slice(0,12).map(t=>S.annualPts[t]||0));
  html+=`<div class="panel"><h3>年度积分榜 <span class="tag">${gameYear(S)} · 前 12 进年度总决赛</span></h3>
  <table class="tbl"><tr><th>#</th><th>战队</th><th style="width:46%">年度积分</th></tr>
- ${rank.slice(0,12).map((t,i)=>{const pts=S.annualPts[t]||0;return `<tr class="${t===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${pts}<div class="pts-bar"><i style="width:${Math.round(pts/maxPts*100)}%"></i></div></td></tr>`;}).join('')}
+ ${rank.slice(0,12).map((t,i)=>{const pts=S.annualPts[t]||0;const rk=i+1;const badge=rk===1?'<span class="rank-badge r1">1</span>':rk===2?'<span class="rank-badge r2">2</span>':rk===3?'<span class="rank-badge r3">3</span>':`<span class="rank-n">${rk}</span>`;return `<tr class="${t===S.teamName?'me':''}"><td>${badge}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${pts}<div class="pts-bar"><i style="width:${Math.round(pts/maxPts*100)}%"></i></div></td></tr>`;}).join('')}
  </table>
  <div class="hint mt8">${myIdx>=0&&myIdx<12?'你队第 '+(myIdx+1)+' 名，'+(myIdx<6?'大师组':'精英组')+'席位在握':(myIdx>=12?'你队第 '+(myIdx+1)+' 名，无缘年度总决赛——春夏赛季继续攒分':'春季赛打完后积分入账')} · 春季冠+100 夏季冠+120</div>
  </div>`;
@@ -945,7 +1075,8 @@ function renderLeague(){
  <table class="tbl"><tr><th>#</th><th>战队</th><th>胜</th><th>负</th><th>积分</th><th>净胜局</th><th>战力</th></tr>
  ${rank.map((n,i)=>{
  const t=(S.tables[g]||{})[n]||{w:0,l:0,pts:0,pw:0};
- return `<tr class="${n===S.teamName?'me':''}"><td>${i+1}</td><td>${crest((AI_TEAMS.find(x=>x.name===n)||{}).icon||(n===S.teamName?S.icon:'队'),n,18)} ${n}${n===S.teamName?' ★':''}</td><td>${t.w}</td><td>${t.l}</td><td>${t.pts}</td><td>${t.pw}</td><td>${fmt(powerOf(S,n))}</td></tr>`;
+ const rk=i+1;const badge=rk===1?'<span class="rank-badge r1">1</span>':rk===2?'<span class="rank-badge r2">2</span>':rk===3?'<span class="rank-badge r3">3</span>':`<span class="rank-n">${rk}</span>`;
+ return `<tr class="${n===S.teamName?'me':''}"><td>${badge}</td><td>${crest((AI_TEAMS.find(x=>x.name===n)||{}).icon||(n===S.teamName?S.icon:'队'),n,18)} ${n}${n===S.teamName?' ★':''}</td><td>${t.w}</td><td>${t.l}</td><td>${t.pts}</td><td>${t.pw}</td><td>${fmt(powerOf(S,n))}</td></tr>`;
  }).join('')}
  </table>
  ${(S.aiSchedule&&S.aiSchedule[g]||[]).filter(m=>m.r).slice(-6).reverse().map(m=>
@@ -975,7 +1106,7 @@ function renderLeague(){
  }
  // 卡位赛对阵（联赛页）
  if(S.phase==='card'&&S.card){
- html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO${KPL.CARD} · 含巅峰对决</span></h3>
+ html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO${KPL.CARD} · 全局BP</span></h3>
  ${S.card.matches.map(m=>{
  const me=m.a===S.teamName||m.b===S.teamName;
  return `<div class="match" style="margin-bottom:6px">
@@ -989,16 +1120,22 @@ function renderLeague(){
  // 季后赛 bracket
  if(S.phase==='playoff'&&S.playoff){
  const pf=S.playoff;
+  const pNext=poMyNext(pf,S.teamName);
+  const pNextId=pNext?pNext.m:null;
   const pMatch=(m,label)=>{
       if(!m)return '';
-      return `<div class="match" style="margin-bottom:6px"><div class="vs"><span class="tname" style="font-size:12px">${label}：${m.a||'?'} vs ${m.b||'?'}</span></div><div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div></div>`;
+      return cupMatchRow(m,label,{me:S.teamName,next:pNextId&&m===pNextId});
   };
+  const pBanner=pNext?(pNext.status==='ready'
+   ?`<div class="hint" style="margin-bottom:8px"><b>下一场：</b>${pNext.tag} vs ${pNext.op}</div>`
+   :`<div class="hint" style="margin-bottom:8px"><b>下一场：</b>${pNext.tag} · 对手待定</div>`):'';
  html+=`<div class="panel"><h3>季后赛对阵（BO7 双败 · 第7局巅峰对决）</h3>
+ ${pBanner}
  ${(pf.wb||[]).map((m,i)=>pMatch(m,'胜者组R'+(i+1))).join('')}
  ${pMatch(pf.wf,'胜者组决赛')}
  ${(pf.lb||[]).map((m,i)=>pMatch(m,'败者组R'+(i+1))).join('')}
- ${(pf.lb2||[]).map((m,i)=>pMatch(m,'败者组R2'+(i?'·2':'·1'))).join('')}
- ${(pf.lb3||[]).map((m,i)=>pMatch(m,'败者组R3'+(i?'·2':'·1'))).join('')}
+ ${(pf.lb2||[]).map((m,i)=>pMatch(m,'败者组R2·'+(i+1))).join('')}
+ ${(pf.lb3||[]).map((m,i)=>pMatch(m,'败者组R3·'+(i+1))).join('')}
  ${pMatch(pf.lb4,'败者组半决赛')}
  ${pMatch(pf.lbf,'败者组决赛')}
  ${pMatch(pf.final,' 总决赛')}

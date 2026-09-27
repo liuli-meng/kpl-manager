@@ -150,6 +150,39 @@ function genAcademyDef(pos,usedNames,season){
  base:[b(68),b(68),b(70),b(72)],skill:{n:'青训体系',t:'team',d:'团战属性额外+8%'},
  sig:pick(cands.length?cands:HEROES).n,career:'本队青训营提拔，阶梯赛历练稳定。'};
 }
+/* 开局自带可出场青训替补：常规赛禁止租借后，伤停/集训必须有人顶。
+ 默认 2 人、满 18 岁（matchEligible）、低薪进一队替补席，不占选秀/转会名额。 */
+function seedStarterAcademy(s,count){
+ if(!s)return [];
+ const n=count==null?2:count;
+ s.players=s.players||[];
+ const used=rookieUsedNames(s);
+ (s.players||[]).forEach(p=>{if(p&&p.name)used.add(p.name);});
+ const added=[];
+ for(let i=0;i<n;i++){
+  // 轮转位置，尽量覆盖首发未盖到的位
+  const pos=POS_ORDER[i%POS_ORDER.length];
+  try{
+   const def=genAcademyDef(pos,used,s.season||1);
+   const p=genPlayer(def);
+   p.age=18; // 必须满 MATCH_MIN_AGE，否则开局青训也上不了场
+   p.contract=3;
+   p.wage=Math.min(4,p.wage||3);
+   p.val=p.val||90;
+   if(!p.tags)def.tags&&0;
+   p.tags=(p.tags||[]).concat(['开局青训']).filter((t,idx,a)=>a.indexOf(t)===idx);
+   s.players.push(p);
+   used.add(p.name);
+   added.push(p);
+  }catch(e){break;}
+ }
+ if(added.length){
+  try{
+   logEvent(s,' 开局青训 '+added.map(p=>p.name+'（'+POS[p.pos][0]+' · 总值'+overall(p)+'）').join('、')+' 进入一队替补——常规赛无租借，伤病由自家青训顶上');
+  }catch(e){}
+ }
+ return added;
+}
 /* ================= AI 转会生态 =================
  AI 阵容以「选手定义(def)」持久化在 s.aiRosterDefs（初始=AI_ROSTERS），每赛季转会期：
  退役结算 → 缺位补强 → 明星流转 → 新星出道。真实选手在联盟内流转，
@@ -277,6 +310,43 @@ function aiBrain(s,tn){
  }catch(e){}
  return Math.max(0.35,Math.min(1.6,base*sc));
 }
+/* AI 建队人格：队名稳定哈希 × 档位先验，驱动转会口味 / 青训投入 / 挖角风格。
+   galaxy 银河战舰（抢即战力）· academy 青训王朝（养新秀）· tactical 体系之师（补短板）· balanced 稳健建设 */
+function aiNameHash(tn){
+ let h=2166136261;
+ const str=String(tn||'');
+ for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}
+ return h>>>0;
+}
+function aiPersonaOf(s,tn){
+ const tier=aiTierOf(s,tn);
+ const styles=tier==='elite'?['galaxy','galaxy','balanced','tactical']
+  :tier==='weak'?['academy','academy','balanced','tactical']
+  :['balanced','balanced','tactical','academy','galaxy'];
+ return styles[aiNameHash(tn)%styles.length];
+}
+/* 位置需求 0~1：该位置最弱者相对队内均值差越多越急缺；缺位直接 1 */
+function aiPosNeedMap(s,tn,ovrOf){
+ const map=aiRosterDefMap(s);
+ const ids=(map[tn]||[]).map(id=>defOf(s,id)).filter(Boolean);
+ const need={};
+ POS_ORDER.forEach(pos=>need[pos]=1); // 空册=全位置急缺
+ if(!ids.length)return need;
+ const vals=ids.map(d=>{
+  const v=ovrOf(d);
+  return (typeof v==='number'&&isFinite(v))?v:70;
+ });
+ const avg=vals.reduce((t,v)=>t+v,0)/vals.length;
+ POS_ORDER.forEach(pos=>{
+  const at=ids.map((d,i)=>({d,v:vals[i]})).filter(x=>x.d.pos===pos);
+  if(!at.length){need[pos]=1;return;}
+  let worst=at[0].v;
+  at.forEach(x=>{if(x.v<worst)worst=x.v;});
+  const gap=clamp((avg-worst)/12,0,1);
+  need[pos]=isFinite(gap)?gap:0.35;
+ });
+ return need;
+}
 /* AI 赛训成长：每赛季给首发补最弱属性（模拟教练组日常特训）。
  玩家每天可练，AI 若只靠 ageDrift 会原地踏步——中下游尤其明显。
  额度按档位：elite 8 / mid 6 / weak 4 点，拆到 1~2 名最弱首发的最弱项。 */
@@ -284,18 +354,24 @@ function aiDevelopStarters(s,tn,map,ovrOf){
  const ids=(map[tn]||[]).slice();
  if(ids.length<3)return;
  const tier=aiTierOf(s,tn);
- const budget=tier==='elite'?10:tier==='mid'?8:6;
+ const persona=aiPersonaOf(s,tn);
+ let budget=tier==='elite'?10:tier==='mid'?8:6;
+ if(persona==='academy')budget+=2;
+ if(persona==='tactical')budget+=1;
+ // 银河战舰集中喂核心，青训队摊开补短板
+ const topN=persona==='galaxy'?1:persona==='academy'?3:2;
  // 按当前总值升序：优先练「短板」，而不是给顶星堆数值
  const ranked=ids.map(id=>({id,def:defOf(s,id)})).filter(x=>x.def)
-  .sort((a,b)=>ovrOf(a.def)-ovrOf(b.def)).slice(0,2);
+  .sort((a,b)=>ovrOf(a.def)-ovrOf(b.def)).slice(0,topN);
  let left=budget;
  ranked.forEach(({def})=>{
   if(left<=0||!Array.isArray(def.base))return;
   const cap=Math.max(1,Math.round(budget*0.6));
   let used=0;
   while(left>0&&used<cap){
-   // base=[lane,farm,team,mind]：每次补当前最弱下标
+   // base=[lane,farm,team,mind]：每次补当前最弱下标（体系队优先抬团战维）
    let idx=0;
+   if(persona==='tactical'&&(def.base[2]||0)<90)idx=2;
    for(let i=1;i<4;i++)if((def.base[i]||0)<(def.base[idx]||0))idx=i;
    const step=Math.min(left,used+2<=cap?2:1);
    def.base[idx]=clamp((def.base[idx]||70)+step,40,99);
@@ -334,12 +410,17 @@ function aiReleaseTick(s,map,teams){
   teams.forEach(tn=>{
     const tier=aiTierOf(s,tn);
     const holdBias=tier==='elite'?-0.25:tier==='weak'?0.15:0;
+    const persona=aiPersonaOf(s,tn);
     map[tn]=map[tn].filter(pid=>{
       const def=defOf(s,pid);
       if(!def)return false;
       const p=genSeasonPlayer(s,def);
       const am=AGE_MODEL[p.pos]||AGE_MODEL.mid;
-      const badForm=(p.age>am.gold&&Math.random()<0.55+holdBias)||(overall(p)<76&&Math.random()<0.5+holdBias);
+      // 银河更爱甩老将，青训队更愿意留过渡
+      let bias=holdBias;
+      if(persona==='galaxy'&&p.age>am.gold)bias+=0.12;
+      if(persona==='academy'&&p.age<=am.gold)bias-=0.12;
+      const badForm=(p.age>am.gold&&Math.random()<0.55+bias)||(overall(p)<76&&Math.random()<0.5+bias);
       if(badForm){
         releasedFrom[pid]=tn;
         logEvent(s,' '+tn+' 未与 '+p.name+'（'+p.age+'岁 · 总值'+overall(p)+'）续约，状态下滑进入自由市场');
@@ -357,24 +438,38 @@ function aiAgeOf(s,def){
   return {age:p.age,pastGold:p.age>m.gold,gold:m.gold,retire:m.retire};
 }
 
-function aiUpgradeScore(s,ovrOf,ageOf,outDef,inDef,tier){
-  const gain=ovrOf(inDef)-ovrOf(outDef);
-  const aOut=ageOf(outDef),aIn=ageOf(inDef);
-  const aggressive=tier==='elite'?1.35:tier==='weak'?0.75:1;
-  const minGain=tier==='elite'?1:tier==='weak'?5:3;
-  if(gain<minGain)return null;
-  let score=gain*aggressive;
-  if(aOut.pastGold)score+=4+(aOut.age-aOut.gold)*0.4;
-  if(aIn.age<=aIn.gold-2)score+=2.5;
-  if(aIn.age>=aIn.retire-1)score-=3;
-  if(ovrOf(inDef)>=88)score+=2;
-  return score;
+function aiUpgradeScore(s,ovrOf,ageOf,outDef,inDef,tier,tn,needPos){
+ const gain=ovrOf(inDef)-ovrOf(outDef);
+ if(typeof gain!=='number'||!isFinite(gain))return null;
+ const aOut=ageOf(outDef),aIn=ageOf(inDef);
+ const aggressive=tier==='elite'?1.35:tier==='weak'?0.75:1;
+ let need=(needPos==null)?0.35:needPos;
+ if(typeof need!=='number'||!isFinite(need))need=0.35;
+ need=clamp(need,0,1);
+ let minGain=tier==='elite'?1:tier==='weak'?5:3;
+ if(need>=0.6)minGain=Math.max(1,minGain-2); // 急缺位置降低门槛
+ if(gain<minGain)return null;
+ let score=gain*aggressive;
+ if(aOut.pastGold)score+=4+(aOut.age-aOut.gold)*0.4;
+ if(aIn.age<=aIn.gold-2)score+=2.5;
+ if(aIn.age>=aIn.retire-1)score-=3;
+ if(ovrOf(inDef)>=88)score+=2;
+ score+=need*2.2; // 优先补强短板位置
+ try{
+  const persona=aiPersonaOf(s,tn||'');
+  if(persona==='galaxy'&&ovrOf(inDef)>=85)score+=2.2;
+  if(persona==='academy'&&aIn.age<=aIn.gold-3)score+=1.8;
+  if(persona==='tactical'&&need>=0.5)score+=1.5;
+ }catch(e){}
+ return (typeof score==='number'&&isFinite(score))?score:null;
 }
 
 function aiStarUpgrade(s,map,order,freePool,ovrOf,ageOf){
   order.forEach(tn=>{
     const tier=aiTierOf(s,tn);
-    const slots=tier==='elite'?2:1;
+    const persona=aiPersonaOf(s,tn);
+    const slots=tier==='elite'||persona==='galaxy'?2:1;
+    const needMap=aiPosNeedMap(s,tn,ovrOf);
     for(let slot=0;slot<slots;slot++){
       if(map[tn].length<5||!freePool.length)break;
       let best=null;
@@ -383,7 +478,7 @@ function aiStarUpgrade(s,map,order,freePool,ovrOf,ageOf){
         if(!def)return;
         freePool.forEach(d=>{
           if(d.pos!==def.pos)return;
-          const sc=aiUpgradeScore(s,ovrOf,ageOf,def,d,tier);
+          const sc=aiUpgradeScore(s,ovrOf,ageOf,def,d,tier,tn,needMap[def.pos]);
           if(sc==null)return;
           if(!best||sc>best.score)best={score:sc,pid,def,out:def,in:d,gain:ovrOf(d)-ovrOf(def)};
         });
@@ -402,8 +497,12 @@ function aiStarUpgrade(s,map,order,freePool,ovrOf,ageOf){
 function aiEliteRaid(s,map,teams,order,freePool,ovrOf,ageOf){
   const tierRank={elite:3,mid:2,weak:1};
   order.forEach(tn=>{
-    if(aiTierOf(s,tn)!=='elite')return;
-    if(Math.random()>=0.5*aiDiffMul(s,tn))return;
+    const persona=aiPersonaOf(s,tn);
+    if(aiTierOf(s,tn)!=='elite'&&persona!=='galaxy')return;
+    const pRaid=(persona==='galaxy'?0.55:0.5)*aiDiffMul(s,tn);
+    if(Math.random()>=pRaid)return;
+    // 优先补本队最弱位置，而不是随便挖一个能涨的
+    const needMap=aiPosNeedMap(s,tn,ovrOf);
     let best=null;
     map[tn].forEach(pid=>{
       const def=defOf(s,pid);
@@ -411,6 +510,7 @@ function aiEliteRaid(s,map,teams,order,freePool,ovrOf,ageOf){
       const cur=ovrOf(def);
       const ag=ageOf(def);
       const floor=ag.pastGold?3:5;
+      const need=needMap[def.pos]||0;
       teams.forEach(src=>{
         if(src===tn)return;
         if((tierRank[aiTierOf(s,src)]||0)>=(tierRank[aiTierOf(s,tn)]||0))return;
@@ -419,7 +519,7 @@ function aiEliteRaid(s,map,teams,order,freePool,ovrOf,ageOf){
           if(!sd||sd.pos!==def.pos)return;
           const gain=ovrOf(sd)-cur;
           if(gain<floor)return;
-          const score=gain+(ag.pastGold?2:0);
+          const score=gain+(ag.pastGold?2:0)+need*2.5+(persona==='galaxy'&&ovrOf(sd)>=88?1.5:0);
           if(!best||score>best.score)best={score,gain,pid,def,sid,sd,src};
         });
       });
@@ -437,7 +537,21 @@ function aiRookieBirths(s,map,order,usedNames){
   const extraBirth=dynastyStreak(s,s.teamName)>=2?1:0;
   const births=rnd(2,3)+extraBirth;
   for(let i=0;i<births;i++){
-    const def=genStarDef(s,usedNames);
+    // 新星位置优先填联盟普遍缺口，而不是完全随机
+    let forcePos=null;
+    try{
+     let bestNeed=-1;
+     POS_ORDER.forEach(pos=>{
+      let short=0;
+      order.forEach(tn=>{
+        const has=(map[tn]||[]).some(id=>{const d=defOf(s,id);return d&&d.pos===pos;});
+        if(!has)short++;
+      });
+      if(short>bestNeed){bestNeed=short;forcePos=pos;}
+     });
+     if(bestNeed<=0)forcePos=null;
+    }catch(e){}
+    const def=genStarDef(s,usedNames,forcePos);
     s.extraDefs.push(def);
     const tn=order.find(t=>map[t].length<5&&!map[t].some(id=>{const d=defOf(s,id);return d&&d.pos===def.pos;}));
     if(tn){map[tn].push(def.id);logEvent(s,' 新星出道：'+def.name+'（'+POS[def.pos][0]+'）加盟 '+tn);}
@@ -471,11 +585,15 @@ function aiAcademyTick(s,map,order,freePool){
   order.forEach(tn=>{
     const mul=aiDiffMul(s,tn);
     const tier=aiTierOf(s,tn);
-    const pOpen=tier==='elite'?0.95:tier==='mid'?0.7:0.5;
+    const persona=aiPersonaOf(s,tn);
+    let pOpen=tier==='elite'?0.95:tier==='mid'?0.7:0.5;
+    if(persona==='academy')pOpen=Math.min(0.98,pOpen+0.22);
+    if(persona==='galaxy')pOpen=Math.max(0.22,pOpen-0.28);
     if(Math.random()>=pOpen*mul)return;
     if(!s.aiAcademy[tn]||!s.aiAcademy[tn].length){
       const pool=[];
-      const n=tier==='elite'?rnd(2,3):rnd(1,2);
+      let n=tier==='elite'?rnd(2,3):rnd(1,2);
+      if(persona==='academy')n+=1;
       for(let k=0;k<n;k++){
         const def=genAiRookieDef(s,tn);
         s.extraDefs.push(def);
@@ -484,15 +602,20 @@ function aiAcademyTick(s,map,order,freePool){
       s.aiAcademy[tn]=pool;
       logEvent(s,' '+tn+' 青训营开班，签入 '+pool.length+' 名新秀（'+pool.map(id=>defOf(s,id).name).join('、')+'）');
     }
-    const trains=tier==='elite'?2:1;
+    let trains=tier==='elite'?2:1;
+    if(persona==='academy')trains+=1;
     for(let t=0;t<trains;t++){
       if(!s.aiAcademy[tn]||!s.aiAcademy[tn].length)break;
       const id=s.aiAcademy[tn][rnd(0,s.aiAcademy[tn].length-1)];
       const r=defOf(s,id);
       if(!r)break;
-      const key=pick(['lane','farm','team','mind']);
-      const idx=['lane','farm','team','mind'].indexOf(key);
-      const trainMax=tier==='elite'?5:4;
+      // 培养向最弱项倾斜（不再是纯随机四维），体系队略偏团战
+      let idx=0;
+      if(persona==='tactical'&&(r.base[2]||0)<88)idx=2;
+      for(let i=1;i<4;i++)if((r.base[i]||0)<(r.base[idx]||0))idx=i;
+      if(Math.random()<0.25)idx=pick([0,1,2,3]); // 少量随机防完全同质
+      const key=['lane','farm','team','mind'][idx];
+      const trainMax=tier==='elite'?5:persona==='academy'?5:4;
       r.base[idx]=clamp((r.base[idx]||70)+rnd(2,trainMax),40,95);
       const rSum=sumBase(r);
       logEvent(s,' '+tn+' 培养青训 '+r.name+'（'+POS[r.pos][0]+'）「'+(TRAIN_ITEMS.find(x=>x.k===key)||{n:key||'训练'}).n+'」+2~'+trainMax);
@@ -553,7 +676,15 @@ function aiFillGaps(s,map,teamName,freePool,usedNames,ovrOf,opts){
     const cands=freePool.filter(d=>d.pos===need&&releasedFrom[d.id]!==teamName);
     let def;
     if(cands.length){
-      def=cands.sort((a,b)=>ovrOf(b)-ovrOf(a))[0];
+      // 人格选人：青训队偏底子/潜力，银河队偏即战力，稳健队加权两者
+      const persona=aiPersonaOf(s,teamName);
+      if(persona==='academy'){
+        def=cands.slice().sort((a,b)=>(sumBase(b)-sumBase(a))||(ovrOf(b)-ovrOf(a)))[0];
+      }else if(persona==='galaxy'){
+        def=cands.slice().sort((a,b)=>ovrOf(b)-ovrOf(a))[0];
+      }else{
+        def=cands.slice().sort((a,b)=>(ovrOf(b)+sumBase(b)*0.12)-(ovrOf(a)+sumBase(a)*0.12))[0];
+      }
       const idx=freePool.indexOf(def);
       if(idx>=0)freePool.splice(idx,1);
       logEvent(s,' 转会：'+def.name+' 加盟 '+teamName+'（'+POS[def.pos][0]+(tag?' · '+tag:'')+'）');
@@ -1524,28 +1655,53 @@ function fireCoach(s){
  save();renderAll();
 }
 
-/* ================= 租借系统（全年可租；转会期买断优先，租借是应急补位） =================
- 向其他战队租借替补：支付租金（身价 15%），租借 LOAN_DAYS 天，到期自动归队。
- 非卖品不可租；同时最多 LOAN_CAP_BASE 人，某位置无健康选手时 +1 应急名额（上限 LOAN_CAP_MAX）。
- 租借期间原队出青训递补。KPL 允许赛季中紧急租借——伤停缺人时这是合法补位手段。 */
+/* ================= 租借系统（对齐 KPL 官方口径） =================
+ 常规赛（春/夏）：禁止租借，赛季大名单 10 人全是自家签约，租借机制不生效。
+ 挑战者杯：出征大名单固定 7 人（含租借），最多租 2 人——自家 5 + 租 2，租借占 7 个名额。
+ 年度总决赛：出征大名单固定 7 人（含租借），最多租 1 人——自家 6 + 租 1，租借占 7 个名额。
+ 租借选手不会增加总人数上限，只是替换名额；租期 LOAN_DAYS 天到期归队。 */
 const LOAN_DAYS=21;
-const LOAN_CAP_BASE=2;
-const LOAN_CAP_MAX=3;
+const CUP_SQUAD=7;
+function loanWindowOpen(s){
+ if(!s)return false;
+ return s.phase==='challenger'||s.phase==='annual';
+}
+function cupLoanMax(s){
+ if(!s)return 0;
+ if(s.phase==='challenger')return 2; // 挑杯：最多租 2
+ if(s.phase==='annual')return 1;     // 年总（大师组口径）：最多租 1
+ return 0;
+}
+function loanRuleText(s){
+ if(!loanWindowOpen(s))return '常规赛（春/夏）无租借：大名单 '+ROSTER_MAX+' 人全是自家签约，租借只在挑战者杯 / 年度总决赛开放。';
+ const m=cupLoanMax(s);
+ if(s.phase==='challenger')return '挑战者杯：出征 '+CUP_SQUAD+' 人（含租借），最多租 '+m+' 人——自家 '+(CUP_SQUAD-m)+' + 租 '+m+'，租借占用 '+CUP_SQUAD+' 个名额。';
+ return '年度总决赛：出征 '+CUP_SQUAD+' 人（含租借），最多租 '+m+' 人——自家 '+(CUP_SQUAD-m)+' + 租 '+m+'，租借占用 '+CUP_SQUAD+' 个名额。';
+}
 function untouchableSet(){
  const U=new Set();
  for(const tn in AI_ROSTERS)AI_ROSTERS[tn].u.forEach(id=>U.add(id));
  return U;
 }
 function loanRent(p){return Math.max(80,Math.round(valueOf(overall(p))*0.15));}
-function healthyPosCount(s,pos){ // 当前能打该位置的人（不含外租/K甲/伤停/未成年）
- return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)).length; // matchEligible 已含外租/K甲/伤停/集训/未成年
+function healthyPosCount(s,pos){ // 当前能打该位置的人（不含外租/K甲/伤停/未成年/常规赛租入）
+ return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)).length;
 }
-function injuryGapPositions(s){ // 伤停/K甲后完全无人可打的位置——应急租借触发条件
+function injuryGapPositions(s){ // 伤停/K甲后完全无人可打的位置——应急补位触发条件
  return POS_ORDER.filter(pos=>healthyPosCount(s,pos)===0);
 }
 function loanCap(s){
- const gap=injuryGapPositions(s).length;
- return Math.min(LOAN_CAP_MAX,LOAN_CAP_BASE+(gap>0?1:0));
+ // 常规赛 0；杯赛按官方出征名额（挑杯 2 / 年总 1）
+ return loanWindowOpen(s)?cupLoanMax(s):0;
+}
+/* 杯赛出征 7 人：自家可战优先，再补租借（不超过 cupLoanMax），总人数固定 7——租借占名额不加人 */
+function cupTravelRoster(s,size,maxLoan){
+ const n=size||CUP_SQUAD;
+ const cap=maxLoan==null?cupLoanMax(s):maxLoan;
+ const eligible=(s.players||[]).filter(p=>matchEligible(s,p));
+ const own=eligible.filter(p=>!p.loan);
+ const loans=eligible.filter(p=>p.loan).slice(0,Math.max(0,cap));
+ return own.concat(loans).slice(0,n);
 }
 function loanCandidates(s){
  const U=untouchableSet();
@@ -1597,9 +1753,10 @@ function loanCandidates(s){
 }
 function loanPlayer(s,teamName,pid){
  if(typeof denyIfBlocked==='function'&&denyIfBlocked('loanIn',s))return;
+ if(!loanWindowOpen(s)){toast(loanRuleText(s)||'常规赛不能租借');return;}
  const cap=loanCap(s);
  if((s.players||[]).filter(p=>p.loan).length>=cap){
- toast('租借名额已满（当前上限 '+cap+' 人'+(cap>LOAN_CAP_BASE?' · 含伤停应急名额':'')+'）');
+ toast('租借名额已满（'+loanRuleText(s)+'）');
  return;
  }
  let p=(ensureAiRosters(s,teamName)||[]).find(x=>x.id===pid);

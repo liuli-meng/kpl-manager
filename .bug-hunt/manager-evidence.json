@@ -1,0 +1,50 @@
+{
+  "draftBidOk": {
+    "raises": 7,
+    "pickBefore": {
+      "players": 5,
+      "phase": "pick",
+      "wraps": 20
+    },
+    "pickAfter": {
+      "players": 6,
+      "lastName": "饮冰",
+      "toast": "选秀签下 饮冰！",
+      "phase": "auction"
+    }
+  },
+  "overCapButton": {
+    "max": 10,
+    "next": 60,
+    "overCap": true,
+    "btnDisabled": false,
+    "btnText": "叫价 60万",
+    "btnClass": "btn gold"
+  },
+  "fullRosterCards": {
+    "before": {
+      "roster": 10,
+      "max": 10,
+      "wrapCount": 19,
+      "signBtnCount": 19,
+      "hint": [
+        "轮到你点名（第1签）　但大名单已满（10/10），只能放弃本签"
+      ],
+      "title": "点击签约",
+      "onClick": "draftPick('drf_2026_1_wvrc')"
+    },
+    "after": {
+      "roster": 10,
+      "toast": "KPL 大名单上限 10 人（当前一线 10 人）——先卖出或放弃选手再签约",
+      "slot": 18,
+      "done": true,
+      "picksLen": 18,
+      "firstPick": {
+        "slot": 0,
+        "team": "封顶证据",
+        "playerId": null
+      }
+    }
+  },
+  "ts": "2026-09-27T10:15:32.350Z"
+}

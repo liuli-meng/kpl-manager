@@ -111,6 +111,56 @@ function boardRelDelta(s,delta,note){
  return d;
 }
 function applyBoardTrust(s,delta,note){return boardRelDelta(s,delta,note);}
+
+/* 赛段间董事会脉冲：排名/分组落地后立刻有反馈，不再等年终才咬人。
+   经理/教练生效；选手生涯豁免。金额克制，避免打爆平衡门禁。 */
+function boardMidSeasonPulse(s,stage){
+ if(!s||s.board&&s.board.fired)return;
+ if(s.mode==='player')return; // 选手不管董事会
+ s.board=s.board||{trust:60,kpi:null,warn:0,fired:false,firedSeason:0,log:[]};
+ // 赛段切换瞬间 phaseGroups 可能已改口（r2→card），不能只靠 myGroup
+ const g=(typeof myGroup==='function'?myGroup(s):null)||['S','A','B','G1','G2','G3']
+  .find(k=>s.groups&&s.groups[k]&&s.groups[k].includes(s.teamName))||null;
+ let delta=0,note='';
+ if(stage==='r1'){
+  if(g==='B'||g==='G3'){delta=-4;note='第一轮落入 B 组，董事会对开局不满';}
+  else if(g==='S'||g==='G1'){delta=3;note='第一轮闯进 S 组，管理层士气提振';}
+  else{delta=-1;note='第一轮中游，董事会保持观望';}
+ }else if(stage==='card'){
+  if(g==='S'||g==='A'){delta=-2;note='进入卡位赛区，董事会要求必须保住席位';}
+  else{delta=-5;note='卡位赛出局在即，董事会已经很不耐烦';}
+ }else if(stage==='r3'){
+  if(g==='S'){delta=2;note='挺进第三轮 S 组，信任度回暖';}
+  else if(g==='A'){delta=0;note='第三轮 A 组，成绩及格但没有惊喜';}
+  else return;
+ }else if(stage==='playoff'){
+  delta=3;note='闯进季后赛，董事会松了一口气';
+ }else return;
+ if(delta===0&&!note)return;
+ boardRelDelta(s,delta,note);
+ s.board.log=s.board.log||[];
+ s.board.log.unshift({season:s.season,rank:myAnnualRank(s),target:s.board.kpi?s.board.kpi.target:null,delta,note,trust:s.board.trust,mid:true});
+ s.board.log=s.board.log.slice(0,12);
+}
+
+/* 现金流告急：资金撑不过 3 周工资时董事会盯上运营，持续告急会掉信任。 */
+function boardCashPulse(s){
+ if(!s)return;
+ if(s.mode==='player')return;
+ if(s.board&&s.board.fired)return;
+ const annual=weeklyWage(s);
+ const weekly=Math.max(1,Math.round(annual/ECON.payWeeks));
+ const runway=Math.floor((s.fund||0)/weekly);
+ if(runway>=3)return; // 还撑得住，不骚扰
+ if((s._cashWarnDay||0)>0&&(s.day||0)-s._cashWarnDay<7)return; // 同一告急窗口只说一次
+ s._cashWarnDay=s.day||0;
+ const delta=runway<=0?-4:-2;
+ const note=runway<=0
+  ?('现金流见底（仅够 '+Math.max(0,s.fund||0)+' 万 · 周薪 '+weekly+' 万），董事会盯紧运营')
+  :('资金只够 '+runway+' 周工资（周薪 '+weekly+' 万），董事会要求开源节流');
+ boardRelDelta(s,delta,note);
+ try{if(typeof playMoment==='function')playMoment(2,'现金流告急',note,'alert');}catch(e){}
+}
 function clubRelChoices(s){
  return [
   {id:'gala',title:'股东答谢晚宴',text:'大股东邀请管理层出席晚宴，希望你亲自站台。缺席可能被解读为不重视俱乐部。',

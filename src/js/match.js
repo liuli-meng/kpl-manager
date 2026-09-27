@@ -443,7 +443,7 @@ function renderPreMatch(){
  <span style="font-size:11px;margin-left:auto">${b.pow>=maxThreat&&maxThreat>0?' ':''}威胁 <b style="color:var(--red)">${b.pow}</b></span>
  </div>`).join('');
  $('#app-modal-body').innerHTML=`
- <h2>赛前准备 <span class="tag">${sr.max===7?'BO7 · 含巅峰对决':'BO5 · 全局BP'}</span></h2>
+ <h2>赛前准备 <span class="tag">${sr.max>=fmtOf(S).peakBoMin?'BO'+sr.max+' · 含巅峰对决':'BO'+sr.max+' · 全局BP'}</span></h2>
  <div class="hint" style="text-align:center;margin-bottom:8px">${window._prepTitle||(S.teamName+' vs '+(sr.opName||'对手'))}${midSeries?` · 当前比分 <b>${sr.mw}:${sr.ow}</b>（<span style="cursor:help" title="我方已用：${(sr.used||[]).join('、')||'无'}
 对方已用：${(sr.usedOpp||[]).join('、')||'无'}">全局BP已用 · 我方 ${(sr.used||[]).length} / 对方 ${(sr.usedOpp||[]).length}</span>）`:''}</div>
  ${poster}
@@ -488,8 +488,14 @@ function prepSwapIn(pid){
 function playGame(){
  const sr=S.series;
  if(!sr){toast('没有进行中的系列赛');return;} // 结算弹窗未点就重入 / 残缺档：不能在 sr.max 上炸
+ if(!Array.isArray(sr.logs))sr.logs=[]; // 半残存档防御：logs 被写成字符串时 push 会炸掉整局
+ if(!Array.isArray(sr.used))sr.used=[];
+ if(!Array.isArray(sr.usedOpp))sr.usedOpp=[];
+ if(typeof sr.max!=='number'||!isFinite(sr.max))sr.max=5;
+ sr.mw=typeof sr.mw==='number'&&isFinite(sr.mw)?sr.mw:0;
+ sr.ow=typeof sr.ow==='number'&&isFinite(sr.ow)?sr.ow:0;
  // 有效战力结算：BAN/选人质量/红蓝 counter 全部折算进胜负（详见 bpEffective）
- const isLastPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：无 BP，不吃任何修正（BO7 第7局 / BO9 第9局）
+ const isLastPeak=sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1; // 巅峰对决：无 BP，不吃任何修正（门槛走赛制旋钮）
  const v=bpEffective({myBans:sr.myBans,oppBans:sr.oppBans,oppPicks:sr.oppPicks,side:sr.side,isPeak:isLastPeak,opName:sr.opName,opRoster:ensureAiRosters(S,sr.opName)||[],used:sr.used,usedOpp:sr.usedOpp});
  const g=singleGame(v.my,v.op);
  // 每小局双方消耗体力（8/局）：系列赛越深越考验轮换——替补体力满员是翻盘资本
@@ -497,7 +503,7 @@ function playGame(){
  rosterLineup(S).forEach(p=>{p.energy=clamp(((p.energy==null||!isFinite(p.energy))?100:p.energy)-8,0,ENERGY_MAX);p.caps=(p.caps||0)+1;}); // caps：出场记录（转售保护期解锁用）
  opR.forEach(p=>p.energy=clamp(p.energy-8,0,ENERGY_MAX));
  if(g.w)sr.mw++;else sr.ow++;
- const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max-1;
+ const isPeak=sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max-1;
  const tag=isPeak?' 巅峰对决（盲选）':'';
  // AI 教练复盘钩子：供下一局选边/BP 加压读取
  if(sr.opName&&sr.opName!==S.teamName){
@@ -693,7 +699,7 @@ function finishSeries(finalWin){
  };
  // 夺冠仪式感：总决赛/各杯赛决赛赢下时全屏庆典（一次性覆盖层，点按或 6 秒自动消失）
  const isTitle=finalWin&&(sr.stage==='po'&&sr.poSlot==='总决赛'||['ch_final','ewc_final','apo_final'].includes(sr.cupSlot));
- const isPeak=sr.max>=7&&sr.mw+sr.ow===sr.max;
+ const isPeak=sr.max>=fmtOf(S).peakBoMin&&sr.mw+sr.ow===sr.max;
  if(isTitle){
  playChampionCeremony(sr.stage==='po'?splitLabel(S)+' 总冠军':
  sr.cupSlot==='ch_final'?gameYear(S)+' 挑战者杯冠军':
@@ -758,7 +764,7 @@ function showMatchModal(r,title){
  }
  const mb=$('#app-modal');$('#app-modal-body').innerHTML=`
  <h2>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
- <div class="result-band ${r.win?'win':'lose'}"><span>${S.teamName}</span><b>${r.score||''}</b><span>${r.opName||''}</span></div>
+ <div class="result-band ${r.win?'win':'lose'}"><span class="rb-team">${crest((AI_TEAMS.find(x=>x.name===S.teamName)||{}).icon||S.icon||'队',S.teamName,20)} ${S.teamName}</span><b class="rb-score"><small>${r.stageTxt||''}</small>${r.score||''}</b><span class="rb-team op">${r.opName||''} ${crest((AI_TEAMS.find(x=>x.name===r.opName)||{}).icon||'队',r.opName||'',20)}</span></div>
  ${mvpCard}
  <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
  ${(aiEnabled())?`<div id="ai-report-box" class="event-card" style="margin-top:10px"><div class="et">AI 战报</div><p>生成中……（联网调用；失败自动回退本地文案，不影响比赛流程）</p></div>`:''}

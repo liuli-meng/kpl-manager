@@ -272,6 +272,9 @@ function uiNoGoEmergency(){
 }
 let _noGoRetry=null; // 缺位处理弹窗记住原来的 BP 回调，补人后直接重试
 function openBP(title,onConfirm){
+ // 无权限（选手等）或 series 空时原来直接 expandSteps(sr) 抛 TypeError，表现为点了没反应/全局异常
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('openBP',S))return;
+ if(!S||!S.series){toast('当前没有进行中的系列赛，无法进入 BP');return;}
  autoFillLineup(S);
  const ls=rosterLineup(S);
  const noGo=lineupNoGo(S);
@@ -387,7 +390,7 @@ function banScore(d,h,opts){
  if(opts.scarcity&&opts.scarcity[h]!=null)score+=opts.scarcity[h];
  return score;
 }
-/* 选人效用：熟练战力 + 版本 + 招牌 + 与战术同向 + 克制对面已选 + 抢对面想要的 + 摇摆 */
+/* 选人效用：熟练战力 + 版本 + 招牌 + 与战术同向 + 克制对面已选 + 抢对面想要的 + 摇摆 + 阵容多样 */
 function pickUtility(d,p,h,opts){
  opts=opts||{};
  const hd=heroOf(h)||{};
@@ -406,6 +409,11 @@ function pickUtility(d,p,h,opts){
   if(typeBeats(et,myT))score-=0.6; // 对面已选克制我
  });
  score+=counterHits*(opts.counterW||1.2);
+ // 己方阵容多样性：同类型堆太多会被一锅端，空缺类型略加分
+ let sameType=0;
+ (opts.allyPicks||[]).forEach(eh=>{if(heroTypeOf(eh)===myT)sameType++;});
+ if(sameType>=2)score-=0.9*sameType;
+ else if(sameType===0)score+=0.5;
  // 抢走对面还想要的高威胁英雄（deny）
  if(opts.enemyThreat&&opts.enemyThreat[h]!=null)score+=Math.min(2.5,opts.enemyThreat[h]/25);
  // 摇摆：多位置英雄后续可换线
@@ -427,6 +435,7 @@ function bestBanFor(d){
 /* ---------- AI 逐手决策（统一走 aiBrain 难度系数） ---------- */
 function aiDraftStep(d){
  const st=d.steps[d.idx];
+ if(!st||!st.type)return; // 残缺/收官后的空步：静默跳过，禁止读 undefined.type 打爆 BP
  const sr=d.sr||{};
  const s=(typeof S!=='undefined')?S:null;
  const opName=sr.opName;
@@ -442,10 +451,13 @@ function aiDraftStep(d){
  const oppFocus=myFocus?(Object.keys({team:0,farm:0,lane:0,mind:0}).find(t=>typeBeats(t,myFocus))||null):null;
  if(st.type==='ban'){
   // 对方 BAN：盯我招牌 + 克制我战术 + 摇摆位；对方已用英雄不 BAN
+  // 首轮 BAN 更重招牌封锁，后续轮更重版本/威胁
+  const earlyBan=(d.idx||0)<=3;
+  const sigWLocal=earlyBan?sigW*1.35:sigW*0.9;
   const avail=banCandidates(d).filter(h=>!((d.usedOpp||[]).includes(h)));
   let best=null,bs=-1;
   avail.forEach(h=>{
-   let score=banScore(d,h,{threatSide:'me',focusType:myFocus,sigSet:mySig,watchSig:sigW});
+   let score=banScore(d,h,{threatSide:'me',focusType:myFocus,sigSet:mySig,watchSig:sigWLocal});
    score+=Math.random()*noise;
    if(behind&&(threatOf(d,h,'me')||0)>0)score+=behindBoost;
    if(score>bs){bs=score;best=h;}
@@ -453,8 +465,9 @@ function aiDraftStep(d){
   if(best)d.oppBans.push(best);
   return;
  }
- // 对方选人：Utility = 熟练战力 + 版本/招牌 + 克制我方已选 + 抢我想要的
+ // 对方选人：Utility = 熟练战力 + 版本/招牌 + 克制我方已选 + 抢我想要的 + 己方阵容多样
  const enemyPicks=Object.values(d.myPicks||{});
+ const allyPicks=Object.values(d.oppPicks||{});
  const enemyThreat={};
  banCandidates(d).forEach(h=>{const th=threatOf(d,h,'me');if(th!=null)enemyThreat[h]=th;});
  let bestPos=null,bestHero=null,bs=-1;
@@ -470,6 +483,7 @@ function aiDraftStep(d){
     focusType:oppFocus,
     sigW:Math.max(0.4,1.6*(brain-0.4)),
     enemyPicks,
+    allyPicks,
     enemyThreat,
     counterW:0.8+1.2*(brain-0.5),
     behind,

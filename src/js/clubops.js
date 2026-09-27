@@ -155,8 +155,13 @@ function mentorSeasonSettle(s){
 function aiRosterFitTactic(s,opName){
  const roster=(typeof ensureAiRosters==='function'?ensureAiRosters(s,opName):null)||[];
  if(!roster.length)return null;
+ // 按“可用战力”加权四维，而不是裸属性求和：避免全队高 farm 低总值误判成运营队
  const sum={lane:0,farm:0,team:0,mind:0};
- roster.forEach(p=>{Object.keys(sum).forEach(k=>{sum[k]+=(p.attrs&&p.attrs[k])||0;});});
+ roster.forEach(p=>{
+  if(p.injury>0)return;
+  const w=Math.max(0.4,playerPower(p,p.sig)/80);
+  Object.keys(sum).forEach(k=>{sum[k]+=((p.attrs&&p.attrs[k])||70)*w;});
+ });
  // 选与全队最强维度同向的战术（均衡除外）
  const keys=Object.keys(sum).sort((a,b)=>sum[b]-sum[a]);
  const top=keys[0];
@@ -166,20 +171,33 @@ function aiRosterFitTactic(s,opName){
 function aiChooseTactic(s,sr,opName){
  const brain=(typeof aiBrain==='function')?aiBrain(s,opName)
   :((typeof aiTierOf==='function'&&aiTierOf(s,opName)==='elite')?1.3:aiTierOf(s,opName)==='weak'?0.7:1);
+ const persona=(typeof aiPersonaOf==='function')?aiPersonaOf(s,opName):'balanced';
  const playerTactic=(s.tactic&&s.tactic!=='balanced')?s.tactic:null;
+ const behind=!!(sr&&((sr.ow||0)>(sr.mw||0)));
+ const ahead=!!(sr&&((sr.mw||0)>(sr.ow||0)));
  if(playerTactic){
   const counter=TACTICS.find(t=>t.beats===playerTactic);
-  // 智能系数越高越爱反制；连冠已含在 aiBrain 的 aiDiffMul 里
-  const pCounter=Math.max(0,Math.min(0.92,0.08+0.48*brain));
+  // 智能系数越高越爱反制；落后加压、领先保稳；连冠已含在 aiBrain 的 aiDiffMul 里
+  let pCounter=Math.max(0,Math.min(0.92,0.08+0.48*brain));
+  if(behind)pCounter=Math.min(0.95,pCounter+0.12);
+  if(ahead)pCounter=Math.max(0.05,pCounter-0.08);
   if(counter&&Math.random()<pCounter){
    try{logEvent(s,' 对手教练组研究录像：'+opName+' 布置「'+counter.name+'」反制你的「'+tacticById(playerTactic).name+'」（难度系数 '+brain.toFixed(2)+'）');}catch(e){}
    return counter.id;
   }
  }
  const fit=aiRosterFitTactic(s,opName);
- // 按阵容强项配战术：智能越高越少乱选
- const pFit=Math.max(0.15,Math.min(0.85,0.2+0.4*brain));
+ // 按阵容强项配战术：智能越高越少乱选；领先更爱用擅长体系稳住
+ let pFit=Math.max(0.15,Math.min(0.9,0.2+0.4*brain));
+ if(ahead&&fit)pFit=Math.min(0.95,pFit+0.15);
+ if(behind&&fit&&persona==='tactical')pFit=Math.min(0.95,pFit+0.1);
+ // 落后且未反制成功：高智能倾向进攻体系抢节奏
+ if(behind&&brain>=0.9&&Math.random()<0.55){
+  const aggro=TACTICS.filter(t=>t.id==='lane'||t.id==='team');
+  return (aggro.length?pick(aggro).id:'team');
+ }
  if(fit&&Math.random()<pFit)return fit;
+ if(brain>=1.15)return fit||'balanced';
  return tacticById(pick(TACTICS).id).id;
 }
 function seriesTacticEdge(s,sr){

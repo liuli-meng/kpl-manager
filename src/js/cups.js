@@ -381,11 +381,12 @@ function annualGroupOf(s){
 }
 function annualSubRule(g){return ANNUAL_SUB[g]||null;}
 function annualHealthyCount(s){
- return (s&&s.players||[]).filter(p=>matchEligible(s,p)&&!p.loan).length;
+ return (s&&s.players||[]).filter(p=>matchEligible(s,p)).length;
 }
-/* 大师组年总大名单：健康可战前 7 人（官方 7 人名单口径） */
+/* 大师组年总出征大名单：固定 7 人（含租借）——自家可战优先，再补租借（≤1），租借占名额 */
 function annualRosterPool(s){
  const n=(annualSubRule('masters')||{}).rosterN||7;
+ if(typeof cupTravelRoster==='function')return cupTravelRoster(s,n,1);
  return (s&&s.players||[]).filter(p=>matchEligible(s,p)&&!p.loan).slice(0,n);
 }
 function annualSubRuleText(s){

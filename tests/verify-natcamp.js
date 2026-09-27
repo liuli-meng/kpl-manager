@@ -140,8 +140,13 @@ const out = vm.runInContext(`
   autoFillLineup(S);
   try{
     openBP('测试',playGame);
-    if($('#app-modal').classList.contains('on'))fail('B④top 空缺仍可进 BP 台');
-    else log('B③top 空缺开赛被拦截（BP 台未开）');
+    // 只认「BP 台」：缺位时 showNoGoModal 会开「无法出战」弹窗（同一 #app-modal），
+    // 不能把弹窗一律当成进了 BP（否则误报 B④）
+    const modalOn=$('#app-modal').classList.contains('on');
+    const body=(document.getElementById('app-modal-body')||{innerHTML:''}).innerHTML||'';
+    const isBP=!!window._draft||/进入 BP|确定出战|禁用英雄|选用英雄|盲选/.test(body);
+    if(isBP)fail('B④top 空缺仍可进 BP 台');
+    else log('B③top 空缺开赛被拦截（'+(modalOn?'缺位弹窗':'toast 提示')+'）');
   }catch(e){log('B③top 空缺开赛被拦截（toast 提示路径）');}
   // 签一名 top 自由球员 → autoFill 顶位 → 可开战
   S.fund=50000;

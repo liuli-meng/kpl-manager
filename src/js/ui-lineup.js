@@ -33,7 +33,7 @@ function renderLineup(){
  <button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${busy?'disabled':''}>↑ 放入首发</button>
  ${S.mode==='manager'?`<button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')" ${busy?'disabled':''}> 出售（谈判）</button>`:''}
  <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长"> 下放 K甲</button>
- <button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="外租 ${LOAN_DAYS} 天：去缺人的俱乐部打主力，租金入账，归队带成长"> 外租练级</button>`}`);
+ ${(S.mode||'manager')==='manager'&&(typeof loanWindowOpen==='function'&&loanWindowOpen(S))?`<button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="杯赛窗口外租：占出征名额，归队带成长"> 外租练级</button>`:''}`}`);
  }).join('')}</div>`:'<div class="hint">暂无替补——转会市场签人，或等俱乐部自动引援</div>'}
  </div>`;
  // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算

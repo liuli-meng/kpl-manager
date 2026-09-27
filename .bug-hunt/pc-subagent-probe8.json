@@ -1,0 +1,898 @@
+{
+  "summary": {
+    "counts": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0
+    },
+    "events": {
+      "pageerror": [],
+      "consoleError": [],
+      "dialogs": []
+    },
+    "findings": []
+  },
+  "playerBoot": {
+    "mode": "player",
+    "team": "西安WE",
+    "page": "career",
+    "players": 6,
+    "hasMe": true,
+    "meId": "me_mujof72p",
+    "age": 19,
+    "lineup": [
+      "top17",
+      "jg18",
+      "me_mujof72p",
+      "ad16",
+      "sup17"
+    ],
+    "toasts": [
+      " 选手生涯开启：你已在首发阵容"
+    ],
+    "startModalOpen": false
+  },
+  "careerUi": {
+    "textLen": 869,
+    "textHead": "新手任务（第 1 天）：完成一次加练更衣室走一遭\n第 1 赛季主线（0/5）：加练一次打完一场更衣室互动关注身价/目标打完整赛季\n你的故事：训练/更衣室/媒体/生涯目标，选手模式每天来这打卡\n×\n无\n中\n无名小将 中路 · 19岁 · 黄金期 首发\nWE\n 西安WE · 合同 2 年 · 年薪 80万 · 总值 72 · 身价系数 100%\n0 冠 · 0 FMVP · 0 一阵\n生涯荣誉\n成长训练\n每天一项 · 合同角色：轮换拼图 · 状态：\n平稳 72\n线\n运\n团\n心\n对线 72/77 · 运营 74/79 · 团战 72/77 · 心态 69/74 （当前/天花板）\n本赛季：出场 0 次 · 场均 — · 单场MVP 0 次 · 比赛 0 场\n招牌：\n貂\n 貂蝉（绝活）· 体力 100 · 士气 79\n接受合理轮换；板凳士气更稳，出场时成长略快\n练对线\n练运营\n练团战\n练心态\n英雄特",
+    "trainBtns": [
+      {
+        "text": "练对线",
+        "onclick": "playerTrain('lane')",
+        "disabled": false
+      },
+      {
+        "text": "练运营",
+        "onclick": "playerTrain('farm')",
+        "disabled": false
+      },
+      {
+        "text": "练团战",
+        "onclick": "playerTrain('team')",
+        "disabled": false
+      },
+      {
+        "text": "练心态",
+        "onclick": "playerTrain('mind')",
+        "disabled": false
+      }
+    ],
+    "socialBtns": [
+      {
+        "text": "更衣室聚餐",
+        "onclick": "playerSocial(S,'bond')",
+        "disabled": false
+      },
+      {
+        "text": "陪替补加练",
+        "onclick": "playerSocial(S,'help')",
+        "disabled": false
+      },
+      {
+        "text": "直播整活",
+        "onclick": "playerSocial(S,'stream')",
+        "disabled": false
+      }
+    ],
+    "mediaBtns": [],
+    "transferBtn": {
+      "text": "📣 申请转会（经纪人寻找下家）",
+      "onclick": "playerRequestTransfer(S)",
+      "disabled": false
+    },
+    "allOns": [
+      "goPage('career')",
+      "goPage('career')",
+      "goPage('career')",
+      "goPage('club')",
+      "goPage('career')",
+      "goPage('career')",
+      "goPage('club')",
+      "dismissHint('career')",
+      "playerTrain('lane')",
+      "playerTrain('farm')",
+      "playerTrain('team')",
+      "playerTrain('mind')",
+      "playerHeroTrain()",
+      "playerRest()",
+      "setPlayerRole(S,'star')",
+      "setPlayerRole(S,'rot')",
+      "setPlayerRole(S,'proj')",
+      "playerSocial(S,'bond')",
+      "playerSocial(S,'help')",
+      "playerSocial(S,'stream')",
+      "playerRequestTransfer(S)"
+    ]
+  },
+  "trainClick": {
+    "ok": true,
+    "toasts": [
+      " 加练对线：平稳，今天没有提升"
+    ],
+    "trained": 1,
+    "laneBefore": 72,
+    "laneAfter": 72,
+    "anyGain": false
+  },
+  "socialClick": {
+    "ok": true,
+    "label": "更衣室聚餐",
+    "toasts": [],
+    "socialBefore": 0,
+    "socialAfter": 1,
+    "changed": true
+  },
+  "mediaClick": {
+    "ok": true,
+    "label": "还没到巅峰，继续打磨",
+    "toasts": [
+      "低调回应赢得尊重"
+    ],
+    "mediaCleared": true,
+    "mediaStat": 1
+  },
+  "clubUi": {
+    "textLen": 506,
+    "hasStartPlayer": true,
+    "hasStartMatch": false,
+    "matchBtns": [
+      {
+        "text": "出战比赛 · 教练指挥（自动模拟 BO5）",
+        "onclick": "startPlayerMatch()",
+        "disabled": false
+      }
+    ],
+    "textHead": "第 1 赛季主线（2/5）：打完一场关注身价/目标打完整赛季\n推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发\n×\nWE\n西安WE\n2026 春季赛 · 第1天 · 常规赛·第一轮 · G3组\n5500\n俱乐部资金\n下一场比赛\n常规赛·第一轮 · G3组 第1/5轮\nWE\n西安WE\n战力 376\nVS\nDYG\n 深圳DYG\n战力 375\n出战比赛 · 教练指挥（自动模拟 BO5）\n你已进入首发轮换——教练按状态评定每场首发。比赛由教练组指挥 BP，赛后看你的个人数据与全场直播。\n主教练\n80评分 · 心态型\n教\n月光 (全队战力+5%)\n月之BP：全队战力+5%，心态属性额外+4% · 年薪 25万 · 转会页可换帅\n事件动态\n共 5 条 · 按分类查看\n全部\n荣誉成就 0\n比赛战报 0\n转会财政 1\n其他动态 4\n媒体采访：无名小将 选择「还没到巅峰，继续打磨」——低调回应赢得尊重\n更衣室：无名小将 组局聚餐，全队士气回暖\n加练对线：无名小将 平稳，今天没有提升（状态 72）\n你已进入首发轮换——用表现锁住它\n选手生涯开启：无名小将（中路 · 次级联赛）签约 西安WE（"
+  },
+  "matchClick": {
+    "ok": true,
+    "disabled": false,
+    "toasts": [
+      " 以下克上！ · 击败 深圳DYG（纸面更弱的一方）",
+      " 成就解锁：旗开得胜（拿下队史首场系列赛胜利）",
+      " 成就解锁：以下克上（击败纸面战力高出 15% 的对手）"
+    ],
+    "before": {
+      "matchIdx": 0,
+      "history": 0,
+      "matches": 0
+    },
+    "after": {
+      "matchIdx": 1,
+      "history": 1,
+      "matches": 1,
+      "phase": "r1"
+    },
+    "modalOpen": true,
+    "bpVisible": false
+  },
+  "gates": [
+    {
+      "name": "market",
+      "cur": "club",
+      "visible": false,
+      "toasts": [
+        "当前身份没有「转会 · 买卖选手」页，已回到俱乐部 · 比赛主场"
+      ],
+      "onPage": false
+    },
+    {
+      "name": "lineup",
+      "cur": "club",
+      "visible": false,
+      "toasts": [
+        "当前身份没有「阵容 · 管理选手」页，已回到俱乐部 · 比赛主场"
+      ],
+      "onPage": false
+    },
+    {
+      "name": "biz",
+      "cur": "club",
+      "visible": false,
+      "toasts": [
+        "当前身份没有「经营 · 钱袋子」页，已回到俱乐部 · 比赛主场"
+      ],
+      "onPage": false
+    },
+    {
+      "name": "train",
+      "cur": "club",
+      "visible": false,
+      "toasts": [
+        "当前身份没有「训练 · 变强」页，已回到俱乐部 · 比赛主场"
+      ],
+      "onPage": false
+    },
+    {
+      "name": "career",
+      "cur": "career",
+      "visible": true,
+      "toasts": [],
+      "onPage": true
+    }
+  ],
+  "kjia": {
+    "hasPromoteHint": false,
+    "hasManagerCopy": false,
+    "hasCanPromoteTag": false,
+    "promoteBtnCount": 0,
+    "enabledPromoteCount": 0,
+    "recallBtnCount": 0,
+    "uiClick": {
+      "skipped": true,
+      "count": 0
+    },
+    "engineTry": {
+      "ok": true,
+      "toasts": [
+        " 选手生涯不能操作「提拔青训」（由俱乐部/经纪处理）"
+      ],
+      "playersAfter": 6,
+      "beforeLen": 6,
+      "squadAfter": 5,
+      "squadBefore": 5
+    },
+    "recallTry": {
+      "called": false,
+      "toasts": [
+        " 选手生涯不能操作「召回 K 甲」（由俱乐部/经纪处理）"
+      ]
+    },
+    "mode": "player",
+    "textHead": "二队 K甲赛况：查看练级数据与俱乐部下放情况（人事权在俱乐部，「生涯」页可申请租借/K甲）\n×\nK甲联赛 · 二队\n2026 春季赛 · 第1/7轮 · 每2天一轮\n次级联赛与 KPL 赛段并行推进：俱乐部把替补/青训下放二队真实出战（不占你的 KPL 出场），表现数据在本页累计；归队时带属性成长。你可在「生涯」页申请下放练级。\n二队概况\nWE\n西安WE二队 · 战力 296 · 联赛第8名 · 下放选手 0 人\n西安WE二队\n战力 296\n下一场 · 第1轮\nK甲·苍穹\n战力 363\nK甲积分榜\n8队单循环 · 胜者积1分\n#\t战队\t胜\t负\t积分\t净胜局\t战力\n1\tK甲·苍穹\t0\t0\t0\t0\t363\n2\tK甲·星火\t0\t0\t0\t0\t366\n3\tK甲·沧澜\t0\t0\t0\t0\t377\n4\tK甲·"
+  },
+  "priv": {
+    "startMatch": {
+      "name": "startMatch",
+      "result": "undefined",
+      "err": null,
+      "toasts": [
+        " 选手生涯不能操作「开始比赛」（由俱乐部/经纪处理）"
+      ]
+    },
+    "openBP": {
+      "name": "openBP",
+      "result": "null",
+      "err": "Cannot read properties of null (reading 'side')",
+      "toasts": []
+    },
+    "bpDom": {
+      "draft": "undefined",
+      "bpModal": true
+    },
+    "listPlayer": {
+      "name": "listPlayer",
+      "result": "no-p",
+      "err": null,
+      "toasts": [
+        " 选手生涯不能操作「挂牌」（由俱乐部/经纪处理）"
+      ]
+    },
+    "openSellNego": {
+      "name": "openSellNego",
+      "result": "no-p",
+      "err": null,
+      "toasts": [
+        " 选手生涯不能操作「出售」（由俱乐部/经纪处理）"
+      ]
+    },
+    "buyPlayer": {
+      "name": "buyPlayer-call",
+      "result": "false",
+      "err": null,
+      "toasts": [
+        "选手生涯：不操作俱乐部买卖（由经纪与俱乐部处理）"
+      ]
+    },
+    "endTransferWindow": {
+      "name": "endTransferWindow",
+      "result": "undefined",
+      "err": null,
+      "toasts": [
+        " 选手生涯不能操作「结束转会期」（由俱乐部/经纪处理）"
+      ]
+    },
+    "upgradeSponsor": {
+      "name": "upgradeSponsor",
+      "result": "undefined",
+      "err": null,
+      "toasts": [
+        " 选手生涯不能操作「升级赞助」（由俱乐部/经纪处理）"
+      ]
+    },
+    "promoteRookie": {
+      "name": "promoteRookie",
+      "result": "no-rookie-or-called",
+      "err": null,
+      "toasts": []
+    }
+  },
+  "coachBoot": {
+    "mode": "coach",
+    "team": "武汉eStarPro",
+    "page": "club",
+    "players": 5,
+    "toasts": [
+      " 教练生涯开启：带队打出成绩！",
+      " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）"
+    ],
+    "startModalOpen": false,
+    "hasCoach": true,
+    "coachDeal": true
+  },
+  "coachPages": {
+    "lineup": {
+      "visible": true,
+      "textLen": 1171,
+      "sellBtns": [],
+      "loanOutBtns": [],
+      "trainBtns": [],
+      "tacticBtns": [
+        {
+          "text": "均衡运营",
+          "onclick": "setTactic('balanced')",
+          "disabled": false
+        },
+        {
+          "text": "运营拉扯",
+          "onclick": "setTactic('farm')",
+          "disabled": false
+        },
+        {
+          "text": "团战致胜",
+          "onclick": "setTactic('team')",
+          "disabled": false
+        },
+        {
+          "text": "线优压制",
+          "onclick": "setTactic('lane')",
+          "disabled": false
+        },
+        {
+          "text": "心理博弈",
+          "onclick": "setTactic('mind')",
+          "disabled": false
+        }
+      ],
+      "coachReqBtns": [],
+      "lineupBtns": [
+        {
+          "text": "任队长",
+          "onclick": "setCaptain('top3')",
+          "disabled": false
+        },
+        {
+          "text": "任队长",
+          "onclick": "setCaptain('jg3')",
+          "disabled": false
+        },
+        {
+          "text": "任队长",
+          "onclick": "setCaptain('mid1')",
+          "disabled": false
+        },
+        {
+          "text": "任队长",
+          "onclick": "setCaptain('ad3')",
+          "disabled": false
+        },
+        {
+          "text": "任队长",
+          "onclick": "setCaptain('sup2')",
+          "disabled": false
+        }
+      ],
+      "btnCount": 21,
+      "textHead": "选手卡管一切：训练、身价、续约、挂牌出售、替补轮换\n×\n首发阵容\n5人\n总战力 534 · 总身价 3.0亿 · 士气均值 85% · 年薪合计 1584万\n坦\n对\n坦然\n对\n总值\n89\n对抗路 · eStar\n黄金期 · 19岁\n合同2年\n出战 吕布 · 池 绝活1/熟练23\n代言 41万 · 人气 34\n吕布战神 · 团战属性额外+12%\n对线\n88\n运营\n87\n团战\n92\n心态\n90\n战力\n100\n身价\n5116万\n年薪\n284万\n体力\n100\n士气\n87\n选手档案\n→ 换下\n任队长\n花\n野\n花海\n野\n总值\n92\n打野 · eStar\n黄金期 · ",
+      "allOns": [
+        "dismissHint('lineup')",
+        "event.stopPropagation();showCareer(findPlayerCard('top3'))",
+        "swapPlayer('top3')",
+        "setCaptain('top3')",
+        "event.stopPropagation();showCareer(findPlayerCard('jg3'))",
+        "swapPlayer('jg3')",
+        "setCaptain('jg3')",
+        "event.stopPropagation();showCareer(findPlayerCard('mid1'))",
+        "swapPlayer('mid1')",
+        "setCaptain('mid1')",
+        "event.stopPropagation();showCareer(findPlayerCard('ad3'))",
+        "swapPlayer('ad3')",
+        "setCaptain('ad3')",
+        "event.stopPropagation();showCareer(findPlayerCard('sup2'))",
+        "swapPlayer('sup2')",
+        "setCaptain('sup2')",
+        "setTactic('balanced')",
+        "setTactic('farm')",
+        "setTactic('team')",
+        "setTactic('lane')"
+      ]
+    },
+    "train": {
+      "visible": true,
+      "textLen": 1433,
+      "sellBtns": [],
+      "loanOutBtns": [],
+      "trainBtns": [
+        {
+          "text": "对线+1~2",
+          "onclick": "doTrain(S,'jg3','lane')",
+          "disabled": false
+        },
+        {
+          "text": "运营+1~2",
+          "onclick": "doTrain(S,'jg3','farm')",
+          "disabled": false
+        },
+        {
+          "text": "团战+1~2",
+          "onclick": "doTrain(S,'jg3','team')",
+          "disabled": false
+        },
+        {
+          "text": "心态+1~2",
+          "onclick": "doTrain(S,'jg3','mind')",
+          "disabled": false
+        },
+        {
+          "text": "对线+1~2",
+          "onclick": "doTrain(S,'mid1','lane')",
+          "disabled": false
+        },
+        {
+          "text": "运营+1~2",
+          "onclick": "doTrain(S,'mid1','farm')",
+          "disabled": false
+        },
+        {
+          "text": "团战+1~2",
+          "onclick": "doTrain(S,'mid1','team')",
+          "disabled": false
+        },
+        {
+          "text": "心态+1~2",
+          "onclick": "doTrain(S,'mid1','mind')",
+          "disabled": false
+        },
+        {
+          "text": "对线+1~2",
+          "onclick": "doTrain(S,'sup2','lane')",
+          "disabled": false
+        },
+        {
+          "text": "运营+1~2",
+          "onclick": "doTrain(S,'sup2','farm')",
+          "disabled": false
+        },
+        {
+          "text": "团战+1~2",
+          "onclick": "doTrain(S,'sup2','team')",
+          "disabled": false
+        },
+        {
+          "text": "心态+1~2",
+          "onclick": "doTrain(S,'sup2','mind')",
+          "disabled": false
+        },
+        {
+          "text": "对线+1~2",
+          "onclick": "doTrain(S,'ad3','lane')",
+          "disabled": false
+        },
+        {
+          "text": "运营+1~2",
+          "onclick": "doTrain(S,'ad3','farm')",
+          "disabled": false
+        },
+        {
+          "text": "团战+1~2",
+          "onclick": "doTrain(S,'ad3','team')",
+          "disabled": false
+        },
+        {
+          "text": "心态+1~2",
+          "onclick": "doTrain(S,'ad3','mind')",
+          "disabled": false
+        },
+        {
+          "text": "对线+1~2",
+          "onclick": "doTrain(S,'top3','lane')",
+          "disabled": false
+        },
+        {
+          "text": "运营+1~2",
+          "onclick": "doTrain(S,'top3','farm')",
+          "disabled": false
+        },
+        {
+          "text": "团战+1~2",
+          "onclick": "doTrain(S,'top3','team')",
+          "disabled": false
+        },
+        {
+          "text": "心态+1~2",
+          "onclick": "doTrain(S,'top3','mind')",
+          "disabled": false
+        }
+      ],
+      "tacticBtns": [],
+      "coachReqBtns": [],
+      "lineupBtns": [],
+      "btnCount": 44,
+      "textHead": "变强在本页：专项训练/青训营/位置改造，花钱要精打细算\n×\n选手训练\n每天限1次 · 属性13万 / 英雄特训25万\n选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）\n全部\n对抗路\n打野\n中路\n发育路\n游走\n总值\n身价\n年轻\n士气\n花\n野\n花海\n野\n总值\n92\n打野 · eStar\n黄金期 · 20岁\n合同3年\n出战 娜可露露 · 池 绝活1/熟练20\n代言 76万 · 人气 63\n娜可露露收割 · 团战属性额外+12%\n对线\n86\n运营\n93\n团战\n94\n心态\n89\n战力\n102\n身价\n6589万\n年薪\n320万\n体力\n100",
+      "allOns": [
+        "dismissHint('train')",
+        "setPosFilter('train','')",
+        "setPosFilter('train','top')",
+        "setPosFilter('train','jg')",
+        "setPosFilter('train','mid')",
+        "setPosFilter('train','ad')",
+        "setPosFilter('train','sup')",
+        "setSortKey('train','ovr')",
+        "setSortKey('train','val')",
+        "setSortKey('train','age')",
+        "setSortKey('train','mor')",
+        "event.stopPropagation();showCareer(findPlayerCard('jg3'))",
+        "doTrain(S,'jg3','lane')",
+        "doTrain(S,'jg3','farm')",
+        "doTrain(S,'jg3','team')",
+        "doTrain(S,'jg3','mind')",
+        "doHeroTrain(S,'jg3')",
+        "event.stopPropagation();showCareer(findPlayerCard('mid1'))",
+        "doTrain(S,'mid1','lane')",
+        "doTrain(S,'mid1','farm')"
+      ]
+    },
+    "market": {
+      "visible": true,
+      "textLen": 1384,
+      "sellBtns": [],
+      "loanOutBtns": [],
+      "trainBtns": [],
+      "tacticBtns": [],
+      "coachReqBtns": [
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_北京WB_1_ac_jg_t0bk6')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_广州TTG_1_ac_jg_ck2x9')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_0_ac_top_6czp8')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_1_ac_jg_z1hnp')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_佛山DRG_0_ac_top_cxq1b')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_济南RW侠_1_ac_jg_u5glw')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_深圳DYG_1_ac_jg_bz58y')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_上海EDG.M_0_ac_top_z7tgr')",
+          "disabled": false
+        }
+      ],
+      "lineupBtns": [
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'北京WB','loan_bench_北京WB_1_ac_jg_t0bk6')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_北京WB_1_ac_jg_t0bk6')",
+          "disabled": false
+        },
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'广州TTG','loan_bench_广州TTG_1_ac_jg_ck2x9')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_广州TTG_1_ac_jg_ck2x9')",
+          "disabled": false
+        },
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_0_ac_top_6czp8')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_0_ac_top_6czp8')",
+          "disabled": false
+        },
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_1_ac_jg_z1hnp')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_1_ac_jg_z1hnp')",
+          "disabled": false
+        },
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'佛山DRG','loan_bench_佛山DRG_0_ac_top_cxq1b')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_佛山DRG_0_ac_top_cxq1b')",
+          "disabled": false
+        },
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'济南RW侠','loan_bench_济南RW侠_1_ac_jg_u5glw')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_济南RW侠_1_ac_jg_u5glw')",
+          "disabled": false
+        },
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'深圳DYG','loan_bench_深圳DYG_1_ac_jg_bz58y')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_深圳DYG_1_ac_jg_bz58y')",
+          "disabled": false
+        },
+        {
+          "text": "立即租借",
+          "onclick": "loanPlayer(S,'上海EDG.M','loan_bench_上海EDG.M_0_ac_top_z7tgr')",
+          "disabled": false
+        },
+        {
+          "text": "申请租借",
+          "onclick": "coachRequest(S,'loan','loan_bench_上海EDG.M_0_ac_top_z7tgr')",
+          "disabled": false
+        }
+      ],
+      "btnCount": 22,
+      "textHead": "教练工作台：应急租借与引援申请（买断谈判由俱乐部打理）\n×\n教练工作台 · 应急与引援\n买断挂牌由俱乐部打理\n伤停/集训缺人时可紧急租借；也可向俱乐部提交引援申请（资金与名单允许时自动办理）。不能挂牌出售选手——那是管理层的事。\n应急租借市场\n21 天 · 名额 0/2\n租金约身价 15%，工资由原队承担；非卖品不外借。缺位位置优先推荐。\n谷雨 (北京WB · 打野 · 总值70)\n租金 132万\n立即租借\n申请租借\n白秋 (广州TTG · 打野 · 总值70)\n租金 132万\n立即租借\n申请租借\n霜降 (南京Hero久竞 · 对抗路 · 总值70)\n租",
+      "allOns": [
+        "dismissHint('market')",
+        "loanPlayer(S,'北京WB','loan_bench_北京WB_1_ac_jg_t0bk6')",
+        "coachRequest(S,'loan','loan_bench_北京WB_1_ac_jg_t0bk6')",
+        "loanPlayer(S,'广州TTG','loan_bench_广州TTG_1_ac_jg_ck2x9')",
+        "coachRequest(S,'loan','loan_bench_广州TTG_1_ac_jg_ck2x9')",
+        "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_0_ac_top_6czp8')",
+        "coachRequest(S,'loan','loan_bench_南京Hero久竞_0_ac_top_6czp8')",
+        "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_1_ac_jg_z1hnp')",
+        "coachRequest(S,'loan','loan_bench_南京Hero久竞_1_ac_jg_z1hnp')",
+        "loanPlayer(S,'佛山DRG','loan_bench_佛山DRG_0_ac_top_cxq1b')",
+        "coachRequest(S,'loan','loan_bench_佛山DRG_0_ac_top_cxq1b')",
+        "loanPlayer(S,'济南RW侠','loan_bench_济南RW侠_1_ac_jg_u5glw')",
+        "coachRequest(S,'loan','loan_bench_济南RW侠_1_ac_jg_u5glw')",
+        "loanPlayer(S,'深圳DYG','loan_bench_深圳DYG_1_ac_jg_bz58y')",
+        "coachRequest(S,'loan','loan_bench_深圳DYG_1_ac_jg_bz58y')",
+        "loanPlayer(S,'上海EDG.M','loan_bench_上海EDG.M_0_ac_top_z7tgr')",
+        "coachRequest(S,'loan','loan_bench_上海EDG.M_0_ac_top_z7tgr')",
+        "event.stopPropagation();showCareer(findPlayerCard('top3'))",
+        "event.stopPropagation();showCareer(findPlayerCard('jg3'))",
+        "event.stopPropagation();showCareer(findPlayerCard('mid1'))"
+      ]
+    },
+    "club": {
+      "visible": true,
+      "textLen": 842,
+      "sellBtns": [],
+      "loanOutBtns": [],
+      "trainBtns": [],
+      "tacticBtns": [],
+      "coachReqBtns": [],
+      "lineupBtns": [],
+      "btnCount": 15,
+      "textHead": "新手任务（第 1 天）：完成一次训练推进一场比赛\n第 1 赛季主线（2/5）：完成一次训练看过联赛积分榜赛季收官（任意结局）\n推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发\n×\neStar\n武汉eStarPro\n2026 春季赛 · 第1天 · 常规赛·第一轮 · G1组\n改队徽\n1.3亿\n俱乐部资金\n董事会\n信任度 60 · 满意\n信任度\n60\n本赛季目标：赛季末年度积分进前 4 （首年按执教班底档位）\n赛季末按「年度积分排名」结算：达成目标涨信任度；连年不达标会逐步失去董事会的耐心\n执教履历\n现合同 2 年 · 0 冠\n你管竞技：首发",
+      "allOns": [
+        "goPage('train')",
+        "goPage('club')",
+        "goPage('train')",
+        "goPage('league')",
+        "goPage('club')",
+        "dismissHint('club')",
+        "openCrestEdit()",
+        "uiStartMatch()",
+        "goPage('train')",
+        "doRest(S)",
+        "window._logFilter='all';renderClub()",
+        "window._logFilter='honor';renderClub()",
+        "window._logFilter='match';renderClub()",
+        "window._logFilter='fund';renderClub()",
+        "window._logFilter='other';renderClub()"
+      ]
+    }
+  },
+  "lineupClick": {
+    "ok": true,
+    "onclick": "setTactic('balanced')",
+    "text": "均衡运营",
+    "toasts": [],
+    "err": null
+  },
+  "marketClick": {
+    "ok": true,
+    "onclick": "coachRequest(S,'loan','loan_bench_北京WB_1_ac_jg_t0bk6')",
+    "text": "申请租借",
+    "toasts": [
+      "谷雨 租借加盟！21 天后自动归队",
+      "谷雨 租借加盟！"
+    ],
+    "err": null
+  },
+  "coachSell": {
+    "listPlayer": {
+      "name": "listPlayer",
+      "err": null,
+      "toasts": [
+        " 教练生涯不能操作「挂牌」（由俱乐部打理，请用申请入口）"
+      ],
+      "listed": 0
+    },
+    "openSellNego": {
+      "name": "openSellNego",
+      "err": null,
+      "toasts": [
+        " 教练生涯不能操作「出售」（由俱乐部打理，请用申请入口）"
+      ],
+      "listed": 0
+    },
+    "buyPlayer": {
+      "name": "buyPlayer",
+      "err": null,
+      "toasts": [],
+      "listed": 0
+    }
+  },
+  "offerValid": {
+    "beforeTeam": "武汉eStarPro",
+    "afterTeam": "成都AG超玩会",
+    "moved": true,
+    "toasts": [],
+    "offerCleared": true,
+    "coachIdBefore": "co3",
+    "coachIdAfter": "co3",
+    "dealLog": [
+      {
+        "year": 2026,
+        "note": "离任 武汉eStarPro，转投 成都AG超玩会"
+      }
+    ]
+  },
+  "offerReject": {
+    "beforeTeam": "成都AG超玩会",
+    "afterTeam": "成都AG超玩会",
+    "stayed": true,
+    "toasts": [],
+    "offerCleared": true,
+    "dealLog": [
+      {
+        "year": 2026,
+        "note": "婉拒 重庆狼队 邀约，留任 成都AG超玩会"
+      },
+      {
+        "year": 2026,
+        "note": "离任 武汉eStarPro，转投 成都AG超玩会"
+      }
+    ],
+    "trust": 73
+  },
+  "offerBad": {
+    "beforeTeam": "成都AG超玩会",
+    "afterTeam": "成都AG超玩会",
+    "moved": false,
+    "toasts": [
+      " 邀约球队「AG超玩会」不在当前联盟，邀约已作废"
+    ],
+    "offerCleared": true,
+    "logAdded": false,
+    "dealLog": [
+      {
+        "year": 2026,
+        "note": "婉拒 重庆狼队 邀约，留任 成都AG超玩会"
+      },
+      {
+        "year": 2026,
+        "note": "离任 武汉eStarPro，转投 成都AG超玩会"
+      }
+    ]
+  },
+  "offerUi": {
+    "hasOfferCard": true,
+    "acceptBtn": {
+      "text": "接受（换队执教）",
+      "onclick": "respondCoachOffer(true)"
+    },
+    "rejectBtn": {
+      "text": "婉拒（留任）",
+      "onclick": "respondCoachOffer(false)"
+    }
+  },
+  "prep": {
+    "phase": "r1",
+    "matchIdx": 0,
+    "hasSeries": false,
+    "scheduleLen": 5,
+    "preseason": false,
+    "transferWindow": 0,
+    "matchBtns": [
+      {
+        "text": "赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）",
+        "onclick": "uiStartMatch()",
+        "disabled": false
+      }
+    ]
+  },
+  "prepClick": {
+    "ok": true,
+    "err": null,
+    "toasts": [],
+    "appModal": true,
+    "modalText": "赛前准备\nBO5 · 全局BP\n常规赛·第一轮 第1/5轮 vs 济南RW侠 · 第1局（BO5 全局BP）\nAG\n成都AG超玩会\n524\nVS\n赛前预估 75% · 战力差 104\nRW\n济南RW侠\n420\n成都AG超玩会\n524\n赛前预估\n75%\n济南RW侠\n420\n我方首发（可调整）\n对\n轩染\n战力 102 · 姬小满\n体力100 士气82\n换人\n野\n钟意\n战力 100 · 澜\n体力100 士气83\n换人\n中\n长生\n战力 99 · 沈梦溪\n体力100 士气77\n换人\n发\n一诺\n战力 106 · 公孙离\n体力100 士气89\n换人\n游\n大帅\n战力 100 · 大乔\n体力100 士气86\n换",
+    "hasEnterBP": true
+  },
+  "bpClick": {
+    "ok": true,
+    "err": null,
+    "toasts": [],
+    "draft": "object",
+    "hasDraft": true,
+    "bodyHasBP": true,
+    "snippet": "AG\n成都AG超玩会\n教练生涯 · 2026 春季赛\n1.5亿\n资金\n524\n总战力\n第1天\n距发薪6天\n1548/2800万\n年薪/帽\n15万/天\n社区网吧\n久哲\n教练 +9%\n存档\n管理\n音效 开\nBGM 关\n重开\n俱乐部\n阵容\n转会\n训练\n联赛\n二队\n联盟\n荣誉馆\n新手任务（第 1 天）：完成一次训练推进一场比赛\n第 1 赛季主线（2/5）：完成一次训练看过联赛积分榜赛季收官（任意结局）\n推"
+  },
+  "coachGates": [
+    {
+      "name": "biz",
+      "cur": "club",
+      "onPage": false,
+      "toasts": [
+        "当前身份没有「经营 · 钱袋子」页，已回到俱乐部 · 比赛主场"
+      ]
+    },
+    {
+      "name": "career",
+      "cur": "club",
+      "onPage": false,
+      "toasts": [
+        "当前身份没有「生涯 · 你的故事」页，已回到俱乐部 · 比赛主场"
+      ]
+    }
+  ],
+  "posInvalid": {
+    "err": null,
+    "boot": {
+      "mode": "player",
+      "ok": true
+    },
+    "toasts": [
+      "无效位置",
+      " 选手生涯开启：17岁跟训，满 18 岁登场！",
+      " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）"
+    ]
+  }
+}

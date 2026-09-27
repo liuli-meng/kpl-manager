@@ -1,0 +1,131 @@
+{
+  "findings": [
+    {
+      "id": "P1-TRAIN-NO-TOAST",
+      "severity": "FAIL",
+      "title": "加练成功（gain>0）完全无 toast 反馈（点了像没反应）",
+      "detail": "{\"toasts\":[],\"rHint\":{\"ok\":true,\"gain\":1,\"note\":\"火热\"}}"
+    },
+    {
+      "id": "P1-SOCIAL-NO-TOAST",
+      "severity": "FAIL",
+      "title": "社交成功无 toast 反馈",
+      "detail": "{\"toasts\":[],\"used\":true}"
+    },
+    {
+      "id": "P2-REST-NO-TOAST",
+      "severity": "WARN",
+      "title": "休息成功无 toast（界面数字会变）",
+      "detail": "{\"toasts\":[]}"
+    },
+    {
+      "id": "P2-ACCEPT-NO-TOAST",
+      "severity": "WARN",
+      "title": "接受邀约换队成功但无 toast（仅日志）",
+      "detail": "{\"via\":\"ui\",\"toasts\":[],\"moved\":true,\"newTeam\":\"重庆狼队\",\"coachKept\":true,\"offerCleared\":true}"
+    },
+    {
+      "id": "P2-REJECT-NO-TOAST",
+      "severity": "WARN",
+      "title": "婉拒邀约无 toast",
+      "detail": "{\"toasts\":[],\"offerCleared\":true,\"stayed\":true}"
+    },
+    {
+      "id": "P1-BP-UI-EMPTY",
+      "severity": "FAIL",
+      "title": "进入 BP 后无征召/确认按钮",
+      "detail": "{\"draft\":false,\"modalText\":\"赛前准备\\nBO5 · 全局BP\\n常规赛·第一轮 第1/5轮 vs 武汉eStarPro · 第1局（0:0）\\nWOLF\\n重庆狼队\\n503\\nVS\\n赛前预估 60% · 战力差 40\\neStar\\n武汉eStarPro\\n463\\n重庆狼队\\n503\\n赛前预估\\n60%\\n武汉eStarPro\\n463\\n我方首发（可调整）\\n对\\n归期\\n战力 89 · 狂铁\\n体力100 士气90\\n换人\\n野\\n小胖\\n战力 101 · 裴擒虎\\n体力100 士气80\\n换人\\n中\\n向鱼\\n战力 101 · 王昭君\\n体力100 士气77\\n换人\\n发\\n\",\"toasts\":[],\"hasPickButtons\":false}"
+    }
+  ],
+  "playerFb": {
+    "trainGain": {
+      "toasts": [],
+      "rHint": {
+        "ok": true,
+        "gain": 1,
+        "note": "火热"
+      }
+    },
+    "social": {
+      "toasts": [],
+      "used": true
+    },
+    "rest": {
+      "toasts": []
+    },
+    "mediaReal": {
+      "opened": true,
+      "mediaClick": {
+        "ui": false,
+        "api": true,
+        "toasts": [
+          "大气发言圈粉"
+        ],
+        "mediaAfter": false
+      },
+      "hasPanel": false
+    },
+    "trainZero": {
+      "toasts": [
+        " 加练心态：低迷，今天没有提升"
+      ],
+      "r2": {
+        "ok": true,
+        "gain": 0,
+        "note": "低迷，今天没有提升"
+      }
+    }
+  },
+  "offerUi": {
+    "buttons": {
+      "accept": {
+        "text": "接受（换队执教）",
+        "on": "respondCoachOffer(true)"
+      },
+      "reject": {
+        "text": "婉拒（留任）",
+        "on": "respondCoachOffer(false)"
+      }
+    },
+    "acceptClick": {
+      "via": "ui",
+      "toasts": [],
+      "moved": true,
+      "newTeam": "重庆狼队",
+      "coachKept": true,
+      "offerCleared": true
+    },
+    "reject": {
+      "toasts": [],
+      "offerCleared": true,
+      "stayed": true
+    },
+    "badNameUi": {
+      "toasts": [
+        " 邀约球队「不存在的战队XYZ」不在当前联盟，邀约已作废"
+      ],
+      "team": "重庆狼队"
+    }
+  },
+  "matchUi": {
+    "btn": "赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）",
+    "afterClick": {
+      "hasSeries": true,
+      "modalOpen": true,
+      "toasts": [],
+      "modalText": "赛前准备\nBO5 · 全局BP\n常规赛·第一轮 第1/5轮 vs 武汉eStarPro · 第1局（BO5 全局BP）\nWOLF\n重庆狼队\n503\nVS\n赛前预估 60% · 战力差 40\neStar\n武汉eStarPro\n463\n重庆狼队\n503\n赛前预估\n60%\n武汉eStarPro\n463\n我方首发（可调整）\n对\n归期\n战力 89 · 狂铁\n体力100 士气90\n换人\n野\n小胖\n战力 101"
+    },
+    "bpBtn": {
+      "text": "赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）",
+      "on": "uiStartMatch()"
+    },
+    "afterBp": {
+      "draft": false,
+      "modalText": "赛前准备\nBO5 · 全局BP\n常规赛·第一轮 第1/5轮 vs 武汉eStarPro · 第1局（0:0）\nWOLF\n重庆狼队\n503\nVS\n赛前预估 60% · 战力差 40\neStar\n武汉eStarPro\n463\n重庆狼队\n503\n赛前预估\n60%\n武汉eStarPro\n463\n我方首发（可调整）\n对\n归期\n战力 89 · 狂铁\n体力100 士气90\n换人\n野\n小胖\n战力 101 · 裴擒虎\n体力100 士气80\n换人\n中\n向鱼\n战力 101 · 王昭君\n体力100 士气77\n换人\n发\n",
+      "toasts": [],
+      "hasPickButtons": false
+    }
+  },
+  "pageErrors": [],
+  "consoleErrors": []
+}

@@ -515,7 +515,7 @@ const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7,CARD:5}; // BO5/BO7：系列赛总�
    卡位赛 BO 数暂留 KPL.CARD（它和"卡位赛这个阶段有没有"绑在一起，等流程表驱动时一起搬）。 */
 const KPL_FORMAT={
  globalBp:true,   // 全局 BP：己方本系列赛用过的英雄后续小局不能再选。真实是 2019 才引入
- peakBoMin:7,     // 巅峰对决只在总局数 ≥ 此值的系列赛出现。BO5 算不算，两源相抵（见对照文档），暂按 7
+ peakBoMin:7,     // 巅峰对决只在总局数 ≥ 此值的系列赛出现。2026 新浪口径：BO5 全程全局BP、无巅峰；BO7 第7局盲选
  transferDays:7,  // 赛前转会期天数
 };
 let _fmtActive=null; // installEra 写入的当前时代覆盖（无时代=null）
@@ -916,6 +916,8 @@ function genEraDef(eraId,team,pos,used){
 const KPL_ERAS={
  '2017':{
   name:'2017 · QG王朝',year:'2017',
+  // 全局 BP 2019 才引入：2017 档每局独立 BAN/PICK，不得沿用现行规则
+  rules:{globalBp:false,peakBoMin:7,transferDays:7},
   desc:'QGhappy 大满贯元年：Fly、cat、Hurt、Alan、老杨的五虎王朝正面硬刚梦泪老帅的 AG 三亚阵容。12 支史实球队 + 6 支创始老牌（SC/MU/LK/DL火箭/BWS/VgHow，历史原型 · 阵容演绎）。',
   teams:[
    {name:'QGhappy',icon:'翼',power:640},{name:'AG超玩会',icon:'焰',power:600},
@@ -1010,6 +1012,8 @@ const KPL_ERAS={
  },
  '2019':{
   name:'2019 · 双冠与信仰',year:'2019',
+  // 2019 引入全局 BP；巅峰对决维持 BO7 第7局
+  rules:{globalBp:true,peakBoMin:7,transferDays:7},
   desc:'eStar 春冠+世冠双冠的「大魔王」元年，AG超玩会收购 BA 席位信仰回归即夺冠（2019 秋季赛版图）。14 支史实球队 + ROX/MTG/GOG/启明等新势力（阵容部分演绎）。',
   teams:[
    {name:'武汉eStarPro',icon:'★',power:640},{name:'成都AG超玩会',icon:'焰',power:620},

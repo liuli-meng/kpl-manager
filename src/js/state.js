@@ -391,6 +391,8 @@ function matchEligible(s,p){
  if(!p)return false;
  const st=playerStatus(p,s);
  if(st.injury||st.loanOut||st.kjia||st.natCamp||st.minor)return false;
+ // 租入选手：仅挑战者杯/年总可出战；常规赛大名单不含租借（KPL 官方口径）
+ if(p.loan&&!(typeof loanWindowOpen==='function'&&loanWindowOpen(s)))return false;
  return true;
 }
 function matchIneligibleReason(s,p){
@@ -401,6 +403,7 @@ function matchIneligibleReason(s,p){
  if(st.kjia)return 'K甲锻炼中（剩 '+st.kjiaDays+' 天）';
  if(st.natCamp)return '国家队集训中';
  if(st.minor)return '未满 '+MATCH_MIN_AGE+' 岁（KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场）';
+ if(p.loan&&!(typeof loanWindowOpen==='function'&&loanWindowOpen(s)))return '租借选手：常规赛不可出战（仅挑战者杯/年总）';
  return '';
 }
 /* 按位置择优排首发：只排「当前可出场」的人（伤停/集训/租借/K甲/未成年跳过）。
@@ -599,6 +602,68 @@ function scrubWages(s){
  (s.academy||[]).forEach(fix);
  if(s.coach&&typeof s.coach.wage!=='number')s.coach.wage=Math.max(1,Math.round((s.coach.cost||80)/8));
  (s.assistants||[]).forEach(a=>{if(a&&typeof a.wage!=='number')a.wage=5;});
+}
+/* 脏数值/半残结构洗净：导入、读档、迁移共用。
+   目标不是「修好一切」，而是保证后续战力/BP/系列赛永远拿到有限数与可 push 的数组。 */
+function scrubStateIntegrity(s){
+ if(!s)return s;
+ try{scrubWages(s);}catch(e){}
+ // 顶层金额：字符串/Infinity/NaN → 合法刻度
+ if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0;
+ if(s.fund<0)s.fund=0;
+ if(typeof s.wageCap!=='number'||!isFinite(s.wageCap)||s.wageCap<=0){
+  s.wageCap=(typeof ECON!=='undefined'&&ECON.wageCapDefault)||2000;
+ }
+ const clampAttr=v=>clamp(typeof v==='number'&&isFinite(v)?v:70,40,99);
+ const fixPlayer=p=>{
+  if(!p||typeof p!=='object')return;
+  const a=p.attrs||{};
+  p.attrs={lane:clampAttr(a.lane),farm:clampAttr(a.farm),team:clampAttr(a.team),mind:clampAttr(a.mind)};
+  if(p.energy!=null)p.energy=clamp(typeof p.energy==='number'&&isFinite(p.energy)?p.energy:100,0,typeof ENERGY_MAX!=='undefined'?ENERGY_MAX:100);
+  if(p.morale!=null)p.morale=clamp(typeof p.morale==='number'&&isFinite(p.morale)?p.morale:80,0,100);
+  if(p.injury!=null)p.injury=Math.max(0,Math.round(typeof p.injury==='number'&&isFinite(p.injury)?p.injury:0));
+  if(p.val!=null)p.val=clamp(typeof p.val==='number'&&isFinite(p.val)?p.val:100,70,150);
+  if(p.wage!=null&&(typeof p.wage!=='number'||!isFinite(p.wage)||p.wage<0))delete p.wage;
+  if(p.heroPool!=null&&!Array.isArray(p.heroPool))p.heroPool=[];
+  if(Array.isArray(p.heroPool)){
+   p.heroPool=p.heroPool.filter(h=>h&&typeof h==='object'&&h.n!=null);
+   p.heroPool.forEach(h=>{h.lv=clamp(typeof h.lv==='number'&&isFinite(h.lv)?h.lv:1,0,3);});
+  }
+  if(p.attrs==null)p.attrs={lane:70,farm:70,team:70,mind:70};
+ };
+ ['players','market','transferList','freeAgents','academy'].forEach(k=>{
+  if(s[k]!=null&&!Array.isArray(s[k]))s[k]=[];
+  (s[k]||[]).forEach(fixPlayer);
+ });
+ if(s.lineup!=null&&!Array.isArray(s.lineup))s.lineup=[];
+ if(s.pick!=null&&typeof s.pick!=='object')s.pick={};
+ // AI 名册 id 必须是字符串（数字/空值会在 defOf 与去重里变成幽灵）
+ if(s.aiRosterDefs&&typeof s.aiRosterDefs==='object'){
+  Object.keys(s.aiRosterDefs).forEach(tn=>{
+   const arr=s.aiRosterDefs[tn];
+   if(!Array.isArray(arr)){s.aiRosterDefs[tn]=[];return;}
+   s.aiRosterDefs[tn]=arr.filter(id=>typeof id==='string'&&id);
+  });
+ }
+ // 系列赛：logs 必须可 push，max/mw/ow 必须是数，used 可 includes
+ const sr=s.series;
+ if(sr&&typeof sr==='object'){
+  if(!Array.isArray(sr.logs))sr.logs=[];
+  if(!Array.isArray(sr.used))sr.used=[];
+  if(!Array.isArray(sr.usedOpp))sr.usedOpp=[];
+  sr.mw=Math.max(0,Math.round(typeof sr.mw==='number'&&isFinite(sr.mw)?sr.mw:0));
+  sr.ow=Math.max(0,Math.round(typeof sr.ow==='number'&&isFinite(sr.ow)?sr.ow:0));
+  let mx=typeof sr.max==='number'&&isFinite(sr.max)?sr.max:5;
+  mx=clamp(Math.round(mx),3,9);
+  sr.max=mx;
+  if(sr.mw+sr.ow>mx)sr.mw=Math.min(sr.mw,Math.ceil(mx/2));
+ }
+ // 赛程指针：越界不复位（会打乱进行中赛段），只夹回合法下标供读取
+ if(Array.isArray(s.schedule)&&s.schedule.length){
+  if(typeof s.matchIdx!=='number'||!isFinite(s.matchIdx)||s.matchIdx<0)s.matchIdx=0;
+  if(s.matchIdx>s.schedule.length)s.matchIdx=s.schedule.length;
+ }
+ return s;
 }
 /* 存档序列化：剔除可重建/仅运行期字段。
   aiRosters 读档时 migrateSave 统一清空重建，写进去纯属白占 localStorage；
@@ -935,6 +1000,7 @@ function migrateSave(){
    logEvent(S,'读档修复：赛段结构缺失已尝试重建（phase='+S.phase+'）');
   }
  }catch(e){console.warn('cup-structure recover fail',e);try{S.phase='champion';}catch(_){}}
+ try{if(typeof scrubStateIntegrity==='function')scrubStateIntegrity(S);}catch(e){}
  try{if(typeof auditSave==='function')auditSave(S,{silent:false});}catch(e){}
 }
 /* 货币缩放（一次性标记）：×10 → ÷6 */

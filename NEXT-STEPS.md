@@ -2,14 +2,14 @@
 
 > 原则：**增量、不重写、保存档、先契约后分层**。  
 > 基线：`npm run test:fast` 全绿。模块契约：`docs/MODULE_GRAPH.md`。  
-> 网页看板：`../index.html`（可勾选进度，本机 localStorage）。
+> 网页看板：`../docs/board/index.html`（可勾选进度，本机 localStorage）。
 
 ## Issue 进度
 
 | # | 项 | 状态 |
 |---|---|---|
 | ① | 模块依赖图 + 循环依赖 | ✅ `docs/MODULE_GRAPH.md` 已标已知环 |
-| ② | issue 清单压进仓库 | ✅ 本文件 + `../index.html` |
+| ② | issue 清单压进仓库 | ✅ 本文件 + `../docs/board/index.html` |
 | ③ | 迁移样本 + sanitizeImport | ✅ `tests/verify-migrate.js` / `verify-statestore.js` |
 | ④ | Phase1：stateStore 入口 / permission / save 防抖 / mid 红线 | ✅ save 同步+scheduleSave 旁路 · canBuy · 崩溃快照 · verify-series-resume 必跑 |
 | ⑤ | Phase2：phase 守卫 / nextDay / 转会拆分 / aiCoach 等价 | ✅ setPhase/Commands/nextDayStep/aiCoach + verify-phase2 |

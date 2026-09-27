@@ -1,0 +1,51 @@
+{
+  "mediaUi": {
+    "opened": true,
+    "hasPanel": true,
+    "btnCount": 3,
+    "btnTexts": [
+      "FMVP属于全队",
+      "我就是关键先生",
+      "冠军只是开始"
+    ],
+    "clickR": {
+      "via": "ui",
+      "toasts": [
+        "大气发言圈粉"
+      ],
+      "before": {
+        "media": true,
+        "stats": 0
+      },
+      "after": {
+        "media": false,
+        "stats": 1
+      }
+    },
+    "mediaId": null
+  },
+  "coachKjia": {
+    "hint": "K甲二队：替补和青训生的练级场，表现好可提拔上一队 ×",
+    "hasPromoteCopy": true,
+    "hasLineupCopy": true,
+    "promoteCount": 0,
+    "recallCount": 0,
+    "promote": [],
+    "force": {
+      "called": true,
+      "toasts": [
+        "冷峤 已提拔一线队！"
+      ],
+      "players": 6
+    },
+    "squad": 4,
+    "textHead": "K甲二队：替补和青训生的练级场，表现好可提拔上一队\n×\nK甲联赛 · 二队\n2026 春季赛 · 第1/7轮 · 每2天一轮\n次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。\n二队概况\n重庆\n重庆狼队二队 · 战力 275 · 联赛第8名 · 下放选手 0 人\n重庆狼队二队\n战力 275\n下一场 · 第1轮\nK甲·苍穹\n战力 373\nK甲积分榜\n8队单循环 · 胜者积1分\n#\t战队\t胜\t负\t积分\t净胜局\t战力\n1\tK甲"
+  },
+  "playerKjia": {
+    "hint": "二队 K甲赛况：查看练级数据与俱乐部下放情况（人事权在俱乐部，「生涯」页可申请租借/K甲） ×",
+    "hasPromoteCopy": true,
+    "hasLineupCopy": false,
+    "hasSelfPath": true
+  },
+  "pageErrors": []
+}

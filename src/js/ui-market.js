@@ -132,25 +132,28 @@ function renderMarket(){
  </div>`;
  }else{
  transferHtml=`<div class="panel ${foldCls('mtransfer')}" data-fold="mtransfer"><h3>转会市场 <span class="tag">转会窗已关闭</span></h3>
- <div class="hint">KPL 转会窗在新赛季开启时开放 7 天：可买断其他俱乐部选手（非卖品除外）、挂牌交易、AI 竞价报价。全年可在下方租借市场临时租人（含转会期应急补位）。</div></div>`;
+ <div class="hint">KPL 转会窗在新赛季开启时开放 7 天：可买断其他俱乐部选手（非卖品除外）、挂牌交易、AI 竞价报价。常规赛不能租借；租借只在挑战者杯 / 年度总决赛出征窗口开放。</div></div>`;
  }
- // 租借市场（全年可开）：向 AI 队租替补，21 天自动归队；伤停缺人时名额+1并优先推缺位
+ // 租借市场：仅挑战者杯 / 年总开放（常规赛禁止——KPL 官方口径）
  {
   const myLoans=(S.players||[]).filter(p=>p.loan);
   const cap=loanCap(S);
+  const winOpen=typeof loanWindowOpen==='function'&&loanWindowOpen(S);
+  const rule=typeof loanRuleText==='function'?loanRuleText(S):'';
   const gaps=injuryGapPositions(S);
-  const cands=loanCandidates(S).slice(0,12);
-  transferHtml+=`<div class="panel ${foldCls('mloan')}" data-fold="mloan"><h3>租借市场 <span class="tag">租期 ${LOAN_DAYS} 天 · 名额 ${myLoans.length}/${cap}${cap>LOAN_CAP_BASE?' · 伤停应急':''} · 到期自动归队</span></h3>
-  <div class="hint" style="margin-bottom:8px">全年可租（含转会期）：支付租金（身价 15%）即可租来应急/补位置，工资由原队承担；非卖品不外借，租借选手不能出售/挂牌。${gaps.length?'<b class="red">当前 '+gaps.map(p=>POS[p][0]).join('、')+' 无人可打——已开放应急名额，下列缺位选手优先。</b>':'某位置因伤停/K甲无人时，名额上限 +1 并优先推荐该位置。'}</div>
+  const cands=winOpen?loanCandidates(S).slice(0,12):[];
+  transferHtml+=`<div class="panel ${foldCls('mloan')}" data-fold="mloan"><h3>租借 ${winOpen?'<span class="tag">杯赛窗口 · '+CUP_SQUAD+' 人出征含租借 · 名额 '+myLoans.length+'/'+cap+'</span>':'<span class="tag">常规赛关闭</span>'}</h3>
+  <div class="hint" style="margin-bottom:8px">${rule||'常规赛无租借。'}${winOpen&&gaps.length?' <b class="red">当前 '+gaps.map(p=>POS[p][0]).join('、')+' 无人可打。</b>':''}</div>
   ${myLoans.length?`<div style="margin-bottom:8px">${myLoans.map(p=>`<div class="match" style="margin-bottom:5px;padding:7px 10px">
   <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · 总值${overall(p)} · 来自${p.loan.from})</span></span></div>
   <div class="score" style="font-size:12px;min-width:0">剩余 <b class="gold">${p.loan.days}</b> 天</div>
   </div>`).join('')}</div>`:''}
-  <div style="max-height:300px;overflow-y:auto">${cands.map(c=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+  ${winOpen?`<div style="max-height:300px;overflow-y:auto">${cands.map(c=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
   <div class="vs"><span class="tname" style="font-size:13px">${c.p.name} <span style="color:var(--dim);font-size:10px">(${c.from} · ${POS[c.p.pos][0]} · 总值${overall(c.p)} · ${c.p.age}岁)${gaps.includes(c.p.pos)?' <b class="red">缺位优先</b>':''}</span></span></div>
   <div class="score" style="font-size:13px;min-width:0">租金 ${c.rent}万</div>
   <button class="btn sm primary" style="margin:0;min-width:64px" onclick="loanPlayer(S,'${_escAttr(c.from)}','${c.p.id}')">租借 ${LOAN_DAYS}天</button>
-  </div>`).join('')||'<div class="hint">联盟暂无可租借的选手</div>'}</div>
+  </div>`).join('')||'<div class="hint">联盟暂无可租借的选手</div>'}</div>`
+  :`<div class="hint">春/夏常规赛租借机制不生效。进入<strong>挑战者杯</strong>或<strong>年度总决赛</strong>后，可按出征名额租借（挑杯最多 2 人、年总最多 1 人，占用 7 人出征名单）。</div>`}
   </div>`;
  }
  // 自由球员与退役名宿：始终可见（不依赖转会窗）→ 侧栏
@@ -215,11 +218,12 @@ function renderCoachMarket(){
  ${injured.length?`<div class="hint" style="margin-bottom:8px">非健康名单：${injured.map(p=>{const st=playerStatus(p,S);return p.name+'（'+(st.injury?st.injuryDays+'天伤停':st.kjia?'K甲':st.loanOut?'外租':'集训')+'）';}).join(' · ')}</div>`:''}
  ${recs.length?`<div class="hint" style="margin-bottom:8px"><b>待处理申请：</b>${recs.map(r=>(r.type==='loan'?'租借 ':(r.type==='sign'?'直签 ':'补位 '))+(r.name||(r.pos?POS[r.pos][0]:'—'))).join(' · ')}</div>`:''}
  </div>`;
- // 应急租借
- html+=`<div class="panel"><h3>应急租借市场 <span class="tag">${LOAN_DAYS} 天 · 名额 ${myLoans.length}/${cap}${cap>LOAN_CAP_BASE?' · 伤停应急':''}</span></h3>
- <div class="hint" style="margin-bottom:8px">租金约身价 15%，工资由原队承担；非卖品不外借。缺位位置优先推荐。</div>
+ // 应急租借（仅杯赛窗口）
+ const winOpen=typeof loanWindowOpen==='function'&&loanWindowOpen(S);
+ html+=`<div class="panel"><h3>应急租借市场 <span class="tag">${winOpen?('杯赛窗口 · 名额 '+myLoans.length+'/'+cap):'常规赛关闭'}</span></h3>
+ <div class="hint" style="margin-bottom:8px">${typeof loanRuleText==='function'?loanRuleText(S):''}${winOpen?' 租金约身价 15%，工资由原队承担；非卖品不外借。':''}</div>
  ${myLoans.length?`<div style="margin-bottom:8px">${myLoans.map(p=>`<div class="match" style="margin-bottom:5px;padding:7px 10px"><div class="vs"><span class="tname">${p.name} <span class="dim" style="font-size:10px">(${POS[p.pos][0]} · ${p.loan.from} · 剩 ${p.loan.days} 天)</span></span></div></div>`).join('')}</div>`:''}
- <div style="max-height:280px;overflow-y:auto">${(adv.loans||[]).map(c=>`
+ ${winOpen?`<div style="max-height:280px;overflow-y:auto">${(adv.loans||[]).map(c=>`
   <div class="match" style="margin-bottom:6px;padding:8px 10px">
   <div class="vs"><span class="tname" style="font-size:13px">${c.name} <span class="dim" style="font-size:10px">(${c.from} · ${POS[c.pos][0]} · 总值${c.ovr}${c.gap?' · <b class="red">缺位优先</b>':''})</span></span></div>
   <div class="score" style="font-size:13px">租金 ${c.rent}万</div>
@@ -227,7 +231,8 @@ function renderCoachMarket(){
    <button class="btn sm primary" onclick="loanPlayer(S,'${_escAttr(c.from)}','${c.id}')">立即租借</button>
    <button class="btn sm" onclick="coachRequest(S,'loan','${c.id}')">申请租借</button>
   </div>
-  </div>`).join('')||'<div class="hint">联盟暂无可租借选手</div>'}</div>
+  </div>`).join('')||'<div class="hint">联盟暂无可租借选手</div>'}</div>`
+  :'<div class="hint">春/夏常规赛租借不生效——进入挑战者杯 / 年度总决赛后按出征名额租借（挑杯≤2、年总≤1，占 7 人名单）。</div>'}
  </div>`;
  // 引援建议
  html+=`<div class="panel"><h3>教练引援建议 <span class="tag">向俱乐部提交 · 自动办理</span></h3>

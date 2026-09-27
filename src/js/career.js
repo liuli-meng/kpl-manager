@@ -91,6 +91,10 @@ function tickPlayerBench(s){
 function playerRequestLoanOut(s){
  s=s||S;
  if(!s||s.mode!=='player')return false;
+ if(typeof loanWindowOpen==='function'&&!loanWindowOpen(s)){
+  toast('常规赛（春/夏）不能租借——租借只在挑战者杯 / 年度总决赛开放');
+  return false;
+ }
  const me=myPlayer(s);
  if(!me)return false;
  if(s.career&&s.career.retired){toast('职业生涯已退役');return false;}
@@ -182,6 +186,12 @@ function loanOutTick(s){
  与选手自请租借同一套 loanOut 状态/日结——三个身份共用同一世界规则，只是发起人不同。 */
 function clubLoanOutPlayer(s,pid){
  s=s||S;
+ // 人事/交易权 + 赛制：常规赛禁止租借（仅挑战者杯/年总窗口）
+ if(typeof denyIfBlocked==='function'&&denyIfBlocked('loanOut',s))return false;
+ if(typeof loanWindowOpen==='function'&&!loanWindowOpen(s)){
+  toast('常规赛（春/夏）不能租借——租借只在挑战者杯 / 年度总决赛开放');
+  return false;
+ }
  if(!s||s.mode==='player'){toast('选手生涯请在「生涯」页自行申请租借');return false;}
  const p=(s.players||[]).find(x=>x.id===pid);
  if(!p)return false;
@@ -282,6 +292,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
    const healthy=s.players.some(p=>p.pos===pos&&playable(p));
    if(healthy)return;
    try{
+    // 常规赛禁止租借：loanCap=0 / loanWindowOpen=false，这里自然不走租
     const cands=(loanCandidates(s)||[]).filter(c=>c.p.pos===pos);
     if(cands.length&&s.fund>=cands[0].rent&&loanCap(s)>(s.players||[]).filter(p=>p.loan).length){
      loanPlayer(s,cands[0].from,cands[0].p.id);

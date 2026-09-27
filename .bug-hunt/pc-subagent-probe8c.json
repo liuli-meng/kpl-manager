@@ -1,0 +1,297 @@
+{
+  "summary": {
+    "counts": {
+      "P0": 2,
+      "P1": 0,
+      "P2": 4
+    },
+    "findings": [
+      {
+        "id": "P0-COACH-LOANOUT-PRIV",
+        "sev": "P0",
+        "title": "教练「外租练级」实际生效（loanOut 规则仅经理）",
+        "detail": "{\"ok\":true,\"err\":null,\"toasts\":[\"大帅 已外租 常山UUG\"],\"changed\":true,\"before\":[{\"id\":\"top4\",\"lo\":false},{\"id\":\"jg4\",\"lo\":false},{\"id\":\"mid3\",\"lo\":false},{\"id\":\"ad1\",\"lo\":false},{\"id\":\"sup3\",\"lo\":false}],\"after\":[{\"id\":\"top4\",\"lo\":false},{\"id\":\"jg4\",\"lo\":false},{\"id\":\"mid3\",\"lo\":false},{\"id\":\"ad1\",\"lo\":false},{\"id\":\"sup3\",\"lo\":true}]}"
+      },
+      {
+        "id": "P0-COACH-LOANOUT-ENGINE",
+        "sev": "P0",
+        "title": "clubLoanOutPlayer 对教练无 denyIfBlocked，外租生效",
+        "detail": "{\"ok\":true,\"err\":null,\"res\":false,\"toasts\":[\"大帅 已在外租借\"],\"loanOut\":true,\"pid\":\"sup3\"}"
+      },
+      {
+        "id": "P2-COACH-LINEUP-HINT",
+        "sev": "P2",
+        "title": "教练阵容页 hint 含「挂牌出售」",
+        "detail": "阵容告急　游走 无人可打\n去应急租借 / 引援建议\n选手卡管一切：训练、身价、续约、挂牌出售、替补轮换\n×\n首发阵容\n5人\n总战力 389 · 总身价 2.3亿 · 士气均值 81% · 年薪合计 1557万\n轩\n对\n轩染\n对\n总值\n89\n对抗路 · AG\n黄金期 · 18岁\n合同3年\n出战 姬小满 · 池 绝活1/熟练23\n代言 35万 · 人气 29\n姬"
+      },
+      {
+        "id": "P2-COACH-KJIA-HINT-PROMOTE",
+        "sev": "P2",
+        "title": "教练二队页 hint 仍写「表现好可提拔上一队」",
+        "detail": "K甲二队：替补和青训生的练级场，表现好可提拔上一队\n×\nK甲联赛 · 二队\n2026 春季赛 · 第1/7轮 · 每2天一轮\n次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。\n二队概况\nAG\n成都AG超玩会二队 · 战力 "
+      },
+      {
+        "id": "P2-PLAYER-UNDERAGE-NO-BENCH-UI",
+        "sev": "P2",
+        "title": "未成年非首发无板凳出路 UI（文案写「K甲可随时申请」却入口隐藏）",
+        "detail": "{\"hasBench\":false,\"err\":null,\"res\":true,\"toasts\":[],\"kjia\":30,\"age\":16}"
+      },
+      {
+        "id": "P2-OFFER-BAD-NO-DEALLOG",
+        "sev": "P2",
+        "title": "非法邀约未写入执教履历 deal.log（仅 toast/事件）",
+        "detail": "{\"dealLog\":[],\"hasLog\":false}"
+      }
+    ]
+  },
+  "coach": {
+    "n": 5,
+    "bench": 0,
+    "mode": "coach",
+    "team": "成都AG超玩会"
+  },
+  "benchUI": {
+    "benchCount": 1,
+    "loanOutBtns": [
+      {
+        "text": "外租练级",
+        "onclick": "clubLoanOutPlayer(S,'sup3')",
+        "disabled": false
+      }
+    ],
+    "sendKjiaBtns": [
+      {
+        "text": "下放 K甲",
+        "onclick": "sendKjia('sup3')",
+        "disabled": false
+      }
+    ],
+    "sellBtns": [],
+    "recallBtns": [],
+    "all": [
+      "dismissHint('lineup')",
+      "event.stopPropagation();showCareer(findPlayerCard('top4'))",
+      "swapPlayer('top4')",
+      "setCaptain('top4')",
+      "event.stopPropagation();showCareer(findPlayerCard('jg4'))",
+      "swapPlayer('jg4')",
+      "setCaptain('jg4')",
+      "event.stopPropagation();showCareer(findPlayerCard('mid3'))",
+      "swapPlayer('mid3')",
+      "setCaptain('mid3')",
+      "event.stopPropagation();showCareer(findPlayerCard('ad1'))",
+      "swapPlayer('ad1')",
+      "setCaptain('ad1')",
+      "event.stopPropagation();showCareer(findPlayerCard('sup3'))",
+      "swapPlayer('sup3')",
+      "sendKjia('sup3')",
+      "clubLoanOutPlayer(S,'sup3')",
+      "setTactic('balanced')",
+      "setTactic('farm')",
+      "setTactic('team')",
+      "setTactic('lane')",
+      "setTactic('mind')"
+    ]
+  },
+  "loanOutClick": {
+    "ok": true,
+    "err": null,
+    "toasts": [
+      "大帅 已外租 常山UUG"
+    ],
+    "changed": true,
+    "before": [
+      {
+        "id": "top4",
+        "lo": false
+      },
+      {
+        "id": "jg4",
+        "lo": false
+      },
+      {
+        "id": "mid3",
+        "lo": false
+      },
+      {
+        "id": "ad1",
+        "lo": false
+      },
+      {
+        "id": "sup3",
+        "lo": false
+      }
+    ],
+    "after": [
+      {
+        "id": "top4",
+        "lo": false
+      },
+      {
+        "id": "jg4",
+        "lo": false
+      },
+      {
+        "id": "mid3",
+        "lo": false
+      },
+      {
+        "id": "ad1",
+        "lo": false
+      },
+      {
+        "id": "sup3",
+        "lo": true
+      }
+    ]
+  },
+  "sendKjia": {
+    "ok": true,
+    "err": null,
+    "toasts": [
+      "大帅 正租借在外，不能下放 K甲"
+    ],
+    "anyKjia": false
+  },
+  "engineLoanOut": {
+    "ok": true,
+    "err": null,
+    "res": false,
+    "toasts": [
+      "大帅 已在外租借"
+    ],
+    "loanOut": true,
+    "pid": "sup3"
+  },
+  "hints": {
+    "market": "教练工作台：应急租借与引援申请（买断谈判由俱乐部打理）\n×\n教练工作台 · 应急与引援\n买断挂牌由俱乐部打理\n伤停/集训缺人时可紧急租借；也可向俱乐部提交引援申请（资金与名单允许时自动办理）。不能挂牌出售选手——那是管理层的事。\n⚠ 游走 位置当前无人可打——建议立刻租借补位\n非健康名单：大帅（外租）\n应急租借市场\n21 天 · 名额 0/3 · 伤停应急\n",
+    "lineup": "阵容告急　游走 无人可打\n去应急租借 / 引援建议\n选手卡管一切：训练、身价、续约、挂牌出售、替补轮换\n×\n首发阵容\n5人\n总战力 389 · 总身价 2.3亿 · 士气均值 81% · 年薪合计 1557万\n轩\n对\n轩染\n对\n总值\n89\n对抗路 · AG\n黄金期 · 18岁\n合同3年\n出战 姬小满 · 池 绝活1/熟练23\n代言 35万 · 人气 29\n姬",
+    "kjia": "K甲二队：替补和青训生的练级场，表现好可提拔上一队\n×\nK甲联赛 · 二队\n2026 春季赛 · 第1/7轮 · 每2天一轮\n次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。\n二队概况\nAG\n成都AG超玩会二队 · 战力 "
+  },
+  "player": {
+    "age": 20,
+    "starter": false,
+    "hasBench": true,
+    "loanBtn": {
+      "text": "租借离队（21天）",
+      "onclick": "playerRequestLoanOut(S)",
+      "disabled": false
+    },
+    "kjiaBtn": {
+      "text": "下放 K甲（30天练级）",
+      "onclick": "playerRequestKjia(S)",
+      "disabled": false
+    },
+    "head": "新手任务（第 1 天）：完成一次加练更衣室走一遭\n第 1 赛季主线（0/5）：加练一次打完一场更衣室互动关注身价/目标打完整赛季\n你的故事：训练/更衣室/媒体/生涯目标，选手模式每天来这打卡\n×\n无\n中\n无名小将 中路 · 20岁 · 黄金期 替补\nUUG\n 常山UUG · 合同 2 年 · 年薪 77万 · 总值 71 · 身价系数 100%\n0 冠 · 0 FMVP · 0 一阵\n生涯荣誉\n成长训练\n每天一项 · 合同角色：轮换拼图 · 状态：\n平稳 76\n线\n运\n团\n心\n对线 70/78 "
+  },
+  "kjiaReq": {
+    "ok": true,
+    "err": null,
+    "toasts": [],
+    "kjia": 30
+  },
+  "under": {
+    "hasBench": false,
+    "err": null,
+    "res": true,
+    "toasts": [],
+    "kjia": 30,
+    "age": 16
+  },
+  "offerEdge": {
+    "empty": {
+      "label": "empty",
+      "err": null,
+      "toasts": [
+        " 邀约球队「」不在当前联盟，邀约已作废"
+      ],
+      "beforeTeam": "武汉eStarPro",
+      "afterTeam": "武汉eStarPro",
+      "offerLeft": false
+    },
+    "nullTeam": {
+      "label": "nullTeam",
+      "err": null,
+      "toasts": [
+        " 邀约球队「null」不在当前联盟，邀约已作废"
+      ],
+      "beforeTeam": "武汉eStarPro",
+      "afterTeam": "武汉eStarPro",
+      "offerLeft": false
+    },
+    "noTeam": {
+      "label": "noTeam",
+      "err": null,
+      "toasts": [
+        " 邀约球队「undefined」不在当前联盟，邀约已作废"
+      ],
+      "beforeTeam": "武汉eStarPro",
+      "afterTeam": "武汉eStarPro",
+      "offerLeft": false
+    },
+    "spaces": {
+      "label": "spaces",
+      "err": null,
+      "toasts": [
+        " 邀约球队「  成都AG超玩会  」不在当前联盟，邀约已作废"
+      ],
+      "beforeTeam": "武汉eStarPro",
+      "afterTeam": "武汉eStarPro",
+      "offerLeft": false
+    }
+  },
+  "dealLog": {
+    "dealLog": [],
+    "hasLog": false
+  },
+  "matchUi": {
+    "modalOpen": true,
+    "modalText": "上海EDG.M vs 西安WE\n上海EDG.M\n0:3\n西安WE\n长\n游\nSERIES MVP\n长歌 · 姜子牙\n2 局 MVP · 合计 21 / 5 / 22\n第1局 我方 8-11 憾负 西安WE ｜ 总比分 0:1 ｜ MVP：长歌（10/2/12）\n第3分钟，对线期：夜白 的 马可波罗 收下人头，我方继续滚经济。\n第5分钟，对线期：驰野 抓到机会，我方 星回 送出人头，节奏被按住。\n第15分钟，资源团崩了！对方打出 2 换 0，星回 这波亏麻了。\n第9分钟，资源团被对方压了一头，我方先避战发育。\n第12分钟，资源团大获全胜！夜白 带队打出 3 换 0，雪球越滚越大。\n第26分钟，大团",
+    "modalBtns": [
+      {
+        "text": "继续（推进一天）",
+        "onclick": "closeMatchContinue()",
+        "disabled": false
+      }
+    ],
+    "toasts": [],
+    "matchIdx": 1,
+    "history": 1
+  },
+  "modalClicks": {
+    "ok": true,
+    "results": [
+      {
+        "text": "继续（推进一天）",
+        "onclick": "closeMatchContinue()",
+        "err": null,
+        "toasts": [],
+        "stillOpen": false,
+        "wasOpen": true
+      }
+    ]
+  },
+  "coachBp": {
+    "err": null,
+    "bpErr": null,
+    "draft": "object",
+    "hasEnter": true,
+    "modalText": "BP · 两段式征召\n全局BP · 绝活+8%\n常规赛·第一轮 第1/5轮 vs 广州TTG · 第1局（BO5 全局BP）　·　我方蓝方 · 第一轮先ban先选\n北京WB\n蓝方\n \nBAN\n \nBAN\n \nBAN\n \nBAN\n \n梓墨\n \n暖阳\n \n花卷\n \n乔兮\n \n星宇\n第一轮 BAN\n1 / 18 手\n广州TTG\n红方\n \nBAN\n \nBAN\n \nBAN\n \nBAN\n \n望舒\n \n疏影\n ",
+    "toasts": []
+  },
+  "bpConfirm": {
+    "ok": true,
+    "draftIdx": 0,
+    "steps": 18,
+    "btns": [
+      {
+        "text": "赛前准备 · 调整阵容 / BP 开赛（",
+        "onclick": "uiStartMatch()"
+      },
+      {
+        "text": "确定出战",
+        "onclick": "bpConfirm()"
+      }
+    ]
+  }
+}

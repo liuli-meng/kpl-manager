@@ -61,9 +61,11 @@ const out = vm.runInContext(`
       if(fundActual!==ECON.budgetMid)fail('cap: 资金应保持默认 '+ECON.budgetMid+'，实际 '+fundActual);
     }
     if(id==='exodus'){
-      if(s.players.length!==4)fail('exodus: 应 4 人，实际 '+s.players.length);
-      if(missing.length!==1)fail('exodus: 应恰好空 1 位，实际 '+JSON.stringify(missing));
-      if(s.lineup.length!==4)fail('exodus: 首发应 4 人，实际 '+s.lineup.length);
+      // 开局青训×2 后：直签 5 + 青训 2 − 出走 1 = 6
+      const acN=s.players.filter(p=>(p.tags||[]).includes('开局青训')).length;
+      if(s.players.length!==6||acN!==2)fail('exodus: 应 6 人（含青训2），实际 '+s.players.length+' 青训='+acN);
+      if(missing.length>1)fail('exodus: 至多空 1 位，实际 '+JSON.stringify(missing));
+      if(s.lineup.length>s.players.length)fail('exodus: 首发 '+s.lineup.length+' > 名单 '+s.players.length);
     }
     if(id==='cursed'){
       // 描述写「初始士气 50」——必须检查

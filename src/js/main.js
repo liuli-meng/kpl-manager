@@ -480,6 +480,7 @@ function applyImport(d,from){
  // 时代联盟按档重装：era 档装该时代；导入现代档时必须还原默认联盟（否则浏览器里装过的时代残留错装）
  if(typeof installEra==='function')installEra((S.era&&KPL_ERAS[S.era])?S.era:null);
  resetRuntimeGlobals(); // 导入 = 换档：不能沿用当前会话里的谈判上下文/开局选择/列表展开
+ if(typeof scrubStateIntegrity==='function')scrubStateIntegrity(S); // 毒数值/半残结构先洗净再迁移
  migrateSave();save();renderAll();closeModal('app-modal');
  toast('已从'+from+'导入：'+S.teamName+'（'+gameYear(S)+'年 · v'+S.v+'）');
 }
@@ -821,6 +822,7 @@ function applyCoachClub(){
  if(def)S.players.push(genPlayer(def));
  });
  S.lineup=buildBestLineup(S); // 统一可出场过滤（未成年/伤停不进首发）
+ try{if(typeof seedStarterAcademy==='function')seedStarterAcademy(S);}catch(e){} // 自带可出场青训×2
  S.coachDeal={years:2,honors:[],log:[]}; // 教练合同：2 年起步，成绩决定去留
  S.seedPower=teamPower(S)||tmpl.seed;
  initGroups(S);
@@ -867,6 +869,7 @@ function createPlayerCareer(){
   role:defaultRoleForArch(_pcArch),stats:{trained:0,social:0,media:0,matches:0},media:null,natFocus:'form'};
  // 首发统一走 buildBestLineup（未成年/伤停不进首发；同位置取可出场中最强）
  S.lineup=buildBestLineup(S);
+ try{if(typeof seedStarterAcademy==='function')seedStarterAcademy(S);}catch(e){} // 自带可出场青训×2
  S.seedPower=teamPower(S)||300;
  initGroups(S);
  S.preseason=false;S.transferWindow=0;
@@ -969,6 +972,8 @@ function createTeam(){
  }
  });
  S.lineup=lineup;
+ // 自带可出场青训×2：先入队再吃剧本（无冠魔咒士气/核心出走减员要能作用到他们）
+ try{if(typeof seedStarterAcademy==='function')seedStarterAcademy(S);}catch(e){}
  applyScenario(S); // 开局剧本：可能削属性/砍工资帽/挖走主力——必须在 seedPower 与 initGroups 之前
  // 新手教练：青训助教
  S.coach={...coachDef('co12')};
@@ -1006,6 +1011,7 @@ function applyClub(){
  });
  // 首发直接安排模板阵容（统一可出场过滤：未成年/异常状态不进首发）
  S.lineup=buildBestLineup(S);
+ try{if(typeof seedStarterAcademy==='function')seedStarterAcademy(S);}catch(e){} // 自带可出场青训×2（先入队，剧本才能作用到）
  applyScenario(S); // 开局剧本：同上，须在 seedPower 与 initGroups 之前
  S.seedPower=teamPower(S)||tmpl.seed; // 种子=执教班底真实战力（决定分组落位）
  initGroups(S);

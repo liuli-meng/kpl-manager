@@ -262,6 +262,7 @@ const out = vm.runInContext(`
    for(let i=0;i<3;i++)tickPlayerBench(S);
    if((S.career.benchDays||0)<3)fail('板凳天数未累计: '+(S.career.benchDays||0));
    else{
+    S.phase='challenger'; // 租借仅挑战者杯/年总开放
     const okLoan=playerRequestLoanOut(S);
     if(!okLoan||!meY.loanOut)fail('连续替补后租借离队失败');
     else if(S.lineup.includes(meY.id))fail('租借中仍在母队首发');

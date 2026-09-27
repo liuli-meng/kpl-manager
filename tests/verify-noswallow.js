@@ -1,4 +1,4 @@
-﻿// 「选手被吞」回归：租借回流 / 卖出挂账 / 自由市场重建 / 关窗清表 都不得让人从联盟蒸发
+// 「选手被吞」回归：租借回流 / 卖出挂账 / 自由市场重建 / 关窗清表 都不得让人从联盟蒸发
 // 运行：node tests/verify-noswallow.js
 const vm = require('vm');
 const { makeDom } = require('./harness');
@@ -22,6 +22,7 @@ const out = vm.runInContext(`
   // ① 合成租借替补到期：不能只删不入册
   {
     const s=newState('我方','x'); S=s; fillRoster(s,'mid');
+    s.phase='challenger'; // 租借窗口
     const cand=loanCandidates(s)[0];
     if(!cand){fail('① 无可租候选');}
     else{

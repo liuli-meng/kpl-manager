@@ -1,0 +1,1652 @@
+{
+  "summary": {
+    "findings": [
+      {
+        "id": "P0-PLAYER-PROMOTE-GUARDED",
+        "severity": "PASS",
+        "title": "选手二队页无提拔按钮且引擎拒绝",
+        "detail": "{\"mode\":\"player\",\"hasPromoteHint\":false,\"hasManagerCopy\":false,\"promoteBtnCount\":0,\"recallBtnCount\":0,\"sendBtnCount\":0,\"promoteBtns\":[],\"promoteTry\":\"no-btn\",\"promoteToasts\":[],\"forceTry\":\"called\",\"forceToasts\":[\"选手生涯没有俱乐部人事权——提拔由俱乐部运作\"],\"squadBefore\":5,\"squadAfter\":5,\"playersBefore\":6,\"playersAfter\":6,\"textHead\":\"二队 K甲赛况：查看练级数据与俱乐部下放情况（人事权在俱乐部，「生涯」页可申请租借/K甲）\\n×\\nK甲联赛 · 二队\\n2026 春季赛 · 第1/7轮 · 每2天一轮\\n次级联赛与 KPL 赛段并行推进：俱乐部把替补/青训下放二队真实出战（不占你的 KPL 出场），表现数据在本页累计；归队时带属性成长。你可在「生涯」页申请下放练级。\\n二队概况\\nJDG\\n北京JDG二队 · 战力 277 · 联赛第8名 · 下放选手 0 人\\n北京JDG二队\\n战力 277\\n下一场 · 第1轮\\nK甲·苍穹\\n战力 371\\nK甲积分榜\\n8队单循环 · 胜者积1分\\n#\\t战队\\t胜\\t负\\t积分\\t净胜局\\t战力\\n1\\tK甲·苍穹\\t0\\t0\\t0\\t0\\t371\\n2\\tK甲·星火\\t0\\t0\\t0\\t0\\t383\\n3\\tK甲·沧澜\\t0\\t0\\t0\\t0\\t376\\n4\\tK甲·曜石\\t0\\t0\\t0\\t0\\t367\\n5\\tK甲·铁鳞\\t0\\t0\\t0\\t0\\t336\\n6\\tK甲·游隼\\t0\\t0\\t\"}",
+        "evidence": null
+      },
+      {
+        "id": "P2-SELL-GUARD-ODD",
+        "severity": "WARN",
+        "title": "openSellNego 返回无 modal",
+        "detail": "{\"r\":\"opened\",\"toasts\":[\" 教练生涯不能操作「出售」（由俱乐部打理，请用申请入口）\"],\"modalOpen\":false}",
+        "evidence": null
+      },
+      {
+        "id": "P0-OFFER-BADNAME-FIXED",
+        "severity": "PASS",
+        "title": "非法队名有 toast 反馈",
+        "detail": "{\"ok\":true,\"moved\":false,\"newTeam\":\"成都AG超玩会\",\"offerCleared\":true,\"logAdded\":false,\"toasts\":[\" 邀约球队「ZZZ_NO_SUCH_CLUB」不在当前联盟，邀约已作废\"],\"silent\":false}",
+        "evidence": null
+      },
+      {
+        "id": "P1-OFFER-UI-MISSING",
+        "severity": "FAIL",
+        "title": "俱乐部页缺豪门邀约接受/拒绝按钮",
+        "detail": "{\"accept\":null,\"reject\":null}",
+        "evidence": null
+      }
+    ],
+    "failCount": 1,
+    "warnCount": 1,
+    "passCount": 2,
+    "pageErrors": [],
+    "consoleErrors": [],
+    "deadClicks": [],
+    "toastCount": 0
+  },
+  "steps": [
+    {
+      "step": "start-ui",
+      "data": {
+        "hasOn": true,
+        "tabs": [
+          {
+            "id": "player",
+            "exists": true,
+            "text": "选手生涯"
+          },
+          {
+            "id": "coach",
+            "exists": true,
+            "text": "教练生涯"
+          },
+          {
+            "id": "self",
+            "exists": true,
+            "text": "经理模式"
+          },
+          {
+            "id": "club",
+            "exists": true,
+            "text": "执教现役俱乐部"
+          },
+          {
+            "id": "era",
+            "exists": true,
+            "text": "历代联盟"
+          }
+        ],
+        "createPlayerBtn": true,
+        "coachApplyBtn": true
+      }
+    },
+    {
+      "step": "player-boot",
+      "data": {
+        "mode": "player",
+        "teamName": "北京JDG",
+        "meName": "无名小将",
+        "meAge": 19,
+        "mePos": "mid",
+        "currentPage": "career",
+        "nav": [
+          "career",
+          "club",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ],
+        "hasCareerFn": true
+      }
+    },
+    {
+      "step": "career-ui",
+      "data": {
+        "currentPage": "career",
+        "textLen": 1012,
+        "buttonCount": 23,
+        "buttons": [
+          {
+            "text": "完成一次加练",
+            "onclick": "goPage('career')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "更衣室走一遭",
+            "onclick": "goPage('career')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "加练一次",
+            "onclick": "goPage('career')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "打完一场",
+            "onclick": "goPage('club')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "更衣室互动",
+            "onclick": "goPage('career')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "关注身价/目标",
+            "onclick": "goPage('career')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "打完整赛季",
+            "onclick": "goPage('club')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "×",
+            "onclick": "dismissHint('career')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "练对线",
+            "onclick": "playerTrain('lane')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "练运营",
+            "onclick": "playerTrain('farm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "练团战",
+            "onclick": "playerTrain('team')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "练心态",
+            "onclick": "playerTrain('mind')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "英雄特训（练绝活）",
+            "onclick": "playerHeroTrain()",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "休息（体力+55 · 养伤）",
+            "onclick": "playerRest()",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "当家核心",
+            "onclick": "setPlayerRole(S,'star')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "轮换拼图",
+            "onclick": "setPlayerRole(S,'rot')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "长期培养",
+            "onclick": "setPlayerRole(S,'proj')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "更衣室聚餐",
+            "onclick": "playerSocial(S,'bond')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "陪替补加练",
+            "onclick": "playerSocial(S,'help')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "直播整活",
+            "onclick": "playerSocial(S,'stream')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "租借离队（21天）",
+            "onclick": "playerRequestLoanOut(S)",
+            "disabled": true,
+            "visible": true
+          },
+          {
+            "text": "下放 K甲（30天练级）",
+            "onclick": "playerRequestKjia(S)",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "📣 申请转会（经纪人寻找下家）",
+            "onclick": "playerRequestTransfer(S)",
+            "disabled": false,
+            "visible": true
+          }
+        ],
+        "mode": "player",
+        "teamName": "北京JDG",
+        "navVisible": [
+          "career",
+          "club",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ],
+        "fabExists": true,
+        "dockExists": true
+      }
+    },
+    {
+      "step": "player-train",
+      "data": {
+        "before": {
+          "energy": 100,
+          "trained": false,
+          "attrs": {
+            "lane": 73,
+            "farm": 71,
+            "team": 72,
+            "mind": 71
+          }
+        },
+        "after": {
+          "energy": 90,
+          "trained": true,
+          "attrs": {
+            "lane": 75,
+            "farm": 71,
+            "team": 72,
+            "mind": 71
+          }
+        },
+        "toasts": [
+          " 选手生涯开启：先争取首发位置！",
+          " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）"
+        ]
+      }
+    },
+    {
+      "step": "player-social",
+      "data": {
+        "key": "bond",
+        "before": {
+          "popularity": 12,
+          "morale": 87,
+          "energy": 90
+        },
+        "r": true,
+        "after": {
+          "popularity": 12,
+          "morale": 92,
+          "energy": 85
+        },
+        "toasts": [
+          " 选手生涯开启：先争取首发位置！",
+          " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）"
+        ]
+      }
+    },
+    {
+      "step": "player-media",
+      "data": {
+        "btnCount": 3,
+        "clickR": "clicked",
+        "mediaAfter": {
+          "day": 1,
+          "q": "测试：新赛季目标是什么？",
+          "opts": [
+            {
+              "l": "目标是冠军",
+              "tip": "t1"
+            },
+            {
+              "l": "打好每一场",
+              "tip": "t2"
+            },
+            {
+              "l": "暂时保密",
+              "tip": "t3"
+            }
+          ]
+        },
+        "toasts": [
+          " 选手生涯开启：先争取首发位置！",
+          " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）",
+          "采访选项无效"
+        ],
+        "hasPanelText": true
+      }
+    },
+    {
+      "step": "player-club-ui",
+      "data": {
+        "currentPage": "club",
+        "textLen": 548,
+        "buttonCount": 10,
+        "buttons": [
+          {
+            "text": "打完一场",
+            "onclick": "goPage('club')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "关注身价/目标",
+            "onclick": "goPage('career')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "打完整赛季",
+            "onclick": "goPage('club')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "×",
+            "onclick": "dismissHint('club')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "出战比赛 · 教练指挥（自动模拟 BO5）",
+            "onclick": "startPlayerMatch()",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "全部",
+            "onclick": "window._logFilter='all';renderClub()",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "荣誉成就 1",
+            "onclick": "window._logFilter='honor';renderClub()",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "比赛战报 0",
+            "onclick": "window._logFilter='match';renderClub()",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "转会财政 1",
+            "onclick": "window._logFilter='fund';renderClub()",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "其他动态 3",
+            "onclick": "window._logFilter='other';renderClub()",
+            "disabled": false,
+            "visible": true
+          }
+        ],
+        "mode": "player",
+        "teamName": "北京JDG",
+        "navVisible": [
+          "career",
+          "club",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ],
+        "fabExists": true,
+        "dockExists": true
+      }
+    },
+    {
+      "step": "player-match",
+      "data": {
+        "before": {
+          "matchIdx": 0,
+          "history": 0,
+          "matches": 0
+        },
+        "r": "ok",
+        "after": {
+          "matchIdx": 1,
+          "history": 1,
+          "matches": 1
+        },
+        "toasts": [
+          " 选手生涯开启：先争取首发位置！",
+          " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）",
+          "采访选项无效"
+        ]
+      }
+    },
+    {
+      "step": "player-illegal-pages",
+      "data": {
+        "results": [
+          {
+            "p": "market",
+            "cur": "club",
+            "visible": false,
+            "newToasts": [
+              "当前身份没有「转会 · 买卖选手」页，已回到俱乐部 · 比赛主场"
+            ]
+          },
+          {
+            "p": "lineup",
+            "cur": "club",
+            "visible": false,
+            "newToasts": [
+              "当前身份没有「阵容 · 管理选手」页，已回到俱乐部 · 比赛主场"
+            ]
+          },
+          {
+            "p": "biz",
+            "cur": "club",
+            "visible": false,
+            "newToasts": [
+              "当前身份没有「经营 · 钱袋子」页，已回到俱乐部 · 比赛主场"
+            ]
+          },
+          {
+            "p": "train",
+            "cur": "club",
+            "visible": false,
+            "newToasts": [
+              "当前身份没有「训练 · 变强」页，已回到俱乐部 · 比赛主场"
+            ]
+          }
+        ],
+        "nav": [
+          "career",
+          "club",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ]
+      }
+    },
+    {
+      "step": "player-kjia-leak",
+      "data": {
+        "mode": "player",
+        "hasPromoteHint": false,
+        "hasManagerCopy": false,
+        "promoteBtnCount": 0,
+        "recallBtnCount": 0,
+        "sendBtnCount": 0,
+        "promoteBtns": [],
+        "promoteTry": "no-btn",
+        "promoteToasts": [],
+        "forceTry": "called",
+        "forceToasts": [
+          "选手生涯没有俱乐部人事权——提拔由俱乐部运作"
+        ],
+        "squadBefore": 5,
+        "squadAfter": 5,
+        "playersBefore": 6,
+        "playersAfter": 6,
+        "textHead": "二队 K甲赛况：查看练级数据与俱乐部下放情况（人事权在俱乐部，「生涯」页可申请租借/K甲）\n×\nK甲联赛 · 二队\n2026 春季赛 · 第1/7轮 · 每2天一轮\n次级联赛与 KPL 赛段并行推进：俱乐部把替补/青训下放二队真实出战（不占你的 KPL 出场），表现数据在本页累计；归队时带属性成长。你可在「生涯」页申请下放练级。\n二队概况\nJDG\n北京JDG二队 · 战力 277 · 联赛第8名 · 下放选手 0 人\n北京JDG二队\n战力 277\n下一场 · 第1轮\nK甲·苍穹\n战力 371\nK甲积分榜\n8队单循环 · 胜者积1分\n#\t战队\t胜\t负\t积分\t净胜局\t战力\n1\tK甲·苍穹\t0\t0\t0\t0\t371\n2\tK甲·星火\t0\t0\t0\t0\t383\n3\tK甲·沧澜\t0\t0\t0\t0\t376\n4\tK甲·曜石\t0\t0\t0\t0\t367\n5\tK甲·铁鳞\t0\t0\t0\t0\t336\n6\tK甲·游隼\t0\t0\t"
+      }
+    },
+    {
+      "step": "player-fab",
+      "data": {
+        "fabExists": true,
+        "fabVisible": true,
+        "dockExists": true,
+        "dockOpen": true,
+        "dockBtnCount": 6,
+        "dockBtns": [
+          {
+            "t": "生涯",
+            "p": "career"
+          },
+          {
+            "t": "俱乐部",
+            "p": "club"
+          },
+          {
+            "t": "联赛",
+            "p": "league"
+          },
+          {
+            "t": "二队",
+            "p": "kjia"
+          },
+          {
+            "t": "联盟",
+            "p": "union"
+          },
+          {
+            "t": "荣誉馆",
+            "p": "hall"
+          }
+        ]
+      }
+    },
+    {
+      "step": "coach-boot",
+      "data": {
+        "mode": "coach",
+        "teamName": "重庆狼队",
+        "coach": {
+          "name": "SK",
+          "id": "co2"
+        },
+        "deal": {
+          "years": 2,
+          "honors": [],
+          "log": []
+        },
+        "currentPage": "club",
+        "nav": [
+          "club",
+          "lineup",
+          "market",
+          "train",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ]
+      }
+    },
+    {
+      "step": "coach-lineup",
+      "data": {
+        "currentPage": "lineup",
+        "textLen": 1146,
+        "buttonCount": 21,
+        "buttons": [
+          {
+            "text": "×",
+            "onclick": "dismissHint('lineup')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('top6'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('top6')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('top6')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('jg5'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('jg5')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('jg5')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('mid4'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('mid4')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('mid4')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('ad2'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('ad2')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('ad2')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('sup4'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('sup4')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('sup4')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "均衡运营",
+            "onclick": "setTactic('balanced')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "运营拉扯",
+            "onclick": "setTactic('farm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "团战致胜",
+            "onclick": "setTactic('team')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "线优压制",
+            "onclick": "setTactic('lane')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "心理博弈",
+            "onclick": "setTactic('mind')",
+            "disabled": false,
+            "visible": true
+          }
+        ],
+        "mode": "coach",
+        "teamName": "重庆狼队",
+        "navVisible": [
+          "club",
+          "lineup",
+          "market",
+          "train",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ],
+        "fabExists": true,
+        "dockExists": true
+      }
+    },
+    {
+      "step": "coach-train",
+      "data": {
+        "currentPage": "train",
+        "textLen": 1412,
+        "buttonCount": 44,
+        "buttons": [
+          {
+            "text": "×",
+            "onclick": "dismissHint('train')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "全部",
+            "onclick": "setPosFilter('train','')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "对抗路",
+            "onclick": "setPosFilter('train','top')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "打野",
+            "onclick": "setPosFilter('train','jg')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "中路",
+            "onclick": "setPosFilter('train','mid')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "发育路",
+            "onclick": "setPosFilter('train','ad')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "游走",
+            "onclick": "setPosFilter('train','sup')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "总值",
+            "onclick": "setSortKey('train','ovr')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "身价",
+            "onclick": "setSortKey('train','val')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "年轻",
+            "onclick": "setSortKey('train','age')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "士气",
+            "onclick": "setSortKey('train','mor')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('mid4'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'mid4','lane')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'mid4','farm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'mid4','team')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "心态+1~2",
+            "onclick": "doTrain(S,'mid4','mind')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "英雄特训 21/80",
+            "onclick": "doHeroTrain(S,'mid4')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('ad2'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'ad2','lane')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'ad2','farm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'ad2','team')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "心态+1~2",
+            "onclick": "doTrain(S,'ad2','mind')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "英雄特训 15/80",
+            "onclick": "doHeroTrain(S,'ad2')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('jg5'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'jg5','lane')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'jg5','farm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'jg5','team')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "心态+1~2",
+            "onclick": "doTrain(S,'jg5','mind')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "英雄特训 21/80",
+            "onclick": "doHeroTrain(S,'jg5')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('sup4'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'sup4','lane')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'sup4','farm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'sup4','team')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "心态+1~2",
+            "onclick": "doTrain(S,'sup4','mind')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "英雄特训 26/80",
+            "onclick": "doHeroTrain(S,'sup4')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('top6'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'top6','lane')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'top6','farm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'top6','team')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "心态+1~2",
+            "onclick": "doTrain(S,'top6','mind')",
+            "disabled": false,
+            "visible": true
+          }
+        ],
+        "mode": "coach",
+        "teamName": "重庆狼队",
+        "navVisible": [
+          "club",
+          "lineup",
+          "market",
+          "train",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ],
+        "fabExists": true,
+        "dockExists": true
+      }
+    },
+    {
+      "step": "coach-market",
+      "data": {
+        "currentPage": "market",
+        "textLen": 1373,
+        "buttonCount": 22,
+        "buttons": [
+          {
+            "text": "×",
+            "onclick": "dismissHint('market')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'成都AG超玩会','loan_bench_成都AG超玩会_1_ac_jg_4w0nm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_成都AG超玩会_1_ac_jg_4w0nm')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'武汉eStarPro','loan_bench_武汉eStarPro_0_ac_top_c9a74')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_武汉eStarPro_0_ac_top_c9a74')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_0_ac_top_1ybvf')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_0_ac_top_1ybvf')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_1_ac_jg_3pg1u')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_1_ac_jg_3pg1u')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'苏州KSG','loan_bench_苏州KSG_1_ac_jg_smvdx')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_苏州KSG_1_ac_jg_smvdx')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'佛山DRG','loan_bench_佛山DRG_0_ac_top_382tu')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_佛山DRG_0_ac_top_382tu')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'佛山DRG','loan_bench_佛山DRG_1_ac_jg_irhg3')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_佛山DRG_1_ac_jg_irhg3')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'杭州LGD.NBW','loan_bench_杭州LGD.NBW_1_ac_jg_dzg5v')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_杭州LGD.NBW_1_ac_jg_dzg5v')",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('top6'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('jg5'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('mid4'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('ad2'))",
+            "disabled": false,
+            "visible": true
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('sup4'))",
+            "disabled": false,
+            "visible": true
+          }
+        ],
+        "mode": "coach",
+        "teamName": "重庆狼队",
+        "navVisible": [
+          "club",
+          "lineup",
+          "market",
+          "train",
+          "league",
+          "kjia",
+          "union",
+          "hall"
+        ],
+        "fabExists": true,
+        "dockExists": true
+      }
+    },
+    {
+      "step": "coach-loan-click",
+      "data": {
+        "ok": true,
+        "changed": true,
+        "newToasts": [
+          "观澜 租借加盟！21 天后自动归队"
+        ],
+        "after": {
+          "page": "market",
+          "toasts": [
+            " 教练生涯开启：带队打出成绩！",
+            " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）",
+            "观澜 租借加盟！21 天后自动归队"
+          ],
+          "textLen": 1544
+        }
+      }
+    },
+    {
+      "step": "coach-sell-guard",
+      "data": {
+        "r": "opened",
+        "toasts": [
+          " 教练生涯不能操作「出售」（由俱乐部打理，请用申请入口）"
+        ],
+        "modalOpen": false
+      }
+    },
+    {
+      "step": "coach-offer",
+      "data": {
+        "acceptExact": {
+          "ok": true,
+          "moved": true,
+          "newTeam": "成都AG超玩会",
+          "coachKept": true,
+          "toasts": []
+        },
+        "reject": {
+          "ok": true,
+          "stayed": true,
+          "offerCleared": true,
+          "logAdded": true,
+          "toasts": []
+        },
+        "badName": {
+          "ok": true,
+          "moved": false,
+          "newTeam": "成都AG超玩会",
+          "offerCleared": true,
+          "logAdded": false,
+          "toasts": [
+            " 邀约球队「ZZZ_NO_SUCH_CLUB」不在当前联盟，邀约已作废"
+          ],
+          "silent": false
+        },
+        "uiButtons": {
+          "accept": null,
+          "reject": null
+        }
+      }
+    },
+    {
+      "step": "coach-club-match-ui",
+      "data": {
+        "btns": [
+          {
+            "text": "完成一次训练",
+            "onclick": "goPage('train')",
+            "disabled": false
+          },
+          {
+            "text": "推进一场比赛",
+            "onclick": "goPage('club')",
+            "disabled": false
+          },
+          {
+            "text": "完成一次训练",
+            "onclick": "goPage('train')",
+            "disabled": false
+          },
+          {
+            "text": "看过联赛积分榜",
+            "onclick": "goPage('league')",
+            "disabled": false
+          },
+          {
+            "text": "赛季收官（任意结局）",
+            "onclick": "goPage('club')",
+            "disabled": false
+          },
+          {
+            "text": "×",
+            "onclick": "dismissHint('club')",
+            "disabled": false
+          },
+          {
+            "text": "改队徽",
+            "onclick": "openCrestEdit()",
+            "disabled": false
+          },
+          {
+            "text": "接受（换队执教）",
+            "onclick": "respondCoachOffer(true)",
+            "disabled": false
+          },
+          {
+            "text": "婉拒（留任）",
+            "onclick": "respondCoachOffer(false)",
+            "disabled": false
+          },
+          {
+            "text": "赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）",
+            "onclick": "uiStartMatch()",
+            "disabled": false
+          },
+          {
+            "text": "前往训练",
+            "onclick": "goPage('train')",
+            "disabled": false
+          },
+          {
+            "text": "全队休息",
+            "onclick": "doRest(S)",
+            "disabled": false
+          },
+          {
+            "text": "全部",
+            "onclick": "window._logFilter='all';renderClub()",
+            "disabled": false
+          },
+          {
+            "text": "荣誉成就 1",
+            "onclick": "window._logFilter='honor';renderClub()",
+            "disabled": false
+          },
+          {
+            "text": "比赛战报 0",
+            "onclick": "window._logFilter='match';renderClub()",
+            "disabled": false
+          },
+          {
+            "text": "转会财政 1",
+            "onclick": "window._logFilter='fund';renderClub()",
+            "disabled": false
+          },
+          {
+            "text": "其他动态 5",
+            "onclick": "window._logFilter='other';renderClub()",
+            "disabled": false
+          }
+        ],
+        "hasStartMatch": true,
+        "hasOpenBP": true,
+        "textHead": "新手任务（第 1 天）：完成一次训练推进一场比赛\n第 1 赛季主线（2/5）：完成一次训练看过联赛积分榜赛季收官（任意结局）\n推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发\n×\nAG\n成都AG超玩会\n2026 春季赛 · 第1天 · 常规赛·第一轮 · G1组\n改队徽\n1.5亿\n俱乐部资金\n董事会\n信任度 73 · 满意\n信任度\n73\n本赛季目标：赛季末年度积分进前 4 （首年按执教班底档位）\n赛季末按「年度积分排名」结算：达成目标涨信任度；连年不达标会逐步失去董事会的耐心\n执教履历\n现合同 2 年 · 0 冠\n你管竞技：首发/战术/训练/外租练级/K甲；俱乐部管钱与自动引援续约。KPI 是带队成绩——信任度耗尽即解约\n2026 · 婉拒 重庆狼队 邀约，留任 成都AG超玩会\n2026 · 离任 重庆狼队，转投 成都AG超玩会\n豪门邀约：重庆狼队 邀请你执教\n接受（换队执教"
+      }
+    },
+    {
+      "step": "coach-bp-chain",
+      "data": {
+        "startMatch": {
+          "ok": true,
+          "hasSeries": true,
+          "opName": "重庆狼队",
+          "toasts": []
+        },
+        "openBP": {
+          "ok": true,
+          "bpOpen": false,
+          "toasts": []
+        },
+        "bpConfirm": {
+          "ok": true,
+          "hasSeries": false,
+          "toasts": [
+            " 成就解锁：旗开得胜（拿下队史首场系列赛胜利）",
+            "没有进行中的系列赛"
+          ]
+        },
+        "playGame": {
+          "skip": "series-null-after-bp"
+        }
+      }
+    },
+    {
+      "step": "coach-biz-gate",
+      "data": {
+        "cur": "club",
+        "bizVisible": false,
+        "toasts": [
+          "当前身份没有「经营 · 钱袋子」页，已回到俱乐部 · 比赛主场"
+        ]
+      }
+    },
+    {
+      "step": "sweep-club",
+      "data": {
+        "count": 17,
+        "samples": [
+          {
+            "text": "完成一次训练",
+            "onclick": "goPage('train')"
+          },
+          {
+            "text": "看清联盟格局",
+            "onclick": "goPage('league')"
+          },
+          {
+            "text": "完成一次训练",
+            "onclick": "goPage('train')"
+          },
+          {
+            "text": "看过联赛积分榜",
+            "onclick": "goPage('league')"
+          },
+          {
+            "text": "赛季收官（任意结局）",
+            "onclick": "goPage('club')"
+          },
+          {
+            "text": "×",
+            "onclick": "dismissHint('club')"
+          },
+          {
+            "text": "改队徽",
+            "onclick": "openCrestEdit()"
+          },
+          {
+            "text": "接受（换队执教）",
+            "onclick": "respondCoachOffer(true)"
+          },
+          {
+            "text": "婉拒（留任）",
+            "onclick": "respondCoachOffer(false)"
+          },
+          {
+            "text": "赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP",
+            "onclick": "uiStartMatch()"
+          },
+          {
+            "text": "前往训练",
+            "onclick": "goPage('train')"
+          },
+          {
+            "text": "全队休息",
+            "onclick": "doRest(S)"
+          },
+          {
+            "text": "全部",
+            "onclick": "window._logFilter='all';renderClub()"
+          },
+          {
+            "text": "荣誉成就 2",
+            "onclick": "window._logFilter='honor';renderClub()"
+          },
+          {
+            "text": "比赛战报 4",
+            "onclick": "window._logFilter='match';renderClub()"
+          }
+        ]
+      }
+    },
+    {
+      "step": "sweep-lineup",
+      "data": {
+        "count": 21,
+        "samples": [
+          {
+            "text": "×",
+            "onclick": "dismissHint('lineup')"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('top4'))"
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('top4')"
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('top4')"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('jg4'))"
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('jg4')"
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('jg4')"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('mid3'))"
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('mid3')"
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('mid3')"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('ad1'))"
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('ad1')"
+          },
+          {
+            "text": "任队长",
+            "onclick": "setCaptain('ad1')"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('sup3'))"
+          },
+          {
+            "text": "→ 换下",
+            "onclick": "swapPlayer('sup3')"
+          }
+        ]
+      }
+    },
+    {
+      "step": "sweep-market",
+      "data": {
+        "count": 22,
+        "samples": [
+          {
+            "text": "×",
+            "onclick": "dismissHint('market')"
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'武汉eStarPro','loan_bench_武汉eStarPro_0_ac_top_c9a74')"
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_武汉eStarPro_0_ac_top_c9a74')"
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_0_ac_top_1ybvf')"
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_0_ac_top_1ybvf')"
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'南京Hero久竞','loan_bench_南京Hero久竞_1_ac_jg_3pg1u')"
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_南京Hero久竞_1_ac_jg_3pg1u')"
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'苏州KSG','loan_bench_苏州KSG_1_ac_jg_smvdx')"
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_苏州KSG_1_ac_jg_smvdx')"
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'佛山DRG','loan_bench_佛山DRG_0_ac_top_382tu')"
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_佛山DRG_0_ac_top_382tu')"
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'佛山DRG','loan_bench_佛山DRG_1_ac_jg_irhg3')"
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_佛山DRG_1_ac_jg_irhg3')"
+          },
+          {
+            "text": "立即租借",
+            "onclick": "loanPlayer(S,'杭州LGD.NBW','loan_bench_杭州LGD.NBW_1_ac_jg_dzg5v')"
+          },
+          {
+            "text": "申请租借",
+            "onclick": "coachRequest(S,'loan','loan_bench_杭州LGD.NBW_1_ac_jg_dzg5v')"
+          }
+        ]
+      }
+    },
+    {
+      "step": "sweep-train",
+      "data": {
+        "count": 42,
+        "samples": [
+          {
+            "text": "全部",
+            "onclick": "setPosFilter('train','')"
+          },
+          {
+            "text": "对抗路",
+            "onclick": "setPosFilter('train','top')"
+          },
+          {
+            "text": "打野",
+            "onclick": "setPosFilter('train','jg')"
+          },
+          {
+            "text": "中路",
+            "onclick": "setPosFilter('train','mid')"
+          },
+          {
+            "text": "发育路",
+            "onclick": "setPosFilter('train','ad')"
+          },
+          {
+            "text": "游走",
+            "onclick": "setPosFilter('train','sup')"
+          },
+          {
+            "text": "总值",
+            "onclick": "setSortKey('train','ovr')"
+          },
+          {
+            "text": "身价",
+            "onclick": "setSortKey('train','val')"
+          },
+          {
+            "text": "年轻",
+            "onclick": "setSortKey('train','age')"
+          },
+          {
+            "text": "士气",
+            "onclick": "setSortKey('train','mor')"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('ad1'))"
+          },
+          {
+            "text": "对线+1~2",
+            "onclick": "doTrain(S,'ad1','lane')"
+          },
+          {
+            "text": "运营+1~2",
+            "onclick": "doTrain(S,'ad1','farm')"
+          },
+          {
+            "text": "团战+1~2",
+            "onclick": "doTrain(S,'ad1','team')"
+          },
+          {
+            "text": "心态+1~2",
+            "onclick": "doTrain(S,'ad1','mind')"
+          }
+        ]
+      }
+    },
+    {
+      "step": "sweep-career",
+      "data": {
+        "count": 0,
+        "samples": []
+      }
+    },
+    {
+      "step": "sweep-kjia",
+      "data": {
+        "count": 6,
+        "samples": [
+          {
+            "text": "×",
+            "onclick": "dismissHint('kjia')"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('kjf_2026_top_opzos'))"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('kjf_2026_jg_yw94p'))"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('kjf_2026_mid_dx9lv'))"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('kjf_2026_ad_024bg'))"
+          },
+          {
+            "text": "选手档案",
+            "onclick": "event.stopPropagation();showCareer(findPlayerCard('kjf_2026_sup_8dw60'))"
+          }
+        ]
+      }
+    }
+  ],
+  "toasts": []
+}

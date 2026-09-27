@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "id": "P2-PICKPOS-GUARDED",
+      "severity": "PASS",
+      "title": "pickPlayerPos 拒绝非法键",
+      "detail": "{\"r\":{\"called\":true,\"_pcPos\":\"mid\"},\"createR\":{\"mode\":\"player\",\"err\":null},\"toasts\":[\"无效位置\",\" 选手生涯开启：先争取首发位置！\",\" 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）\"]}"
+    }
+  ],
+  "hints": {
+    "marketHint": "教练工作台：应急租借与引援申请（买断谈判由俱乐部打理） ×",
+    "marketHead": "教练工作台：应急租借与引援申请（买断谈判由俱乐部打理）\n×\n教练工作台 · 应急与引援\n买断挂牌由俱乐部打理\n伤停/集训缺人时可紧急租借；也可向俱乐部提交引援申请（资金与名单允许时自动办理）。不能挂牌出售选手——那是管理层的事。\n应急租借市场\n21 天 · 名额 0/2\n租金约身价 15%，工资由原队承担；非卖品不外借。缺位位置优先推荐。\n听松 (武汉eSt",
+    "marketHasBuySellCopy": false,
+    "marketHasCannotSell": true,
+    "kjiaHint": "K甲二队：替补和青训生的练级场，表现好可提拔上一队 ×",
+    "kjiaHasPromoteCopy": true,
+    "lineupHasSell": false,
+    "lineupHasTactic": true
+  },
+  "posGuard": {
+    "r": {
+      "called": true,
+      "_pcPos": "mid"
+    },
+    "createR": {
+      "mode": "player",
+      "err": null
+    },
+    "toasts": [
+      "无效位置",
+      " 选手生涯开启：先争取首发位置！",
+      " 成就解锁：手握巨星（阵中拥有总值 ≥90 的选手）"
+    ]
+  },
+  "mediaUi": {
+    "hasPanel": false,
+    "btnCount": 0,
+    "clickR": {
+      "via": "none",
+      "hasPanel": false
+    }
+  },
+  "pageErrors": []
+}

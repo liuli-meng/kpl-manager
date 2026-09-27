@@ -107,13 +107,33 @@ function draftSlotPrice(slot){return slot<8?DRAFT_BID_TOP:DRAFT_BID_REST;}
    同一签位内同队的心理上限会随机跳变——先敢出 150、下一手又嫌 160 贵，逻辑不自洽）。 */
 function draftAiFund(s,team){
  const d=s.draft;
- if(!d)return rnd(400,1600);
+ if(!d)return rnd(900,2200);
  d.aiFund=d.aiFund||{};
- if(d.aiFund[team]==null)d.aiFund[team]=rnd(400,1600);
+ if(d.aiFund[team]==null){
+  /* 本场预算一次摇定 + 俱乐部底蕴加成：
+     旧 rnd(400,1600) 下限太低，弱队第二签起就跟不动，面板常年「未放弃 2 队」，
+     玩家观感是「一堆队根本不想争」。豪门（seed 高）额外上浮。 */
+  const base=rnd(900,2200);
+  let prestige=0;
+  if(team!==s.teamName){
+   const t=(typeof AI_TEAMS!=='undefined'?AI_TEAMS:[]).find(x=>x.name===team);
+   prestige=clamp(Math.round(((t&&t.seed)||400)-380)*6,-300,900);
+  }
+  d.aiFund[team]=Math.max(1100,base+prestige);
+ }
  return d.aiFund[team];
 }
+/* 新秀身价粗估（万）：总值 × 档级系数，给竞拍当「值不值」锚点（对齐 fantasy auction 的 value） */
+function draftProspectValue(p){
+ if(!p)return 80;
+ const o=overall(p);
+ const hot=(p.tags||[]).includes('热门新秀')?1.12:1;
+ const kj=(p.tags||[]).includes('K甲前三')?1.18:1;
+ return Math.round(o*1.35*hot*kj);
+}
 /* 玩家/AI 同一口径的签位出价上限。
-   原先只有 AI 走这套公式，玩家可用 s.fund 砸穿 25%/意愿 cap——统一后两边同一规则。 */
+   融合 fantasy-auction 的两件事：① 给后续签位留底（每空位至少留起拍价）② 身价锚点（不为水货梭哈）。
+   仍保留意愿价（缺口/空位/临时席位），避免纯身价导致没人抢替补位。 */
 function draftTeamMaxBid(s,team,slot){
  if(!draftStillWant(s,team))return 0;
  const fund=team===s.teamName?(s.fund||0):draftAiFund(s,team);
@@ -121,17 +141,48 @@ function draftTeamMaxBid(s,team,slot){
  const base=draftSlotPrice(slot);
  // 临时席位队更愿意砸钱抢签（保级/站稳脚跟）
  const tempBoost=(typeof isTempSeat==='function'&&isTempSeat(s,team))?1.25:1;
- // 意愿价：起拍 + 阵容缺口 + 大名单空位（替补/苗子）。
- // 旧公式只看位置缺口——满编强队 need≈0，上限被压到起拍价附近，永远跟不动 AI，
- // 玩家表现为「整场选秀叫不上价 → 选不了人」。空位与保底竞争线一并计入。
  const slotsLeft=Math.max(1,ROSTER_MAX-(draftTeamRosterCount(s,team)||0));
- const will=Math.round((base+need*12+slotsLeft*8)*tempBoost);
- const econ=Math.round(fund*0.25*tempBoost);
- // 经济上限仍是 25% 资金；意愿价至少给到「能跟一轮」和经济上限的 6 成，
- // 否则同一套公式会把有钱满编队锁死在陪跑位（与 AI 不对等）。
- return Math.min(Math.max(will,base+DRAFT_BID_STEP,Math.round(econ*0.6)),econ,Math.floor(fund));
+ // 意愿价：起拍 + 缺口 + 空位（替补/苗子）。空位权重上调，满编强队也能抢苗子
+ const will=Math.round((base+need*14+slotsLeft*14)*tempBoost);
+ // 经济线：32% 资金（25% 时弱队一轮就被抬出，竞拍不热闹）
+ const econ=Math.round(fund*0.32*tempBoost);
+ // 后续签位留底：还剩 N 个空位先锁一点，但最多吃掉经济线的 45%——
+ // 旧写法 (N-1)×起拍 在空位多时会把 spend 压到起拍价，弱队整场只能看
+ const slotsLeftRaw=Math.max(0,slotsLeft-1)*DRAFT_BID_REST;
+ const reserve=Math.min(slotsLeftRaw,Math.round(econ*0.45));
+ const spend=Math.max(base+DRAFT_BID_STEP,econ-reserve);
+ // 身价锚点：按池内最强新秀估「这一签大概值多少」，好货多就更敢抬
+ let bestVal=90;
+ try{
+  const pool=(s.draft&&s.draft.pool)||[];
+  if(pool.length){
+   bestVal=pool.reduce((m,p)=>Math.max(m,draftProspectValue(p)),0);
+  }
+ }catch(e){}
+ const anchor=Math.round(bestVal*0.55+slotsLeft*12);
+ return Math.min(Math.max(will,base+DRAFT_BID_STEP,Math.round(spend*0.55),Math.round(anchor*0.6)),spend,Math.floor(fund));
 }
-function draftMaxAiBid(s,team,slot){return draftTeamMaxBid(s,team,slot);}
+function draftMaxAiBid(s,team,slot){
+ // AI 硬上限与玩家同口径（draftTeamMaxBid），但实际叫价还要过身价软上限，避免一路抬到硬顶收不敛
+ return draftTeamMaxBid(s,team,slot);
+}
+/* AI 软上限：这一签「大概值多少」才跟。硬上限管「能不能」，软上限管「值不值」。
+   没有软上限时双方都顶着硬上限对抬，25 轮都收敛不了，面板永远停在竞拍。 */
+function draftAiBidCap(s,team,slot){
+ const hard=draftTeamMaxBid(s,team,slot);
+ if(hard<=0)return 0;
+ const base=draftSlotPrice(slot);
+ const need=POS_ORDER.reduce((t,pos)=>t+draftPosNeed(s,team,pos),0);
+ const tempBoost=(typeof isTempSeat==='function'&&isTempSeat(s,team))?1.2:1;
+ let bestVal=100;
+ try{
+  const pool=(s.draft&&s.draft.pool)||[];
+  if(pool.length)bestVal=pool.reduce((m,p)=>Math.max(m,draftProspectValue(p)),0);
+ }catch(e){}
+ // 池内最强身价 × 缺口系数：越缺人越肯超值一点
+ const soft=Math.round(bestVal*(0.82+need*0.1)*tempBoost);
+ return Math.min(hard,Math.max(base,soft));
+}
 /* 旧档/异常档修复：竞拍价与领先者一旦被写成 NaN/null，整场竞拍再也不可能收敛
    （早期 `draftBidRaise` 误用 s.bid，NaN 会跟着存档落盘，JSON 里变 null 再读出）。
    读档时统一归一化，别指望坏值自己好。 */
@@ -213,7 +264,8 @@ function draftAiAuction(s){ // AI 叫价直到轮到玩家或签位落定
   for(const t of candidates){if(t===d.leader)continue;next=t;break;}
   if(!next)break;
   if(next===s.teamName)break; // 等玩家
-  const max=draftTeamMaxBid(s,next,d.slot);
+  // 软上限（值不值）优先，硬上限（能不能）兜底——只看硬顶会无限抬价
+  const max=draftAiBidCap(s,next,d.slot);
   // 首拍只需 >=起拍价；有领先者才 +STEP。旧版连首拍也要求 +10，大量 AI 第一轮弃拍
   const needBid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
   if(max>=needBid){
@@ -232,8 +284,8 @@ function draftWinSlot(s,team,cost){
  const playerFull=(team===s.teamName)&&!draftStillWant(s,team);
  if(cost>0&&!playerFull){
  if(team===s.teamName)s.fund=Math.max(0,(s.fund||0)-cost);
- else if(d.aiFund&&d.aiFund[team]!=null)d.aiFund[team]=Math.max(0,d.aiFund[team]-cost);
- else if(d.aiFund)d.aiFund[team]=Math.max(0,(draftAiFund(s,team)-cost));
+ else if(d.aiFund&&d.aiFund[team]!=null)d.aiFund[team]=Math.max(600,d.aiFund[team]-cost); // 保底还能跟起拍，避免后段全场躺平
+ else if(d.aiFund)d.aiFund[team]=Math.max(600,(draftAiFund(s,team)-cost));
  d.log.push(team+' 以 '+cost+'万拍得第'+(d.slot+1)+'签');
  }else if(cost>0){
  d.log.push(team+' 拍得第'+(d.slot+1)+'签，但大名单已满（不扣款）');
@@ -421,12 +473,11 @@ function draftPick(s,id){
  if(typeof denyIfBlocked==='function'&&denyIfBlocked('draft',s))return;
  const d=s.draft;
  if(!d||d.done||d.phase!=='pick'){toast('当前不在点名阶段');return;}
- if(!rosterGuard(s)){ // 大名单已满：这一签作废（不能再走 draftNextSlot 原地重拍，否则签位卡在同一步）
-  d.picks.push({slot:d.slot,team:s.teamName,playerId:null});
-  d.log.push(s.teamName+' 大名单已满，第'+(d.slot+1)+'签作废');
-  d.slot++;
-  draftNextSlot(s);
-  if(!d.done){save();renderAll();}
+ if(!rosterGuard(s)){
+  /* 大名单已满：不要代跑 draftNextSlot——满员后玩家不再是竞拍候选，
+     draftAiAuction 会把剩余签位一口气打完，看起来像「点一下卡片整届选秀都没了」。
+     只拦住本签，交给显式「放弃点名」。 */
+  toast('大名单已满（'+ROSTER_MAX+' 人）——不能点名，请点「放弃点名」');
   return;
  }
  const p=d.pool.find(x=>x.id===id);
@@ -535,7 +586,7 @@ function draftPanelHtml(){
  const nextBid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
  const overCap=nextBid>myMax;
  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
- <button class="btn gold" onclick="draftBidRaise()"> 叫价 ${nextBid}万</button>
+ <button class="btn gold" onclick="draftBidRaise()"${overCap?' disabled':''}> 叫价 ${nextBid}万</button>
  <button class="btn sm" onclick="draftBidPass()">放弃本签竞拍</button>
  </div>
  <div class="hint" style="margin-bottom:8px;${overCap?'color:var(--red)':''}">本队签位预算上限 <b>${myMax}万</b>（资金/意愿封顶）${overCap?` · 需 ${nextBid}万已超上限，本签只能放弃——下签仍可竞拍`:' · 可继续叫价'}</div>`;
@@ -557,7 +608,8 @@ function draftPanelHtml(){
  html+=`<div class="hint" style="color:var(--red);margin-bottom:8px">本届选秀你未能参与：开始时大名单已满（${rosterNow}/${ROSTER_MAX}）。想选新秀请先在转会页卖掉或放走选手腾位置，下届选秀即可参与。</div>`;
  }
  if(d.pool.length&&(d.phase==='pick'||mePick||d.done===false)){
- const interactive=mePick;
+ // 满员时不可点签约：否则点卡片会走 rosterGuard 作废并 draftNextSlot 一口气跑完整届
+ const interactive=mePick&&!myFull;
  if(interactive){
  html+=`<div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
@@ -574,17 +626,21 @@ function draftPanelHtml(){
  :card;
  }).join('')}</div>`;
  }else{
- /* 非本队点名回合（竞拍中 / 你已放弃 / 已收官）：新秀卡只能看不能点，可原来是 20 张完整
-    pcard 实测 40.7 KB——约占转会页的 1/3，而它承载的信息只有「名字/位置/总值/档级」。
-    这里压成紧凑行（约 3 KB），信息一条不少；轮到自己点名时仍走上面的完整卡片路径，
-    「整卡可点」和满员提示（0aeaf0b）都不受影响。 */
+ /* 非本队点名回合 / 满员：新秀卡只读紧凑行。满员时绝不能挂 draftPick——
+    一点会作废签位并让 AI 跑完整届（manager-subagent P1）。 */
  const src=p=>{const t=(p.tags||[]).filter(x=>x!=='选秀'&&x!=='青训出身');return t.join('/')||'训练营';};
- html+=`<div class="hint" style="margin-bottom:6px"><b>要先「叫价」拍下签位，才能点名选人</b>（当前是竞拍阶段）。新秀池 ${d.pool.length} 人 · 轮到你点名时会展开为可点卡片</div>
- <div style="max-height:220px;overflow-y:auto">${d.pool.map(p=>`<div class="match" style="margin-bottom:4px;padding:5px 8px">
+ const poolRows=d.pool.map(p=>`<div class="match" style="margin-bottom:4px;padding:5px 8px">
  <div class="vs"><span class="tname" style="font-size:12px">${p.name} <span style="color:var(--dim);font-size:10px">(${POS[p.pos][0]} · ${p.age||18}岁${p.fromClub?' · '+p.fromClub+'青训':''})</span></span></div>
  <div class="power" style="font-size:10px">${src(p)}</div>
  <div class="score" style="font-size:12px;min-width:0">总值 ${overall(p)}</div>
- </div>`).join('')}</div>`;
+ </div>`).join('');
+ if(mePick&&myFull){
+ html+=`<div class="hint" style="margin-bottom:6px;color:var(--red)"><b>大名单已满（${rosterNow}/${ROSTER_MAX}）——不能点名</b>，本签只能点下方「放弃点名」。新秀池 ${d.pool.length} 人如下（只读）。</div>
+ <div style="max-height:220px;overflow-y:auto">${poolRows}</div>`;
+ }else{
+ html+=`<div class="hint" style="margin-bottom:6px"><b>要先「叫价」拍下签位，才能点名选人</b>（当前是竞拍阶段）。新秀池 ${d.pool.length} 人 · 轮到你点名时会展开为可点卡片</div>
+ <div style="max-height:220px;overflow-y:auto">${poolRows}</div>`;
+ }
  }
  }
  // 放弃按钮必须独立于「池里有人」：池子空时原来连按钮都不渲染 → 玩家卡死在点名阶段

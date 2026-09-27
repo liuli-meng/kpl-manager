@@ -1,0 +1,265 @@
+{
+  "findings": [
+    {
+      "id": "P2-DRAFT-ACT-NOOP",
+      "severity": "WARN",
+      "title": "bidPass 无状态变化且无 toast",
+      "detail": "{\"act\":\"bidPass\",\"before\":{\"phase\":\"pick\",\"slot\":0,\"bid\":220,\"leader\":\"成都AG超玩会\",\"picks\":0},\"after\":{\"phase\":\"pick\",\"slot\":0,\"bid\":220,\"leader\":\"成都AG超玩会\",\"picks\":0},\"toasts\":[]}"
+    },
+    {
+      "id": "P1-TRAIN-SUCCESS-NO-TOAST",
+      "severity": "FAIL",
+      "title": "playerTrain 成功路径确认无 toast（gain>0）",
+      "detail": "{\"trainToasts\":[],\"socialToasts\":[],\"restToasts\":[\"今天已经休息过了\"],\"heroToasts\":[\"今天已经练过了\"],\"trained\":true,\"socialUsed\":true}"
+    },
+    {
+      "id": "P1-SOCIAL-SUCCESS-NO-TOAST",
+      "severity": "FAIL",
+      "title": "playerSocial 成功路径确认无 toast",
+      "detail": "{\"trainToasts\":[],\"socialToasts\":[],\"restToasts\":[\"今天已经休息过了\"],\"heroToasts\":[\"今天已经练过了\"],\"trained\":true,\"socialUsed\":true}"
+    }
+  ],
+  "boot": {
+    "mode": "manager",
+    "team": "成都AG超玩会",
+    "fund": 15000,
+    "phase": "r1",
+    "preseason": true
+  },
+  "draft": {
+    "r": "ok",
+    "hasDraft": true,
+    "phase": "auction",
+    "slot": 0,
+    "bid": 210,
+    "leader": "桐乡情久",
+    "poolLen": 20,
+    "picks": 0,
+    "toasts": [],
+    "btnCount": 24,
+    "btns": [
+      {
+        "text": "跳过剩余 7 天",
+        "on": "uiSkipTransfer(S)",
+        "disabled": false
+      },
+      {
+        "text": "叫价 220万",
+        "on": "draftBidRaise()",
+        "disabled": false
+      },
+      {
+        "text": "放弃本签竞拍",
+        "on": "draftBidPass()",
+        "disabled": false
+      },
+      {
+        "text": "○ 常规开档",
+        "on": "pickScenario('normal')",
+        "disabled": false
+      },
+      {
+        "text": "财政危机",
+        "on": "pickScenario('debt')",
+        "disabled": false
+      },
+      {
+        "text": "核心出走",
+        "on": "pickScenario('exodus')",
+        "disabled": false
+      },
+      {
+        "text": "工资帽紧缩",
+        "on": "pickScenario('cap')",
+        "disabled": false
+      },
+      {
+        "text": "无冠魔咒",
+        "on": "pickScenario('cursed')",
+        "disabled": false
+      },
+      {
+        "text": "2026 · 现役",
+        "on": "pickPlayerEra('')",
+        "disabled": false
+      },
+      {
+        "text": "2017 · QG王朝",
+        "on": "pickPlayerEra('2017')",
+        "disabled": false
+      },
+      {
+        "text": "2019 · 双冠与信仰",
+        "on": "pickPlayerEra('2019')",
+        "disabled": false
+      },
+      {
+        "text": "对抗路",
+        "on": "pickPlayerPos('top')",
+        "disabled": false
+      },
+      {
+        "text": "打野",
+        "on": "pickPlayerPos('jg')",
+        "disabled": false
+      },
+      {
+        "text": "中路",
+        "on": "pickPlayerPos('mid')",
+        "disabled": false
+      },
+      {
+        "text": "发育路",
+        "on": "pickPlayerPos('ad')",
+        "disabled": false
+      },
+      {
+        "text": "游走",
+        "on": "pickPlayerPos('sup')",
+        "disabled": false
+      },
+      {
+        "text": "青训新秀",
+        "on": "pickPlayerArch(0)",
+        "disabled": false
+      },
+      {
+        "text": "次级联赛",
+        "on": "pickPlayerArch(1)",
+        "disabled": false
+      },
+      {
+        "text": "海归选手",
+        "on": "pickPlayerArch(2)",
+        "disabled": false
+      },
+      {
+        "text": "2026 · 现役",
+        "on": "pickCoachEra('')",
+        "disabled": false
+      }
+    ],
+    "modalOpen": false,
+    "modalText": "",
+    "clubHasDraft": false
+  },
+  "interact": {
+    "out": [
+      {
+        "act": "bidRaise",
+        "before": {
+          "phase": "auction",
+          "slot": 0,
+          "bid": 210,
+          "leader": "桐乡情久",
+          "picks": 0
+        },
+        "after": {
+          "phase": "pick",
+          "slot": 0,
+          "bid": 220,
+          "leader": "成都AG超玩会",
+          "picks": 0
+        },
+        "toasts": []
+      },
+      {
+        "act": "bidPass",
+        "before": {
+          "phase": "pick",
+          "slot": 0,
+          "bid": 220,
+          "leader": "成都AG超玩会",
+          "picks": 0
+        },
+        "after": {
+          "phase": "pick",
+          "slot": 0,
+          "bid": 220,
+          "leader": "成都AG超玩会",
+          "picks": 0
+        },
+        "toasts": []
+      },
+      {
+        "act": "pick",
+        "before": {
+          "phase": "auction",
+          "slot": 1,
+          "bid": 200,
+          "leader": "常山UUG",
+          "picks": 1
+        },
+        "after": {
+          "phase": "auction",
+          "slot": 1,
+          "bid": 200,
+          "leader": "常山UUG",
+          "picks": 1
+        },
+        "toasts": [
+          " 选秀签下 听潮！"
+        ]
+      }
+    ],
+    "uiBtns": [
+      {
+        "text": "叫价 210万",
+        "on": "draftBidRaise()",
+        "disabled": false
+      },
+      {
+        "text": "放弃本签竞拍",
+        "on": "draftBidPass()",
+        "disabled": false
+      }
+    ],
+    "final": {
+      "phase": "auction",
+      "slot": 1,
+      "bid": 200,
+      "leader": "常山UUG",
+      "picks": 1
+    }
+  },
+  "fabCheck": {
+    "fabExists": true,
+    "fabRect": {
+      "t": 830,
+      "l": 1212,
+      "w": 52,
+      "h": 52
+    },
+    "dockExists": true,
+    "overlapCount": 0,
+    "overlap": [],
+    "bodyOverflow": "visible"
+  },
+  "playerFab": {
+    "mode": "player",
+    "fabRect": {
+      "t": 830,
+      "l": 1212,
+      "w": 52,
+      "h": 52
+    },
+    "overlapCount": 0,
+    "overlap": [],
+    "dockOpen": true,
+    "dockBtns": 6
+  },
+  "toastSrc": {
+    "trainToasts": [],
+    "socialToasts": [],
+    "restToasts": [
+      "今天已经休息过了"
+    ],
+    "heroToasts": [
+      "今天已经练过了"
+    ],
+    "trained": true,
+    "socialUsed": true
+  },
+  "pageErrors": [],
+  "consoleErrors": []
+}

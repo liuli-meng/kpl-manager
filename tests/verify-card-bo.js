@@ -69,7 +69,7 @@ const scan = (f, re, why) => {
   fs.readFileSync(f, 'utf8').split(/\r?\n/).forEach((ln, i) => { if (re.test(ln)) bad.push(f + ':' + (i + 1) + ' ' + why + ' | ' + ln.trim().slice(0, 80)); });
 };
 scan('src/js/season.js', /卡位赛.{0,12}BO7/, '引擎注释/文案回潮 BO7');
-scan('src/js/ui.js', /卡位赛[\s\S]{0,80}>\s*BO7|BO7 · 含巅峰对决/, 'UI 卡位赛标签写死 BO7');
+scan('src/js/ui.js', /卡位赛[\s\S]{0,80}>\s*BO7|BO7 · 含巅峰对决|BO\$\{KPL\.CARD\} · 含巅峰对决/, 'UI 卡位赛标签写死 BO7 或假巅峰');
 const ui = fs.readFileSync('src/js/ui.js', 'utf8');
 if ((ui.match(/BO\$\{KPL\.CARD\}/g) || []).length < 2) bad.push('ui.js 卡位赛 tag 没读 KPL.CARD（应至少 2 处）');
 console.log(bad.length ? '[FAIL] ④ ' + bad.join('\n     ') : '[PASS] ④ 静态守卫：卡位赛 BO 数只在 KPL.CARD 一处');

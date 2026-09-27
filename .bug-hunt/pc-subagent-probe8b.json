@@ -1,0 +1,40 @@
+{
+  "findings": [
+    {
+      "id": "P1-PLAYER-BENCH-PANEL-MISS",
+      "sev": "P1",
+      "title": "非首发选手生涯页无「板凳出路」",
+      "detail": "{\"hasBenchPanel\":false,\"textHasLoan\":false,\"textHasKjia\":false}",
+      "evidence": null
+    },
+    {
+      "id": "P1-OPENBP-NO-GUARD-THROW",
+      "sev": "P1",
+      "title": "openBP 无权限门禁且无 series 时直接 TypeError（选手/任意模式）",
+      "detail": "{\"err\":\"Cannot read properties of null (reading 'side')\",\"draftBefore\":\"undefined\",\"draftAfter\":\"undefined\",\"hasDraft\":false}",
+      "evidence": null
+    },
+    {
+      "id": "P1-OPENBP-NOSERIES-THROW",
+      "sev": "P1",
+      "title": "openBP 在无 series 时抛 TypeError（赛前/换队后误入会炸）",
+      "detail": "{\"err\":\"Cannot read properties of null (reading 'side')\",\"draft\":\"undefined\"}",
+      "evidence": null
+    },
+    {
+      "id": "P2-COACH-SWAP-MANAGER-COPY",
+      "sev": "P2",
+      "title": "教练换下空位 toast 仍说「可出售/挂牌」",
+      "detail": "{\"toasts\":[\"大帅 已下场（游走空缺）——可出售/挂牌后补人，开赛前该位置必须有人\"],\"mode\":\"coach\"}",
+      "evidence": null
+    },
+    {
+      "id": "FATAL",
+      "sev": "P0",
+      "title": "probe fatal",
+      "detail": "ReferenceError: goPage is not defined\n    at E:\\sex\\kpl-manager\\.bug-hunt\\probe-pc-sub8b.js:364:7",
+      "evidence": null
+    }
+  ],
+  "fatal": "ReferenceError: goPage is not defined\n    at E:\\sex\\kpl-manager\\.bug-hunt\\probe-pc-sub8b.js:364:7"
+}

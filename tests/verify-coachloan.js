@@ -28,8 +28,9 @@ const out = vm.runInContext(`
   if(!pages.includes('market'))fail('①教练导航无 market 页: '+pages.join(','));
   else log('①教练导航：'+pages.join('/'));
 
-  // ② 伤停导致缺位 → 可立即租借补位
+  // ② 杯赛窗口伤停缺位 → 可立即租借补位（常规赛禁止租借）
   S=mkCoach(3000);
+  S.phase='challenger'; // 租借只在挑杯/年总开放
   const inj=S.lineup.map(id=>S.players.find(p=>p.id===id)).filter(Boolean)[0];
   inj.injury=8;
   // 临时抽掉替补，保证该位置只剩伤号

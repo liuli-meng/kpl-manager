@@ -1,0 +1,170 @@
+{
+  "ts": "2026-09-27T10:11:11.228Z",
+  "afterCreate": {
+    "modalOn": false,
+    "mode": "manager",
+    "teamName": "封顶回归",
+    "fund": 8000,
+    "players": 5,
+    "transferWindow": 7,
+    "preseason": true,
+    "draft": {
+      "phase": "auction",
+      "slot": 0,
+      "pool": 20,
+      "done": false,
+      "order": 18,
+      "bid": 60,
+      "leader": null
+    },
+    "page": "page-market"
+  },
+  "draftTrace": {
+    "raises": 7,
+    "raiseClicks": 7,
+    "pickClicks": 1,
+    "passClicks": 0,
+    "toasts": [
+      "轮到你点名（第1签）",
+      "大会记录：封顶回归 叫价 100万（第1签）成都AG超玩会 叫价 110万（第1签）封顶回归 叫价 120万（第1签）成都AG超玩会 叫价 130万（第1签）封顶回归 叫价 140万（第1签）成都AG超玩会 叫价 150万（第1签）封顶回归 叫价 160万（第1签）成都AG超玩会 叫价 170万（第1签）封顶回归 叫价 180万（第1签）封顶回归 以 180万拍得第1签",
+      "全年可租（含转会期）：支付租金（身价 15%）即可租来应急/补位置，工资由原队承担；非卖品不外借，租借选手不能出售/挂牌。某位置因伤停/K甲无人时，名额上限 +1 并优先推荐该位置。"
+    ],
+    "pickedName": "竹杖",
+    "beforeLen": 5,
+    "afterLen": 6
+  },
+  "pageSnaps": {
+    "club": {
+      "stage": "club",
+      "dirty": [],
+      "dead": []
+    },
+    "lineup": {
+      "stage": "lineup",
+      "dirty": [],
+      "dead": []
+    },
+    "market": {
+      "stage": "market",
+      "dirty": [],
+      "dead": []
+    },
+    "train": {
+      "stage": "train",
+      "dirty": [],
+      "dead": []
+    },
+    "league": {
+      "stage": "league",
+      "dirty": [],
+      "dead": []
+    },
+    "kjia": {
+      "stage": "kjia",
+      "dirty": [],
+      "dead": []
+    },
+    "union": {
+      "stage": "union",
+      "dirty": [],
+      "dead": []
+    },
+    "hall": {
+      "stage": "hall",
+      "dirty": [],
+      "dead": []
+    },
+    "biz": {
+      "stage": "biz",
+      "dirty": [],
+      "dead": []
+    }
+  },
+  "fabTest": {
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "fab": {
+      "x": 330,
+      "y": 718,
+      "w": 48,
+      "h": 48,
+      "bottom": 766,
+      "right": 378
+    },
+    "nav": {
+      "top": 785,
+      "h": 59
+    },
+    "results": {
+      "hall": {
+        "btn": {
+          "x": 320,
+          "y": 818,
+          "w": 49,
+          "h": 52
+        },
+        "hit": "BUTTON",
+        "hitIsNavBtn": true,
+        "hitIsFab": false
+      },
+      "biz": {
+        "btn": {
+          "x": 365,
+          "y": 818,
+          "w": 38,
+          "h": 52
+        },
+        "hit": "BUTTON",
+        "hitIsNavBtn": true,
+        "hitIsFab": false
+      },
+      "union": {
+        "btn": {
+          "x": 274,
+          "y": 818,
+          "w": 38,
+          "h": 52
+        },
+        "hit": "BUTTON",
+        "hitIsNavBtn": true,
+        "hitIsFab": false
+      },
+      "kjia": {
+        "btn": {
+          "x": 235,
+          "y": 818,
+          "w": 38,
+          "h": 52
+        },
+        "hit": "BUTTON",
+        "hitIsNavBtn": true,
+        "hitIsFab": false
+      }
+    }
+  },
+  "pageErrors": [],
+  "consoleErrors": [],
+  "bugs": [],
+  "log": [
+    "page title: 王者电竞经理 · KPL 篇",
+    "start-modal=1 nameInputVisible=true",
+    "afterCreate {\"modalOn\":false,\"mode\":\"manager\",\"teamName\":\"封顶回归\",\"fund\":8000,\"players\":5,\"transferWindow\":7,\"preseason\":true,\"draft\":{\"phase\":\"auction\",\"slot\":0,\"pool\":20,\"done\":false,\"order\":18,\"bid\":60,\"leader\":null},\"page\":\"page-market\"}",
+    "click ok: prospect-card",
+    "pick click → {\"players\":6,\"lastName\":\"竹杖\",\"lastId\":\"drf_2026_0_nq4k\",\"phase\":\"auction\",\"done\":false,\"picks\":1,\"toast\":\" 选秀签下 竹杖！\"}",
+    "draftTrace {\"raises\":7,\"raiseClicks\":7,\"pickClicks\":1,\"passClicks\":0,\"toasts\":[\"轮到你点名（第1签）\",\"大会记录：封顶回归 叫价 100万（第1签）成都AG超玩会 叫价 110万（第1签）封顶回归 叫价 120万（第1签）成都AG超玩会 叫价 130万（第1签）封顶回归 叫价 140万（第1签）成都AG超玩会 叫价 150万（第1签）封顶回归 叫价 160万（第1签）成都AG超玩会 叫价 170万（第1签）封顶回归 叫价 180万（第1签）封顶回归 以 180万拍得第1签\",\"全年可租（含转会期）：支付租金（身价 15%）即可租来应急/补位置，工资由原队承担；非卖品不外借，租借选手不能出售/挂牌。某位置因伤停/K甲无人时，名额上限 +1 并优先推荐该位置。\"],\"pickedName\":\"竹杖\",\"beforeLen\":5,\"afterLen\":6}",
+    "click ok: nav-club",
+    "click ok: nav-lineup",
+    "click ok: nav-market",
+    "click ok: nav-train",
+    "click ok: nav-league",
+    "click ok: nav-kjia",
+    "click ok: nav-union",
+    "click ok: nav-hall",
+    "click ok: nav-biz",
+    "fabTest {\"viewport\":{\"w\":390,\"h\":844},\"fab\":{\"x\":330,\"y\":718,\"w\":48,\"h\":48,\"bottom\":766,\"right\":378},\"nav\":{\"top\":785,\"h\":59},\"results\":{\"hall\":{\"btn\":{\"x\":320,\"y\":818,\"w\":49,\"h\":52},\"hit\":\"BUTTON\",\"hitIsNavBtn\":true,\"hitIsFab\":false},\"biz\":{\"btn\":{\"x\":365,\"y\":818,\"w\":38,\"h\":52},\"hit\":\"BUTTON\",\"hitIsNavBtn\":true,\"hitIsFab\":false},\"union\":{\"btn\":{\"x\":274,\"y\":818,\"w\":38,\"h\":52},\"hit\":\"BUTTON\",\"hitIsNavBtn\":true,\"hitIsFab\":false},\"kjia\":{\"btn\":{\"x\":235,\"y\":818,\"w\":38,\"h\":52},\"hit\":\"BUTTON\",\"hitIsNavBtn\":true,\"hitIsFab\":false}}}",
+    "click ok: mobile-nav-hall",
+    "click ok: mobile-nav-biz"
+  ]
+}

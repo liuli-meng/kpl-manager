@@ -58,9 +58,12 @@ const out = vm.runInContext(`
   else log('③ 自建开局（财政危机）：scenario='+S.scenario+' 资金 '+S.fund+' 工资帽 '+S.wageCap);
   _scenario='exodus';createTeam();
   const h2=POS_ORDER.filter(pos=>!S.players.some(p=>p.pos===pos));
-  if(S.players.length!==4||h2.length!==1)fail('自建开局缺位逻辑未生效: 人数='+S.players.length+' 空缺='+JSON.stringify(h2));
+  // 自带 2 名可出场青训后：4 名直签 + 2 青训 = 6（exodus 仍空 1 个位置，除非青训正好补上）
+  const acN=S.players.filter(p=>(p.tags||[]).includes('开局青训')).length;
+  if(S.players.length!==6||acN!==2)fail('自建开局人数/青训不对: 人数='+S.players.length+' 青训='+acN);
+  else if(h2.length>1)fail('自建开局缺位逻辑未生效: 空缺='+JSON.stringify(h2));
   else if(S.players.some(p=>/^新人[0-9]+$/.test(p.name)))fail('开局出现占位名');
-  else log('③ 自建开局（核心出走）：4 人 · 空出 '+POS[h2[0]][0]+' · 名字正常');
+  else log('③ 自建开局（核心出走）：'+S.players.length+' 人（含开局青训×2）· 空缺 '+JSON.stringify(h2)+' · 名字正常');
   _scenario='normal';
 
   // ④ 成就：对应剧本夺冠才解锁（跨剧本不得串）

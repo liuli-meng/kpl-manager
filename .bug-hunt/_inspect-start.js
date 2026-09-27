@@ -1,0 +1,18 @@
+const fs=require('fs');
+const h=fs.readFileSync('E:/sex/kpl-manager/src/js/main.js','utf8');
+const i=h.indexOf('function switchStartTab');
+console.log('=== switchStartTab ===');
+console.log(h.slice(i, i+900));
+const j=h.indexOf('tab-self-body');
+console.log('=== tab-self-body in main.js ===');
+console.log('idx', j);
+console.log(h.slice(j, j+600));
+const g=fs.readFileSync('E:/sex/kpl-manager/game.html','utf8');
+const k=g.indexOf('id="start-modal"');
+console.log('=== game.html start-modal ===');
+console.log('idx', k);
+console.log(g.slice(Math.max(0,k-250), k+500));
+const m=g.indexOf('tab-self-body');
+console.log('=== game.html tab-self-body ===');
+console.log('idx', m);
+console.log(g.slice(m, m+700));

@@ -1,0 +1,44 @@
+{
+  "coachBypass": {
+    "mode": "coach",
+    "canOperatePromote": false,
+    "blockReason": "教练生涯不能操作「提拔青训」（由俱乐部打理，请用申请入口）",
+    "squad0": {
+      "id": "kjf_2026_top_qv8ln",
+      "name": "冷峤"
+    },
+    "playersBefore": 5,
+    "squadBefore": 5,
+    "singleArg": {
+      "ok": true,
+      "toasts": [
+        "冷峤 已提拔一线队！"
+      ]
+    },
+    "afterSingle": {
+      "players": 6,
+      "squad": 4
+    },
+    "twoArg": {
+      "ok": true,
+      "toasts": [
+        " 教练生涯不能操作「提拔青训」（由俱乐部打理，请用申请入口）"
+      ]
+    },
+    "afterTwo": {
+      "players": 6,
+      "squad": 4
+    },
+    "denyDirect": true
+  },
+  "playerCopy": {
+    "hasPromoteWord": true,
+    "context": "底\nK甲注册选手 · 每赛段重建\n俱乐部每赛段自动补充的次级联赛注册选手——人事提拔由俱乐部运作，你可以在这里观察潜在队友。\n冷\n对\n冷峤K甲\n对\n总值\n66\n",
+    "hasRecallWord": false,
+    "hasLineupRef": false,
+    "hasPromoteBtn": false,
+    "hasRecallBtn": false,
+    "hint": "二队 K甲赛况：查看练级数据与俱乐部下放情况（人事权在俱乐部，「生涯」页可申请租借/K甲） ×"
+  },
+  "pageErrors": []
+}
