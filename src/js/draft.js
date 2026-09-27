@@ -121,7 +121,15 @@ function draftTeamMaxBid(s,team,slot){
  const base=draftSlotPrice(slot);
  // 临时席位队更愿意砸钱抢签（保级/站稳脚跟）
  const tempBoost=(typeof isTempSeat==='function'&&isTempSeat(s,team))?1.25:1;
- return Math.min(Math.round(fund*0.25*tempBoost), Math.round((base+need*12)*tempBoost), Math.floor(fund));
+ // 意愿价：起拍 + 阵容缺口 + 大名单空位（替补/苗子）。
+ // 旧公式只看位置缺口——满编强队 need≈0，上限被压到起拍价附近，永远跟不动 AI，
+ // 玩家表现为「整场选秀叫不上价 → 选不了人」。空位与保底竞争线一并计入。
+ const slotsLeft=Math.max(1,ROSTER_MAX-(draftTeamRosterCount(s,team)||0));
+ const will=Math.round((base+need*12+slotsLeft*8)*tempBoost);
+ const econ=Math.round(fund*0.25*tempBoost);
+ // 经济上限仍是 25% 资金；意愿价至少给到「能跟一轮」和经济上限的 6 成，
+ // 否则同一套公式会把有钱满编队锁死在陪跑位（与 AI 不对等）。
+ return Math.min(Math.max(will,base+DRAFT_BID_STEP,Math.round(econ*0.6)),econ,Math.floor(fund));
 }
 function draftMaxAiBid(s,team,slot){return draftTeamMaxBid(s,team,slot);}
 /* 旧档/异常档修复：竞拍价与领先者一旦被写成 NaN/null，整场竞拍再也不可能收敛
@@ -523,10 +531,14 @@ function draftPanelHtml(){
  <div class="vs" style="justify-content:flex-end"><div class="power">共 ${d.order.length} 签 · 未放弃 ${alive.length} 队</div></div>
  </div>`;
  if(meAuction){
+ const myMax=draftTeamMaxBid(s,s.teamName,d.slot);
+ const nextBid=d.leader?d.bid+DRAFT_BID_STEP:d.bid;
+ const overCap=nextBid>myMax;
  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
- <button class="btn gold" onclick="draftBidRaise()"> 叫价 ${d.leader?d.bid+DRAFT_BID_STEP:d.bid}万</button>
+ <button class="btn gold" onclick="draftBidRaise()"> 叫价 ${nextBid}万</button>
  <button class="btn sm" onclick="draftBidPass()">放弃本签竞拍</button>
- </div>`;
+ </div>
+ <div class="hint" style="margin-bottom:8px;${overCap?'color:var(--red)':''}">本队签位预算上限 <b>${myMax}万</b>（资金/意愿封顶）${overCap?` · 需 ${nextBid}万已超上限，本签只能放弃——下签仍可竞拍`:' · 可继续叫价'}</div>`;
  }else if(d.phase==='auction'){
  html+= myFull
  /* 满员是最容易被当成「点了没反应」的状态：原本文案只说「你已放弃或未轮到」，

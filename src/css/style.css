@@ -88,7 +88,9 @@ nav button.on,nav button[aria-current="page"]{color:#1A1020;
   background:linear-gradient(180deg,var(--accent2),var(--gold));
   box-shadow:0 4px 14px rgba(232,195,74,.28),0 1px 0 rgba(255,255,255,.35) inset}
 nav button.on .ic,nav button[aria-current="page"] .ic{color:#1A1020}
-/* 悬浮换页窗（活动窗口） */
+/* 悬浮换页窗（活动窗口）
+   桌面：右下角；移动端必须抬到底栏导航之上——原 bottom:18px 会盖住「荣誉/经营」，
+   点击中心命中 page-fab，底栏最后两项点不到。 */
 .page-fab{position:fixed;right:16px;bottom:18px;z-index:80;width:52px;height:52px;border-radius:16px;
   background:linear-gradient(180deg,var(--accent2),var(--gold));border:1px solid var(--accent-deep);color:#1A1020;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
@@ -431,6 +433,9 @@ footer{background:transparent;border-top:1px solid var(--line);
   .start-tabs .btn{min-height:42px}
   .ph-x{min-width:36px;min-height:36px}
   nav button{min-height:52px}
+  /* 换页 FAB / 面板：抬到底栏之上，避免盖住「荣誉馆/经营」 */
+  .page-fab{bottom:calc(78px + env(safe-area-inset-bottom,0));right:12px;width:48px;height:48px}
+  .page-dock{bottom:calc(138px + env(safe-area-inset-bottom,0));right:12px;max-height:min(55vh,360px)}
   .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
   .tbl th,.tbl td{white-space:nowrap}
   .modal{border-radius:10px;padding:16px 12px;max-height:94dvh}

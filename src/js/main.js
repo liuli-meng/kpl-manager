@@ -979,6 +979,7 @@ function createTeam(){
  setBoardKpi(S); // 首年董事会目标：按分组档位定（S组→前4 / A组→前8 / B组→前12）
  initFans(S); // 开档粉丝：由阵容人气决定起步规模（影响赞助单价/门票/代言与升级门槛）
  buildTransferMarket(S);refreshMarket(S,{seed:true}); // 播种：不吃玩家的「每日首刷免费」额度
+ try{if(typeof initDraft==='function')initDraft(S);}catch(e){} // 首赛季选秀大会（与 applyClub 对齐）
  logEvent(S,`战队 ${name} 成立！初始资金${S.fund}万，目标：KPL 总冠军！`);
  logEvent(S,` 开局直签 ${S.players.length} 名选手 + 青训助教，赛前转会期 7 天可自由调整阵容`);
  if(weeklyWage(S)>S.wageCap)logEvent(S,'⚠️ 首发年薪 '+weeklyWage(S)+'万 已超工资帽 '+S.wageCap+'万——发薪日按 60% 缴纳奢侈税');
