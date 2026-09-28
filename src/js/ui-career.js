@@ -1,4 +1,76 @@
 /* 生涯页 UI（从 ui.js 拆出：只搬渲染与转发，日决策引擎在 playerops） */
+/* 选手「我现在打谁」：与俱乐部页同口径——系列赛/下一场/对手待定，避免生涯页只有成长没有赛程 */
+function careerMatchBrief(){
+ const sr=S&&S.series;
+ if(sr&&sr.opName){
+  return {kind:'series',title:'系列赛进行中',opp:sr.opName,
+   sub:'第 '+((sr.mw||0)+(sr.ow||0)+1)+' 局 · 当前 '+(sr.mw||0)+':'+(sr.ow||0),
+   stage:(sr.stage==='po'?(sr.poSlot||'季后赛'):sr.stage==='card'?'卡位赛':sr.stage==='cup'?(sr.cupLabel||'杯赛'):(PHASE_NAME[S.phase]||S.phase))};
+ }
+ const p=S&&S.phase;
+ if(p==='r1'||p==='r2'||p==='r3'){
+  const m=(S.schedule||[])[S.matchIdx];
+  if(m)return {kind:'next',title:'下一场比赛',opp:m.opp,
+   sub:(PHASE_NAME[p]||p)+' · 第'+m.round+'/'+KPL.ROUNDS+'轮',stage:PHASE_NAME[p]||p};
+ }
+ if(p==='card'&&S.card&&S.card.matches){
+  const m=S.card.matches.find(x=>x&&!x.r&&(x.a===S.teamName||x.b===S.teamName));
+  if(m)return {kind:'next',title:'下一场 · 卡位赛',opp:m.a===S.teamName?m.b:m.a,sub:'BO'+KPL.CARD+' · 含巅峰对决',stage:'卡位赛'};
+ }
+ if(p==='playoff'&&S.playoff&&typeof poMyNext==='function'){
+  const nx=poMyNext(S.playoff,S.teamName);
+  if(nx)return {kind:nx.status==='ready'?'next':'wait',
+   title:nx.status==='ready'?'下一场 · 季后赛':'季后赛 · 对手待定',
+   opp:nx.op,sub:nx.tag,nxTag:nx.tag,stage:'季后赛'};
+ }
+ if((p==='challenger'||p==='ewc'||p==='asiad'||p==='annual')&&typeof cupListNext==='function'){
+  let list=[];
+  if(p==='challenger'&&S.challenger){
+   const c=S.challenger,p2=c.po;
+   if(c.stage==='single'&&c.r1)list=[...(c.r1||[]).map((m,i)=>({m,tag:'32/16强'})),...((c.r2||[]).map(m=>({m,tag:'16强'})))];
+   else if(p2)list=[...(p2.wb1||[]).map(m=>({m,tag:'胜者组R1'})),...(p2.wb2||[]).map(m=>({m,tag:'胜者组SF'})),{m:p2.wf,tag:'胜者组决赛'},
+    ...(p2.lb1||[]).map(m=>({m,tag:'败者组R1'})),...(p2.lb2||[]).map(m=>({m,tag:'败者组R2'})),{m:p2.lbs,tag:'败者组SF'},{m:p2.lbf,tag:'败者组决赛'},{m:c.final,tag:'决赛'}];
+  }else if(p==='ewc'&&S.ewc){
+   list=[...(S.ewc.qf||[]).map(m=>({m,tag:'八强'})),...((S.ewc.sf||[]).map(m=>({m,tag:'半决赛'}))),{m:S.ewc.final,tag:'决赛'}];
+  }else if(p==='asiad'&&S.ag){
+   list=[...(S.ag.qf||[]).map(m=>({m,tag:'八强'})),...((S.ag.sf||[]).map(m=>({m,tag:'半决赛'}))),{m:S.ag.final,tag:'决赛'}];
+  }else if(p==='annual'&&S.annual){
+   const a=S.annual;
+   if(a.stage==='arena'&&a.rounds){
+    (a.rounds||[]).forEach((rd,ri)=>(rd||[]).forEach(m=>{
+      if(m&&(m.a===S.teamName||m.b===S.teamName))list.push({m,tag:'擂台第'+(ri+1)+'轮'});
+    }));
+   }else if(a.stage==='breakthrough')list=(a.brk||[]).map(m=>({m,tag:'突围赛'}));
+   else if(a.po){
+    const p3=a.po;
+    list=[...(p3.wb1||[]).map(m=>({m,tag:'胜者组R1'})),...(p3.wb2||[]).map(m=>({m,tag:'胜者组SF'})),{m:p3.wf,tag:'胜者组决赛'},
+     ...(p3.lb1||[]).map(m=>({m,tag:'败者组R1'})),...(p3.lb2||[]).map(m=>({m,tag:'败者组R2'})),{m:p3.lbs,tag:'败者组SF'},{m:p3.lbf,tag:'败者组决赛'},{m:p3.final,tag:'总决赛'}];
+   }
+  }
+  const nx=cupListNext(list.filter(x=>x&&x.m),S.teamName);
+  if(nx)return {kind:nx.status==='ready'?'next':'wait',
+   title:nx.status==='ready'?'下一场 · '+(PHASE_NAME[p]||p):(PHASE_NAME[p]||p)+' · 对手待定',
+   opp:nx.op,sub:nx.tag,stage:PHASE_NAME[p]||p};
+ }
+ return null;
+}
+function careerMatchPanel(){
+ const b=careerMatchBrief();
+ if(!b)return '';
+ const reg=['r1','r2','r3'].includes(S.phase);
+ const goFn=(S.mode==='player'&&reg)?'startPlayerMatch()':'uiDoNextAction(S)';
+ const action=b.kind==='series'
+  ?`<button class="btn primary" style="width:100%" onclick="${goFn}">继续系列赛 · ${b.sub||''}</button>`
+  :b.kind==='next'
+   ?`<button class="btn primary" style="width:100%" onclick="${goFn}">${S.mode==='player'&&reg?'出战比赛':'前往比赛'}</button>`
+   :`<button class="btn" style="width:100%" onclick="goPage('league')">查看赛程对阵</button>`;
+ return `<div class="panel" style="border-color:var(--cyan)"><h3>${b.title} <span class="tag">${b.stage||''}</span></h3>
+ <div class="match"><div class="vs"><span class="tname">${S.teamName}</span></div>
+ <div class="score" style="font-size:13px">${b.kind==='series'?b.sub:(b.kind==='wait'?'对手待定':'VS')}</div>
+ <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname">${b.opp||'待定'}</span></div></div>
+ <div class="hint" style="margin:6px 0 8px">${b.sub||''}</div>
+ ${action}</div>`;
+}
 /* ================= 生涯页（选手模式主页：成长 / 竞争 / 报价 / 履历） ================= */
 function renderCareer(){
  const el=$('#page-career');
@@ -19,6 +91,7 @@ function renderCareer(){
  el.innerHTML=`<div class="panel center" style="border-color:var(--gold)">
  <div style="font-size:34px;font-weight:800;color:var(--gold);margin:8px 0">${name} 退役</div>
  <div class="dim" style="margin-bottom:10px">${age} 岁 · ${(c.seasons||[]).length||0} 个赛季 · ${c.titles||0} 冠 · ${mvp} 次单场MVP · 生涯最高总值 ${ovrPeak||'—'}</div>
+ ${(()=>{const h=(S.history||[])[0];return h?`<div class="hint" style="margin-bottom:10px">最后一战：${h.opp||'—'} · ${h.stage||''} ${h.score||''}${h.win===false?'（失利）':h.win===true?'（取胜）':''}</div>`:'';})()}
  <table class="tbl" style="max-width:640px;margin:0 auto 12px"><tr><th>赛季</th><th>球队</th><th>出场</th><th>场均KDA</th><th>MVP</th><th>荣誉</th></tr>${rows||'<tr><td colspan="6" class="hint">无赛季履历</td></tr>'}</table>
  ${c.coachPath?'<div class="hint" style="margin-bottom:10px">教练组发出邀请：你可以留在赛场开启执教生涯（一条龙）——履历与荣誉会写进教练合同。</div>':''}
  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -41,6 +114,7 @@ function renderCareer(){
  <div class="dim" style="font-size:12px">${crest(S.icon,S.teamName,18)} ${S.teamName} · 合同 ${me.contract>0?me.contract+' 年':'到期'} · 年薪 ${me.wage}万 · 总值 <b style="color:${ovrColor(overall(me))}">${overall(me)}</b> · 身价系数 ${me.val||100}%${me.injury>0?' · <span class="red">伤停 '+me.injury+' 天</span>':''}</div></div>
  <div style="margin-left:auto;text-align:right"><div class="gold" style="font-size:16px;font-weight:800">${c.titles||0} 冠 · ${c.fmvp||0} FMVP · ${c.allstar||0} 一阵</div><div class="dim" style="font-size:11px">生涯荣誉</div></div>
  </div></div>`;
+ html+=careerMatchPanel();
  // 成长 + 每日行动（伤停/集训/外租/K甲不可加练；休息仍可回体力并加速养伤）
  const trainBlock=trainBlockedReason(S,me);
  const trainLock=S.trained||!!trainBlock;
@@ -131,8 +205,8 @@ function renderCareer(){
  </div>`;
  if(c.pendingMove)html+=`<div class="panel" style="border-color:var(--gold)"><h3>转会意向 <span class="tag" style="color:var(--gold)">将加盟 ${c.pendingMove.team}</span></h3>
  <div class="hint">当前赛段继续为 ${S.teamName} 出战；打完挑战者杯/年总等收官战后，新赛季开始时正式加盟新东家。</div></div>`;
- // 履历
- html+=`<div class="panel"><h3>生涯履历 <span class="tag">${c.seasons.length} 个赛季</span></h3>
+ // 履历（超 15 季由 career.js 截断——这里标明，避免「早期赛季消失」）
+ html+=`<div class="panel"><h3>生涯履历 <span class="tag">${c.seasons.length} 个赛季${c.seasons.length>=15?' · 仅保留最近 15 季':''}</span></h3>
  ${c.seasons.length?`<table class="tbl"><tr><th>赛季</th><th>球队</th><th>出场</th><th>场均KDA</th><th>MVP</th><th>总值</th><th>身价</th><th>荣誉</th></tr>
  ${c.seasons.map(r=>`<tr><td>${r.year}</td><td>${r.team}</td><td>${r.apps}</td><td>${r.kda||'—'}</td><td>${r.mvp}</td><td>${r.ovr}</td><td>${r.val}%</td><td class="gold">${r.titles?r.titles+' 冠':''}</td></tr>`).join('')}</table>`:'<div class="hint">首个赛季进行中——每个赛季结束后这里记录你的一年</div>'}
  </div>`;

@@ -562,8 +562,13 @@ function clubLeaguePhasePanel(){
  }
  if(!m)return '';
  const oppIcon=(AI_TEAMS.find(t=>t.name===m.opp)||{}).icon||'';
- let html=`<div class="panel">
- <h3>下一场比赛 <span class="tag">${(PHASE_NAME[S.phase]||S.phase)} · ${g}组 第${m.round}/${KPL.ROUNDS}轮</span></h3>
+ let html='';
+ const srLive=(S.series&&S.series.stage==='regular')?S.series:null;
+ const liveTitle=srLive
+  ?`系列赛进行中 <span class="tag">${(PHASE_NAME[S.phase]||S.phase)} · 第${(srLive.mw||0)+(srLive.ow||0)+1}局 · 当前 ${srLive.mw||0}:${srLive.ow||0}</span>`
+  :`下一场比赛 <span class="tag">${(PHASE_NAME[S.phase]||S.phase)} · ${g}组 第${m.round}/${KPL.ROUNDS}轮</span>`;
+ html=`<div class="panel">
+ <h3>${liveTitle}</h3>
  <div class="match">
  <div class="vs"><div>${crest(S.icon,S.teamName,38)}</div><div><div class="tname">${S.teamName}</div><div class="power">战力 ${fmt(teamPower(S))}</div></div></div>
  <div style="color:var(--dim);font-weight:900">VS</div>
@@ -572,11 +577,13 @@ function clubLeaguePhasePanel(){
  const me=myPlayer(S);
  const meStart=me&&S.lineup.includes(me.id);
  if(S.mode==='player'){
- html+=`<button class="btn primary" style="width:100%" onclick="startPlayerMatch()">出战比赛 · 教练指挥（自动模拟 BO5）</button>
+ html+=`<button class="btn primary" style="width:100%" onclick="startPlayerMatch()">${srLive?'继续出战 · 教练指挥':'出战比赛 · 教练指挥（自动模拟 BO5）'}</button>
  <div class="hint mt8">${me?(meStart?'你已进入首发轮换——教练按状态评定每场首发':'你目前是替补：在「生涯」页加练，战力超过同位置队友即可夺回首发'):'选手数据缺失'}。比赛由教练组指挥 BP，赛后看你的个人数据与全场直播。</div>`;
  }else{
- html+=`<button class="btn primary" style="width:100%" onclick="uiStartMatch()">赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）</button>
- <div class="hint mt8">KPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（13万/小局）。赛前可换首发，BP 中也可换替补。</div>`;
+ html+=`<button class="btn primary" style="width:100%" onclick="uiStartMatch()">${srLive?'继续系列赛 · 调整阵容 / BP（当前 '+(srLive.mw||0)+':'+(srLive.ow||0)+'）':'赛前准备 · 调整阵容 / BP 开赛（BO5 全局BP）'}</button>
+ <div class="hint mt8">${srLive
+  ?'系列赛尚未打完：点上方继续打第 '+((srLive.mw||0)+(srLive.ow||0)+1)+' 局。全局 BP 已用英雄锁定，比分不会重置。'
+  :'KPL 官方赛制：常规赛 BO5 全局BP，胜者积 1 分；系列赛内用过的英雄锁定，每局对手 BAN 2 个；奖金按胜小局数结算（13万/小局）。赛前可换首发，BP 中也可换替补。'}</div>`;
  }
  return html+`</div>`;
 }
@@ -746,6 +753,7 @@ function clubResultPanel(){
  <div style="font-size:40px;color:var(--faint)"></div>
  <h3 style="justify-content:center">${splitLabel(S)} 止步</h3>
  <div class="dim" style="margin:8px 0">未能晋级后续阶段（B组后2名 / 卡位赛失利 / 季后赛出局）</div>
+ ${(()=>{const h=(S.history||[])[0];return h?`<div class="hint" style="margin:4px 0">最后一战：${h.opp||'—'} · ${h.stage||''} ${h.score||''}${h.win===false?'（失利）':h.win===true?'（取胜）':''}</div>`:'';})()}
  <div class="hint" style="margin:6px 0">年度积分已入账（当前 ${S.annualPts[S.teamName]||0} 分）· ${S.split==='spring'?'接下来：挑战者杯 → 夏季赛 → EWC':(!S.ewcDone&&S.split==='summer')?'接下来：EWC → '+(isAsiadYear(S)&&!S.agDone?'亚运会 → 年度总决赛':'年度总决赛'):(isAsiadYear(S)&&!S.agDone)?'接下来：亚运会（国家队征召） → 年度总决赛':'接下来：年度总决赛（前12晋级）'}</div>
  <button class="btn gold mt12" onclick="uiAdvanceCalendar(S)">${calendarNextLabel(S)}</button>
  </div>`;
@@ -956,8 +964,8 @@ function renderBiz(){
  // 年度回顾归档（每年一份快照，点开回看）
  {
  const revs=S.yearReviews||[];
- html+=`<div class="panel"><h3>年度回顾 <span class="tag">${revs.length} 份归档 · 每年赛季末自动生成</span></h3>
- <div class="hint" style="margin-bottom:8px">每年度轮换时定格一份总结：成绩曲线（各赛段名次）、转会记录、董事会评价、关键战役与经营快照。</div>
+ html+=`<div class="panel"><h3>年度回顾 <span class="tag">${revs.length} 份归档 · 每年赛季末自动生成${revs.length>=10?' · 仅保留最近 10 年':''}</span></h3>
+ <div class="hint" style="margin-bottom:8px">每年度轮换时定格一份总结：成绩曲线（各赛段名次）、转会记录、董事会评价、关键战役与经营快照。${revs.length>=10?'更早的年度归档会自动滚动淘汰。':''}</div>
  ${revs.length?revs.map((r,i)=>`<div class="match" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" onclick="showYearReview(${i})">
  <div class="vs"><span class="tname" style="font-size:13px">${r.year||'—'} 年度回顾${(r.stages||[]).some(st=>st.place==='冠军')?' <span class="gold">冠军赛季</span>':''}</span>
  <div class="power" style="font-size:10px">年度积分 ${r.annualPts==null?'—':r.annualPts} · 联盟第 ${r.annualRank||'—'} 名 · ${(r.transfers||[]).length} 笔转会 · 信任度 ${r.board?r.board.trust:'—'}</div></div>
@@ -1059,10 +1067,14 @@ function renderLeague(){
  {
  const rank=annualRank(S);
  const myIdx=rank.indexOf(S.teamName);
- const maxPts=Math.max(1,...rank.slice(0,12).map(t=>S.annualPts[t]||0));
+ const top=rank.slice(0,12);
+ // 13 名开外也要能看见自己：同类「后半程消失」问题
+ const showTeams=top.slice();
+ if(myIdx>=12&&S.teamName)showTeams.push(S.teamName);
+ const maxPts=Math.max(1,...showTeams.map(t=>S.annualPts[t]||0));
  html+=`<div class="panel"><h3>年度积分榜 <span class="tag">${gameYear(S)} · 前 12 进年度总决赛</span></h3>
  <table class="tbl"><tr><th>#</th><th>战队</th><th style="width:46%">年度积分</th></tr>
- ${rank.slice(0,12).map((t,i)=>{const pts=S.annualPts[t]||0;const rk=i+1;const badge=rk===1?'<span class="rank-badge r1">1</span>':rk===2?'<span class="rank-badge r2">2</span>':rk===3?'<span class="rank-badge r3">3</span>':`<span class="rank-n">${rk}</span>`;return `<tr class="${t===S.teamName?'me':''}"><td>${badge}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}</td><td class="gold">${pts}<div class="pts-bar"><i style="width:${Math.round(pts/maxPts*100)}%"></i></div></td></tr>`;}).join('')}
+ ${showTeams.map(t=>{const i=rank.indexOf(t);const pts=S.annualPts[t]||0;const rk=i+1;const badge=rk===1?'<span class="rank-badge r1">1</span>':rk===2?'<span class="rank-badge r2">2</span>':rk===3?'<span class="rank-badge r3">3</span>':`<span class="rank-n">${rk}</span>`;return `<tr class="${t===S.teamName?'me':''}"><td>${badge}</td><td>${crest((AI_TEAMS.find(x=>x.name===t)||{}).icon||(t===S.teamName?S.icon:'队'),t,18)} ${t}${t===S.teamName?' ★':''}${i>=12?' <span class="tag">前12外</span>':''}</td><td class="gold">${pts}<div class="pts-bar"><i style="width:${Math.round(pts/maxPts*100)}%"></i></div></td></tr>`;}).join('')}
  </table>
  <div class="hint mt8">${myIdx>=0&&myIdx<12?'你队第 '+(myIdx+1)+' 名，'+(myIdx<6?'大师组':'精英组')+'席位在握':(myIdx>=12?'你队第 '+(myIdx+1)+' 名，无缘年度总决赛——春夏赛季继续攒分':'春季赛打完后积分入账')} · 春季冠+100 夏季冠+120</div>
  </div>`;
@@ -1079,6 +1091,7 @@ function renderLeague(){
  return `<tr class="${n===S.teamName?'me':''}"><td>${badge}</td><td>${crest((AI_TEAMS.find(x=>x.name===n)||{}).icon||(n===S.teamName?S.icon:'队'),n,18)} ${n}${n===S.teamName?' ★':''}</td><td>${t.w}</td><td>${t.l}</td><td>${t.pts}</td><td>${t.pw}</td><td>${fmt(powerOf(S,n))}</td></tr>`;
  }).join('')}
  </table>
+ ${(S.aiSchedule&&S.aiSchedule[g]||[]).filter(m=>m.r).length?`<div class="hint" style="margin:6px 0 4px">组内其他场次 · 最近 6 场</div>`:''}
  ${(S.aiSchedule&&S.aiSchedule[g]||[]).filter(m=>m.r).slice(-6).reverse().map(m=>
  `<div class="match" style="margin-bottom:5px;padding:7px 10px">
  <div class="vs"><span class="tname" style="font-size:12px">${m.a}</span></div>
@@ -1114,7 +1127,7 @@ function renderLeague(){
  <div class="score" style="font-size:12px">${m.r?m.r+' 晋级':'待赛'}</div>
  <div class="vs" style="justify-content:flex-end;text-align:right"><span class="tname" style="font-size:12px">${m.b} ${me&&m.b===S.teamName?'★':''}</span></div></div>`;
  }).join('')}
- <div class="hint">S5 vs A2、S6 vs A1 胜者升S组；A5 vs B2、A6 vs B1 胜者进A组（B组全淘汰）</div>
+ <div class="hint">S5 vs A2、S6 vs A1 胜者升S组；A5 vs B2、A6 vs B1 胜者进A组（B组全淘汰）<br><span style="opacity:.75">A↔B 卡位与 B3-B6 直接淘汰为游戏化演绎（官方明确的是 S↔A 卡位）</span></div>
  </div>`;
  }
  // 季后赛 bracket

@@ -160,11 +160,68 @@ function renderPage(name){
  else if(name==='biz')renderBiz();
  // 面板标题语义标记：一处覆盖 10 页 88 个面板的色标/图标，不必逐个渲染函数改
  if(typeof decoratePanelMarks==='function'){try{decoratePanelMarks(document.getElementById('page-'+name));}catch(e){}}
+ // 手机长页：区块锚点 + 主操作条（少滑找按钮）
+ try{enhanceMobileChrome(name);}catch(e){}
  // 排序/筛选 chips 行：把当前选中 chip 滚进视口（否则默认排序「总值」在横滑容器里可能看不见）
  try{
   const row=document.querySelector('#page-'+name+' .sort-row');
   if(row){const on=row.querySelector('.s-chip.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'nearest'});}
  }catch(e){}
+}
+/* 手机端游玩舒适层：分区页签（一屏一区块，切换不靠长滑）+ 底部主操作条 */
+function enhanceMobileChrome(name){
+ const page=document.getElementById('page-'+name);
+ const bar=document.getElementById('action-bar');
+ if(!page)return;
+ // 清掉旧锚点/页签壳（render 会重绘页面，但保险）
+ const oldJump=page.querySelector(':scope > .sec-jump');
+ if(oldJump)oldJump.remove();
+ const oldTabs=page.querySelector(':scope > .sec-tabs');
+ if(oldTabs)oldTabs.remove();
+ page.classList.remove('sec-host');
+ page.querySelectorAll(':scope > .panel.sec-on').forEach(p=>p.classList.remove('sec-on'));
+ const isMob=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
+ const panels=[...page.querySelectorAll(':scope > .panel')];
+ if(isMob&&panels.length>=3){
+  // 区块页签：只显示当前块，避免「折叠了还是要上下找」
+  const meta=panels.map((p,i)=>{
+   if(!p.id)p.id='sec-'+name+'-'+i;
+   const h=p.querySelector('h3');
+   let label=h?(h.childNodes[0]&&h.childNodes[0].textContent||h.textContent||''):'';
+   label=String(label).replace(/\s+/g,' ').trim().slice(0,6)||('块'+(i+1));
+   return {id:p.id,label};
+  });
+  const tabs=document.createElement('div');
+  tabs.className='sec-tabs';
+  tabs.setAttribute('role','tablist');
+  tabs.innerHTML=meta.map((x,i)=>`<button type="button" role="tab" class="sec-tab${i===0?' on':''}" data-sec="${x.id}" aria-selected="${i===0}">${x.label}</button>`).join('');
+  page.insertBefore(tabs,page.firstChild);
+  page.classList.add('sec-host');
+  panels.forEach((p,i)=>p.classList.toggle('sec-on',i===0));
+  // 默认展开当前块（取消折叠态，页签模式下折叠无意义）
+  panels.forEach(p=>p.classList.remove('collapsed'));
+  tabs.addEventListener('click',e=>{
+   const b=e.target.closest('.sec-tab');if(!b)return;
+   const id=b.dataset.sec;
+   tabs.querySelectorAll('.sec-tab').forEach(t=>{
+    const on=t===b;
+    t.classList.toggle('on',on);
+    t.setAttribute('aria-selected',on?'true':'false');
+   });
+   panels.forEach(p=>p.classList.toggle('sec-on',p.id===id));
+   // 切换后回到内容区顶部，而不是页中间
+   window.scrollTo({top:Math.max(0,page.offsetTop-8),behavior:'instant' in window?'instant':'auto'});
+   try{const on=tabs.querySelector('.sec-tab.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'center'});}catch(_){}
+  });
+ }
+ // 主操作条：推进/开赛等 nextAction 常驻（参考 weui/vant action-bar）
+ if(!bar)return;
+ const act=(typeof nextAction==='function'&&S)?nextAction(S):null;
+ const mode=(S&&S.mode)||'manager';
+ const navPages=(MODE_PAGES[mode]||MODE_PAGES.manager).slice(0,6);
+ bar.innerHTML=(act?`<button class="btn primary ab-main" onclick="uiDoNextAction(S)">${act.label}</button>`:
+  `<button class="btn ab-main" onclick="uiDoNextAction(S)">推进下一步</button>`)
+  +`<div class="ab-chips">${navPages.map(id=>`<button type="button" class="ab-chip${curPageNameSafe()===id?' on':''}" onclick="goPage('${id}')">${pageLabel(id)}</button>`).join('')}</div>`;
 }
 function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
 

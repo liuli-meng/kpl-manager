@@ -76,6 +76,8 @@ const SUITES = [
   { id: 'verify-playoff-entry', file: 'tests/verify-playoff-entry.js', label: '季后赛/卡位赛入口' },
   { id: 'verify-playoff-bracket', file: 'tests/verify-playoff-bracket.js', label: '季后赛对阵显示' },
   { id: 'verify-cup-visibility', file: 'tests/verify-cup-visibility.js', label: '杯赛后半程可见性' },
+  { id: 'verify-late-visibility', file: 'tests/verify-late-visibility.js', label: '排名/系列赛可见性' },
+  { id: 'verify-career-review-visibility', file: 'tests/verify-career-review-visibility.js', label: '生涯/回顾可见性' },
   { id: 'verify-bughunt-regress', file: 'tests/verify-bughunt-regress.js', label: 'bug-hunt 回归' },
   { id: 'verify-coachloan', file: 'tests/verify-coachloan.js', label: '教练租借与引援' },
   { id: 'verify-relations', file: 'tests/verify-relations.js', label: '战队关系事件' },
