@@ -2,11 +2,11 @@
  每页首行「这是什么」由各渲染函数拼 pageHint()；
  首进默认「3 步上手」任务线（目标驱动），完整页码 tour 仍可重放；
  前 3 个游戏日顶部任务条（missionStrip）挂在 club/career 首行。 */
-const TOUR_KEY='km_tour',HINT_KEY='km_hints',MISSION_KEY='km_missions';
+const TOUR_KEY='km_tour',TOUR2_KEY='km_tour2',HINT_KEY='km_hints',MISSION_KEY='km_missions';
 const PAGE_HINTS={
- club:'推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发',
- lineup:'选手卡管一切：训练、身价、续约、挂牌出售、替补轮换',
- market:'买人卖人：赛前转会期自由组队，赛季中留意报价与自由市场。教练模式=应急租借与引援申请',
+ club:'推进日期打比赛：赛程/赛况/复盘都在这。转会期结束前先凑齐首发。手机上用顶部分区页签切换，底部黄条是「下一步」',
+ lineup:'选手卡管一切：训练、身价、续约、挂牌出售、替补轮换。开局自带 2 名青训替补，伤病有人顶',
+ market:'买人卖人：赛前转会期自由组队。选秀=竞拍签位再点名。常规赛不能租借，租借只在挑战者杯/年总',
  train:'变强在本页：专项训练/青训营/位置改造，花钱要精打细算',
  league:'联盟战局：积分榜、赛程比分、数据榜——看看对手有多强',
  kjia:'K甲二队：替补和青训生的练级场，表现好可提拔上一队',
@@ -191,10 +191,14 @@ function quickSteps(){
 }
 function maybeStartTour(){
  if(_tour.on||!S)return;
- try{if(localStorage.getItem(TOUR_KEY))return;}catch(_){}
- // 赛前转会期先组队：引导与「先组队再开赛」的落地页抢焦点，开赛后/非转会期再弹
+ let t1=null,t2=null;
+ try{t1=localStorage.getItem(TOUR_KEY);t2=localStorage.getItem(TOUR2_KEY);}catch(_){}
+ // 赛前转会期先组队：引导与「先组队再开赛」抢焦点，开赛后再弹
  if(S.preseason&&(S.transferWindow||0)>0)return;
- startQuickOnboard(); // 首进：3 步上手（目标驱动），完整 tour 从管理页重放
+ // 全新玩家：3 步上手（完成后 _tourEnd 会同时打上 km_tour / km_tour2）
+ if(!t1){startQuickOnboard();return;}
+ // 老玩家、还没看过新规则：播「新版说明」
+ if(!t2){startWhatsNew();return;}
 }
 function startTour(){ // 完整页码 tour（管理页入口）
  _tour={on:true,i:0,mode:'full'};
@@ -204,30 +208,57 @@ function startQuickOnboard(){ // 首进默认：3 步上手
  _tour={on:true,i:0,mode:'quick'};
  renderTour();
 }
+/* 新版规则引导：手机分区页签 / 开局青训 / 租借窗口 / 选秀竞拍 */
+function whatsNewSteps(){
+ return [
+  {page:null,title:'新版速览 · 手机怎么玩',text:'手机上每页顶部有【分区页签】，一屏只看一块，点标签切换，不用长页上下滑。底部金色【主操作条】是「下一步/开赛」，旁边 3 个快捷页签；更多页用右下角「换页」。'},
+  {page:null,title:'开局自带 2 名青训',text:'常规赛禁止租借后，伤病/集训必须有人顶。开档自动进 2 名满 18 岁、可出战的青训替补（低薪），在阵容页替补席可见。'},
+  {page:null,title:'租借只在杯赛开窗',text:'【常规赛（春/夏）】不能租借，大名单 10 人全是自家签约。【挑战者杯】出征 7 人（含租借）最多租 2；【年度总决赛】出征 7 人最多租 1。租借占名额，不额外加人。'},
+  {page:'market',title:'选秀：先竞拍签位，再点名',text:'转会期顶部「选秀大会」：叫价拍下签位后，池子展开为可点卡片，点「点名签约」。大名单满 10 人只能放弃；自家青训第一轮不可选。'},
+  {page:null,title:'还能回来看',text:'管理 →「重玩新手引导 / 新版说明」随时再看。进度自动存本机，换机请先导出存档。冲银龙杯！'},
+ ];
+}
+function startWhatsNew(){
+ _tour={on:true,i:0,mode:'new'};
+ renderTour();
+}
 function renderTour(){
- const steps=_tour.mode==='quick'?quickSteps():tourSteps();
+ const mode=_tour.mode||'quick';
+ const steps=mode==='quick'?quickSteps():(mode==='new'?whatsNewSteps():tourSteps());
  const st=steps[_tour.i]||steps[0];
  if(st.page)goPage(st.page); // goPage 会再进 maybeStartTour：_tour.on 守卫挡住，不递归
  const n=steps.length;
- const isQuick=_tour.mode==='quick';
+ const isQuick=mode==='quick';
+ const isNew=mode==='new';
  $('#app-modal-body').innerHTML=`<h2>${_escTxt(st.title)}</h2>
  <div class="hint" style="margin-bottom:10px">${st.text}</div>
  <div style="display:flex;gap:4px;margin-bottom:14px">${steps.map((_,i)=>`<span style="flex:1;height:3px;border-radius:2px;background:${i<=_tour.i?'var(--gold)':'var(--line)'}"></span>`).join('')}</div>
  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  ${_tour.i>0?'<button class="btn sm" onclick="tourPrev()">上一步</button>':''}
  <button class="btn sm" onclick="tourSkip()">跳过</button>
- ${isQuick?'<button class="btn sm" onclick="startTour()">看完整引导</button>':''}
- ${_tour.i<n-1?'<button class="btn sm primary" onclick="tourNext()">下一步</button>':'<button class="btn sm gold" onclick="tourFinish()">'+(isQuick?'开始上手':'开始征程')+'</button>'}
+ ${(isQuick||isNew)?'<button class="btn sm" onclick="startTour()">看完整引导</button>':''}
+ ${_tour.i<n-1?'<button class="btn sm primary" onclick="tourNext()">下一步</button>':'<button class="btn sm gold" onclick="tourFinish()">'+((isQuick||isNew)?'开始上手':'开始征程')+'</button>'}
  </div>`;
  $('#app-modal').classList.add('on');
 }
-function tourNext(){const steps=_tour.mode==='quick'?quickSteps():tourSteps();const n=steps.length;if(_tour.i<n-1){_tour.i++;renderTour();}else tourFinish();}
+function tourNext(){
+ const mode=_tour.mode||'quick';
+ const steps=mode==='quick'?quickSteps():(mode==='new'?whatsNewSteps():tourSteps());
+ const n=steps.length;if(_tour.i<n-1){_tour.i++;renderTour();}else tourFinish();
+}
 function tourPrev(){if(_tour.i>0){_tour.i--;renderTour();}}
 function _tourEnd(msg){
+ const was=_tour.mode;
  _tour={on:false,i:0,mode:'quick'};
- try{localStorage.setItem(TOUR_KEY,'1');}catch(_){}
+ try{
+  localStorage.setItem(TOUR_KEY,'1');
+  if(was==='new'||was==='quick'||was==='full')localStorage.setItem(TOUR2_KEY,'1');
+ }catch(_){}
  closeModal('app-modal');
  toast(msg);
 }
-function tourSkip(){_tourEnd('已跳过引导——「管理 → 重玩新手引导」随时再看');}
-function tourFinish(){_tourEnd('上手！前 3 天按顶部任务条走，目标：总冠军');}
+function tourSkip(){_tourEnd('已跳过引导——「管理 → 新版说明 / 重玩新手引导」随时再看');}
+function tourFinish(){
+ const was=_tour.mode;
+ _tourEnd(was==='new'?'新规则上手！手机点顶部页签切换区块，底部黄条推进比赛':'上手！前 3 天按顶部任务条走，目标：总冠军');
+}

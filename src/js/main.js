@@ -182,13 +182,24 @@ function enhanceMobileChrome(name){
  page.querySelectorAll(':scope > .panel.sec-on').forEach(p=>p.classList.remove('sec-on'));
  const isMob=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
  const panels=[...page.querySelectorAll(':scope > .panel')];
- if(isMob&&panels.length>=3){
+ if(isMob&&panels.length>=2){
   // 区块页签：只显示当前块，避免「折叠了还是要上下找」
   const meta=panels.map((p,i)=>{
    if(!p.id)p.id='sec-'+name+'-'+i;
    const h=p.querySelector('h3');
-   let label=h?(h.childNodes[0]&&h.childNodes[0].textContent||h.textContent||''):'';
-   label=String(label).replace(/\s+/g,' ').trim().slice(0,6)||('块'+(i+1));
+   let label='';
+   if(h)label=(h.childNodes[0]&&h.childNodes[0].textContent||h.textContent||'');
+   // 无 h3（荣誉馆横幅等）：抓首段有字文案，避免「块1」
+   if(!String(label).trim()){
+    const t=(p.querySelector('.banner .big,.banner,h2,.hint')||p).textContent||'';
+    label=t;
+   }
+   label=String(label).replace(/\s+/g,' ').trim().replace(/^[\s·|·-]+/,'').slice(0,10)||('');
+   // 横幅抽出来是年份/赛制时改用页面名，避免「2026 赛季 ·」
+   if(!label||/^\d{4}/.test(label)||label.length<=2){
+    const pageN=(typeof pageLabel==='function')?pageLabel(name):name;
+    label=(i===0?pageN:pageN+(i+1));
+   }
    return {id:p.id,label};
   });
   const tabs=document.createElement('div');
@@ -218,10 +229,14 @@ function enhanceMobileChrome(name){
  if(!bar)return;
  const act=(typeof nextAction==='function'&&S)?nextAction(S):null;
  const mode=(S&&S.mode)||'manager';
- const navPages=(MODE_PAGES[mode]||MODE_PAGES.manager).slice(0,6);
+ // 只放 4 个快捷页（含当前页）：6 个 chip 在 48% 宽里横滑后 3 个中心点点不到
+ const all=(MODE_PAGES[mode]||MODE_PAGES.manager);
+ const cur=curPageNameSafe();
+ const rest=all.filter(id=>id!==cur);
+ const navPages=[cur].concat(rest).slice(0,3).filter(Boolean);
  bar.innerHTML=(act?`<button class="btn primary ab-main" onclick="uiDoNextAction(S)">${act.label}</button>`:
   `<button class="btn ab-main" onclick="uiDoNextAction(S)">推进下一步</button>`)
-  +`<div class="ab-chips">${navPages.map(id=>`<button type="button" class="ab-chip${curPageNameSafe()===id?' on':''}" onclick="goPage('${id}')">${pageLabel(id)}</button>`).join('')}</div>`;
+  +`<div class="ab-chips">${navPages.map(id=>`<button type="button" class="ab-chip${cur===id?' on':''}" onclick="goPage('${id}')">${pageLabel(id)}</button>`).join('')}</div>`;
 }
 function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
 
@@ -309,6 +324,7 @@ function openSaveMgmt(){
  <button class="btn sm primary" onclick="importSave()"> 导入</button>
  <button class="btn sm" onclick="restoreAutoBackup()" ${storeGet(slotKey()+'_auto')?'':'disabled'}> 恢复赛季备份</button>
  <button class="btn sm" onclick="startTour()"> 重玩新手引导</button>
+ <button class="btn sm gold" onclick="startWhatsNew()"> 新版说明</button>
  <button class="btn sm" onclick="closeModal('app-modal')">关闭</button>
  </div>
  <div class="center mt8" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
