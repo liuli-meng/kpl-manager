@@ -1022,8 +1022,9 @@ function genEraDef(eraId,team,pos,used){
  const skPool=(typeof posSkillPool==='function')?posSkillPool(pos):[['lane','线霸体系','对线属性额外+8%'],['farm','运营体系','运营属性额外+8%'],['team','团战体系','团战属性额外+8%'],['mind','大心脏体系','心态属性额外+8%']];
  const sk=skPool[Math.floor(rv()*skPool.length)];
  const cands=heroesNow().filter(x=>x.pos[0]===pos);
+ const sigHero=(cands.length?cands[Math.floor(rv()*cands.length)]:(heroesNow()[0]||HEROES[0]||{n:'亚瑟'}));
  const def={id:key,name,pos,team,tags:[],base,skill:{n:sk[1],t:sk[0],d:sk[2]},
-  sig:cands[Math.floor(rv()*cands.length)].n,
+  sig:sigHero.n,
   career:eraId+'年效力于'+team+'的轮换选手（阵容演绎）。'};
  PLAYER_POOL.push(def); // 注册进选手池：defOf/defIndex 才能解析该 id
  return def;
