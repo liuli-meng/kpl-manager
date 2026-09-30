@@ -536,6 +536,38 @@ function fmtOf(s){
  return f;
 }
 
+/* ================= 赛制按自然年演变（2016-2026 时间线） =================
+   结构骨架：ab=2016 A/B · double-rr=2017 双循环 · eastwest=2018-2020春 东西部
+             single=2020秋 单组 · sab=2021+ S/A/B+卡位
+   详见 docs/KPL赛制演变对照_2016-2026.md。yearFmt 覆盖 KPL_FORMAT 同名键。 */
+const KPL_YEAR_FORMAT={
+ 2016:{structure:'ab',      regBo:5, playoffBo:5, cardBo:0, hasCard:false, globalBp:false, hasAnnual:false, promo:true,  peakBoMin:99},
+ 2017:{structure:'double-rr',regBo:3, playoffBo:5, cardBo:0, hasCard:false, globalBp:false, hasAnnual:false, promo:true,  peakBoMin:99},
+ 2018:{structure:'eastwest', regBo:5, playoffBo:7, cardBo:0, hasCard:false, globalBp:false, hasAnnual:false, promo:true,  peakBoMin:7},
+ 2019:{structure:'eastwest', regBo:5, playoffBo:7, cardBo:7, hasCard:false, globalBp:true,  hasAnnual:false, promo:false, peakBoMin:7},
+ 2020:{structure:'single',   regBo:5, playoffBo:7, cardBo:7, hasCard:false, globalBp:true,  hasAnnual:false, promo:false, peakBoMin:7},
+ 2021:{structure:'sab',      regBo:5, playoffBo:7, cardBo:7, hasCard:true,  globalBp:true,  hasAnnual:false, promo:false, peakBoMin:7},
+ 2022:{structure:'sab',      regBo:5, playoffBo:7, cardBo:7, hasCard:true,  globalBp:true,  hasAnnual:false, promo:false, peakBoMin:7},
+ 2023:{structure:'sab',      regBo:5, playoffBo:7, cardBo:7, hasCard:true,  globalBp:true,  hasAnnual:false, promo:false, peakBoMin:7},
+ 2024:{structure:'sab',      regBo:5, playoffBo:7, cardBo:7, hasCard:true,  globalBp:true,  hasAnnual:true,  promo:false, peakBoMin:7},
+ 2025:{structure:'sab',      regBo:5, playoffBo:7, cardBo:7, hasCard:true,  globalBp:true,  hasAnnual:true,  promo:false, peakBoMin:7},
+ 2026:{structure:'sab',      regBo:5, playoffBo:7, cardBo:5, hasCard:true,  globalBp:true,  hasAnnual:true,  promo:false, peakBoMin:7},
+};
+function yearFmt(year){
+ const y=parseInt(year,10);
+ if(KPL_YEAR_FORMAT[y])return Object.assign({},KPL_FORMAT,KPL_YEAR_FORMAT[y]);
+ // 超出表：就近回落（2026 口径）；2016 之前按 2016
+ if(y<2016)return Object.assign({},KPL_FORMAT,KPL_YEAR_FORMAT[2016]);
+ return Object.assign({},KPL_FORMAT,KPL_YEAR_FORMAT[2026]);
+}
+/* 跨年时刷新 S._fmt：让「从 2017 档打到 2019」自动换规则 */
+function applyYearFmt(s){
+ if(!s)return;
+ const y=(typeof gameYear==='function')?gameYear(s):2026;
+ s._fmt=yearFmt(y);
+ return s._fmt;
+}
+
 /* ================= 教练池（真实 KPL 主教练） =================
  bonus: 全队战力% style: 侧重属性(对应属性额外加成) wage: 周薪 cost: 签约费
  经济刻度：与工资帽 150 同步 ÷6——顶帅周薪 ~53（约帽的 1/3），中坚 22~27，助教位 12 */
@@ -1197,6 +1229,8 @@ function installEra(id){
  Object.assign(AI_ROSTERS,rosters);
  CLUB_TEMPLATES.length=0;era.clubs.forEach(c=>CLUB_TEMPLATES.push(c));
  _eraActive=id;
+ // 赛制按时代起始年对齐（跨年时 applyYearFmt 会继续吃 KPL_YEAR_FORMAT）
+ try{if(typeof applyYearFmt==='function')applyYearFmt({era:id,season:1});}catch(e){}
 }
 
 /* ================= 史实跨年名单（升降级 / 扩军 / 更名） =================

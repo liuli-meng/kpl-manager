@@ -115,7 +115,12 @@ function powerOf(s,name){
  return s.aiPower[name]||450;
 }
 function phaseGroups(s){
- if(s.phase==='r1')return ['G1','G2','G3'];
+ if(s.phase==='r1'){
+  if(s.groups && s.groups.All)return ['All'];
+  if(s.groups && (s.groups.East||s.groups.West))return ['East','West'].filter(g=>s.groups[g]&&s.groups[g].length);
+  if(s.groups && (s.groups.A||s.groups.B) && !s.groups.G1)return ['A','B'].filter(g=>s.groups[g]&&s.groups[g].length);
+  return ['G1','G2','G3'];
+ }
  if(s.phase==='r2')return ['S','A','B'];
  if(s.phase==='r3')return ['S','A'];
  return [];
@@ -146,11 +151,29 @@ function initGroups(s){
  });
  all.push({name:s.teamName,power:s.seedPower||teamPower(s)}); // 玩家种子=开局真实战力
  all.sort((a,b)=>b.power-a.power);
- s.leagueTeams=all.map(x=>x.name); // 联盟 18 队注册名录（联盟页/榜单用）
- const g1=all.slice(0,6).map(x=>x.name);
- const g2=all.slice(6,12).map(x=>x.name);
- const g3=all.slice(12,18).map(x=>x.name);
- s.groups={G1:g1,G2:g2,G3:g3};
+ s.leagueTeams=all.map(x=>x.name); // 联盟注册名录（联盟页/榜单用）
+ try{applyYearFmt(s);}catch(e){}
+ const st=(fmtOf(s).structure)||'sab';
+ if(st==='ab'||st==='eastwest'){
+  // 2016 A/B 两组 · 2018-2020春 东西部：按种子对半切（东/西部或 A/B）
+  const half=Math.ceil(all.length/2);
+  const gA=all.slice(0,half).map(x=>x.name);
+  const gB=all.slice(half).map(x=>x.name);
+  const nA=st==='eastwest'?'East':'A', nB=st==='eastwest'?'West':'B';
+  s.groups={}; s.groups[nA]=gA; s.groups[nB]=gB;
+  s.structure=st;
+ }else if(st==='single'||st==='double-rr'){
+  // 2020秋 单组大循环 / 2017 双循环：全员一组
+  s.groups={All:all.map(x=>x.name)};
+  s.structure=st;
+ }else{
+  // 2021+ S/A/B 三组
+  const g1=all.slice(0,6).map(x=>x.name);
+  const g2=all.slice(6,12).map(x=>x.name);
+  const g3=all.slice(12,18).map(x=>x.name);
+  s.groups={G1:g1,G2:g2,G3:g3};
+  s.structure='sab';
+ }
  setPhase(s,'r1',{who:'initGroups',force:true});
  s.aiPower={};
  aiList.forEach(t=>{
@@ -213,7 +236,7 @@ function simulateAiRound(s,upToRound){
  phaseGroups(s).forEach(g=>{
  (s.aiSchedule[g]||[]).forEach(m=>{
  if(m.round>upToRound||m.r)return;
- const r=simSeriesResult(s,m.a,m.b,KPL.BO5);
+ const r=simSeriesResult(s,m.a,m.b,fmtOf(s).regBo||5);
  m.r={w:r.win?m.a:m.b,mw:r.mw,ow:r.ow};
  const ta=(s.tables[g]||{})[m.a],tb=(s.tables[g]||{})[m.b];
  if(!ta||!tb)return;
@@ -241,33 +264,50 @@ function simSeriesResult(s,a,b,bo){
 /* ===== 阶段推进 ===== */
 function advancePhase(s){
  simulateAiRound(s,99); // 兜底补完本阶段未模拟的 AI 场次
+ const st=fmtOf(s).structure||s.structure||'sab';
  if(s.phase==='r1'){
- const sTeams=[],aTeams=[],bTeams=[];
- ['G1','G2','G3'].forEach(grp=>{
- const rank=sortGroup(s,grp);
- // 12/15 队时代 G3 不满 6 人：rank[4]/rank[5] 可能是 undefined，禁止推进分组
- // （undefined 会一路漏到季后赛 lb2.a，且 undefined!==null 让补位判断全部失效 → 年份冻死）
- if(rank[0])sTeams.push(rank[0]);
- if(rank[1])sTeams.push(rank[1]);
- if(rank[2])aTeams.push(rank[2]);
- if(rank[3])aTeams.push(rank[3]);
- if(rank[4])bTeams.push(rank[4]);
- if(rank[5])bTeams.push(rank[5]);
- });
- s.groups={S:sTeams,A:aTeams,B:bTeams};
- setPhase(s,'r2',{who:'advancePhase'});
- initTables(s);
- genRoundSchedule(s);
- const g=myGroup(s);
- logEvent(s,' 第一轮结束！'+s.teamName+' 进入'+(g==='S'?'S组':g==='A'?'A组':'B组')+'（第二轮）');
- try{if(typeof boardMidSeasonPulse==='function')boardMidSeasonPulse(s,'r1');}catch(e){}
+  if(st==='sab'){
+   const sTeams=[],aTeams=[],bTeams=[];
+   ['G1','G2','G3'].forEach(grp=>{
+    const rank=sortGroup(s,grp);
+    if(rank[0])sTeams.push(rank[0]);
+    if(rank[1])sTeams.push(rank[1]);
+    if(rank[2])aTeams.push(rank[2]);
+    if(rank[3])aTeams.push(rank[3]);
+    if(rank[4])bTeams.push(rank[4]);
+    if(rank[5])bTeams.push(rank[5]);
+   });
+   s.groups={S:sTeams,A:aTeams,B:bTeams};
+   setPhase(s,'r2',{who:'advancePhase'});
+   initTables(s);
+   genRoundSchedule(s);
+   const g=myGroup(s);
+   logEvent(s,' 第一轮结束！'+s.teamName+' 进入'+(g==='S'?'S组':g==='A'?'A组':'B组')+'（第二轮）');
+   try{if(typeof boardMidSeasonPulse==='function')boardMidSeasonPulse(s,'r1');}catch(e){}
+  }else{
+   // ab / eastwest / single / double-rr：常规赛结束 →（可选保级）→ 季后赛
+   if(fmtOf(s).promo){
+    const ranked=sortGroup(s,phaseGroups(s)[0]).filter(Boolean);
+    if(ranked.length>=8)logEvent(s,' 保级/席位结算：'+(ranked.slice(-2).join('、')||'—')+' 赛季成绩靠后（本年代有升降级口径）');
+   }
+   buildPlayoff(s);
+   try{if(typeof boardMidSeasonPulse==='function')boardMidSeasonPulse(s,'playoff');}catch(e){}
+  }
  }else if(s.phase==='r2'){
- setPhase(s,'card',{who:'advancePhase'});
- setupCard(s);
- try{if(typeof boardMidSeasonPulse==='function')boardMidSeasonPulse(s,'card');}catch(e){}
+  if(fmtOf(s).hasCard){
+   setPhase(s,'card',{who:'advancePhase'});
+   setupCard(s);
+   try{if(typeof boardMidSeasonPulse==='function')boardMidSeasonPulse(s,'card');}catch(e){}
+  }else{
+   // 无卡位的年代：第二轮结束直接收束常规赛 → 季后赛
+   setPhase(s,'r3',{who:'advancePhase'});
+   initTables(s);
+   genRoundSchedule(s);
+   logEvent(s,' 第二轮结束！进入第三轮');
+  }
  }else if(s.phase==='r3'){
- buildPlayoff(s);
- try{if(typeof boardMidSeasonPulse==='function')boardMidSeasonPulse(s,'playoff');}catch(e){}
+  buildPlayoff(s);
+  try{if(typeof boardMidSeasonPulse==='function')boardMidSeasonPulse(s,'playoff');}catch(e){}
  }
  save();renderAll();
 }
@@ -416,7 +456,36 @@ function ensureLeagueChampion(s){
 }
 function buildPlayoff(s){
  // 旧版残留的 simulateGroupAI 调用已删：r3 的 AI 场次由 simulateAiRound 逐轮模拟 + advancePhase 兜底补完，此处重跑会重复计分（且该函数在重构时已丢失导致进季后赛必崩）
- // 12/15 队时代 S/A 可能不足 6 人：过滤空位，避免 undefined 漏进对阵树
+ const st=fmtOf(s).structure||s.structure||'sab';
+ if(st!=='sab'){
+  // 2016-2020 骨架：各组前 4 汇合 8 强双败（BO5/BO7 按年代）
+  const ranked=[];
+  phaseGroups(s).forEach(g=>{sortGroup(s,g).filter(Boolean).slice(0,4).forEach(t=>{if(t&&!ranked.includes(t))ranked.push(t);});});
+  if(!ranked.length){setPhase(s,'eliminated',{who:'season',force:true});save();renderAll();return;}
+  while(ranked.length<8)ranked.push(null);
+  s.playoff={
+   wb:[{a:ranked[0],b:ranked[3],r:null},{a:ranked[1],b:ranked[2],r:null}],
+   lb:[{a:ranked[4],b:ranked[7],r:null},{a:ranked[5],b:ranked[6],r:null}],
+   lb2:[{a:null,b:null,r:null},{a:null,b:null,r:null}],
+   lb3:[{a:null,b:null,r:null},{a:null,b:null,r:null}],
+   wf:{a:null,b:null,r:null},
+   lb4:{a:null,b:null,r:null},
+   lbf:{a:null,b:null,r:null},
+   final:{a:null,b:null,r:null},champ:null
+  };
+  if(s.phase!=='eliminated')setPhase(s,'playoff',{who:'buildPlayoff',force:true});
+  const bo=fmtOf(s).playoffBo||7;
+  logEvent(s,' 季后赛开启！8 强 BO'+bo+' 双败淘汰（'+(st==='eastwest'?'东西部':st==='ab'?'A/B 分组':'单组')+' · '+(gameYear(s)||'')+' 年赛制）');
+  if(!ranked.includes(s.teamName)){
+   logEvent(s,' 未能晋级季后赛，本赛季止步');
+   let guard=0;
+   while(!s.playoff.final.r&&guard<20){playoffStep(s);guard++;}
+   return;
+  }
+  save();renderAll();
+  return;
+ }
+ // 2021+ SAB：10 队双败（S 前 4 + A 前 4 + S5/S6）
  const sRank=sortGroup(s,'S').filter(Boolean),aRank=sortGroup(s,'A').filter(Boolean);
  if(!sRank.length){setPhase(s,'eliminated',{who:'season',force:true});save();renderAll();return;}
  s.playoff={
@@ -538,13 +607,13 @@ function playPoMatch(s,m,slot){
  const opName=m.a===s.teamName?m.b:m.a;
  if(s.mode==='player'){ // 选手生涯：教练指挥，自动打季后赛系列赛（走 finishSeries：结算弹窗 + 延后推进）
  tagMatch(s,m,'po_'+slot);
- playerPlayAndFinish(s,opName,KPL.BO7,{stage:'po',mid:'po_'+slot,poSlot:slot,_match:m});
+ playerPlayAndFinish(s,opName,fmtOf(s).playoffBo||7,{stage:'po',mid:'po_'+slot,poSlot:slot,_match:m});
  return;
  }
  // 系列赛中断恢复（P2-7 校验身份）：poSlot 不属于当前场次 = 僵尸系列赛，废弃重开
  if(s.series&&s.series.stage==='po'){
  if(!s.series.poSlot||s.series.poSlot===slot){
- showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO7·含巅峰对决）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
+ showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO'+(fmtOf(s).playoffBo||7)+(fmtOf(s).peakBoMin<=(fmtOf(s).playoffBo||7)?'·含巅峰对决':'')+'）vs '+opName+' · 第'+(s.series.mw+s.series.ow+1)+'局（'+s.series.mw+':'+s.series.ow+'）');
  return;
  }
  logEvent(s,'⚠ 赛程修复：废弃未同步的季后赛残影（'+s.series.poSlot+'），本场重新开打');
@@ -553,12 +622,12 @@ function playPoMatch(s,m,slot){
  }
  tagMatch(s,m,'po_'+slot);
  // L2：series 只留 mid，不再挂 poMatch 对象引用
- s.series={used:[],usedOpp:[],mw:0,ow:0,max:7,stage:'po',mid:'po_'+slot,poSlot:slot,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'playoff',opName)};s.seriesAuto=false;
+ s.series={used:[],usedOpp:[],mw:0,ow:0,max:fmtOf(s).playoffBo||7,stage:'po',mid:'po_'+slot,poSlot:slot,logs:[],myName:m.a===s.teamName?m.a:m.b,opName,side:firstSide(s,'playoff',opName)};s.seriesAuto=false;
  resetOppEnergy(s,opName);
- showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO7·含巅峰对决）vs '+opName+' · 第1局');
+ showPreMatch((slot==='总决赛'?'总决赛':'季后赛')+'（BO'+(fmtOf(s).playoffBo||7)+'）vs '+opName+' · 第1局');
  return;
  }
- const r=simSeriesResult(s,m.a,m.b,KPL.BO7);
+ const r=simSeriesResult(s,m.a,m.b,fmtOf(s).playoffBo||7);
  m.r=r.win?m.a:m.b;
  logEvent(s,' 季后赛（'+slot+'）：'+m.a+' '+(r.win?'胜':'负')+' '+m.b+'，'+m.r+' 晋级');
  save();renderAll();
@@ -776,6 +845,7 @@ function newSeason(s){
  try{storeSet(slotKey()+'_auto',serializeForSave(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
  try{recordSeasonAwards(s);}catch(e){logEvent(s,' 最佳阵容结算异常：'+(e&&e.message)+'（不影响赛季轮换）');} // 上赛季最佳阵容入册（趁阵容还没跨季老化）；失败不得挡住 newSeason
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
+ try{applyYearFmt(s);}catch(e){} // 赛制随自然年演变（2016 东西部/BO3 → 2021 SAB → 2026 卡位BO5）
  try{if(typeof applyHistoricalLeague==='function')applyHistoricalLeague(s);}catch(e){} // 史实跨年：升降级/更名换队
  try{if(typeof histPromotionSkip==='function')histPromotionSkip(s);}catch(e){} // 史实降级空窗→快进到重返年
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
