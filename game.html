@@ -971,7 +971,7 @@ function genEraDef(eraId,team,pos,used){
  const key='g'+eraId+'_'+team.replace(/\./g,'')+'_'+pos; // 队名去点号（RNG.M→RNGM），保证 id 稳定可引用
  const exist=PLAYER_POOL.find(d=>d.id===key);
  if(exist)return exist;
- let name=poolName(ERA_GEN_NAMES.concat(ACADEMY_NAMES),used); // 池尽回退 combName（原为「新援N」）
+ let name=poolName(ERA_GEN_NAMES.concat(typeof ACADEMY_NAMES!=='undefined'?ACADEMY_NAMES:[]),used); // 池尽回退 combName；ACADEMY_NAMES 在 players.js 后载，加载期允许缺席
  used.add(name);
  let h=5381;for(let i=0;i<key.length;i++)h=((h*33)^key.charCodeAt(i))>>>0;
  const rv=()=>{h=((h*1103515245)+12345)>>>0;return (h>>>16)%1000/1000;};
@@ -982,7 +982,11 @@ function genEraDef(eraId,team,pos,used){
   :[0,1,2,3].map(()=>clamp(band+Math.floor(rv()*9)-4,40,99));
  const skPool=(typeof posSkillPool==='function')?posSkillPool(pos):[['lane','线霸体系','对线属性额外+8%'],['farm','运营体系','运营属性额外+8%'],['team','团战体系','团战属性额外+8%'],['mind','大心脏体系','心态属性额外+8%']];
  const sk=skPool[Math.floor(rv()*skPool.length)];
- const cands=heroesNow().filter(x=>x.pos[0]===pos);
+ const cands=(function(){
+  const yr=parseInt(String(eraId).replace(/\D/g,''),10);
+  const pool=(yr&&typeof heroesForYear==='function')?heroesForYear(yr):heroesNow();
+  return pool.filter(x=>x.pos[0]===pos);
+ })();
  const sigHero=(cands.length?cands[Math.floor(rv()*cands.length)]:(heroesNow()[0]||HEROES[0]||{n:'亚瑟'}));
  const def={id:key,name,pos,team,tags:[],base,skill:{n:sk[1],t:sk[0],d:sk[2]},
   sig:sigHero.n,
@@ -1246,6 +1250,91 @@ const KPL_YEAR_CHANGES={
  2025:{in:['桐乡情久','常山UUG'],out:[],rename:{}},
  2026:{in:[],out:[],rename:{}},
 };
+
+const KPL_YEAR_META={
+ 2016:{name:'2016 · 创世纪元',desc:'2016.9.17 开赛的首届 KPL 秋季赛：12 队在上海开启职业联赛。AS仙阁黑八掀翻 AG，辰鬼加冕首个 FMVP。A/B 分组 · 季后 BO5 · 无全局 BP。'},
+ 2017:{name:'2017 · QG王朝',desc:'QGhappy 大满贯元年。'}, // 占位，手写档覆盖
+ 2018:{name:'2018 · Hero与东西部',desc:'东西部主客场 + 固定席位；Hero久竞登场即春夏+冬冠单年三冠，久诚一年三 FMVP。常规赛 BO5 四 Ban，无全局 BP。'},
+ 2019:{name:'2019 · 双冠与信仰',desc:'eStar 春冠+世冠双冠，AG 收购 BA 回归当年登顶。全局 BP 元年。'}, // 占位，手写档覆盖
+ 2020:{name:'2020 · TS奇迹',desc:'16 队主场化；秋季取消东西部。TS 春冠+世冠让三追四，暖阳双 FMVP；DYG 秋决零封夺冠。'},
+ 2021:{name:'2021 · SAB元年',desc:'17 队 S/A/B 分组 + 卡位赛；Hero 春冠、eStar 秋冠开启大魔王序章。8 月赛制改为春夏。'},
+ 2022:{name:'2022 · 狼星争霸',desc:'正式春夏赛制。eStar 春 4:0 狼队跨赛事三连冠；夏决狼队重夺银龙杯，小胖 FMVP。'},
+ 2023:{name:'2023 · 群雄并起',desc:'狼队春冠第八冠，TTG 夏决 4:2 队史首冠，AG 世冠捧凤凰杯。'},
+ 2024:{name:'2024 · 十冠与圣龙',desc:'狼队春决加冕十冠王；AG 夏冠 + 首座年总圣龙杯（4:2 狼队，一诺 FMVP）。'},
+ 2025:{name:'2025 · AG王朝',desc:'AG 春夏连冠 + 鸟巢年总，大帅辅助位 FMVP；五连冠王朝。'},
+ 2026:{name:'2026 · 十周年',desc:'KPL 十周年。KSG 春决 4:0 狼队队史首冠，TTG 夏决厦门登顶。卡位赛 BO5 · 年总圣龙杯。'},
+};
+const KPL_YEAR_ICON={
+ 'AG超玩会':'焰','成都AG超玩会':'焰','eStar':'★','eStarPro':'★','武汉eStarPro':'★',
+ 'XQ':'戒','广州TTG':'环','AS仙阁':'仙','sViper':'蛇','WF.D':'海','SC':'锋','MU':'兽','LK':'鳞',
+ 'DL火箭':'箭','BWS':'盾','VgHow':'遥','QGhappy':'翼','重庆QGhappy':'翼','重庆狼队':'狼',
+ 'JC':'竞','DYG.JC':'竞','深圳DYG':'影','RNG.M':'冠','上海RNG.M':'冠','GK':'山','佛山GK':'山','佛山DRG':'龙',
+ 'EDG.M':'电','上海EDG.M':'电','BA黑凤梨':'梨','YTG':'拓','南京Hero久竞':'影','Hero久竞':'影',
+ '济南RW侠':'剑','TS':'潮','北京WB':'熊','厦门VG':'紫','苏州KSG':'虎','杭州LGD大鹅':'鹅','杭州LGD.NBW':'鹅',
+ 'XYG':'仙','MTG':'拳','北京JDG':'豹','桐乡情久':'红','常山UUG':'牛','西安WE':'狼','长沙TES.A':'拳',
+};
+function teamsAtYear(year){
+ let list=['eStar','XQ','AG超玩会','AS仙阁','sViper','WF.D','SC','MU','LK','DL火箭','BWS','VgHow'];
+ for(let y=2017;y<=year;y++){
+  const ch=KPL_YEAR_CHANGES[y];if(!ch)continue;
+  Object.keys(ch.rename||{}).forEach(o=>{
+   const n=ch.rename[o];
+   list=list.map(x=>x===o?n:x);
+
+   if(n==='成都AG超玩会')list=list.map(x=>x==='AG超玩会'?n:x);
+  });
+  (ch.out||[]).forEach(n=>{list=list.filter(x=>x!==n);});
+  (ch.in||[]).forEach(n=>{if(!list.includes(n))list.push(n);});
+ }
+
+ if(year<=2018)list=list.map(x=>x==='上海EDG.M'?'EDG.M':x==='上海RNG.M'?'RNG.M':x==='佛山GK'?'GK':x==='南京Hero久竞'?'Hero久竞':x);
+ return list;
+}
+function buildYearEra(year){
+ const y=parseInt(year,10);
+ const meta=KPL_YEAR_META[y]||{name:y+' 年',desc:y+' 赛季联盟（史实名单 · 阵容演绎）'};
+ const fmt=yearFmt(y);
+ const teams=teamsAtYear(y).map(n=>({name:n,icon:KPL_YEAR_ICON[n]||n.slice(0,1),power:500}));
+
+ const elite=['AG超玩会','成都AG超玩会','QGhappy','重庆QGhappy','重庆狼队','eStar','eStarPro','武汉eStarPro','AS仙阁','Hero久竞','南京Hero久竞','TS','XQ','广州TTG'];
+ teams.forEach((t,i)=>{t.power=elite.includes(t.name)?620-i*2:480-(i%10)*12;});
+ const used=new Set();
+ const defs=[],rosters={},clubs=[];
+ const coachIds=COACH_POOL.map(c=>c.id);
+ teams.forEach((t,i)=>{
+  const p=[];
+  for(let k=0;k<5;k++){
+   const pos=POS_ORDER[k];
+   const def=genEraDef(String(y),t.name,pos,used);
+   used.add(def.name);
+   defs.push(def);
+   p.push(def.id);
+  }
+  rosters[t.name]={p,u:[]};
+  clubs.push({
+   name:t.name,icon:t.icon,
+   budget:4000+t.power*12,cap:1200+t.power*2,
+   coach:coachIds[i%coachIds.length],
+   seed:t.power,
+   players:p,
+   desc:elite.includes(t.name)?(y+' 豪门 · 争冠热门'):(y+' 参赛队 · 阵容演绎'),
+  });
+ });
+ return {
+  name:meta.name,year:String(y),
+  rules:Object.assign({},fmt),
+  desc:meta.desc,
+  teams,defs,fa:[],coaches:[],bonds:{},rosters,clubs,
+ };
+}
+
+(function ensureYearEras(){
+ for(let y=2016;y<=2026;y++){
+  const id=String(y);
+  if(KPL_ERAS[id]&&KPL_ERAS[id].defs&&KPL_ERAS[id].defs.length>10)continue; // 手写档
+  try{KPL_ERAS[id]=buildYearEra(y);}catch(e){try{console.warn('year era',y,e&&e.message);}catch(_){}}
+ }
+})();
 
 function _histFillRoster(s,teamName,used){
  used=used||new Set((s.players||[]).map(p=>p.name));
@@ -4325,8 +4414,9 @@ function rosterGuard(s){
 function sellGuard(s){
  const n=rosterCount(s);
  if(n>ROSTER_MAX)return true; // 超编：强制可卖，否则名单永久锁死
- if(n<=5)return false; // 五位置首发不能再卖空
- const cap=Math.max(2,Math.floor(n/2)); // 至少 2 个卖出名额，否则「先卖后买」根本走不通
+ if(n<=0)return false;
+
+ const cap=Math.max(1,Math.floor(n/2));
  if((s.windowSold||0)>=cap){
   toast(' 联盟规则：一个转会期卖出不超过 '+cap+' 人（已卖 '+(s.windowSold||0)+' / 名单 '+n+'）——超编时不限卖');
   return false;
@@ -4345,7 +4435,10 @@ function enforceRosterCap(s){
   return;
  }
 
- const extra=(s.players||[]).filter(p=>!(p.kjia>0)&&!p.loan)
+ const extra=(s.players||[]).filter(p=>{
+  const pst=(typeof playerStatus==='function')?playerStatus(p,s):null;
+  return pst?!(pst.kjia||pst.loan||pst.loanOut):!(p.kjia>0)&&!p.loan;
+ })
   .sort((a,b)=>overall(a)-overall(b)).slice(0,n-ROSTER_MAX);
  extra.forEach(p=>{
   if(!p.listed){p.listed=true;}
@@ -4402,6 +4495,7 @@ function openNegotiation(s,pid){
  const p=s.transferList.find(x=>x.id===pid)||(s.freeAgents||[]).find(x=>x.id===pid);
  if(!p){toast('该选手不在转会市场');return;}
  if(s.players.some(x=>x.id===pid)){toast('已拥有该选手');return;}
+ if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满（'+ROSTER_MAX+' 人）——先卖出/放走选手再谈判');return;}
  if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
 
  window._nego={pid,round:1,
@@ -5621,6 +5715,7 @@ function promoteRookie(s,id){
  if(!r)return;
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
  if(r.age<MATCH_MIN_AGE){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛——再等一年');return;}
+ if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满——先卖出/放走选手再提拔青训');return;}
  if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
 
  if(typeof reserveLeft==='function'&&reserveLeft(s)<=0){
@@ -5821,18 +5916,20 @@ function initGroups(s){
  s.leagueTeams=all.map(x=>x.name); // 联盟注册名录（联盟页/榜单用）
  try{applyYearFmt(s);}catch(e){}
  const st=(fmtOf(s).structure)||'sab';
- if(st==='ab'||st==='eastwest'){
+
+ const stKey=(st==='legacy')?'double-rr':st;
+ if(stKey==='ab'||stKey==='eastwest'){
 
   const half=Math.ceil(all.length/2);
   const gA=all.slice(0,half).map(x=>x.name);
   const gB=all.slice(half).map(x=>x.name);
-  const nA=st==='eastwest'?'East':'A', nB=st==='eastwest'?'West':'B';
+  const nA=stKey==='eastwest'?'East':'A', nB=stKey==='eastwest'?'West':'B';
   s.groups={}; s.groups[nA]=gA; s.groups[nB]=gB;
-  s.structure=st;
- }else if(st==='single'||st==='double-rr'){
+  s.structure=stKey;
+ }else if(stKey==='single'||stKey==='double-rr'){
 
   s.groups={All:all.map(x=>x.name)};
-  s.structure=st;
+  s.structure=stKey;
  }else{
 
   const g1=all.slice(0,6).map(x=>x.name);
@@ -6119,8 +6216,11 @@ function buildPlayoff(s){
  const st=fmtOf(s).structure||s.structure||'sab';
  if(st!=='sab'){
 
+  const groups=phaseGroups(s);
   const ranked=[];
-  phaseGroups(s).forEach(g=>{sortGroup(s,g).filter(Boolean).slice(0,4).forEach(t=>{if(t&&!ranked.includes(t))ranked.push(t);});});
+  const single=groups.length<=1;
+  const take=single?8:4;
+  groups.forEach(g=>{sortGroup(s,g).filter(Boolean).slice(0,take).forEach(t=>{if(t&&!ranked.includes(t))ranked.push(t);});});
   if(!ranked.length){setPhase(s,'eliminated',{who:'season',force:true});save();renderAll();return;}
   while(ranked.length<8)ranked.push(null);
   s.playoff={
@@ -7567,6 +7667,7 @@ function promoteKjiaPlayer(s,id){
  const p=s.kjia.squad.find(x=>x.id===id);
  if(!p){toast('该选手不在二队班底');return;}
  if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 年仅 '+(p.age||'?')+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛');return;}
+ if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满——先卖出/放走选手再提拔');return;}
  if(!rosterGuard(s))return; // 大名单 ≤10
  if(s.players.some(x=>x.id===id)){toast(p.name+' 已在一队');return;}
  s.kjia.squad=s.kjia.squad.filter(x=>x.id!==id);

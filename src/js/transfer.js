@@ -910,7 +910,10 @@ function enforceRosterCap(s){
   return;
  }
  // 倒计时结束：自动挂牌最弱者（给玩家最后一次主动卖的机会，下窗仍未卖则回收）
- const extra=(s.players||[]).filter(p=>!(p.kjia>0)&&!p.loan)
+ const extra=(s.players||[]).filter(p=>{
+  const pst=(typeof playerStatus==='function')?playerStatus(p,s):null;
+  return pst?!(pst.kjia||pst.loan||pst.loanOut):!(p.kjia>0)&&!p.loan;
+ })
   .sort((a,b)=>overall(a)-overall(b)).slice(0,n-ROSTER_MAX);
  extra.forEach(p=>{
   if(!p.listed){p.listed=true;}
@@ -971,6 +974,7 @@ function openNegotiation(s,pid){
  const p=s.transferList.find(x=>x.id===pid)||(s.freeAgents||[]).find(x=>x.id===pid);
  if(!p){toast('该选手不在转会市场');return;}
  if(s.players.some(x=>x.id===pid)){toast('已拥有该选手');return;}
+ if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满（'+ROSTER_MAX+' 人）——先卖出/放走选手再谈判');return;}
  if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
  // 不存 s 引用：换档/导入后旧引用会指向死状态（断链 bug）。使用处一律 getState()/S
  window._nego={pid,round:1,
