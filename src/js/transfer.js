@@ -912,7 +912,7 @@ function enforceRosterCap(s){
  // 倒计时结束：自动挂牌最弱者（给玩家最后一次主动卖的机会，下窗仍未卖则回收）
  const extra=(s.players||[]).filter(p=>{
   const pst=(typeof playerStatus==='function')?playerStatus(p,s):null;
-  return pst?!(pst.kjia||pst.loan||pst.loanOut):!(p.kjia>0)&&!p.loan;
+  return !pst||!(pst.kjia||pst.loan||pst.loanOut);
  })
   .sort((a,b)=>overall(a)-overall(b)).slice(0,n-ROSTER_MAX);
  extra.forEach(p=>{

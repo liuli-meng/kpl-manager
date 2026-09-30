@@ -26,24 +26,30 @@ const out = vm.runInContext(`
    return S;
   };
 
-  // ① 一键培养：3 个未达标各培养一次，扣 3×17
+  // ① 一键培养：3 个未达标各培养一次，扣 3×rtc（弱旅 5 折走 rookieTrainCost，勿钉死 ROOKIE_TRAIN_COST）
   const a=mk('a',5,[60,60,60,60]),b=mk('b',4,[60,60,60,60]),c=mk('c',3,[60,60,60,60]);
   setup(1000,[a,b,c]);
+  const rtc=rookieTrainCost(S);
+  S.fund=3*rtc;
+  const fund0=S.fund;
   const before=[total(a),total(b),total(c)];
   trainAllRookies(S);
-  if(S.fund!==1000-3*ROOKIE_TRAIN_COST)fail('①资金应为 '+(1000-51)+'，实际 '+S.fund);
+  if(S.fund!==fund0-3*rtc)fail('①资金应为 '+(fund0-3*rtc)+'，实际 '+S.fund);
   else if(![a,b,c].every((r,i)=>total(r)>before[i]))fail('①有人没被培养：'+JSON.stringify(before)+' → '+JSON.stringify([total(a),total(b),total(c)]));
   else if(!S.academyTrained)fail('①一键培养未消耗每日名额');
-  else log('①一键培养 3 人各一次 · 扣 '+(3*ROOKIE_TRAIN_COST)+'万 · 名额已消耗');
+  else log('①一键培养 3 人各一次 · 扣 '+(3*rtc)+'万 · 名额已消耗');
 
   // ② 已达标（四维≥300）的不进池、不花钱
   const d=mk('d',5,[80,80,80,80]); // 320 已达标
   setup(1000,[mk('e',3,[60,60,60,60]),d]);
+  const rtc2=rookieTrainCost(S);
+  S.fund=rtc2+500; // 够 1 人
+  const fund2=S.fund;
   const dBefore=total(d);
   trainAllRookies(S);
-  if(S.fund!==1000-ROOKIE_TRAIN_COST)fail('②应为只扣 1 人（'+ROOKIE_TRAIN_COST+'万），实际 '+S.fund);
+  if(S.fund!==fund2-rtc2)fail('②应为只扣 1 人（'+rtc2+'万），实际 '+S.fund);
   else if(total(d)!==dBefore)fail('②已达标的青训被培养了（浪费钱）');
-  else log('②已达标青训跳过 · 只培养未达标的（扣 '+ROOKIE_TRAIN_COST+'万）');
+  else log('②已达标青训跳过 · 只培养未达标的（扣 '+rtc2+'万）');
 
   // ③ 每日名额共享：一键用掉后，单个培养必须被拒且不动钱
   const f=mk('f',3,[60,60,60,60]);
@@ -56,7 +62,9 @@ const out = vm.runInContext(`
 
   // ④ 资金不足：按潜力从高到低优先，低潜跳过并提示
   const p5=mk('p5',5,[60,60,60,60]),p4=mk('p4',4,[60,60,60,60]),p2=mk('p2',2,[60,60,60,60]);
-  setup(2*ROOKIE_TRAIN_COST,[p5,p4,p2]); // 只够 2 人
+  setup(1000,[p5,p4,p2]);
+  const rtc4=rookieTrainCost(S);
+  S.fund=2*rtc4; // 只够 2 人
   trainAllRookies(S);
   if(total(p5)===60*4)fail('④高潜力 p5 未被优先培养');
   else if(total(p4)===60*4)fail('④次高潜力 p4 未被优先培养');
@@ -65,10 +73,12 @@ const out = vm.runInContext(`
   else log('④资金只够 2 人：按潜力 5→4 优先，潜力 2 跳过 · 资金归零');
 
   // ⑤ 一个都练不起：不消耗名额（否则玩家白白丢掉当天机会）
-  setup(ROOKIE_TRAIN_COST-1,[mk('g',5,[60,60,60,60])]);
+  setup(1000,[mk('g',5,[60,60,60,60])]);
+  const rtc5=rookieTrainCost(S);
+  S.fund=rtc5-1;
   trainAllRookies(S);
   if(S.academyTrained)fail('⑤资金不足却消耗了每日名额');
-  else if(S.fund!==ROOKIE_TRAIN_COST-1)fail('⑤资金不足却扣钱了');
+  else if(S.fund!==rtc5-1)fail('⑤资金不足却扣钱了');
   else log('⑤资金不足时名额与资金均未变动');
 
   // ⑥ 空营 / 全达标：同样不消耗名额
