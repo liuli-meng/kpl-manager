@@ -9,27 +9,28 @@ const out = vm.runInContext(`
   const fail=m=>{res.push('[FAIL] '+m);hadFail=true;};
   const log=t=>res.push('[PASS] '+t);
 
-  // ① 市场买人：扣 valueOf
-  S=newState('买队','买');fillRoster(S,'mid');S.fund=20000;
-  S.preseason=false;S.transferWindow=3;
+  // ① 市场买人：扣 valueOf（转会窗自由交易期）
+  S=newState('买队','买');fillRoster(S,'mid');S.fund=50000;
+  S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
   const p=genPlayer(genFreeAgentDef('mid','star',new Set(['测试星'])));
   S.market=[p];
-  const cost=Math.round(valueOf(overall(p)));
+  const cost=Math.round(valueOf(overall(p))*(p.discount||1));
   const f0=S.fund;const ok=buyPlayer(S,p);const paid=Math.round(f0-S.fund);
-  if(!ok||paid!==cost)fail('买人扣费错误: cost='+cost+' paid='+paid);
+  if(!ok||paid!==cost)fail('买人扣费错误: cost='+cost+' paid='+paid+' ok='+ok);
   else log('① 买人按身价扣 '+paid+' 万');
 
-  // ② 自由球员缺 signCost：必须按身价 58 折扣款，不得 0
-  S=newState('自由队','自');fillRoster(S,'mid');S.fund=20000;
-  S.preseason=false;S.transferWindow=3;
+  // ② 自由球员缺 signCost：必须按身价 58 折扣款，不得 0（弱旅再 8 折）
+  S=newState('自由队','自');fillRoster(S,'mid');S.fund=50000;
+  S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
   const fa=genPlayer(genFreeAgentDef('mid','mid',new Set(['测试由'])));
   delete fa.signCost;
   S.freeAgents=[fa];
-  const expect=Math.round(valueOf(overall(fa))*0.58);
+  let expect=Math.round(valueOf(overall(fa))*0.58);
+  if(isWeakClub(S))expect=Math.max(30,Math.round(expect*0.8));
   const f1=S.fund;signFreeAgent(S,fa.id);const paid2=Math.round(f1-S.fund);
   if(paid2<=0)fail('缺 signCost 时 0 元白拿');
-  else if(Math.abs(paid2-expect)>2)fail('缺 signCost 扣价偏差: expect~'+expect+' paid='+paid2);
-  else log('② 缺 signCost 自动按身价扣 '+paid2+' 万');
+  else if(Math.abs(paid2-expect)>2)fail('缺 signCost 扣价偏差: expect~'+expect+' paid='+paid2+' weak='+isWeakClub(S));
+  else log('② 缺 signCost 自动按身价扣 '+paid2+' 万（weak='+isWeakClub(S)+'）');
 
   // ③ signCostOf：0/负/NaN 都回落身价
   const bad=genPlayer(genFreeAgentDef('mid','low',new Set(['测试坏'])));

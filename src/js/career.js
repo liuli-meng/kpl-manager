@@ -355,8 +355,8 @@ function coachRequest(s,type,pid,pos){
   if(s.coachRecs.some(r=>r.pid===pid&&r.type==='loan')){toast('已提交过该租借申请');return;}
   s.coachRecs.unshift({type:'loan',pid,pos:hit.p.pos,name:hit.p.name});
   logEvent(s,' 教练申请：租借 '+hit.p.name+'（'+POS[hit.p.pos][0]+' · '+hit.from+'）应急补位——俱乐部将尽快办理');
-  // 有缺位/伤停时立刻尝试执行，不等赛季轮换
-  if(injuryGapPositions(s).length||s.transferWindow===0){
+  // 有缺位/伤停或租借窗开放时立刻执行（旧版窗内只排队不落地，三年 9 申请 0 落地）
+  {
    const rest=s.coachRecs.slice();
    s.coachRecs=[{type:'loan',pid,pos:hit.p.pos}];
    coachAutoSquad(s);
@@ -367,7 +367,7 @@ function coachRequest(s,type,pid,pos){
    }
    s.coachRecs=rest.filter(r=>!(r.pid===pid&&r.type==='loan'));
    toast('已登记租借申请（资金/名额不足时俱乐部会在条件具备后办理）');
-  }else toast('租借申请已提交，俱乐部办理中');
+  }
  }else if(type==='sign'){
   const fa=(s.freeAgents||[]).find(p=>p.id===pid);
   if(!fa){toast('该自由球员已不在名单');return;}
@@ -553,7 +553,8 @@ function signFreeAgent(s,id){
  if(!p)return;
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return;}
  // 签约费必须按身价：signCost 缺失时用 signCostOf 兜底，禁止 ||0 白拿
- const signFee=(typeof signCostOf==='function')?signCostOf(p):Math.round(valueOf(overall(p))*0.58);
+ let signFee=(typeof signCostOf==='function')?signCostOf(p):Math.round(valueOf(overall(p))*0.58);
+ if(typeof isWeakClub==='function'&&isWeakClub(s)){signFee=Math.max(30,Math.round(signFee*0.8));p.discount=0.8;} // 弱旅直签 8 折
  p.signCost=signFee;
  if(s.fund<signFee){toast('资金不足（签约费 '+signFee+'万）');return;}
  if(weeklyWage(s)+(p.wage||0)>s.wageCap){

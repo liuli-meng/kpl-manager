@@ -5,3 +5,11 @@ Thumbs.db
 # 玩家导出的真实存档（saves/*.json）：含个人进度且每次都变，不该进版本库——
 # 与 kpl-manager-rewrite 的同一决定保持一致，免得 git status 长期碍眼或被 git add . 误收
 saves/
+
+# 本地排查/一次性补丁脚本（不进版本库）
+.bug-hunt/
+tests/_patch_*.py
+tests/_tmp_*.js
+tests/econ-probe.js
+tests/econ-fee-probe.js
+tests/value-fee-probe.js

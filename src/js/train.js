@@ -130,6 +130,11 @@ function recruitRookie(s){
  save();renderAll();toast('新秀 '+r.name+' 加入青训营');
 }
 const ROOKIE_TRAIN_COST=17; // 单次培养费用（万）：单独培养与一键培养共用，勿各写一份
+function rookieTrainCost(s){
+ const base=ROOKIE_TRAIN_COST;
+ if(typeof isWeakClub==='function'&&s&&isWeakClub(s))return Math.round(base*0.5); // 弱旅青训 5 折：低成本养成通道
+ return base;
+}
 /* 单次培养结算（单独培养 / 一键培养共用，避免两份成长公式漂移）。
    潜力越高成长越快：2-4 起步 + 潜力加成（pot/2），平均 4~6/天 —— 约 3~4 周培养到晋升线（四维和300） */
 function applyRookieTrain(r){
@@ -165,8 +170,9 @@ function trainAllRookies(s){
  let done=0,spent=0,short=0;
  const parts=[];
  for(const r of list){
-  if(s.fund<ROOKIE_TRAIN_COST){short++;continue;}
-  s.fund-=ROOKIE_TRAIN_COST;spent+=ROOKIE_TRAIN_COST;
+  const rtc=typeof rookieTrainCost==="function"?rookieTrainCost(s):ROOKIE_TRAIN_COST;
+  if(s.fund<rtc){short++;continue;}
+  s.fund-=rtc;spent+=rtc;
   const t=applyRookieTrain(r);
   parts.push(r.name+'「'+t.label+'」+'+t.gain);
   done++;

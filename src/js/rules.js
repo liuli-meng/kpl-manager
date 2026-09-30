@@ -143,8 +143,9 @@ function youthDirectEntry(s){
 /* 转会窗分段：买入类操作在挂牌期拦截 */
 function freeSignBlockedReason(s){
  if(canFreeSign(s))return '';
- if(!s||!s.preseason)return '';
- return '已进入挂牌期（后 '+TRANSFER_FREE_DAYS+' 天）——只能挂牌/竞价/续约/租借，不能买断直签';
+ // 仅挂牌期拦截买断直签。非窗期保持放行（历史上如此）——误导文案在 UI 层改，不在此新增闸门
+ if(s&&s.preseason)return '已进入挂牌期（后 '+TRANSFER_FREE_DAYS+' 天）——只能挂牌/竞价/续约/租借，不能买断直签';
+ return '';
 }
 /* 身份限制：经理才做买断/出售生意；教练=俱乐部代管（应急租借/引援申请）；选手不碰转会 */
 function transferOpsBlockedReason(s){

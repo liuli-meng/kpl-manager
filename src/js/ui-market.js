@@ -62,7 +62,7 @@ function renderMarket(){
   const free=(typeof canFreeSign==='function')?canFreeSign(S):true;
   windowBanner=`<div class="panel" style="margin:0 0 10px;border-color:rgba(217,164,65,.45)">
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-  <div><b class="gold">赛前转会期${ph?' · '+ph:''}</b>　<span class="hint">剩余 ${S.transferWindow} 天${free?' · 可买断/直签':' · 挂牌期：只挂牌/竞价/续约/租借'} · 天数用完自动开赛</span></div>
+  <div><b class="gold">赛前转会期${ph?' · '+ph:''}</b>　<span class="hint">剩余 ${S.transferWindow} 天${S.preseason?(free?' · 可买断/直签':' · 挂牌期：只挂牌/竞价/续约/租借'):' · 非转会期：补强走挂牌报价/应急租借/青训提拔'} · 天数用完自动开赛</span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
   <button class="btn sm" onclick="goPage('club')">去俱乐部页组队/开赛</button>
   <button class="btn sm gold" onclick="uiSkipTransfer(S)">跳过剩余 ${S.transferWindow} 天</button>

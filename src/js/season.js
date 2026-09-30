@@ -162,18 +162,20 @@ function initGroups(s){
  s.leagueTeams=all.map(x=>x.name); // 联盟注册名录（联盟页/榜单用）
  try{applyYearFmt(s);}catch(e){}
  const st=(fmtOf(s).structure)||'sab';
- if(st==='ab'||st==='eastwest'){
+ // 'legacy' 是时代档半成品标记：按 2017 双循环（单组大循环）落组，避免掉进 S/A/B 分叉
+ const stKey=(st==='legacy')?'double-rr':st;
+ if(stKey==='ab'||stKey==='eastwest'){
   // 2016 A/B 两组 · 2018-2020春 东西部：按种子对半切（东/西部或 A/B）
   const half=Math.ceil(all.length/2);
   const gA=all.slice(0,half).map(x=>x.name);
   const gB=all.slice(half).map(x=>x.name);
-  const nA=st==='eastwest'?'East':'A', nB=st==='eastwest'?'West':'B';
+  const nA=stKey==='eastwest'?'East':'A', nB=stKey==='eastwest'?'West':'B';
   s.groups={}; s.groups[nA]=gA; s.groups[nB]=gB;
-  s.structure=st;
- }else if(st==='single'||st==='double-rr'){
+  s.structure=stKey;
+ }else if(stKey==='single'||stKey==='double-rr'){
   // 2020秋 单组大循环 / 2017 双循环：全员一组
   s.groups={All:all.map(x=>x.name)};
-  s.structure=st;
+  s.structure=stKey;
  }else{
   // 2021+ S/A/B 三组
   const g1=all.slice(0,6).map(x=>x.name);
@@ -466,9 +468,14 @@ function buildPlayoff(s){
  // 旧版残留的 simulateGroupAI 调用已删：r3 的 AI 场次由 simulateAiRound 逐轮模拟 + advancePhase 兜底补完，此处重跑会重复计分（且该函数在重构时已丢失导致进季后赛必崩）
  const st=fmtOf(s).structure||s.structure||'sab';
  if(st!=='sab'){
-  // 2016-2020 骨架：各组前 4 汇合 8 强双败（BO5/BO7 按年代）
+  // 2016-2020 骨架：汇合 8 强双败（BO5/BO7 按年代）
+  // 双组（ab/eastwest）各组前 4；单组（double-rr/single/legacy）直接取全联盟前 8——
+  // 旧写法对单组也 slice(0,4)，2017 双循环 18 队只放 4 个进季后赛，玩家排名再高也进不去
+  const groups=phaseGroups(s);
   const ranked=[];
-  phaseGroups(s).forEach(g=>{sortGroup(s,g).filter(Boolean).slice(0,4).forEach(t=>{if(t&&!ranked.includes(t))ranked.push(t);});});
+  const single=groups.length<=1;
+  const take=single?8:4;
+  groups.forEach(g=>{sortGroup(s,g).filter(Boolean).slice(0,take).forEach(t=>{if(t&&!ranked.includes(t))ranked.push(t);});});
   if(!ranked.length){setPhase(s,'eliminated',{who:'season',force:true});save();renderAll();return;}
   while(ranked.length<8)ranked.push(null);
   s.playoff={

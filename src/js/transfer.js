@@ -867,23 +867,56 @@ function buyoutPrice(p){
 /* 非卖品强挖：2.5倍溢价（同样受 1500 封顶，顶星与主力同价时更看意愿/成功率），成功率=意愿缺口，失败意愿-10 */
 function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
-/* 大名单：≥10 人禁止再签（买断/直签/青训提拔共用守卫） */
-function rosterFull(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length>=ROSTER_MAX;} // K甲下放不占一线名额
+/* 大名单：硬上限 ROSTER_MAX+2（先签后卖宽限），软上限 ROSTER_MAX（需 3 日内裁减） */
+function rosterFull(s){return rosterCount(s)>=ROSTER_MAX;} // K甲下放不占一线名额
 /* 一线大名单人数：K甲下放不占名额——所有「X/10」展示必须走这里，禁止再用 s.players.length */
 function rosterCount(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length;}
+function rosterHardMax(){return ROSTER_MAX+2;} // 先签后卖：满编仍可再签 2 人，3 日内裁回
+function rosterOverDays(s){return s&&s.overSignDays||0;}
 function rosterGuard(s){
- if(!rosterFull(s))return true;
- toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前一线 '+rosterCount(s)+' 人）——先卖出或放弃选手再签约');
+ const n=rosterCount(s);
+ if(n<ROSTER_MAX)return true;
+ if(n<rosterHardMax()){
+  // 满编宽限：签完 3 日内必须卖掉/放走多余（matchDayTick/nextDay 会催）
+  s.overSignDays=3;
+  logEvent(s,' 临时超编：大名单 '+n+'/'+ROSTER_MAX+'（宽限上限 '+rosterHardMax()+'）——3 日内裁减至 '+ROSTER_MAX+' 人，否则董事会点名清退');
+  return true;
+ }
+ toast(' 大名单已满（'+n+'/'+rosterHardMax()+' 含宽限）——先卖出/放走选手再签约');
  return false;
 }
-/* 转会期卖出守卫：本转会期已卖出人数达到现名单一半（向下取整）则禁止再卖 */
+/* 转会期卖出守卫：正常窗最多卖一半（至少 2 人，支持卖一买一）；超编时不限卖（必须能裁） */
 function sellGuard(s){
- const n=(s.players||[]).length;
- if((s.windowSold||0)>=Math.floor(n/2)){
- toast(' 联盟规则：一个转会期卖出不得超过队内一半（已卖 '+(s.windowSold||0)+' 人 / 名单 '+n+' 人）');
- return false;
+ const n=rosterCount(s);
+ if(n>ROSTER_MAX)return true; // 超编：强制可卖，否则名单永久锁死
+ if(n<=0)return false;
+ // 转会期卖出 ≤ 半数（向下取整）。旧写法 n<=5 一刀切禁卖，与「半数」规则冲突——5 人阵也能卖 2 人
+ const cap=Math.max(1,Math.floor(n/2));
+ if((s.windowSold||0)>=cap){
+  toast(' 联盟规则：一个转会期卖出不超过 '+cap+' 人（已卖 '+(s.windowSold||0)+' / 名单 '+n+'）——超编时不限卖');
+  return false;
  }
  return true;
+}
+/* 超编宽限到期：自动挂牌最低总值者，避免永久 11/12 人挂机 */
+function enforceRosterCap(s){
+ if(!s||s.mode==='player')return;
+ const n=rosterCount(s);
+ if(n<=ROSTER_MAX){s.overSignDays=0;return;}
+ if(!s.overSignDays)return;
+ s.overSignDays--;
+ if(s.overSignDays>0){
+  logEvent(s,' 裁减倒计时：大名单 '+n+'/'+ROSTER_MAX+'（剩 '+s.overSignDays+' 天）——请挂牌/出售/放走 '+Math.max(0,n-ROSTER_MAX)+' 人');
+  return;
+ }
+ // 倒计时结束：自动挂牌最弱者（给玩家最后一次主动卖的机会，下窗仍未卖则回收）
+ const extra=(s.players||[]).filter(p=>!(p.kjia>0)&&!p.loan)
+  .sort((a,b)=>overall(a)-overall(b)).slice(0,n-ROSTER_MAX);
+ extra.forEach(p=>{
+  if(!p.listed){p.listed=true;}
+ });
+ if(extra.length)logEvent(s,' 裁减到期：已自动挂牌 '+extra.map(p=>p.name).join('、')+'（最弱 '+extra.length+' 人）——挂牌期请处理');
+ s.overSignDays=3; // 再宽限一轮给挂牌成交
 }
 /* ================= FC26 式转会谈判 =================
  玩家报「转会费+年薪」组合报价 → 对方评估 → 最多 3 轮拉锯：
@@ -1672,16 +1705,27 @@ const LOAN_DAYS=21;
 const CUP_SQUAD=7;
 function loanWindowOpen(s){
  if(!s)return false;
+ // 赛前转会期也开租借：中弱档/教练申请的低成本追赶通道（三年报告：申请 0 落地）
+ if(s.preseason&&s.transferWindow>0)return true;
  return s.phase==='challenger'||s.phase==='annual';
 }
 function cupLoanMax(s){
  if(!s)return 0;
+ if(s.preseason&&s.transferWindow>0){
+  // 弱旅/教练可租 2，豪门 1——结构性追赶，不是豪门堆人
+  if(typeof isWeakClub==='function'&&isWeakClub(s))return 2;
+  if(s.mode==='coach')return 2;
+  return 1;
+ }
  if(s.phase==='challenger')return 2; // 挑杯：最多租 2
  if(s.phase==='annual')return 1;     // 年总（大师组口径）：最多租 1
  return 0;
 }
 function loanRuleText(s){
- if(!loanWindowOpen(s))return '常规赛（春/夏）无租借：大名单 '+ROSTER_MAX+' 人全是自家签约，租借只在挑战者杯 / 年度总决赛开放。';
+ if(!loanWindowOpen(s))return '常规赛（春/夏）无租借：大名单 '+ROSTER_MAX+' 人全是自家签约，租借在赛前转会期 / 挑战者杯 / 年度总决赛开放。';
+ if(s.preseason&&s.transferWindow>0){
+  return '转会期租借：名额 '+((s.players||[]).filter(p=>p.loan).length)+'/'+cupLoanMax(s)+'（弱旅/教练可租 2 · 租金弱旅 5 折）——低成本补强主通道';
+ }
  const m=cupLoanMax(s);
  if(s.phase==='challenger')return '挑战者杯：出征 '+CUP_SQUAD+' 人（含租借），最多租 '+m+' 人——自家 '+(CUP_SQUAD-m)+' + 租 '+m+'，租借占用 '+CUP_SQUAD+' 个名额。';
  return '年度总决赛：出征 '+CUP_SQUAD+' 人（含租借），最多租 '+m+' 人——自家 '+(CUP_SQUAD-m)+' + 租 '+m+'，租借占用 '+CUP_SQUAD+' 个名额。';
@@ -1691,7 +1735,16 @@ function untouchableSet(){
  for(const tn in AI_ROSTERS)AI_ROSTERS[tn].u.forEach(id=>U.add(id));
  return U;
 }
-function loanRent(p){return Math.max(80,Math.round(valueOf(overall(p))*0.15));}
+function isWeakClub(s){ // 弱旅：预算薄或战力档后段——给结构性追赶杠杆
+ const fund=(s&&s.fund)||0;
+ const pow=(s&&s.seedPower)||(typeof teamPower==='function'?teamPower(s)||0:0);
+ return fund<7000||pow<430;
+}
+function loanRent(p){ // 弱旅租金 5 折：低成本租借是追赶主通道
+ const base=Math.max(80,Math.round(valueOf(overall(p))*0.15));
+ const weak=(typeof S!=='undefined'&&S&&isWeakClub(S));
+ return weak?Math.max(40,Math.round(base*0.5)):base;
+}
 function healthyPosCount(s,pos){ // 当前能打该位置的人（不含外租/K甲/伤停/未成年/常规赛租入）
  return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)).length;
 }
@@ -1699,7 +1752,7 @@ function injuryGapPositions(s){ // 伤停/K甲后完全无人可打的位置—�
  return POS_ORDER.filter(pos=>healthyPosCount(s,pos)===0);
 }
 function loanCap(s){
- // 常规赛 0；杯赛按官方出征名额（挑杯 2 / 年总 1）
+ // 常规赛 0；转会期/杯赛按窗口名额（转会期弱旅/教练 2 · 挑杯 2 · 年总 1）
  return loanWindowOpen(s)?cupLoanMax(s):0;
 }
 /* 杯赛出征 7 人（含租借）：勾选 s.cupSquad.ids；未勾选时自动择优。
