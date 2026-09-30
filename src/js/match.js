@@ -681,7 +681,10 @@ function finishSeries(finalWin){
  logEvent(S,' '+(PHASE_NAME[S.phase]||S.phase)+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
  simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
- if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
+ // 常规赛收束看「本队赛程是否打完」：KPL.ROUNDS=5 只覆盖 S/A/B 组内循环，
+ // 2017 双循环/单组大循环是 17-18 场——写死 5 会在第 5 场误判赛季结束、直接 buildPlayoff
+ const schedN=(S.schedule||[]).length;
+ if(schedN?S.matchIdx>=schedN:S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
  }else if(sr.stage==='card'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;

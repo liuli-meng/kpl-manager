@@ -12286,7 +12286,9 @@ function finishSeries(finalWin){
  logEvent(S,' '+(PHASE_NAME[S.phase]||S.phase)+'：'+S.teamName+' '+(finalWin?'胜':'负')+' '+sr.opName+' '+sr.mw+':'+sr.ow+'（小局奖金 '+bonus+'万）');
  S.matchIdx++;
  simulateAiRound(S,m?m.round:S.matchIdx); // 本轮打完，联盟其他场次同步开打并更新积分
- if(S.matchIdx>=KPL.ROUNDS)advancePhase(S);
+
+ const schedN=(S.schedule||[]).length;
+ if(schedN?S.matchIdx>=schedN:S.matchIdx>=KPL.ROUNDS)advancePhase(S);
  title=S.teamName+' vs '+sr.opName;
  }else if(sr.stage==='card'){
  const m=(typeof resolveSeriesMatch==='function'&&resolveSeriesMatch(S,sr))||null;
