@@ -143,7 +143,7 @@ function genSeasonPlayer(s,def){
 function genAcademyDef(pos,usedNames,season){
  const name=typeof ACADEMY_NAMES!=='undefined'?poolName(ACADEMY_NAMES,usedNames):combName(usedNames);
  usedNames.add(name);
- const cands=HEROES.filter(h=>h.pos[0]===pos);
+ const cands=heroesNow().filter(h=>h.pos[0]===pos);
  const boost=Math.min(2*((season||1)-1),14);
  const b=v=>clamp(v+boost,40,99);
  // 位置专精底子（旧版全员 [68,68,70,72] 游走向，中路/对抗路看起来「不对位」）
@@ -278,7 +278,7 @@ function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额�
  const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,74,84):[0,1,2,3].map(()=>rnd(74,84));
  return {id:'ns_'+s.season+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:['青训'],
  base:raw.map(b),
- skill:{n:sk[1],t:sk[0],d:sk[2]},sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,
+ skill:{n:sk[1],t:sk[0],d:sk[2]},sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,
  career:'赛季'+s.season+'从青训营出道的新生代，天赋肉眼可见。'};
 }
 /* AI 转会期（newSeason 内调用）：联盟生态推进 */
@@ -758,7 +758,7 @@ function genAiRookieDef(s,teamName){
  return {id:'aiq'+gameYear(s)+'_'+rnd(1000,9999)+'_'+teamName.slice(0,2),name,pos,team:teamName,tags:['青训'],
  base:[b(70),b(68),b(70),b(68)],
  skill:{n:'潜力新星',t:pick(['lane','farm','team','mind']),d:'AI 青训出品，达标自动晋升'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:' '+teamName+' 青训营培养的新生代。'};
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:' '+teamName+' 青训营培养的新生代。'};
 }
 function sumBase(d){return (d.base||[0,0,0,0]).reduce((t,v)=>t+v,0);}
 /* 构建转会市场：各 AI 队选手（含非卖品与意愿） */

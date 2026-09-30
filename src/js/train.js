@@ -54,7 +54,7 @@ function doHeroTrain(s,pid){
  msg=` 英雄特训：${p.name} 的「${t.n}」熟练度提升至「${HERO_LV[t.lv].n}」！`;
  }else{
  if((p.heroPool||[]).length>=80){toast('英雄池已满（上限80）且全部满级');return;}
- const src=HEROES.filter(h=>h.pos.includes(p.pos)).map(h=>h.n).filter(h=>!p.heroPool.some(x=>x.n===h));
+ const src=heroesNow().filter(h=>h.pos.includes(p.pos)).map(h=>h.n).filter(h=>!p.heroPool.some(x=>x.n===h));
  if(!src.length){toast('该位置可学的英雄都学完了');return;}
  const h=pick(src);
  p.heroPool.push({n:h,lv:0});
@@ -109,7 +109,7 @@ function genRookie(s){
  const potential=rnd(2,5);
  const attrs={};
  ['lane','farm','team','mind'].forEach(k=>{attrs[k]=clamp(rnd(42,58)+(potential>=4?rnd(0,5):0),40,70);});
- const mainPool=HEROES.filter(h=>h.pos[0]===pos).map(h=>h.n);
+ const mainPool=heroesNow().filter(h=>h.pos[0]===pos).map(h=>h.n);
  const sig=pick(mainPool);
  const heroPool=[{n:sig,lv:2}];
  const cand=[...new Set(mainPool)].filter(h=>h!==sig);
@@ -230,11 +230,11 @@ function convertPos(s,pid,newPos){
  const oldPool=new Map(p.heroPool.map(h=>[h.n,h.lv]));
  p.pos=newPos;
  if(!heroOf(p.sig).pos.includes(newPos)){
- p.sig=pick(HEROES.filter(h=>h.pos[0]===newPos)).n; // 招牌不通用则重立
+ p.sig=pick(heroesNow().filter(h=>h.pos[0]===newPos)).n; // 招牌不通用则重立
  }
  const newPool=[{n:p.sig,lv:3}];
  const add=(n,lv)=>{if(!newPool.some(x=>x.n===n))newPool.push({n,lv});};
- HEROES.filter(h=>h.pos.includes(newPos)&&h.n!==p.sig).forEach(h=>add(h.n,oldPool.has(h.n)?oldPool.get(h.n):2));
+ heroesNow().filter(h=>h.pos.includes(newPos)&&h.n!==p.sig).forEach(h=>add(h.n,oldPool.has(h.n)?oldPool.get(h.n):2));
  p.heroPool=newPool;
  logEvent(s,' '+p.name+' 位置改造：'+POS[oldPos][0]+' → '+POS[newPos][0]+'（'+cost+'万）');
  save();renderAll();toast(p.name+' 已转型 '+POS[newPos][0]);

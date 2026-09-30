@@ -28,7 +28,7 @@ function kjiaFiller(s,pos,used){ // 二队 K甲班底：低总值的常驻注册
  const base=[0,1,2,3].map(()=>rnd(62,74));
  return genPlayer({id:'kjf_'+gameYear(s)+'_'+pos+'_'+Math.random().toString(36).slice(2,7),name,pos,team:kjiaMyName(s),tags:['K甲'],
  base,skill:{n:'次级联赛',t:pick(['lane','farm','team','mind']),d:'K甲班底选手，等一个上调一队的机会'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:kjiaMyName(s)+' 班底选手，常年在次级联赛征战。'});
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:kjiaMyName(s)+' 班底选手，常年在次级联赛征战。'});
 }
 function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
  const my=kjiaMyName(s);

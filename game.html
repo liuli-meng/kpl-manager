@@ -394,6 +394,40 @@ const HEROES=[
 ];
 const TYPE_NAME={lane:'对线型',farm:'运营型',team:'团战型',mind:'心态型'};
 
+const HERO_RELEASE={
+
+ 姬小满:2023,花木兰:2015,关羽:2016,马超:2019,吕布:2015,狂铁:2018,廉颇:2015,猪八戒:2019,
+ 孙策:2018,白起:2015,蒙恬:2020,达摩:2015,夏洛特:2020,老夫子:2015,夏侯惇:2015,司空震:2021,
+ 亚连:2023,刘邦:2015,杨戬:2016,大司命:2024,
+
+ 镜:2020,澜:2020,娜可露露:2016,兰陵王:2016,裴擒虎:2018,露娜:2015,李白:2015,韩信:2015,
+ 云缨:2021,梦奇:2017,曜:2019,阿古朵:2020,铠:2017,宫本武藏:2015,盘古:2019,嫦娥:2019,
+
+ 西施:2019,干将莫邪:2017,不知火舞:2017,沈梦溪:2018,王昭君:2015,安琪拉:2015,姜子牙:2015,
+ 弈星:2018,张良:2015,女娲:2017,貂蝉:2015,上官婉儿:2018,百里守约:2017,海月:2022,金蝉:2021,
+ 周瑜:2015,嬴政:2015,
+
+ 公孙离:2018,孙尚香:2015,马可波罗:2015,虞姬:2015,鲁班七号:2015,伽罗:2018,后羿:2015,狄仁杰:2015,
+ 李元芳:2015,艾琳:2021,黄忠:2017,莱西奥:2023,戈娅:2022,蒙犽:2019,
+
+ 鬼谷子:2017,张飞:2015,大乔:2016,盾山:2018,太乙真人:2016,牛魔:2015,苏烈:2017,明世隐:2017,
+ 孙膑:2015,鲁班大师:2020,桑启:2022,墨子:2015,东皇太一:2017,庄周:2015,刘禅:2015,
+};
+HEROES.forEach(h=>{h.y=HERO_RELEASE[h.n]||2015;});
+
+function heroesForYear(year){
+ const y=parseInt(year,10);
+ if(!y||isNaN(y)||y>=2026)return HEROES;
+ return HEROES.filter(h=>(h.y||2015)<=y);
+}
+function heroesOf(s){
+ try{return heroesForYear(gameYear(s));}catch(e){return HEROES;}
+}
+
+function heroesNow(){
+ try{return heroesOf(typeof S!=='undefined'&&S?S:null);}catch(e){return HEROES;}
+}
+
 const HERO_BY_NAME={};
 HEROES.forEach(h=>{HERO_BY_NAME[h.n]=h;});
 
@@ -948,7 +982,7 @@ function genEraDef(eraId,team,pos,used){
   :[0,1,2,3].map(()=>clamp(band+Math.floor(rv()*9)-4,40,99));
  const skPool=(typeof posSkillPool==='function')?posSkillPool(pos):[['lane','线霸体系','对线属性额外+8%'],['farm','运营体系','运营属性额外+8%'],['team','团战体系','团战属性额外+8%'],['mind','大心脏体系','心态属性额外+8%']];
  const sk=skPool[Math.floor(rv()*skPool.length)];
- const cands=HEROES.filter(x=>x.pos[0]===pos);
+ const cands=heroesNow().filter(x=>x.pos[0]===pos);
  const def={id:key,name,pos,team,tags:[],base,skill:{n:sk[1],t:sk[0],d:sk[2]},
   sig:cands[Math.floor(rv()*cands.length)].n,
   career:eraId+'年效力于'+team+'的轮换选手（阵容演绎）。'};
@@ -3218,7 +3252,7 @@ function migratePlayerFields(s){
  p.heroPool=old.map(n=>({n,lv:n===p.sig?3:2}));
  }
  if(p.sig&&!p.heroPool.some(x=>x.n===p.sig))p.heroPool.unshift({n:p.sig,lv:3});
- HEROES.filter(h=>h.pos.includes(p.pos)).forEach(h=>{if(!p.heroPool.some(x=>x.n===h.n))p.heroPool.push({n:h.n,lv:2});});
+ heroesNow().filter(h=>h.pos.includes(p.pos)).forEach(h=>{if(!p.heroPool.some(x=>x.n===h.n))p.heroPool.push({n:h.n,lv:2});});
  p.heroPool=p.heroPool.filter(x=>{const h=heroOf(x.n);return h&&h.pos.includes(p.pos);});
  });
  const scrubPoolPos=p=>{if(p&&Array.isArray(p.heroPool))p.heroPool=p.heroPool.filter(x=>{const h=heroOf(x.n);return h&&h.pos.includes(p.pos);});};
@@ -3312,7 +3346,7 @@ function genPlayer(def){
  if(def.tags&&def.tags.includes('青训'))wage=Math.max(2,Math.round(wage*0.7));
 
  const heroPool=[{n:def.sig,lv:3}];
- HEROES.filter(h=>h.pos.includes(def.pos)&&h.n!==def.sig).forEach(h=>heroPool.push({n:h.n,lv:2}));
+ heroesNow().filter(h=>h.pos.includes(def.pos)&&h.n!==def.sig).forEach(h=>heroPool.push({n:h.n,lv:2}));
  const p={id:def.id,name:def.name,pos:def.pos,team:def.team||null,tags:def.tags||[],
  attrs,skill:def.skill,sig:def.sig,heroPool,career:def.career||'',wage,energy:ENERGY_MAX,morale:rnd(75,92),injury:0,
  mvp:0,retiring:false,contract:rnd(2,3), // 合同年限：到期后需续约（转会期处理）
@@ -3384,7 +3418,7 @@ function genFreeAgentDef(pos,band,usedNames){
  const BAND={star:[85,92],mid:[74,82],low:[66,73]}[band]||[74,82];
  const base=posSpecializedBase(pos,BAND[0],BAND[1]);
  const sk=pick(posSkillPool(pos)); // [type, 名, 描述]
- const sig=pick(HEROES.filter(h=>h.pos[0]===pos)).n;
+ const sig=pick(heroesNow().filter(h=>h.pos[0]===pos)).n;
  return {id:'fa_'+pos+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:[],
  base,skill:{n:sk[1]+'体系',t:sk[0],d:sk[2]},sig,
  career:'自由球员，曾在次级联赛历练，'+rnd(18,22)+'岁，等待 KPL 机会。'};
@@ -3568,7 +3602,7 @@ function genSeasonPlayer(s,def){
 function genAcademyDef(pos,usedNames,season){
  const name=typeof ACADEMY_NAMES!=='undefined'?poolName(ACADEMY_NAMES,usedNames):combName(usedNames);
  usedNames.add(name);
- const cands=HEROES.filter(h=>h.pos[0]===pos);
+ const cands=heroesNow().filter(h=>h.pos[0]===pos);
  const boost=Math.min(2*((season||1)-1),14);
  const b=v=>clamp(v+boost,40,99);
 
@@ -3698,7 +3732,7 @@ function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额�
  const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,74,84):[0,1,2,3].map(()=>rnd(74,84));
  return {id:'ns_'+s.season+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:['青训'],
  base:raw.map(b),
- skill:{n:sk[1],t:sk[0],d:sk[2]},sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,
+ skill:{n:sk[1],t:sk[0],d:sk[2]},sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,
  career:'赛季'+s.season+'从青训营出道的新生代，天赋肉眼可见。'};
 }
 
@@ -4166,7 +4200,7 @@ function genAiRookieDef(s,teamName){
  return {id:'aiq'+gameYear(s)+'_'+rnd(1000,9999)+'_'+teamName.slice(0,2),name,pos,team:teamName,tags:['青训'],
  base:[b(70),b(68),b(70),b(68)],
  skill:{n:'潜力新星',t:pick(['lane','farm','team','mind']),d:'AI 青训出品，达标自动晋升'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:' '+teamName+' 青训营培养的新生代。'};
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:' '+teamName+' 青训营培养的新生代。'};
 }
 function sumBase(d){return (d.base||[0,0,0,0]).reduce((t,v)=>t+v,0);}
 
@@ -5402,7 +5436,7 @@ function doHeroTrain(s,pid){
  msg=` 英雄特训：${p.name} 的「${t.n}」熟练度提升至「${HERO_LV[t.lv].n}」！`;
  }else{
  if((p.heroPool||[]).length>=80){toast('英雄池已满（上限80）且全部满级');return;}
- const src=HEROES.filter(h=>h.pos.includes(p.pos)).map(h=>h.n).filter(h=>!p.heroPool.some(x=>x.n===h));
+ const src=heroesNow().filter(h=>h.pos.includes(p.pos)).map(h=>h.n).filter(h=>!p.heroPool.some(x=>x.n===h));
  if(!src.length){toast('该位置可学的英雄都学完了');return;}
  const h=pick(src);
  p.heroPool.push({n:h,lv:0});
@@ -5454,7 +5488,7 @@ function genRookie(s){
  const potential=rnd(2,5);
  const attrs={};
  ['lane','farm','team','mind'].forEach(k=>{attrs[k]=clamp(rnd(42,58)+(potential>=4?rnd(0,5):0),40,70);});
- const mainPool=HEROES.filter(h=>h.pos[0]===pos).map(h=>h.n);
+ const mainPool=heroesNow().filter(h=>h.pos[0]===pos).map(h=>h.n);
  const sig=pick(mainPool);
  const heroPool=[{n:sig,lv:2}];
  const cand=[...new Set(mainPool)].filter(h=>h!==sig);
@@ -5568,11 +5602,11 @@ function convertPos(s,pid,newPos){
  const oldPool=new Map(p.heroPool.map(h=>[h.n,h.lv]));
  p.pos=newPos;
  if(!heroOf(p.sig).pos.includes(newPos)){
- p.sig=pick(HEROES.filter(h=>h.pos[0]===newPos)).n; // 招牌不通用则重立
+ p.sig=pick(heroesNow().filter(h=>h.pos[0]===newPos)).n; // 招牌不通用则重立
  }
  const newPool=[{n:p.sig,lv:3}];
  const add=(n,lv)=>{if(!newPool.some(x=>x.n===n))newPool.push({n,lv});};
- HEROES.filter(h=>h.pos.includes(newPos)&&h.n!==p.sig).forEach(h=>add(h.n,oldPool.has(h.n)?oldPool.get(h.n):2));
+ heroesNow().filter(h=>h.pos.includes(newPos)&&h.n!==p.sig).forEach(h=>add(h.n,oldPool.has(h.n)?oldPool.get(h.n):2));
  p.heroPool=newPool;
  logEvent(s,' '+p.name+' 位置改造：'+POS[oldPos][0]+' → '+POS[newPos][0]+'（'+cost+'万）');
  save();renderAll();toast(p.name+' 已转型 '+POS[newPos][0]);
@@ -7222,7 +7256,7 @@ function seriesTacticEdge(s,sr){
 }
 
 function applySeasonPatch(s,upN,downN){
- const cand=HEROES.filter(h=>h.pos&&h.pos.length);
+ const cand=heroesNow().filter(h=>h.pos&&h.pos.length);
  const up=(upN&&HEROES.find(h=>h.n===upN))||pick(cand);
  let down=(downN&&HEROES.find(h=>h.n===downN))||pick(cand),g=0;
  while(down.n===up.n&&g++<10)down=pick(cand);
@@ -7262,7 +7296,7 @@ function kjiaFiller(s,pos,used){ // 二队 K甲班底：低总值的常驻注册
  const base=[0,1,2,3].map(()=>rnd(62,74));
  return genPlayer({id:'kjf_'+gameYear(s)+'_'+pos+'_'+Math.random().toString(36).slice(2,7),name,pos,team:kjiaMyName(s),tags:['K甲'],
  base,skill:{n:'次级联赛',t:pick(['lane','farm','team','mind']),d:'K甲班底选手，等一个上调一队的机会'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:kjiaMyName(s)+' 班底选手，常年在次级联赛征战。'});
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:kjiaMyName(s)+' 班底选手，常年在次级联赛征战。'});
 }
 function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
  const my=kjiaMyName(s);
@@ -7542,7 +7576,7 @@ function genDraftProspect(s,i,used,namePool){
  t:pick(['lane','farm','team','mind']),
  d:tier==='kjia'?'K甲/次级联赛尖子，强度随二队本届名次浮动':(tier==='hot'?'训练营冲榜赛头名，天赋出众':'官方新秀训练营结业，等待俱乐部点名')
  },
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,
  career:tier==='kjia'?'次级联赛（K甲）突出选手，进入选秀大会。':'官方 KPL 新秀训练营结业，参加选秀大会。'
  });
  p.age=18;p.wage=DRAFT_WAGE;p.contract=DRAFT_CONTRACT;
@@ -8460,7 +8494,7 @@ function genChallengerDef(s,i,teamName,band){
  return {id:'ch'+gameYear(s)+'_'+i,name,pos,team:teamName,tags:['特权'],
  base:[b(baseLv),b(baseLv-1),b(baseLv),b(baseLv-1)],
  skill:{n:'挑战者祝福',t:pick(['lane','farm','team','mind']),d:'低赛道挑战 KPL 时的体系优势'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:'挑战者杯'+band+'赛道选手，'+(band==='K甲'?'K甲职业队':'来自'+band+'赛道')+'。'};
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:'挑战者杯'+band+'赛道选手，'+(band==='K甲'?'K甲职业队':'来自'+band+'赛道')+'。'};
 }
 function setupChallenger(s){
  const p=ensureLeagueChampion(s); // 玩家止步/季后赛未补完时先 AI 打出冠军，否则赛历卡死
@@ -8595,7 +8629,7 @@ function genEwcDef(s,i,teamName){
  const b=v=>clamp(v+rnd(-4,4),68,88);
  return {id:'ewc'+gameYear(s)+'_'+i,name,pos,team:teamName,tags:['国际'],
  base:[b(76),b(74),b(76),b(75)],skill:{n:'海外劲旅',t:pick(['lane','farm','team','mind']),d:'国际赛场淬炼的体系战力'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:gameYear(s)+' EWC 电竞世界杯海外参赛队选手。'};
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:gameYear(s)+' EWC 电竞世界杯海外参赛队选手。'};
 }
 function setupEWC(s){
 
@@ -10912,7 +10946,7 @@ function myCandidates(d,pos){
  const cand=p.heroPool.filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n));
  if(cand.length)return cand;
 
- return HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)).map(h=>({n:h.n,lv:0}));
+ return heroesOf(typeof S!=='undefined'?S:null).filter(h=>h.pos.includes(pos)&&!taken.has(h.n)).map(h=>({n:h.n,lv:0}));
 }
 
 function ensureHeroInPool(p,hero){
@@ -10920,7 +10954,7 @@ function ensureHeroInPool(p,hero){
 }
 function banCandidates(d){
  const taken=takenSet(d);
- return HEROES.map(h=>h.n).filter(n=>!taken.has(n));
+ return heroesOf(typeof S!=='undefined'?S:null).map(h=>h.n).filter(n=>!taken.has(n));
 }
 function myOpenPositions(d){
  return POS_ORDER.filter(pos=>!(pos in d.myPicks)&&d.ls.some(x=>x.pos===pos));
@@ -11073,7 +11107,7 @@ function aiDraftStep(d){
   if(!p)return;
   const taken=takenSet(d),oppUsed=d.usedOpp||[];
   let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
-  if(!cand.length)cand=HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0}));
+  if(!cand.length)cand=heroesOf(typeof S!=='undefined'?S:null).filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0}));
   cand.forEach(h=>{
    const score=pickUtility(d,p,h.n,{
     focusType:oppFocus,
@@ -16870,7 +16904,7 @@ function createPlayerCareer(){
  const base=arch.base.map(v=>clamp(v+rnd(-1,2),40,90));
  const def={id:'me_'+Date.now().toString(36),name,pos:_pcPos,team:tmpl.name,tags:[],
  base,skill:{n:pick(['新星','大心脏','多面手','永动机'])+'体质',t:pick(['lane','farm','team','mind']),d:'职业生涯由你书写'},
- sig:pick(HEROES.filter(h=>h.pos[0]===_pcPos)).n,
+ sig:pick(heroesNow().filter(h=>h.pos[0]===_pcPos)).n,
  career:arch.career+'，'+arch.age+' 岁，渴望在 KPL 证明自己。'};
  const me=genPlayer(def);
  me.age=arch.age;

@@ -311,7 +311,7 @@ function myCandidates(d,pos){
  const cand=p.heroPool.filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n));
  if(cand.length)return cand;
  // 职业选手兜底：池内英雄全被 BAN/选完时，可临时拿出该位置任意英雄（生疏-8%，赛后进池）
- return HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)).map(h=>({n:h.n,lv:0}));
+ return heroesOf(typeof S!=='undefined'?S:null).filter(h=>h.pos.includes(pos)&&!taken.has(h.n)).map(h=>({n:h.n,lv:0}));
 }
 /* 临时掏的英雄写入选手英雄池（生疏），保证战力结算与展示一致 */
 function ensureHeroInPool(p,hero){
@@ -319,7 +319,7 @@ function ensureHeroInPool(p,hero){
 }
 function banCandidates(d){
  const taken=takenSet(d);
- return HEROES.map(h=>h.n).filter(n=>!taken.has(n));
+ return heroesOf(typeof S!=='undefined'?S:null).map(h=>h.n).filter(n=>!taken.has(n));
 }
 function myOpenPositions(d){
  return POS_ORDER.filter(pos=>!(pos in d.myPicks)&&d.ls.some(x=>x.pos===pos));
@@ -477,7 +477,7 @@ function aiDraftStep(d){
   if(!p)return;
   const taken=takenSet(d),oppUsed=d.usedOpp||[];
   let cand=(p.heroPool||[]).filter(h=>heroOf(h.n)&&heroOf(h.n).pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n));
-  if(!cand.length)cand=HEROES.filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0}));
+  if(!cand.length)cand=heroesOf(typeof S!=='undefined'?S:null).filter(h=>h.pos.includes(pos)&&!taken.has(h.n)&&!oppUsed.includes(h.n)).map(h=>({n:h.n,lv:0}));
   cand.forEach(h=>{
    const score=pickUtility(d,p,h.n,{
     focusType:oppFocus,

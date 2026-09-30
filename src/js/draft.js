@@ -61,7 +61,7 @@ function genDraftProspect(s,i,used,namePool){
  t:pick(['lane','farm','team','mind']),
  d:tier==='kjia'?'K甲/次级联赛尖子，强度随二队本届名次浮动':(tier==='hot'?'训练营冲榜赛头名，天赋出众':'官方新秀训练营结业，等待俱乐部点名')
  },
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,
  career:tier==='kjia'?'次级联赛（K甲）突出选手，进入选秀大会。':'官方 KPL 新秀训练营结业，参加选秀大会。'
  });
  p.age=18;p.wage=DRAFT_WAGE;p.contract=DRAFT_CONTRACT;

@@ -364,6 +364,41 @@ const HEROES=[
  {n:'刘禅',pos:['sup'],t:'team'},
 ];
 const TYPE_NAME={lane:'对线型',farm:'运营型',team:'团战型',mind:'心态型'};
+/* 英雄上线年（王者荣耀正式服大致年份；缺省 2015=开服批）
+   池按 gameYear 过滤：2016 档打不出 2023 才出的姬小满。详见 docs/KPL赛制演变对照_2016-2026.md */
+const HERO_RELEASE={
+ // 对抗路
+ 姬小满:2023,花木兰:2015,关羽:2016,马超:2019,吕布:2015,狂铁:2018,廉颇:2015,猪八戒:2019,
+ 孙策:2018,白起:2015,蒙恬:2020,达摩:2015,夏洛特:2020,老夫子:2015,夏侯惇:2015,司空震:2021,
+ 亚连:2023,刘邦:2015,杨戬:2016,大司命:2024,
+ // 打野
+ 镜:2020,澜:2020,娜可露露:2016,兰陵王:2016,裴擒虎:2018,露娜:2015,李白:2015,韩信:2015,
+ 云缨:2021,梦奇:2017,曜:2019,阿古朵:2020,铠:2017,宫本武藏:2015,盘古:2019,嫦娥:2019,
+ // 中路
+ 西施:2019,干将莫邪:2017,不知火舞:2017,沈梦溪:2018,王昭君:2015,安琪拉:2015,姜子牙:2015,
+ 弈星:2018,张良:2015,女娲:2017,貂蝉:2015,上官婉儿:2018,百里守约:2017,海月:2022,金蝉:2021,
+ 周瑜:2015,嬴政:2015,
+ // 发育路
+ 公孙离:2018,孙尚香:2015,马可波罗:2015,虞姬:2015,鲁班七号:2015,伽罗:2018,后羿:2015,狄仁杰:2015,
+ 李元芳:2015,艾琳:2021,黄忠:2017,莱西奥:2023,戈娅:2022,蒙犽:2019,
+ // 游走
+ 鬼谷子:2017,张飞:2015,大乔:2016,盾山:2018,太乙真人:2016,牛魔:2015,苏烈:2017,明世隐:2017,
+ 孙膑:2015,鲁班大师:2020,桑启:2022,墨子:2015,东皇太一:2017,庄周:2015,刘禅:2015,
+};
+HEROES.forEach(h=>{h.y=HERO_RELEASE[h.n]||2015;});
+/* 当前年可用英雄（上线年 ≤ year）；year 缺省/表外按 2026 全开 */
+function heroesForYear(year){
+ const y=parseInt(year,10);
+ if(!y||isNaN(y)||y>=2026)return HEROES;
+ return HEROES.filter(h=>(h.y||2015)<=y);
+}
+function heroesOf(s){
+ try{return heroesForYear(gameYear(s));}catch(e){return HEROES;}
+}
+/* 无参便捷：跟当前存档年走（生成招牌/英雄池/自由人时用） */
+function heroesNow(){
+ try{return heroesOf(typeof S!=='undefined'&&S?S:null);}catch(e){return HEROES;}
+}
 /* 英雄按名索引：heroOf 是最热查询（战力结算/BP/渲染每步都查），静态表建 Map 一次 */
 const HERO_BY_NAME={};
 HEROES.forEach(h=>{HERO_BY_NAME[h.n]=h;});
@@ -981,7 +1016,7 @@ function genEraDef(eraId,team,pos,used){
   :[0,1,2,3].map(()=>clamp(band+Math.floor(rv()*9)-4,40,99));
  const skPool=(typeof posSkillPool==='function')?posSkillPool(pos):[['lane','线霸体系','对线属性额外+8%'],['farm','运营体系','运营属性额外+8%'],['team','团战体系','团战属性额外+8%'],['mind','大心脏体系','心态属性额外+8%']];
  const sk=skPool[Math.floor(rv()*skPool.length)];
- const cands=HEROES.filter(x=>x.pos[0]===pos);
+ const cands=heroesNow().filter(x=>x.pos[0]===pos);
  const def={id:key,name,pos,team,tags:[],base,skill:{n:sk[1],t:sk[0],d:sk[2]},
   sig:cands[Math.floor(rv()*cands.length)].n,
   career:eraId+'年效力于'+team+'的轮换选手（阵容演绎）。'};

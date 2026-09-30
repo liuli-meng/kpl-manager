@@ -9,7 +9,7 @@ function genPlayer(def){
  if(def.tags&&def.tags.includes('青训'))wage=Math.max(2,Math.round(wage*0.7));
  // 英雄池：招牌(绝活lv3) + 本职及摇摆位全会(熟练lv2) —— 只含本位置可用英雄，BP 候选与档案展示一致
  const heroPool=[{n:def.sig,lv:3}];
- HEROES.filter(h=>h.pos.includes(def.pos)&&h.n!==def.sig).forEach(h=>heroPool.push({n:h.n,lv:2}));
+ heroesNow().filter(h=>h.pos.includes(def.pos)&&h.n!==def.sig).forEach(h=>heroPool.push({n:h.n,lv:2}));
  const p={id:def.id,name:def.name,pos:def.pos,team:def.team||null,tags:def.tags||[],
  attrs,skill:def.skill,sig:def.sig,heroPool,career:def.career||'',wage,energy:ENERGY_MAX,morale:rnd(75,92),injury:0,
  mvp:0,retiring:false,contract:rnd(2,3), // 合同年限：到期后需续约（转会期处理）
@@ -84,7 +84,7 @@ function genFreeAgentDef(pos,band,usedNames){
  const BAND={star:[85,92],mid:[74,82],low:[66,73]}[band]||[74,82];
  const base=posSpecializedBase(pos,BAND[0],BAND[1]);
  const sk=pick(posSkillPool(pos)); // [type, 名, 描述]
- const sig=pick(HEROES.filter(h=>h.pos[0]===pos)).n;
+ const sig=pick(heroesNow().filter(h=>h.pos[0]===pos)).n;
  return {id:'fa_'+pos+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:[],
  base,skill:{n:sk[1]+'体系',t:sk[0],d:sk[2]},sig,
  career:'自由球员，曾在次级联赛历练，'+rnd(18,22)+'岁，等待 KPL 机会。'};

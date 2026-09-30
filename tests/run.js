@@ -31,6 +31,7 @@ const SUITES = [
   { id: 'verify-card-bo', file: 'tests/verify-card-bo.js', label: '卡位赛 BO 数' },
   { id: 'verify-era-format', file: 'tests/verify-era-format.js', label: '赛制旋钮层' },
   { id: 'verify-year-format', file: 'tests/verify-year-format.js', label: '赛制年代时间线' },
+  { id: 'verify-hero-year', file: 'tests/verify-hero-year.js', label: '英雄按年解锁' },
   { id: 'verify-era-history', file: 'tests/verify-era-history.js', label: '史实跨年名单' },
   { id: 'verify-mode-achieve', file: 'tests/verify-mode-achieve.js', label: '分视角成就/空窗' },
   { id: 'verify-logcat', file: 'tests/verify-logcat.js', label: '日志分类' },

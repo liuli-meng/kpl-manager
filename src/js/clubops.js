@@ -237,7 +237,7 @@ function seriesTacticEdge(s,sr){
 /* 赛季版本大改：两名英雄一加强一削弱，持有者属性微调（影响招牌价值与 BP 优先级）。
  upN/downN 可显式指定英雄名（测试与"策划指定版本"用），缺省随机抽取 */
 function applySeasonPatch(s,upN,downN){
- const cand=HEROES.filter(h=>h.pos&&h.pos.length);
+ const cand=heroesNow().filter(h=>h.pos&&h.pos.length);
  const up=(upN&&HEROES.find(h=>h.n===upN))||pick(cand);
  let down=(downN&&HEROES.find(h=>h.n===downN))||pick(cand),g=0;
  while(down.n===up.n&&g++<10)down=pick(cand);

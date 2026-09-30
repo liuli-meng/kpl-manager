@@ -1028,7 +1028,7 @@ function createPlayerCareer(){
  const base=arch.base.map(v=>clamp(v+rnd(-1,2),40,90));
  const def={id:'me_'+Date.now().toString(36),name,pos:_pcPos,team:tmpl.name,tags:[],
  base,skill:{n:pick(['新星','大心脏','多面手','永动机'])+'体质',t:pick(['lane','farm','team','mind']),d:'职业生涯由你书写'},
- sig:pick(HEROES.filter(h=>h.pos[0]===_pcPos)).n,
+ sig:pick(heroesNow().filter(h=>h.pos[0]===_pcPos)).n,
  career:arch.career+'，'+arch.age+' 岁，渴望在 KPL 证明自己。'};
  const me=genPlayer(def);
  me.age=arch.age;

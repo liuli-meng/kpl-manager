@@ -38,7 +38,7 @@ function genChallengerDef(s,i,teamName,band){
  return {id:'ch'+gameYear(s)+'_'+i,name,pos,team:teamName,tags:['特权'],
  base:[b(baseLv),b(baseLv-1),b(baseLv),b(baseLv-1)],
  skill:{n:'挑战者祝福',t:pick(['lane','farm','team','mind']),d:'低赛道挑战 KPL 时的体系优势'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:'挑战者杯'+band+'赛道选手，'+(band==='K甲'?'K甲职业队':'来自'+band+'赛道')+'。'};
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:'挑战者杯'+band+'赛道选手，'+(band==='K甲'?'K甲职业队':'来自'+band+'赛道')+'。'};
 }
 function setupChallenger(s){
  const p=ensureLeagueChampion(s); // 玩家止步/季后赛未补完时先 AI 打出冠军，否则赛历卡死
@@ -181,7 +181,7 @@ function genEwcDef(s,i,teamName){
  const b=v=>clamp(v+rnd(-4,4),68,88);
  return {id:'ewc'+gameYear(s)+'_'+i,name,pos,team:teamName,tags:['国际'],
  base:[b(76),b(74),b(76),b(75)],skill:{n:'海外劲旅',t:pick(['lane','farm','team','mind']),d:'国际赛场淬炼的体系战力'},
- sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:gameYear(s)+' EWC 电竞世界杯海外参赛队选手。'};
+ sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:gameYear(s)+' EWC 电竞世界杯海外参赛队选手。'};
 }
 function setupEWC(s){
  // EWC 直邀：夏季/当季冠亚军（EWC 在 7 月底）
