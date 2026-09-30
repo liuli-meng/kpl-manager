@@ -1,7 +1,7 @@
 /* ================= 背景音乐（BGM）系统（程序化合成，无资源文件；默认关闭）==================
  目标（P2「从有音效到有表演」）：极轻循环 pad + 胜/负/夺冠三段和弦。
  约束：零外部素材、默认音量低、无 AudioContext 时静默降级；开关独立于 SFX，互不拖累。 */
-let _bgmOn=false,_bgmNode=null,_bgmVolume=0.35,_bgmAc=null,_bgmTimer=null;
+let _bgmOn=false,_bgmNode=null,_bgmVolume=0.35,_bgmAc=null,_bgmTimer=[],_bgmGen=0;
 try{
  _bgmOn=localStorage.getItem('km_bgm')==='1';
  const v=parseFloat(localStorage.getItem('km_bgm_vol'));
@@ -28,21 +28,26 @@ function _bgmEnsureAc(){
 }
 function _bgmOk(){return !!( _bgmOn && (window.AudioContext||window.webkitAudioContext));}
 
-/* 停掉当前 pad（含淡出） */
+/* 停掉当前 pad（含淡出）。
+   竞态：关→320ms 内再开时，旧清理回调不得拆掉新节点——只清「当时那个」节点，
+   且延迟必须 ≥ 淡出时长，否则会硬切。 */
 function stopBGM(fadeMs){
- if(_bgmTimer){clearTimeout(_bgmTimer);_bgmTimer=null;}
+ _bgmTimer.forEach(id=>{try{clearTimeout(id);}catch(_){}});_bgmTimer=[];
  if(!_bgmNode)return;
  try{
+  const n=_bgmNode; // 捕获本次要停的节点；回调只认它
+  n.stopping=true;
   const t=fadeMs==null?280:fadeMs;
-  if(_bgmNode.oscs&&_bgmNode.oscs.length)fadeControl(false,t);
-  else if(_bgmNode.stop)try{_bgmNode.stop();}catch(_){}
+  if(n.oscs&&n.oscs.length)fadeControl(false,t);
+  else if(n.stop)try{n.stop();}catch(_){}
   setTimeout(()=>{
-   if(_bgmNode&&_bgmNode.oscs){
-    _bgmNode.oscs.forEach(x=>{try{x.o.stop();}catch(_){}});
-    _bgmNode.oscs=[];
+   if(_bgmNode!==n)return; // 窗口内已重开/换节点：不动新手
+   if(n.oscs&&n.oscs.length){
+    n.oscs.forEach(x=>{try{x.o.stop();}catch(_){}});
+    n.oscs=[];
    }
-   if(_bgmNode&&_bgmNode.mode==='idle')_bgmNode=null;
-  },t+40);
+   if(_bgmNode===n)_bgmNode=null;
+  },Math.max(t+60,80)); // ≥ fade+60ms，保证淡出走完再拆
  }catch(_){_bgmNode=null;}
 }
 
@@ -50,8 +55,9 @@ function stopBGM(fadeMs){
 function playIdlePad(){
  if(!_bgmOk())return;
  const ac=_bgmEnsureAc();if(!ac)return;
- if(_bgmNode&&_bgmNode.mode==='idle'&&_bgmNode.oscs&&_bgmNode.oscs.length)return;
- if(_bgmNode&&_bgmNode.mode!=='idle')stopBGM(120);
+ // 重入：仅当「正在播且未在停」才跳过；stopBGM 淡出窗口内重开必须重建
+ if(_bgmNode&&_bgmNode.mode==='idle'&&_bgmNode.oscs&&_bgmNode.oscs.length&&!_bgmNode.stopping)return;
+ if(_bgmNode){_bgmNode.stopping=true;stopBGM(80);}
  try{
   const now=ac.currentTime,oscs=[];
   BGM.idle.freqs.forEach(f=>{
@@ -64,7 +70,7 @@ function playIdlePad(){
    o.start(now);
    oscs.push({o,g,baseVol:BGM.idle.vol});
   });
-  _bgmNode={ac,mode:'idle',oscs};
+  _bgmNode={ac,mode:'idle',oscs,gen:++_bgmGen,stopping:false};
  }catch(e){try{console.warn('BGM idle fail',e&&e.message);}catch(_){}}
 }
 
@@ -74,10 +80,10 @@ function playChordBGM(mode){
  const ac=_bgmEnsureAc();if(!ac)return;
  const cfg=BGM[mode];if(!cfg)return;
  try{
-  // 和弦叠在 pad 上，不打断 idle
+  // 和弦叠在 pad 上，不打断 idle；多句柄入数组，stopBGM 能全清
   cfg.chords.forEach((chord,i)=>{
    const delay=cfg.delays[i]||0;
-   _bgmTimer=setTimeout(()=>{
+   const id=setTimeout(()=>{
     if(!_bgmOn)return;
     const t0=ac.currentTime;
     chord.forEach((f,j)=>{
@@ -92,6 +98,7 @@ function playChordBGM(mode){
      o.start(at);o.stop(at+0.6);
     });
    },delay);
+   _bgmTimer.push(id);
   });
  }catch(e){try{console.warn('BGM chord fail',e&&e.message);}catch(_){}}
 }
@@ -148,7 +155,9 @@ function detectAndPlayBGM(){
  try{
   const cur=document.querySelector('.page.on');
   const id=cur&&cur.id?cur.id.replace('page-',''):'';
-  if(id==='club'||id==='biz'||id==='hall'||id==='career'||id==='league')playIdlePad();
+  // 训练/阵容/市场等经营页同样要 pad，避免时断时续
+  const quiet=new Set(['','club','biz','hall','career','league','train','lineup','market','honor','union','board']);
+  if(quiet.has(id)||!id)playIdlePad();
  }catch(_){playIdlePad();}
 }
 

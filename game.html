@@ -4304,22 +4304,54 @@ function buyoutPrice(p){
 function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
 
-function rosterFull(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length>=ROSTER_MAX;} // K甲下放不占一线名额
+function rosterFull(s){return rosterCount(s)>=ROSTER_MAX;} // K甲下放不占一线名额
 
 function rosterCount(s){return (s.players||[]).filter(p=>!(p.kjia>0)).length;}
+function rosterHardMax(){return ROSTER_MAX+2;} // 先签后卖：满编仍可再签 2 人，3 日内裁回
+function rosterOverDays(s){return s&&s.overSignDays||0;}
 function rosterGuard(s){
- if(!rosterFull(s))return true;
- toast(' KPL 大名单上限 '+ROSTER_MAX+' 人（当前一线 '+rosterCount(s)+' 人）——先卖出或放弃选手再签约');
+ const n=rosterCount(s);
+ if(n<ROSTER_MAX)return true;
+ if(n<rosterHardMax()){
+
+  s.overSignDays=3;
+  logEvent(s,' 临时超编：大名单 '+n+'/'+ROSTER_MAX+'（宽限上限 '+rosterHardMax()+'）——3 日内裁减至 '+ROSTER_MAX+' 人，否则董事会点名清退');
+  return true;
+ }
+ toast(' 大名单已满（'+n+'/'+rosterHardMax()+' 含宽限）——先卖出/放走选手再签约');
  return false;
 }
 
 function sellGuard(s){
- const n=(s.players||[]).length;
- if((s.windowSold||0)>=Math.floor(n/2)){
- toast(' 联盟规则：一个转会期卖出不得超过队内一半（已卖 '+(s.windowSold||0)+' 人 / 名单 '+n+' 人）');
- return false;
+ const n=rosterCount(s);
+ if(n>ROSTER_MAX)return true; // 超编：强制可卖，否则名单永久锁死
+ if(n<=5)return false; // 五位置首发不能再卖空
+ const cap=Math.max(2,Math.floor(n/2)); // 至少 2 个卖出名额，否则「先卖后买」根本走不通
+ if((s.windowSold||0)>=cap){
+  toast(' 联盟规则：一个转会期卖出不超过 '+cap+' 人（已卖 '+(s.windowSold||0)+' / 名单 '+n+'）——超编时不限卖');
+  return false;
  }
  return true;
+}
+
+function enforceRosterCap(s){
+ if(!s||s.mode==='player')return;
+ const n=rosterCount(s);
+ if(n<=ROSTER_MAX){s.overSignDays=0;return;}
+ if(!s.overSignDays)return;
+ s.overSignDays--;
+ if(s.overSignDays>0){
+  logEvent(s,' 裁减倒计时：大名单 '+n+'/'+ROSTER_MAX+'（剩 '+s.overSignDays+' 天）——请挂牌/出售/放走 '+Math.max(0,n-ROSTER_MAX)+' 人');
+  return;
+ }
+
+ const extra=(s.players||[]).filter(p=>!(p.kjia>0)&&!p.loan)
+  .sort((a,b)=>overall(a)-overall(b)).slice(0,n-ROSTER_MAX);
+ extra.forEach(p=>{
+  if(!p.listed){p.listed=true;}
+ });
+ if(extra.length)logEvent(s,' 裁减到期：已自动挂牌 '+extra.map(p=>p.name).join('、')+'（最弱 '+extra.length+' 人）——挂牌期请处理');
+ s.overSignDays=3; // 再宽限一轮给挂牌成交
 }
 
 function negoWageDemand(p){
@@ -5079,16 +5111,27 @@ const LOAN_DAYS=21;
 const CUP_SQUAD=7;
 function loanWindowOpen(s){
  if(!s)return false;
+
+ if(s.preseason&&s.transferWindow>0)return true;
  return s.phase==='challenger'||s.phase==='annual';
 }
 function cupLoanMax(s){
  if(!s)return 0;
+ if(s.preseason&&s.transferWindow>0){
+
+  if(typeof isWeakClub==='function'&&isWeakClub(s))return 2;
+  if(s.mode==='coach')return 2;
+  return 1;
+ }
  if(s.phase==='challenger')return 2; // 挑杯：最多租 2
  if(s.phase==='annual')return 1;     // 年总（大师组口径）：最多租 1
  return 0;
 }
 function loanRuleText(s){
- if(!loanWindowOpen(s))return '常规赛（春/夏）无租借：大名单 '+ROSTER_MAX+' 人全是自家签约，租借只在挑战者杯 / 年度总决赛开放。';
+ if(!loanWindowOpen(s))return '常规赛（春/夏）无租借：大名单 '+ROSTER_MAX+' 人全是自家签约，租借在赛前转会期 / 挑战者杯 / 年度总决赛开放。';
+ if(s.preseason&&s.transferWindow>0){
+  return '转会期租借：名额 '+((s.players||[]).filter(p=>p.loan).length)+'/'+cupLoanMax(s)+'（弱旅/教练可租 2 · 租金弱旅 5 折）——低成本补强主通道';
+ }
  const m=cupLoanMax(s);
  if(s.phase==='challenger')return '挑战者杯：出征 '+CUP_SQUAD+' 人（含租借），最多租 '+m+' 人——自家 '+(CUP_SQUAD-m)+' + 租 '+m+'，租借占用 '+CUP_SQUAD+' 个名额。';
  return '年度总决赛：出征 '+CUP_SQUAD+' 人（含租借），最多租 '+m+' 人——自家 '+(CUP_SQUAD-m)+' + 租 '+m+'，租借占用 '+CUP_SQUAD+' 个名额。';
@@ -5098,7 +5141,16 @@ function untouchableSet(){
  for(const tn in AI_ROSTERS)AI_ROSTERS[tn].u.forEach(id=>U.add(id));
  return U;
 }
-function loanRent(p){return Math.max(80,Math.round(valueOf(overall(p))*0.15));}
+function isWeakClub(s){ // 弱旅：预算薄或战力档后段——给结构性追赶杠杆
+ const fund=(s&&s.fund)||0;
+ const pow=(s&&s.seedPower)||(typeof teamPower==='function'?teamPower(s)||0:0);
+ return fund<7000||pow<430;
+}
+function loanRent(p){ // 弱旅租金 5 折：低成本租借是追赶主通道
+ const base=Math.max(80,Math.round(valueOf(overall(p))*0.15));
+ const weak=(typeof S!=='undefined'&&S&&isWeakClub(S));
+ return weak?Math.max(40,Math.round(base*0.5)):base;
+}
 function healthyPosCount(s,pos){ // 当前能打该位置的人（不含外租/K甲/伤停/未成年/常规赛租入）
  return (s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)).length;
 }
@@ -5510,6 +5562,11 @@ function recruitRookie(s){
  save();renderAll();toast('新秀 '+r.name+' 加入青训营');
 }
 const ROOKIE_TRAIN_COST=17; // 单次培养费用（万）：单独培养与一键培养共用，勿各写一份
+function rookieTrainCost(s){
+ const base=ROOKIE_TRAIN_COST;
+ if(typeof isWeakClub==='function'&&s&&isWeakClub(s))return Math.round(base*0.5); // 弱旅青训 5 折：低成本养成通道
+ return base;
+}
 
 function applyRookieTrain(r){
  const gain=2+rnd(0,2)+Math.floor((r.potential||3)/2);
@@ -5541,8 +5598,9 @@ function trainAllRookies(s){
  let done=0,spent=0,short=0;
  const parts=[];
  for(const r of list){
-  if(s.fund<ROOKIE_TRAIN_COST){short++;continue;}
-  s.fund-=ROOKIE_TRAIN_COST;spent+=ROOKIE_TRAIN_COST;
+  const rtc=typeof rookieTrainCost==="function"?rookieTrainCost(s):ROOKIE_TRAIN_COST;
+  if(s.fund<rtc){short++;continue;}
+  s.fund-=rtc;spent+=rtc;
   const t=applyRookieTrain(r);
   parts.push(r.name+'「'+t.label+'」+'+t.gain);
   done++;
@@ -6246,6 +6304,7 @@ function matchDayTick(s){
   p.energy=(e==null||!isFinite(e))?ENERGY_MAX:clamp(e+35,0,ENERGY_MAX);
  });
  try{if(s.day%WAGE_EVERY===0)payWage(s);}catch(e){}
+ try{if(typeof enforceRosterCap==='function')enforceRosterCap(s);}catch(e){}
  try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
  try{if(s.mode==='player'&&typeof playerMediaDayTick==='function')playerMediaDayTick(s);}catch(e){} // 比赛日也偶发媒体（旧版只在 nextDay 触发，选手全年摸不到）
  try{natCampTick(s);}catch(e){}
@@ -6298,6 +6357,7 @@ function nextDayStep(s){
  inSeasonOfferTick(s); // 赛中转会报价：表现火热的选手被挖角（留人/放人/抬价，俱乐部页答复）
  }
  if(s.day%WAGE_EVERY===0)payWage(s);
+ try{if(typeof enforceRosterCap==='function')enforceRosterCap(s);}catch(e){}
  s.players.forEach(p=>{
   if(!p)return;
   p.injury=Math.max(0,(p.injury||0)-1);
@@ -8267,8 +8327,9 @@ function youthDirectEntry(s){
 
 function freeSignBlockedReason(s){
  if(canFreeSign(s))return '';
- if(!s||!s.preseason)return '';
- return '已进入挂牌期（后 '+TRANSFER_FREE_DAYS+' 天）——只能挂牌/竞价/续约/租借，不能买断直签';
+
+ if(s&&s.preseason)return '已进入挂牌期（后 '+TRANSFER_FREE_DAYS+' 天）——只能挂牌/竞价/续约/租借，不能买断直签';
+ return '';
 }
 
 function transferOpsBlockedReason(s){
@@ -9523,7 +9584,7 @@ function coachRequest(s,type,pid,pos){
   s.coachRecs.unshift({type:'loan',pid,pos:hit.p.pos,name:hit.p.name});
   logEvent(s,' 教练申请：租借 '+hit.p.name+'（'+POS[hit.p.pos][0]+' · '+hit.from+'）应急补位——俱乐部将尽快办理');
 
-  if(injuryGapPositions(s).length||s.transferWindow===0){
+  {
    const rest=s.coachRecs.slice();
    s.coachRecs=[{type:'loan',pid,pos:hit.p.pos}];
    coachAutoSquad(s);
@@ -9534,7 +9595,7 @@ function coachRequest(s,type,pid,pos){
    }
    s.coachRecs=rest.filter(r=>!(r.pid===pid&&r.type==='loan'));
    toast('已登记租借申请（资金/名额不足时俱乐部会在条件具备后办理）');
-  }else toast('租借申请已提交，俱乐部办理中');
+  }
  }else if(type==='sign'){
   const fa=(s.freeAgents||[]).find(p=>p.id===pid);
   if(!fa){toast('该自由球员已不在名单');return;}
@@ -9712,7 +9773,8 @@ function signFreeAgent(s,id){
  if(!p)return;
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return;}
 
- const signFee=(typeof signCostOf==='function')?signCostOf(p):Math.round(valueOf(overall(p))*0.58);
+ let signFee=(typeof signCostOf==='function')?signCostOf(p):Math.round(valueOf(overall(p))*0.58);
+ if(typeof isWeakClub==='function'&&isWeakClub(s)){signFee=Math.max(30,Math.round(signFee*0.8));p.discount=0.8;} // 弱旅直签 8 折
  p.signCost=signFee;
  if(s.fund<signFee){toast('资金不足（签约费 '+signFee+'万）');return;}
  if(weeklyWage(s)+(p.wage||0)>s.wageCap){
@@ -14315,7 +14377,7 @@ function renderMarket(){
   const free=(typeof canFreeSign==='function')?canFreeSign(S):true;
   windowBanner=`<div class="panel" style="margin:0 0 10px;border-color:rgba(217,164,65,.45)">
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-  <div><b class="gold">赛前转会期${ph?' · '+ph:''}</b>　<span class="hint">剩余 ${S.transferWindow} 天${free?' · 可买断/直签':' · 挂牌期：只挂牌/竞价/续约/租借'} · 天数用完自动开赛</span></div>
+  <div><b class="gold">赛前转会期${ph?' · '+ph:''}</b>　<span class="hint">剩余 ${S.transferWindow} 天${S.preseason?(free?' · 可买断/直签':' · 挂牌期：只挂牌/竞价/续约/租借'):' · 非转会期：补强走挂牌报价/应急租借/青训提拔'} · 天数用完自动开赛</span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
   <button class="btn sm" onclick="goPage('club')">去俱乐部页组队/开赛</button>
   <button class="btn sm gold" onclick="uiSkipTransfer(S)">跳过剩余 ${S.transferWindow} 天</button>
@@ -14850,7 +14912,7 @@ function playerScrim(){
 
 </script>
 <script>
-let _bgmOn=false,_bgmNode=null,_bgmVolume=0.35,_bgmAc=null,_bgmTimer=null;
+let _bgmOn=false,_bgmNode=null,_bgmVolume=0.35,_bgmAc=null,_bgmTimer=[],_bgmGen=0;
 try{
  _bgmOn=localStorage.getItem('km_bgm')==='1';
  const v=parseFloat(localStorage.getItem('km_bgm_vol'));
@@ -14878,27 +14940,31 @@ function _bgmEnsureAc(){
 function _bgmOk(){return !!( _bgmOn && (window.AudioContext||window.webkitAudioContext));}
 
 function stopBGM(fadeMs){
- if(_bgmTimer){clearTimeout(_bgmTimer);_bgmTimer=null;}
+ _bgmTimer.forEach(id=>{try{clearTimeout(id);}catch(_){}});_bgmTimer=[];
  if(!_bgmNode)return;
  try{
+  const n=_bgmNode; // 捕获本次要停的节点；回调只认它
+  n.stopping=true;
   const t=fadeMs==null?280:fadeMs;
-  if(_bgmNode.oscs&&_bgmNode.oscs.length)fadeControl(false,t);
-  else if(_bgmNode.stop)try{_bgmNode.stop();}catch(_){}
+  if(n.oscs&&n.oscs.length)fadeControl(false,t);
+  else if(n.stop)try{n.stop();}catch(_){}
   setTimeout(()=>{
-   if(_bgmNode&&_bgmNode.oscs){
-    _bgmNode.oscs.forEach(x=>{try{x.o.stop();}catch(_){}});
-    _bgmNode.oscs=[];
+   if(_bgmNode!==n)return; // 窗口内已重开/换节点：不动新手
+   if(n.oscs&&n.oscs.length){
+    n.oscs.forEach(x=>{try{x.o.stop();}catch(_){}});
+    n.oscs=[];
    }
-   if(_bgmNode&&_bgmNode.mode==='idle')_bgmNode=null;
-  },t+40);
+   if(_bgmNode===n)_bgmNode=null;
+  },Math.max(t+60,80)); // ≥ fade+60ms，保证淡出走完再拆
  }catch(_){_bgmNode=null;}
 }
 
 function playIdlePad(){
  if(!_bgmOk())return;
  const ac=_bgmEnsureAc();if(!ac)return;
- if(_bgmNode&&_bgmNode.mode==='idle'&&_bgmNode.oscs&&_bgmNode.oscs.length)return;
- if(_bgmNode&&_bgmNode.mode!=='idle')stopBGM(120);
+
+ if(_bgmNode&&_bgmNode.mode==='idle'&&_bgmNode.oscs&&_bgmNode.oscs.length&&!_bgmNode.stopping)return;
+ if(_bgmNode){_bgmNode.stopping=true;stopBGM(80);}
  try{
   const now=ac.currentTime,oscs=[];
   BGM.idle.freqs.forEach(f=>{
@@ -14911,7 +14977,7 @@ function playIdlePad(){
    o.start(now);
    oscs.push({o,g,baseVol:BGM.idle.vol});
   });
-  _bgmNode={ac,mode:'idle',oscs};
+  _bgmNode={ac,mode:'idle',oscs,gen:++_bgmGen,stopping:false};
  }catch(e){try{console.warn('BGM idle fail',e&&e.message);}catch(_){}}
 }
 
@@ -14923,7 +14989,7 @@ function playChordBGM(mode){
 
   cfg.chords.forEach((chord,i)=>{
    const delay=cfg.delays[i]||0;
-   _bgmTimer=setTimeout(()=>{
+   const id=setTimeout(()=>{
     if(!_bgmOn)return;
     const t0=ac.currentTime;
     chord.forEach((f,j)=>{
@@ -14938,6 +15004,7 @@ function playChordBGM(mode){
      o.start(at);o.stop(at+0.6);
     });
    },delay);
+   _bgmTimer.push(id);
   });
  }catch(e){try{console.warn('BGM chord fail',e&&e.message);}catch(_){}}
 }
@@ -14989,7 +15056,9 @@ function detectAndPlayBGM(){
  try{
   const cur=document.querySelector('.page.on');
   const id=cur&&cur.id?cur.id.replace('page-',''):'';
-  if(id==='club'||id==='biz'||id==='hall'||id==='career'||id==='league')playIdlePad();
+
+  const quiet=new Set(['','club','biz','hall','career','league','train','lineup','market','honor','union','board']);
+  if(quiet.has(id)||!id)playIdlePad();
  }catch(_){playIdlePad();}
 }
 
