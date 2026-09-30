@@ -5714,6 +5714,12 @@ const PHASE_NAME={r1:'常规赛·第一轮',r2:'常规赛·第二轮',card:'卡�
 const isAsiadYear=s=>gameYear(s)%4===2; // 亚运会四年一届（2026 名古屋 / 2030 / 2034…），夏赛后、年总前举行
 
 const SPLIT_NAME={spring:'春季赛',summer:'夏季赛'};
+function splitNameFor(year,split){
+ const y=parseInt(year,10);
+ if(y===2016)return '秋季赛'; // 2016.9.17 开赛的首届，单季秋季赛，冠军 AS仙阁
+ if(y<=2021)return split==='spring'?'春季赛':'秋季赛';
+ return split==='spring'?'春季赛':'夏季赛';
+}
 const ANNUAL_PTS={spring:{p1:100,p2:80,p34:60,p56:40,p78:20,p910:10,p1112:5,p1318:0},
  summer:{p1:120,p2:100,p34:80,p56:50,p78:30,p910:20,p1112:10,p1318:0}};
 const gameYear=s=>{
@@ -5724,7 +5730,7 @@ const gameYear=s=>{
  }
  return 2025+(s.season||1); // 赛季序号=年份偏移：season1 = 2026年
 };
-const splitLabel=s=>gameYear(s)+' '+(SPLIT_NAME[s.split]||'春季赛');
+const splitLabel=s=>gameYear(s)+' '+splitNameFor(gameYear(s),s.split||'spring');
 
 function get_division_system_for_year(year) {
   if(EAST_WEST_DIVISION.years.includes(year)) {
@@ -6230,7 +6236,7 @@ function playoffStep(s){
  }
  if(p.final.r){
  p.champ=p.final.r;
- s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split||'spring',event:SPLIT_NAME[s.split]||'春季赛',champ:p.final.r}]).slice(-48); // 王朝统计（连冠反制用，一年两冠按时间序）
+ s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:s.split||'spring',event:splitNameFor(gameYear(s),s.split||'spring'),champ:p.final.r}]).slice(-48); // 王朝统计（连冠反制用，一年两冠按时间序）
  s.champion=p.final.r===s.teamName;
  const ourFinal=p.final.a===s.teamName||p.final.b===s.teamName;
 
@@ -6651,7 +6657,7 @@ function startSplit(s,split){
  s.aiRosters={};s.aiInj={};
  initGroups(s);
  initKjia(s);
- logEvent(s,' '+splitLabel(s)+' 开幕！'+(s.mode==='player'?'打出表现：首发、身价与报价都由数据说话':'带队出成绩：目标 '+SPLIT_NAME[split]+' 冠军'));
+ logEvent(s,' '+splitLabel(s)+' 开幕！'+(s.mode==='player'?'打出表现：首发、身价与报价都由数据说话':'带队出成绩：目标 '+splitNameFor(gameYear(s),split)+' 冠军'));
  save();renderAll();
  return;
  }
@@ -6671,7 +6677,7 @@ function startSplit(s,split){
  try{if(typeof initDraft==='function')initDraft(s);}catch(e){} // 选秀大会：新秀池 + 倒序点名
  if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s); // 亚运年夏季：先宣布国家队征召（集训缺席整季）
  logEvent(s,' '+splitLabel(s)+' 赛前转会期开启（7天）：可买断/挂牌/直签选手与教练，市场每日首刷免费（再刷 5 万/次）；结束转会期后联赛开打');
- logEvent(s,' '+splitLabel(s)+' 开始！18队 S/A/B 赛制，目标：'+SPLIT_NAME[split]+'总冠军（年度积分 +'+ANNUAL_PTS[split].p1+'）！');
+ logEvent(s,' '+splitLabel(s)+' 开始！'+(fmtOf(s).structure==='sab'?'18队 S/A/B 赛制':fmtOf(s).structure==='eastwest'?'东西部赛制':'常规赛循环'),'目标：'+splitNameFor(gameYear(s),split)+'总冠军（年度积分 +'+ANNUAL_PTS[split].p1+'）！');
  save();renderAll();
 }
 
@@ -6699,8 +6705,8 @@ function awardAnnualPts(s){
  const place=leaguePlacements(s);
  Object.keys(place).forEach(t=>{s.annualPts[t]=(s.annualPts[t]||0)+(pts[place[t]]||0);});
  s.yearStages=s.yearStages||[];
- s.yearStages.push({ev:s.split==='spring'?'春季赛':'夏季赛',place:PLACEMENT_TXT[place[s.teamName]||'p1318']}); // 成绩曲线
- logEvent(s,' 年度积分入账：'+s.teamName+' 目前累计 '+(s.annualPts[s.teamName]||0)+' 分（'+(s.split==='spring'?'春':'夏')+'季赛·前12进年总）');
+ s.yearStages.push({ev:splitNameFor(gameYear(s),s.split),place:PLACEMENT_TXT[place[s.teamName]||'p1318']}); // 成绩曲线
+ logEvent(s,' 年度积分入账：'+s.teamName+' 目前累计 '+(s.annualPts[s.teamName]||0)+' 分（'+splitNameFor(gameYear(s),s.split)+'·前12进年总）');
 }
 
 function awardFMVP(s,champ,event){
@@ -6728,10 +6734,11 @@ function awardFMVP(s,champ,event){
 
 function calendarStages(s){
  const asiad=isAsiadYear(s);
+ const y=(typeof gameYear==='function')?gameYear(s):2026;
  return [
-  {k:'spring',n:'春季赛',hint:'约1-4月'},
+  {k:'spring',n:splitNameFor(y,'spring'),hint:y===2016?'9月开赛':'约1-4月'},
   {k:'challenger',n:'挑战者杯',hint:'4/25-5/23'},
-  {k:'summer',n:'夏季赛',hint:'6月起'},
+  {k:'summer',n:splitNameFor(y,'summer'),hint:y<=2021?'约9-12月':'6月起'},
   {k:'ewc',n:'EWC',hint:'7/30-8/8'},
  ].concat(asiad?[{k:'asiad',n:'亚运会',hint:'9月·名古屋'}]:[]).concat([
   {k:'annual',n:'年度总决赛',hint:'10-11月'},
@@ -6786,7 +6793,7 @@ function yearCalendarHtml(s){
     +'<div class="cal-n">'+st.n+'</div>'
     +'<div class="cal-h">'+st.hint+(on?' · 进行中':done?' · 已完':'')+'</div></div>';
   }).join('')
-  +'</div><div class="hint" style="margin-top:8px">顺序：春季赛 → 挑战者杯 → 夏季赛 → EWC（夏休）→ 亚运会（亚运年）→ 年度总决赛</div></div>';
+  +'</div><div class="hint" style="margin-top:8px">顺序：'+splitNameFor(gameYear(s||S),'spring')+' → 挑战者杯 → '+splitNameFor(gameYear(s||S),'summer')+' → EWC（夏休）→ 亚运会（亚运年）→ 年度总决赛</div></div>';
 }
 
 </script>
@@ -13820,7 +13827,7 @@ function renderKjia(){
  const done=k.rd>=k.rounds.length;
  const next=done?null:k.rounds[k.rd].find(m=>m.a===my||m.b===my);
  const isPlayer=S.mode==='player';
- let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
+ let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${splitNameFor(gameYear(S),S.split||'spring')} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
  <div class="hint">${isPlayer
   ?'次级联赛与 KPL 赛段并行推进：俱乐部把替补/青训下放二队真实出战（不占你的 KPL 出场），表现数据在本页累计；归队时带属性成长。你可在「生涯」页申请下放练级。'
   :'次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。'}</div></div>`;

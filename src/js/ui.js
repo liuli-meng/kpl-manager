@@ -1370,7 +1370,7 @@ function renderKjia(){
  const done=k.rd>=k.rounds.length;
  const next=done?null:k.rounds[k.rd].find(m=>m.a===my||m.b===my);
  const isPlayer=S.mode==='player';
- let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${SPLIT_NAME[S.split]||'春季赛'} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
+ let html=pageHint('kjia')+`<div class="panel"><h3>K甲联赛 · 二队 <span class="tag">${gameYear(S)} ${splitNameFor(gameYear(S),S.split||'spring')} · ${done?'已收官':'第'+(k.rd+1)+'/'+k.rounds.length+'轮'} · 每${KJIA_EVERY}天一轮</span></h3>
  <div class="hint">${isPlayer
   ?'次级联赛与 KPL 赛段并行推进：俱乐部把替补/青训下放二队真实出战（不占你的 KPL 出场），表现数据在本页累计；归队时带属性成长。你可在「生涯」页申请下放练级。'
   :'次级联赛与 KPL 赛段并行推进：阵容页「下放 K甲」把替补/青训送进二队真实出战（不占首发、不计 KPL 出场），表现数据在本页累计；下放中不可交易，归队时带属性成长。每赛段重开一届。'}</div></div>`;
