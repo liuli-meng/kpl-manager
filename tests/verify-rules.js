@@ -73,13 +73,12 @@ const out = vm.runInContext(`
 
   // ⑤ canSign：玩家名单满 / AI 同位置 / 已在册
   const s5=mk();
-  s5.players=s5.players.slice(0,10);
-  if((s5.players||[]).length<10){
-    while(s5.players.length<10)s5.players.push(genPlayer(genFreeAgentDef('mid','low',new Set(s5.players.map(p=>p.name)))));
-  }
+  const HARD5=(typeof rosterHardMax==='function')?rosterHardMax():12;
+  s5.players=s5.players.slice(0,Math.min(HARD5,10));
+  while(s5.players.length<HARD5)s5.players.push(genPlayer(genFreeAgentDef('mid','low',new Set(s5.players.map(p=>p.name)))));
   const free=genPlayer(genFreeAgentDef('top','mid',new Set()));
   const chkFull=canSign(s5,free,{actor:'player'});
-  if(chkFull.ok)fail('名单满时 canSign 仍放行');
+  if(chkFull.ok)fail('硬顶满员时 canSign 仍放行');
   else if(!/名单/.test(chkFull.reason))fail('名单满原因文案异常: '+chkFull.reason);
   else{
     const s5b=mk();

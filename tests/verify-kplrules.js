@@ -39,9 +39,14 @@ const out = vm.runInContext(`
   if(bad.length)fail('① 转会费封顶被突破: '+bad.join(', '));
   else log('① 转会费 ECON.transferCap 封顶：买断 '+bo+' · 强挖 '+ut+' · 要价 '+ask+' · 挂牌 '+(listed?listed.price:'—')+' · AI报价 '+(s1.bids[0]?s1.bids[0].bid:'—'));
 
-  // ② 大名单 ≤10：买断签约 / 谈判入口 / 青训晋升 三处守卫
+  // ② 大名单硬顶：买断签约 / 谈判入口 / 青训晋升 三处守卫（软 10 有先签后卖宽限）
   const s2=mkS(10);S=s2;
-  if(s2.players.length!==10)fail('② 预置满员失败: '+s2.players.length);
+  const HARD2=(typeof rosterHardMax==='function')?rosterHardMax():12;
+  while(s2.players.length<HARD2){
+    const extra=genPlayer(genFreeAgentDef('sup','low',new Set(s2.players.map(p=>p.name))));
+    extra.signCost=1;s2.players.push(extra);
+  }
+  if(s2.players.length!==HARD2)fail('② 预置硬顶满员失败: '+s2.players.length);
   else{
    const victim=genPlayer(genFreeAgentDef('mid','mid',new Set()));
    s2.market=[victim];
@@ -57,10 +62,10 @@ const out = vm.runInContext(`
     wage:2,morale:80,injury:0,retiring:false,contract:2,isRookie:false}];
    promoteRookie(s2,'r1');
    const promoted=s2.players.some(p=>p.id==='r1');
-   if(bought||s2.players.length!==cnt0||s2.fund!==fund0)fail('满员仍买断成功（人数'+s2.players.length+' 资金'+s2.fund+'）');
-   else if(negoOpened)fail('满员仍打开了谈判');
-   else if(promoted)fail('满员仍青训晋升');
-   else log('② 大名单 ≤10：买断/谈判/青训晋升 三处全部被拦截（当前 '+s2.players.length+' 人）');
+   if(bought||s2.players.length!==cnt0||s2.fund!==fund0)fail('硬顶满员仍买断成功（人数'+s2.players.length+' 资金'+s2.fund+'）');
+   else if(negoOpened)fail('硬顶满员仍打开了谈判');
+   else if(promoted)fail('硬顶满员仍青训晋升');
+   else log('② 大名单硬顶：买断/谈判/青训晋升 三处全部被拦截（当前 '+s2.players.length+' 人）');
   }
 
   // ③ 转会期卖出 ≤ 半数（向下取整）+ 窗口开启清零

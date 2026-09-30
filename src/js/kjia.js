@@ -233,8 +233,7 @@ function promoteKjiaPlayer(s,id){
  const p=s.kjia.squad.find(x=>x.id===id);
  if(!p){toast('该选手不在二队班底');return;}
  if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 年仅 '+(p.age||'?')+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛');return;}
- if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满——先卖出/放走选手再提拔');return;}
- if(!rosterGuard(s))return; // 大名单 ≤10
+ if(!rosterGuard(s))return; // 名单上限统一走 rosterGuard（含先签后卖宽限）
  if(s.players.some(x=>x.id===id)){toast(p.name+' 已在一队');return;}
  s.kjia.squad=s.kjia.squad.filter(x=>x.id!==id);
  p.team=s.teamName;

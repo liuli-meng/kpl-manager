@@ -5718,8 +5718,7 @@ function promoteRookie(s,id){
  if(!r)return;
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
  if(r.age<MATCH_MIN_AGE){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛——再等一年');return;}
- if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满——先卖出/放走选手再提拔青训');return;}
- if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
+ if(!rosterGuard(s))return; // 名单上限统一走 rosterGuard（含先签后卖宽限）
 
  if(typeof reserveLeft==='function'&&reserveLeft(s)<=0){
  toast('自留签已用完（每季 '+(s.reserveSlots!=null?s.reserveSlots:2)+' 个）——下赛季刷新，或转会市场补人');
@@ -7670,8 +7669,7 @@ function promoteKjiaPlayer(s,id){
  const p=s.kjia.squad.find(x=>x.id===id);
  if(!p){toast('该选手不在二队班底');return;}
  if((p.age||0)<MATCH_MIN_AGE){toast(p.name+' 年仅 '+(p.age||'?')+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛');return;}
- if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满——先卖出/放走选手再提拔');return;}
- if(!rosterGuard(s))return; // 大名单 ≤10
+ if(!rosterGuard(s))return; // 名单上限统一走 rosterGuard（含先签后卖宽限）
  if(s.players.some(x=>x.id===id)){toast(p.name+' 已在一队');return;}
  s.kjia.squad=s.kjia.squad.filter(x=>x.id!==id);
  p.team=s.teamName;
@@ -8468,7 +8466,10 @@ function canSign(s,p,opts){
    if(fb)return {ok:false,reason:fb};
   }
   if((s.players||[]).some(x=>x.id===pid))return {ok:false,reason:name+' 已在名单中'};
-  if(typeof rosterFull==='function'&&rosterFull(s))
+
+  if(typeof rosterHardMax==='function'&&typeof rosterCount==='function'&&rosterCount(s)>=rosterHardMax())
+   return {ok:false,reason:'KPL 大名单上限 '+rosterHardMax()+' 人（含先签后卖宽限）'};
+  else if(typeof rosterFull==='function'&&typeof rosterHardMax!=='function'&&rosterFull(s))
    return {ok:false,reason:'KPL 大名单上限 '+(typeof ROSTER_MAX!=='undefined'?ROSTER_MAX:10)+' 人'};
   const pst=(typeof playerStatus==='function')?playerStatus(p,s):null;
   if(pst&&pst.loanOut)return {ok:false,reason:name+' 租借在外，不能直接签约'};

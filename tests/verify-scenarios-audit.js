@@ -97,22 +97,23 @@ const out = vm.runInContext(`
   if(TRANSFER_CAP!==ECON.transferCap)fail('TRANSFER_CAP 不是 ECON.transferCap');
   else ok('① 转会费 1.2 亿封顶：五档共用，剧本不改（TRANSFER_CAP 全局）');
 
-  // ② 大名单 ≤10：exodus 开局 4 人，转会期可补；满员后仍应拦截
+  // ② 大名单：软 10 可先签后卖宽限到硬 12；硬顶后买断拦截
+  const HARD=(typeof rosterHardMax==='function')?rosterHardMax():12;
   _scenario='exodus';document.querySelector('#new-team-name').value='x';createTeam();
-  while(S.players.length<10){
+  while(S.players.length<HARD){
     const pos=POS_ORDER.find(pp=>true);
     const u=new Set(S.players.map(p=>p.name));
     const cand=genPlayer(genFreeAgentDef(pos,'mid',u));
     S.players.push(cand);
   }
-  if(S.players.length!==10)fail('无法预置满员: '+S.players.length);
+  if(S.players.length!==HARD)fail('无法预置硬顶满员: '+S.players.length);
   else{
     const victim=genPlayer(genFreeAgentDef('mid','mid',new Set()));
     S.market=[victim];
     const c0=S.players.length,f0=S.fund;
     const bought=buyPlayer(S,victim);
-    if(bought||S.players.length!==c0)fail('② 大名单守卫在 exodus 满员后失效');
-    else ok('② 大名单 ≤10：exodus 满员补人后买断仍被拦（守卫与剧本无冲突）');
+    if(bought||S.players.length!==c0)fail('② 大名单守卫在硬顶满员后失效');
+    else ok('② 大名单硬顶 '+c0+'：exodus 买断被拦（先签后卖宽限不破硬顶）');
   }
 
   // ③ 卖出半数：exodus 已少 1 人，半数应按当前名单

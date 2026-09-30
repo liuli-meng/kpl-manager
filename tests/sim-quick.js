@@ -22,10 +22,12 @@ vm.runInContext('this.Math=(function(a){var f=function(){a|=0;a=a+0x6D2B79F5|0;v
 
 const HEADLESS = `
 function simSquad(kind){
+  if(kind.era)installEra(kind.era); else installEra(null);
   S=newState(kind.name,'⚔️');
   if(kind.era)S.era=kind.era;
   if(kind.template){
     const tmpl=CLUB_TEMPLATES.find(c=>c.name===kind.template);
+    if(!tmpl)throw new Error('simSquad: 模板不存在 '+kind.template);
     tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(d=>d.id===pid);if(def)S.players.push(genPlayer(def));});
     S.coach={...COACH_POOL.find(c=>c.id===tmpl.coach)};
     S.lineup=S.players.map(p=>p.id);
@@ -114,7 +116,7 @@ const BANDS = {
 const ERA_BANDS = {
   qg:   v => v <= 0.62 || `2017 时代 QGhappy 夺冠率 ${(v*100).toFixed(0)}% 越界 ≤62%（时代联盟一家独大）`,
   dist: v => v >= 2 || `2017 时代 30 季冠军仅 ${v} 支（联盟失去竞争性）`,
-  po:   v => v >= 0.35 || `时代档 AG超玩会 季后赛率 ${(v*100).toFixed(0)}% 异常偏低（时代阵容战力结算可能坏了）`,
+  po:   v => (v >= 0.80 && v <= 1.0) || `时代档 AG超玩会 季后赛率 ${(v*100).toFixed(0)}% 越界 [80%,100%]（2017 AG 应稳定进季后赛）`,
 };
 
 const N = Math.max(10, parseInt((process.argv.find(a => a.startsWith('--n=')) || '').split('=')[1], 10) || 50);
@@ -148,8 +150,8 @@ console.log('AG豪门    夺冠 ' + (t2.my/N*100).toFixed(0) + '%  破产 ' + (t
 const t3 = checkTier('UUG弱旅', {name:'UUG弱旅', template:'常山UUG'}, [BANDS['UUG弱旅'], BANDS['_破产']]);
 console.log('UUG弱旅   季后赛 ' + (t3.po/N*100).toFixed(0) + '%  破产 ' + (t3.broke/N*100).toFixed(0) + '%');
 
-// 时代档：2017 · QG王朝——扮演 AG超玩会（次强，时代模板名即「AG超玩会」），看 QGhappy(640) 会不会一家独大
-vm.runInContext(HEADLESS + 'installEra("2017");', dom);
+// 时代档：2017 · QG王朝——扮演 AG超玩会（次强，时代模板名即「AG超玩会」）
+// installEra 由 simSquad 按 kind.era 自装
 const ERA_KIND = {name:'时代AG', era:'2017', template:'AG超玩会'};
 const te = checkTier('2017时代', ERA_KIND, []);
 const champNames = Object.keys(te.champs), total = champNames.reduce((t, k) => t + te.champs[k], 0);

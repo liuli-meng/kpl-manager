@@ -176,7 +176,10 @@ function canSign(s,p,opts){
    if(fb)return {ok:false,reason:fb};
   }
   if((s.players||[]).some(x=>x.id===pid))return {ok:false,reason:name+' 已在名单中'};
-  if(typeof rosterFull==='function'&&rosterFull(s))
+  // 与 rosterGuard 同口径：软上限 10 可宽限到硬上限 12（先签后卖），硬顶才拒
+  if(typeof rosterHardMax==='function'&&typeof rosterCount==='function'&&rosterCount(s)>=rosterHardMax())
+   return {ok:false,reason:'KPL 大名单上限 '+rosterHardMax()+' 人（含先签后卖宽限）'};
+  else if(typeof rosterFull==='function'&&typeof rosterHardMax!=='function'&&rosterFull(s))
    return {ok:false,reason:'KPL 大名单上限 '+(typeof ROSTER_MAX!=='undefined'?ROSTER_MAX:10)+' 人'};
   const pst=(typeof playerStatus==='function')?playerStatus(p,s):null;
   if(pst&&pst.loanOut)return {ok:false,reason:name+' 租借在外，不能直接签约'};

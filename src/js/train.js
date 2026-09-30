@@ -194,8 +194,7 @@ function promoteRookie(s,id){
  if(!r)return;
  if(!rookieReady(r)){toast(r.name+' 尚未达到晋升标准（四维总和需≥300）');return;}
  if(r.age<MATCH_MIN_AGE){toast(r.name+' 年仅 '+r.age+' 岁，KPL 规定满 '+MATCH_MIN_AGE+' 岁才能上场比赛——再等一年');return;}
- if(typeof rosterFull==='function'&&rosterFull(s)){toast(' 大名单已满——先卖出/放走选手再提拔青训');return;}
- if(!rosterGuard(s))return; // 联盟规则：大名单 ≤10 人
+ if(!rosterGuard(s))return; // 名单上限统一走 rosterGuard（含先签后卖宽限）
  // 自留签：每季 2 个名额（对齐 KPL）；用完只能等下赛季或走选秀/转会
  if(typeof reserveLeft==='function'&&reserveLeft(s)<=0){
  toast('自留签已用完（每季 '+(s.reserveSlots!=null?s.reserveSlots:2)+' 个）——下赛季刷新，或转会市场补人');

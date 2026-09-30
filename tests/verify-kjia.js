@@ -180,7 +180,7 @@ const out = vm.runInContext(`
    else if(!(pickAdult.tags||[]).includes('K甲提拔'))fail('缺 K甲提拔 标签');
    else{
     // 满员拦截
-    while((s8.players||[]).length<ROSTER_MAX){
+    while((s8.players||[]).length<(typeof rosterHardMax==='function'?rosterHardMax():ROSTER_MAX+2)){
      const b=genPlayer(genFreeAgentDef(pick(POS_ORDER),'mid',new Set(s8.players.map(p=>p.name))));
      s8.players.push(b);
     }
