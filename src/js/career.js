@@ -253,7 +253,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
     if(rec.type==='sign'&&rec.pid){
      const fa=(s.freeAgents||[]).find(p=>p.id===rec.pid);
      if(fa&&s.fund>(fa.signCost||0)&&!rosterFull(s)){
-      const cost=Math.max(0,Math.round(fa.signCost||valueOf(overall(fa))));
+      const cost=(typeof signCostOf==='function')?signCostOf(fa):Math.max(0,Math.round(fa.signCost||valueOf(overall(fa))));
       if(s.fund>=cost){
        if(s.players.some(x=>x.id===fa.id))return;
        s.fund-=cost;fa.acqCost=cost;fa.contract=2;fa.loan=null;
@@ -273,7 +273,7 @@ function coachAutoSquad(s){ // 教练/选手模式：俱乐部自动续约与引
      const fa=(s.freeAgents||[]).filter(p=>p.pos===need).sort((a,b)=>overall(b)-overall(a))[0];
      if(fa&&s.fund>=(fa.signCost||80)&&!rosterFull(s)){
       if(s.players.some(x=>x.id===fa.id))return;
-      const cost=Math.max(0,Math.round(fa.signCost||80));
+      const cost=(typeof signCostOf==='function')?signCostOf(fa,80):Math.max(0,Math.round(fa.signCost||80));
       s.fund-=cost;fa.acqCost=cost;fa.contract=2;
       delete fa.freeAgent;delete fa.signCost;
       s.players.push(fa);
@@ -552,17 +552,21 @@ function signFreeAgent(s,id){
  const p=(s.freeAgents||[]).find(x=>x.id===id);
  if(!p)return;
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return;}
- if(s.fund<(p.signCost||0)){toast('资金不足（签约费 '+(p.signCost||0)+'万）');return;}
+ // 签约费必须按身价：signCost 缺失时用 signCostOf 兜底，禁止 ||0 白拿
+ const signFee=(typeof signCostOf==='function')?signCostOf(p):Math.round(valueOf(overall(p))*0.58);
+ p.signCost=signFee;
+ if(s.fund<signFee){toast('资金不足（签约费 '+signFee+'万）');return;}
  if(weeklyWage(s)+(p.wage||0)>s.wageCap){
  const {over,tax}=overCapTax(s,p.wage||0);
  if(!confirm(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+(p.wage||0))+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return;
  }
- s.fund-=(p.signCost||0);
- p.acqCost=p.signCost; // 买入价锚定（转售保护用）
+ s.fund-=signFee;
+ p.acqCost=signFee; // 买入价锚定（转售保护用）
+ p.joinedDay=s.day;
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.freeAgents=s.freeAgents.filter(x=>x.id!==id);
  s.players.push(p);
- recordTransfer(s,'in',p,p.signCost,'自由球员','自由市场直签'); // 年度回顾·转会台账
- logEvent(s,' 自由市场签下 '+p.name+'（无球可打选手 · 签约费 '+p.signCost+'万）');
+ recordTransfer(s,'in',p,signFee,'自由球员','自由市场直签'); // 年度回顾·转会台账
+ logEvent(s,' 自由市场签下 '+p.name+'（无球可打选手 · 签约费 '+signFee+'万 · 按身价）');
  save();renderAll();toast(p.name+' 加盟！');
 }

@@ -236,7 +236,7 @@ function parkFreeAgent(s,p,note){
  if(!p||p.id==null)return false;
  ensureDef(s,p);
  const fa={...p,team:null,freeAgent:true,willingness:Math.max(p.willingness||50,60),
-  signCost:Math.max(30,Math.round(valueOf(overall(p))*0.6)),
+  signCost:Math.max(30,Math.round(valueOf(overall(p))*0.6)), // 身价 6 折签约费（signCostOf 兜底）
   loan:null,loanOut:null,kjia:0,ownerTeam:null,untouchable:false};
  delete fa.acqCost;
  s.freeAgents=(s.freeAgents||[]).filter(x=>x.id!==p.id).concat([fa]);

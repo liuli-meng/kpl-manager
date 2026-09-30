@@ -31,6 +31,14 @@ const HERO_LV={
 };
 function heroLv(p,heroId){const h=(p.heroPool||[]).find(x=>x.n===heroId);return h?h.lv:1;}
 /* 英雄熟练度：绝活+8% / 熟练+4% / 一般0% / 生疏-8% */
+/* 选手身价→签约/转会价：signCost 缺失/非法时按身价折算，禁止 0 元白拿 */
+function signCostOf(p,fallback){
+ if(!p)return fallback!=null?fallback:0;
+ const v=Math.round(valueOf(overall(p))*0.58);
+ const sc=p.signCost;
+ if(typeof sc==='number'&&isFinite(sc)&&sc>0)return Math.round(sc);
+ return v>0?v:(fallback!=null?fallback:80);
+}
 function buyPlayer(s,p){
  if(!p){toast('选手已被签走');return false;}
  if(typeof canSign==='function'){

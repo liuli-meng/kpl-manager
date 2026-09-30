@@ -218,7 +218,7 @@ function renderMarket(){
  ${sortChips('fa')}
  ${truncSlice('mfa',applySortPref('fa',S.freeAgents)).map(p=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
  <div class="vs"><span class="tname" style="font-size:13px">${p.name} <span style="color:var(--dim);font-size:10px">(总值${overall(p)} · ${POS[p.pos][1]}${p.age?' · '+p.age+'岁':''})</span></span></div>
- <div class="score" style="font-size:13px;min-width:0">${p.signCost}万</div>
+ <div class="score" style="font-size:13px;min-width:0">${(typeof signCostOf==='function'?signCostOf(p):p.signCost||0)}万</div>
  <button class="btn sm primary" style="margin:0" onclick="openNegotiation(S,'${p.id}')">谈薪资直签</button>
  </div>`).join('')||'<div class="hint">暂无自由球员</div>'}
  ${truncMoreHtml('mfa',(S.freeAgents||[]).length)}

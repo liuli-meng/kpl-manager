@@ -63,6 +63,7 @@ const SUITES = [
   { id: 'verify-ai-hidden', file: 'tests/verify-ai-hidden.js', label: 'AI隐性边界' },
   { id: 'verify-corruption', file: 'tests/verify-corruption.js', label: '损坏注入/连点' },
   { id: 'verify-wagecap', file: 'tests/verify-wagecap.js', label: '工资帽经济' },
+  { id: 'verify-value-fee', file: 'tests/verify-value-fee.js', label: '身价扣费门禁' },
   { id: 'verify-playerstatus', file: 'tests/verify-playerstatus.js', label: '选手状态机' },
   { id: 'verify-nanwage', file: 'tests/verify-nanwage.js', label: '周薪NaN/杯赛面板守卫' },
   { id: 'verify-review', file: 'tests/verify-review.js', label: '赛季回顾' },
