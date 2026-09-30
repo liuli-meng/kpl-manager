@@ -14,10 +14,10 @@ const out = vm.runInContext(`
 
   // ① 默认值 = 抽表前写死的值（任何一项漂了，就等于悄悄改了现行赛制）
   const d=fmtOf({});
-  const want={globalBp:true,peakBoMin:7,transferDays:7};
+  const want={globalBp:true,peakBoMin:7,transferDays:7,cardBo:5,hasAnnual:true,regBo:5};
   const drift=Object.keys(want).filter(k=>d[k]!==want[k]);
   if(drift.length)fail('① 默认旋钮漂移: '+drift.map(k=>k+'='+d[k]+' 应为 '+want[k]).join(', '));
-  else ok('① 默认口径：globalBp='+d.globalBp+' peakBoMin='+d.peakBoMin+' transferDays='+d.transferDays);
+  else ok('① 默认口径：globalBp='+d.globalBp+' peakBoMin='+d.peakBoMin+' transferDays='+d.transferDays+' cardBo='+d.cardBo+' hasAnnual='+d.hasAnnual+' regBo='+d.regBo);
 
   // ② 时代覆盖通路：installEra(带 rules 的时代) → fmtOf 读到覆盖值；installEra(null) 还原
   KPL_ERAS.__test={name:'测试时代',year:'2099',desc:'',rules:{globalBp:false,transferDays:3},

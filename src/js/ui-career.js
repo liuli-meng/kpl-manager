@@ -15,7 +15,7 @@ function careerMatchBrief(){
  }
  if(p==='card'&&S.card&&S.card.matches){
   const m=S.card.matches.find(x=>x&&!x.r&&(x.a===S.teamName||x.b===S.teamName));
-  if(m)return {kind:'next',title:'下一场 · 卡位赛',opp:m.a===S.teamName?m.b:m.a,sub:'BO'+KPL.CARD+' · 含巅峰对决',stage:'卡位赛'};
+  if(m)return {kind:'next',title:'下一场 · 卡位赛',opp:m.a===S.teamName?m.b:m.a,sub:'BO'+fmtOf(S).cardBo+' · 全局BP',stage:'卡位赛'};
  }
  if(p==='playoff'&&S.playoff&&typeof poMyNext==='function'){
   const nx=poMyNext(S.playoff,S.teamName);

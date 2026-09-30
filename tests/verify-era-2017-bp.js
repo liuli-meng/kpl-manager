@@ -19,7 +19,9 @@ const out = vm.runInContext(`
   const f2=fmtOf(s2);
 
   if(f1.globalBp!==false)fail('① 2017 档 globalBp='+f1.globalBp+'，应为 false');
-  else ok('① 2017 档关闭全局 BP（每局独立 BAN/PICK）');
+  else if(f1.hasAnnual!==false)fail('① 2017 档 hasAnnual='+f1.hasAnnual+'，应为 false（年总 2024 才有）');
+  else if(f1.regBo!==3)fail('① 2017 档 regBo='+f1.regBo+'，应为 3');
+  else ok('① 2017 档关闭全局 BP（每局独立 BAN/PICK）· 无年总 · 常规赛 BO3');
   if(f2.globalBp!==true)fail('② 还原现役 globalBp='+f2.globalBp+'，应为 true');
   else ok('② 现役默认开启全局 BP');
 
@@ -28,7 +30,9 @@ const out = vm.runInContext(`
   const f3=fmtOf(s3);
   installEra(null);
   if(f3.globalBp!==true)fail('③ 2019 档 globalBp='+f3.globalBp+'，应为 true');
-  else ok('③ 2019 档开启全局 BP（引入年）');
+  else if(f3.hasAnnual!==false)fail('③ 2019 档 hasAnnual='+f3.hasAnnual+'，应为 false');
+  else if(f3.cardBo!==7)fail('③ 2019 档 cardBo='+f3.cardBo+'，应为 7');
+  else ok('③ 2019 档开启全局 BP（引入年）· 卡位 BO7 · 无年总');
 
   renderAll=_ra;save=_sv;
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; '));

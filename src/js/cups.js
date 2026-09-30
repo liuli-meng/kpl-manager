@@ -1,4 +1,4 @@
-﻿/* 年度杯赛：挑战者杯/EWC/亚运会/年总 + 杯赛通用流程（season.js 机械拆出） */
+/* 年度杯赛：挑战者杯/EWC/亚运会/年总 + 杯赛通用流程（season.js 机械拆出） */
 /* ================= 挑战者杯（2026 KPL 春季赛后最高关注度杯赛） =================
  真实赛制简化建模：32 队（18 KPL 全员 + 14 挑战者：K甲/全国大赛/青训/高校/职工/主播/全球七大赛道）
  → 单败淘汰 32→16（BO5）→16→8（BO7），春季赛冠军/亚军为一二号种子分半区
@@ -488,6 +488,12 @@ function annualRank(s){
  return Object.keys(s.annualPts||{}).sort((a,b)=>(s.annualPts[b]||0)-(s.annualPts[a]||0)||powerOf(s,b)-powerOf(s,a));
 }
 function setupAnnual(s){
+ // 年度总决赛 2024 起才有：2017/2019 时代档走年度收官（无圣龙杯）
+ if(!fmtOf(s).hasAnnual){
+  logEvent(s,' '+gameYear(s)+' 赛季收官（本年代尚无 KPL 年度总决赛）');
+  if(typeof newSeason==='function')newSeason(s);
+  return;
+ }
  const all=annualRank(s);
  const q=all.slice(0,12);
  s.annual={stage:'arena',roundIdx:0,masters:q.slice(0,6),elites:q.slice(6,12),q};

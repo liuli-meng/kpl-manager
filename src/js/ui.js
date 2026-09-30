@@ -740,7 +740,7 @@ function clubCardPanel(){
  const list=matches.map((m,i)=>({m,tag:'卡位赛·'+(i+1)}));
  const nx=cupListNext(list,S.teamName);
  const myCard=nx?nx.m:(matches.find(m=>m.a===S.teamName||m.b===S.teamName)||null);
- return `<div class="panel"><h3>卡位赛 <span class="tag">BO${KPL.CARD} · 全局BP</span></h3>
+ return `<div class="panel"><h3>卡位赛 <span class="tag">BO${fmtOf(S).cardBo} · 全局BP</span></h3>
  ${cupNextBanner(nx,S.teamName)}
  ${cupRows(list,S.teamName,nx)}
  ${myCard&&!myCard.r?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="uiDoNextAction(S)"> 进行卡位赛</button>`:''}
@@ -1265,7 +1265,7 @@ function renderLeague(){
  const groups=phaseGroups(S);
  const myG=myGroup(S);
  let html=pageHint('league')+(typeof yearCalendarHtml==='function'?yearCalendarHtml(S):'')+`<div class="panel"><h3>${splitLabel(S)} · ${(PHASE_NAME[S.phase]||S.phase)} <span class="tag">KPL 官方赛制 · 18队 S/A/B</span></h3>
- <div class="hint" style="margin-bottom:8px">常规赛 BO5 全局BP · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${KPL.CARD} 全局BP · 季后赛 10队双败（第7局巅峰对决） · 年度赛历：春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运会（亚运年）→ 年度总决赛</div></div>`;
+ <div class="hint" style="margin-bottom:8px">常规赛 BO${fmtOf(S).regBo} ${fmtOf(S).globalBp?'全局BP':'独立BP'} · 胜者积1分 · 第一轮各组前2进S组 / 3-4进A组 / 5-6进B组 · 卡位赛 BO${fmtOf(S).cardBo} · 季后赛 10队双败${fmtOf(S).peakBoMin<=7?'（第7局巅峰对决）':''} · 年度赛历：春季赛 → 挑战者杯 → 夏季赛 → EWC → 亚运会（亚运年）${fmtOf(S).hasAnnual?'→ 年度总决赛':'（本年代无年总）'}</div></div>`;
  // 年度积分榜（春夏累计，前12进年度总决赛）——带条形刻度
  {
  const rank=annualRank(S);
@@ -1322,7 +1322,7 @@ function renderLeague(){
  }
  // 卡位赛对阵（联赛页）
  if(S.phase==='card'&&S.card){
- html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO${KPL.CARD} · 全局BP</span></h3>
+ html+=`<div class="panel"><h3>卡位赛对阵 <span class="tag">BO${fmtOf(S).cardBo} · 全局BP</span></h3>
  ${S.card.matches.map(m=>{
  const me=m.a===S.teamName||m.b===S.teamName;
  return `<div class="match" style="margin-bottom:6px">
