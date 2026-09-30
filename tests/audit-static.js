@@ -221,8 +221,17 @@ const out = vm_run(dom, `
       S.seedPower=teamPower(S)||400;
       initGroups(S);
       buildTransferMarket(S);refreshMarket(S);
-      if(!S.groups.G1||S.groups.G1.length!==6)eraBad.push(id+':分组异常');
-      if(!S.leagueTeams||S.leagueTeams.length!==18)eraBad.push(id+':联盟名录'+((S.leagueTeams||[]).length)+'队');
+      // 分组形态随赛制：sab→G1/G2/G3 各 6；ab/eastwest→两组；double-rr/single/legacy→单组 All
+      const st0=(typeof fmtOf==='function'?(fmtOf(S).structure||S.structure):S.structure)||'sab';
+      const stKey=st0==='legacy'?'double-rr':st0;
+      const gs=S.groups||{};
+      const groupOk=(stKey==='sab')
+        ? !!(gs.G1&&gs.G1.length===6&&gs.G2&&gs.G2.length===6)
+        : (stKey==='ab'||stKey==='eastwest')
+          ? !!((gs.A||gs.East)&& (gs.B||gs.West))
+          : !!(gs.All&&gs.All.length>=12);
+      if(!groupOk)eraBad.push(id+':分组异常('+stKey+' → '+Object.keys(gs).join('/')+')');
+      if(!S.leagueTeams||S.leagueTeams.length<12)eraBad.push(id+':联盟名录'+((S.leagueTeams||[]).length)+'队');
       migrateSave();
       let eErr='';
       try{['club','career','lineup','market','train','league','kjia','union','hall','biz'].forEach(p=>renderPage(p));}catch(e){eErr=e.message;}

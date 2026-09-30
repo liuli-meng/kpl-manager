@@ -149,8 +149,9 @@ function trainRookie(s,id){
  if(s.academyTrained){toast('今日已培养过青训选手');return;}
  const r=(s.academy||[]).find(x=>x.id===id);
  if(!r)return;
- if(s.fund<ROOKIE_TRAIN_COST){toast('青训培养需 '+ROOKIE_TRAIN_COST+'万');return;}
- s.fund-=ROOKIE_TRAIN_COST;
+ const rtc=(typeof rookieTrainCost==='function')?rookieTrainCost(s):ROOKIE_TRAIN_COST;
+ if(s.fund<rtc){toast('青训培养需 '+rtc+'万');return;}
+ s.fund-=rtc;
  s.academyTrained=true;
  const t=applyRookieTrain(r);
  logEvent(s,' 青训培养：'+r.name+'「'+t.label+'」+'+t.gain+'（潜力'+r.potential+'）');
