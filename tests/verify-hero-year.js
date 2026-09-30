@@ -71,6 +71,26 @@ const missing = sandbox.HEROES.filter((h) => !h.y);
 if (missing.length) fail('缺上线年：' + missing.map((h) => h.n).join(','));
 else ok('全部英雄已标注上线年');
 
+// 与公开时间线对齐的锚点（百科/爆料站/荣耀助手汇总）
+const anchors = {
+  后羿: 2015, 貂蝉: 2015, 吕布: 2015, 廉颇: 2015, 韩信: 2015, 露娜: 2015,
+  花木兰: 2016, 张飞: 2016, 李白: 2016, 李元芳: 2016, 刘邦: 2016, 娜可露露: 2016, 兰陵王: 2016,
+  干将莫邪: 2017, 鬼谷子: 2017, 大乔: 2016, 东皇太一: 2017, 黄忠: 2017,
+  公孙离: 2018, 裴擒虎: 2018, 狂铁: 2018, 上官婉儿: 2018, 盾山: 2018,
+  猪八戒: 2019, 西施: 2019, 马超: 2019, 嫦娥: 2019,
+  镜: 2020, 蒙恬: 2020, 阿古朵: 2020, 夏洛特: 2020, 澜: 2020, 蒙犽: 2020,
+  司空震: 2021, 云缨: 2021, 金蝉: 2021,
+  桑启: 2022, 戈娅: 2022, 海月: 2022,
+  莱西奥: 2023, 姬小满: 2023, 亚连: 2023,
+  大司命: 2024,
+};
+let badAnchor = 0;
+for (const [n, y] of Object.entries(anchors)) {
+  const got = (sandbox.HERO_BY_NAME[n] || {}).y;
+  if (got !== y) { fail(n + ' 上线年 ' + got + ' 应为 ' + y); badAnchor++; }
+}
+if (!badAnchor) ok('时间线锚点 ' + Object.keys(anchors).length + ' 项对齐公开资料');
+
 // heroesNow 跟 S._y
 sandbox.S = { _y: 2016 };
 const now16 = sandbox.heroesNow().length;
