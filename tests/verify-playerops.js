@@ -112,7 +112,10 @@ const out = vm.runInContext(`
     }
 
     // ⑧ 任务条：选手模式 day=1 未完成时出现（此前用例已做过训练/社交，需重置进度再验）
+    //    只删 localStorage 不够：missionState() 有模块内缓存，renderAll 现在会真的渲染当前页，
+    //    缓存里已带 done_* 标记。清缓存 + 清盘才算真重置。
     try{localStorage.removeItem('km_missions');}catch(_){}
+    try{if(typeof saveMissionState==='function')saveMissionState({});}catch(_){}
     S.day=1;
     if(S.career&&S.career.stats){S.career.stats.trained=0;S.career.stats.social=0;S.career.stats.matches=0;}
     const strip=missionStrip(S);

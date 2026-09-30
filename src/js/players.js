@@ -1,4 +1,4 @@
-﻿function genPlayer(def){
+function genPlayer(def){
  const keys=['lane','farm','team','mind'];
  const attrs={};
  keys.forEach((k,i)=>{attrs[k]=clamp((def.base?def.base[i]:70)+rnd(-1,1),40,99);});
@@ -53,7 +53,7 @@ function buyPlayer(s,p){
  const {over,tax}=overCapTax(s,p.wage);
  if(!confirm(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return false;
  }
- s.fund-=cost;p.acqCost=cost;s.players.push(p); // acqCost：买入价锚定（转售保护用）
+ s.fund-=cost;p.acqCost=cost;p.joinedDay=s.day;s.players.push(p); // acqCost：买入价锚定（转售保护用）；joinedDay：新援磨合
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.market=s.market.filter(x=>x.id!==p.id); // 签约后从市场移除
   s.freeAgents=(s.freeAgents||[]).filter(x=>x.id!==p.id); // 同步摘自由市场，防同名双挂
@@ -74,11 +74,51 @@ function genFreeAgentDef(pos,band,usedNames){
  if(usedNames)usedNames.add(name);
  // 档位即四维基准：star≈顶星(88+) / mid≈主力(78) / low≈轮换(69)，总值由 base 直出
  const BAND={star:[85,92],mid:[74,82],low:[66,73]}[band]||[74,82];
- const base=[0,1,2,3].map(()=>rnd(BAND[0],BAND[1]));
- const sk=pick([['lane','对线属性额外+10%'],['farm','运营属性额外+10%'],['team','团战属性额外+10%'],['mind','心态属性额外+10%']]);
- const skilln={lane:'线霸',farm:'运营',team:'团战',mind:'大心脏'}[sk[0]];
+ const base=posSpecializedBase(pos,BAND[0],BAND[1]);
+ const sk=pick(posSkillPool(pos)); // [type, 名, 描述]
  const sig=pick(HEROES.filter(h=>h.pos[0]===pos)).n;
  return {id:'fa_'+pos+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:[],
- base,skill:{n:skilln+'体系',t:sk[0],d:sk[1]},sig,
+ base,skill:{n:sk[1]+'体系',t:sk[0],d:sk[2]},sig,
  career:'自由球员，曾在次级联赛历练，'+rnd(18,22)+'岁，等待 KPL 机会。'};
+}
+/* ================= 位置专精四维（对齐 POS_W，治「职不对位」） =================
+ 旧生成器四维平随机：中路可能对线最高、游走可能运营最高，档案看起来「不是这个位置的人」。
+ 现在按 POS_W 主属性抬高、次属性持平、冷属性压低，overall() 加权后自然对位。 */
+const POS_ATTR_KEYS=['lane','farm','team','mind'];
+const POS_SKILL_BIAS={
+ top:[['lane','线霸','对线属性额外+10%'],['team','团战','团战属性额外+10%']],
+ jg:[['farm','运营','运营属性额外+10%'],['team','团战','团战属性额外+10%']],
+ mid:[['team','团战','团战属性额外+10%'],['lane','线霸','对线属性额外+10%']],
+ ad:[['lane','线霸','对线属性额外+10%'],['farm','运营','运营属性额外+10%']],
+ sup:[['mind','大心脏','心态属性额外+10%'],['team','团战','团战属性额外+10%']],
+};
+function posSpecializedBase(pos,min,max,rndFn){
+ const r=rndFn||(typeof rnd==='function'?rnd:(a,b)=>a+Math.floor(Math.random()*(b-a+1)));
+ const w=(typeof POS_W!=='undefined'&&POS_W[pos])||{lane:.25,farm:.25,team:.25,mind:.25};
+ // 并列权重时按「更像本位置」破平：mid 团战略>对线，ad 对线≈运营
+ const tieBoost={mid:{team:1},ad:{lane:1},top:{lane:1},jg:{farm:1},sup:{mind:1}};
+ const ranked=POS_ATTR_KEYS.slice().sort((a,b)=>{
+  const wb=(w[b]||0)+((tieBoost[pos]&&tieBoost[pos][b])||0)*0.01;
+  const wa=(w[a]||0)+((tieBoost[pos]&&tieBoost[pos][a])||0)*0.01;
+  return wb-wa;
+ });
+ // 分层抽样：四档不重叠区间，主属性必在最高档——随机再大也不会「职不对位」
+ const span=Math.max(4,max-min);
+ const bands=[
+  [min+Math.round(span*0.62),max],                 // 主
+  [min+Math.round(span*0.34),min+Math.round(span*0.58)],
+  [min+Math.round(span*0.12),min+Math.round(span*0.30)],
+  [min,min+Math.round(span*0.10)],
+ ];
+ const out={};
+ POS_ATTR_KEYS.forEach(k=>{
+  const rank=Math.min(3,ranked.indexOf(k));
+  const t=bands[rank]||bands[2];
+  const lo=clamp(t[0],40,99),hi=clamp(Math.max(t[1],t[0]),40,99);
+  out[k]=clamp(r(lo,hi),40,99);
+ });
+ return POS_ATTR_KEYS.map(k=>out[k]);
+}
+function posSkillPool(pos){
+ return POS_SKILL_BIAS[pos]||POS_SKILL_BIAS.mid;
 }

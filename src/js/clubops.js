@@ -36,7 +36,28 @@ function idleMul(s){
 function dailyCommercialIncome(s){
  const sp=SPONSORS[clamp(s.sponsorLv||0,0,SPONSORS.length-1)]||SPONSORS[0];
  const inc=sp&&isFinite(sp.income)?sp.income:0;
- return Math.round((inc*fanMul(s,500)+Math.round(fanEff(s)*0.08))*idleMul(s));
+ const base=inc*fanMul(s,500)+Math.round(fanEff(s)*0.08);
+ // 现金饱和：不缺钱后赞助议价/粉丝消费见顶，日流水边际递减（弱旅 fund≤软帽不打折）
+ const cut=clamp(((s.fund||0)-(typeof ECON_SOFT_CAP!=='undefined'?ECON_SOFT_CAP:18000))/60000,0,
+  (typeof ECON_COMMERCIAL_MAX_CUT!=='undefined'?ECON_COMMERCIAL_MAX_CUT:0.5));
+ return Math.round(base*(1-cut)*idleMul(s));
+}
+/* 储备监管费（周结，payWage 扣）：财务公平向巨款俱乐部摊派——压后期滚雪球，弱旅为 0 */
+function cashReserveFee(s){
+ const soft=(typeof ECON_SOFT_CAP!=='undefined'?ECON_SOFT_CAP:18000);
+ const rate=(typeof ECON_RESERVE_FEE_RATE!=='undefined'?ECON_RESERVE_FEE_RATE:0.05);
+ const maxFee=(typeof ECON_RESERVE_FEE_MAX!=='undefined'?ECON_RESERVE_FEE_MAX:2800);
+ const excess=Math.max(0,(s&&s.fund||0)-soft);
+ return Math.round(Math.min(maxFee,excess*rate));
+}
+/* 俱乐部周度编制成本：后勤/青训/场馆/差旅/数据组——真实俱乐部开销大头不在选手年薪。
+   旧版只有象征性周薪，fund 只涨不跌（玩家反馈「没有扣费」）。挂机时对外活动停摆，编制同步缩减。 */
+function clubOpsCost(s){
+ if(!s)return 0;
+ const roster=(s.players||[]).filter(p=>p&&!p.loan).length;
+ const pop=(s.players||[]).reduce((t,p)=>t+((p&&p.popularity)||0),0);
+ const base=40 + roster*22 + pop*0.28;
+ return Math.round(base*(0.55+0.45*idleMul(s)));
 }
 /* ================= 赛事奖金 70/30 分成（KPL 硬规则） =================
  官方奖金选手分成不得低于 70%（士气/签约意愿体现），俱乐部最多留成 30% 入基金。

@@ -74,8 +74,11 @@ function get_division_system_for_year(year) {
 
 function leaguePayout(s,place){
  const map={'冠军':830,'亚军':500,'四强':250,'八强':133}; // 联盟版权/商务分润（真实对齐 ÷6）：按成绩加权、非平均分配
- const amt=map[place];
- if(amt){s.fund+=amt;logEvent(s,' 联盟分润（'+place+'）：'+amt+'万');}
+ let amt=map[place];
+ // 小球市扶持：资金薄弱时额外 +25% 分润（弱档冲冠杠杆）
+ const needy=!!(s&&(s.fund||0)<7000);
+ if(amt&&needy)amt=Math.round(amt*1.25);
+ if(amt){s.fund+=amt;logEvent(s,' 联盟分润（'+place+'）：'+amt+'万'+(needy?'（含小球市扶持）':''));}
 }
 function logLevel(txt){
  if(/成就解锁|冠军|王朝|捧杯|FMVP|名人堂|亚运/.test(txt))return 'gold';
@@ -104,6 +107,10 @@ function logEvent(s,txt){(s.eventLog=s.eventLog||[]).unshift({txt,t:Date.now(),l
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(0,i);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function powerOf(s,name){
  if(name===s.teamName)return teamPower(s);
+ // 亚运国家队：战力在 setupAsianGames 写入，不走 ensureAiRosters（避免空阵容/覆盖）
+ if(typeof AG_NATION_NAMES!=='undefined'&&AG_NATION_NAMES.has&&AG_NATION_NAMES.has(name)){
+  return (s.aiPower&&s.aiPower[name])||450;
+ }
  ensureAiRosters(s,name); // 懒建真实阵容并写入 aiPower（与玩家同刻度）
  return s.aiPower[name]||450;
 }
@@ -222,8 +229,8 @@ function simulateAiRound(s,upToRound){
 function simSeriesResult(s,a,b,bo){
  let mw=0,ow=0;
  const need=Math.ceil(bo/2);
- const aEff=powerOf(s,a)*(1+dynastyStreak(s,b)*0.02); // 王朝反制①：对方连冠 → 我方研究加成
- const bEff=powerOf(s,b)*(1+dynastyStreak(s,a)*0.02);
+ const aEff=powerOf(s,a)*(1+dynastyStreak(s,b)*0.045); // 王朝反制①：对方连冠 → 我方研究加成（旧 +2%/冠无感，提到 +4.5%/冠，满3连冠约+13.5%）
+ const bEff=powerOf(s,b)*(1+dynastyStreak(s,a)*0.045);
  for(let i=1;i<=bo&&mw<need&&ow<need;i++){
  // 与玩家局同一事件引擎（对线/资源/大团），AI 对 AI 也保持叙事与分差手感一致
  const w=(typeof singleGame==='function')?singleGame(aEff,bEff).w:(Math.random()<winChance(aEff,bEff));
@@ -238,9 +245,14 @@ function advancePhase(s){
  const sTeams=[],aTeams=[],bTeams=[];
  ['G1','G2','G3'].forEach(grp=>{
  const rank=sortGroup(s,grp);
- sTeams.push(rank[0],rank[1]);
- aTeams.push(rank[2],rank[3]);
- bTeams.push(rank[4],rank[5]);
+ // 12/15 队时代 G3 不满 6 人：rank[4]/rank[5] 可能是 undefined，禁止推进分组
+ // （undefined 会一路漏到季后赛 lb2.a，且 undefined!==null 让补位判断全部失效 → 年份冻死）
+ if(rank[0])sTeams.push(rank[0]);
+ if(rank[1])sTeams.push(rank[1]);
+ if(rank[2])aTeams.push(rank[2]);
+ if(rank[3])aTeams.push(rank[3]);
+ if(rank[4])bTeams.push(rank[4]);
+ if(rank[5])bTeams.push(rank[5]);
  });
  s.groups={S:sTeams,A:aTeams,B:bTeams};
  setPhase(s,'r2',{who:'advancePhase'});
@@ -404,7 +416,8 @@ function ensureLeagueChampion(s){
 }
 function buildPlayoff(s){
  // 旧版残留的 simulateGroupAI 调用已删：r3 的 AI 场次由 simulateAiRound 逐轮模拟 + advancePhase 兜底补完，此处重跑会重复计分（且该函数在重构时已丢失导致进季后赛必崩）
- const sRank=sortGroup(s,'S'),aRank=sortGroup(s,'A');
+ // 12/15 队时代 S/A 可能不足 6 人：过滤空位，避免 undefined 漏进对阵树
+ const sRank=sortGroup(s,'S').filter(Boolean),aRank=sortGroup(s,'A').filter(Boolean);
  if(!sRank.length){setPhase(s,'eliminated',{who:'season',force:true});save();renderAll();return;}
  s.playoff={
  wb:[{a:sRank[0],b:sRank[3],r:null},{a:sRank[1],b:sRank[2],r:null}], // 胜者组R1: S1vS4,S2vS3
@@ -430,27 +443,46 @@ function buildPlayoff(s){
 function playoffStep(s){
  const p=s.playoff;
  if(!p)return;
+ // 单边对阵（12/15 队时代空位）：只有一队时直接晋级，禁止整届冻在空位上
+ const walkover=(m)=>{
+  if(!m||m.r!=null)return false;
+  if(m.a&&!m.b){m.r=m.a;return true;}
+  if(!m.a&&m.b){m.r=m.b;return true;}
+  return false;
+ };
+ [p.wb&&p.wb[0],p.wb&&p.wb[1],p.lb&&p.lb[0],p.lb&&p.lb[1],
+  p.lb2&&p.lb2[0],p.lb2&&p.lb2[1],p.lb3&&p.lb3[0],p.lb3&&p.lb3[1],
+  p.wf,p.lb4,p.lbf,p.final].forEach(walkover);
  for(let i=0;i<2;i++){const m=p.wb[i];if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'wb'+(i+1));return;}}
  for(let i=0;i<2;i++){const m=p.lb[i];if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'lb'+(i+1));return;}}
  for(let i=0;i<2;i++){
  const m=p.lb2[i];
- if(m.b===null&&p.lb[i].r)m.b=p.lb[i].r;
+ if(m.b==null&&p.lb[i].r)m.b=p.lb[i].r;
  if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'lb2_'+(i+1));return;}
  }
- if(p.wf.a===null){const _w0=p.wb&&p.wb[0],_w1=p.wb&&p.wb[1];if(_w0&&_w1){p.wf.a=_w0.r;p.wf.b=_w1.r;}}
+ // wf/lb4 同样 a/b 独立补位：一方赛果可能晚到，不能在 a===null 时把 b 一并写死
+ if(p.wf.a==null&&p.wb&&p.wb[0]&&p.wb[0].r){p.wf.a=p.wb[0].r;}
+ if(p.wf.b==null&&p.wb&&p.wb[1]&&p.wb[1].r){p.wf.b=p.wb[1].r;}
  if(p.wf.r===null&&p.wf.a&&p.wf.b){playPoMatch(s,p.wf,'胜者组决赛');return;}
  for(let i=0;i<2;i++){
  const m=p.lb3[i];
- if(m.a===null)m.a=p.wb[i].r===p.wb[i].a?p.wb[i].b:p.wb[i].a;
- if(m.b===null&&p.lb2[i].r)m.b=p.lb2[i].r;
+ if(m.a==null)m.a=p.wb[i].r===p.wb[i].a?p.wb[i].b:p.wb[i].a;
+ if(m.b==null&&p.lb2[i].r)m.b=p.lb2[i].r;
  if(m.r===null&&m.a&&m.b){playPoMatch(s,m,'lb3_'+(i+1));return;}
  }
- if(p.lb4.a===null){const _l30=p.lb3&&p.lb3[0],_l31=p.lb3&&p.lb3[1];if(_l30&&_l31){p.lb4.a=_l30.r;p.lb4.b=_l31.r;}}
+ if(p.lb4.a==null&&p.lb3&&p.lb3[0]&&p.lb3[0].r){p.lb4.a=p.lb3[0].r;}
+ if(p.lb4.b==null&&p.lb3&&p.lb3[1]&&p.lb3[1].r){p.lb4.b=p.lb3[1].r;}
  if(p.lb4.r===null&&p.lb4.a&&p.lb4.b){playPoMatch(s,p.lb4,'败者组半决赛');return;}
  // 败者组决赛：胜者组决赛败者 vs 败者组半决赛胜者（双败制关键）
- if(p.lbf.a===null){p.lbf.a=p.wf.r===p.wf.a?p.wf.b:p.wf.a;p.lbf.b=p.lb4.r;}
+ // 败者组决赛：胜者组决赛败者 vs 败者组半决赛胜者（双败制关键）
+ // a/b 必须独立补位：lb4 可能晚于 wf 就绪，不能在 a===null 时把 b 一并写死，
+ // 否则 b 永远是 null，整届季后赛在总决赛门口冻死（实测 2017 档 Y2 夏季后赛）
+ if(p.lbf.a==null&&p.wf&&p.wf.r){p.lbf.a=p.wf.r===p.wf.a?p.wf.b:p.wf.a;}
+ if(p.lbf.b==null&&p.lb4&&p.lb4.r){p.lbf.b=p.lb4.r;}
  if(p.lbf.r===null&&p.lbf.a&&p.lbf.b){playPoMatch(s,p.lbf,'败者组决赛');return;}
- if(p.final.a===null){p.final.a=p.wf.r;p.final.b=p.lbf.r;}
+ // 总决赛：胜者组冠军 vs 败者组冠军 —— 同样 a/b 独立补位
+ if(p.final.a==null&&p.wf&&p.wf.r){p.final.a=p.wf.r;}
+ if(p.final.b==null&&p.lbf&&p.lbf.r){p.final.b=p.lbf.r;}
  if(p.final.r===null&&p.final.a&&p.final.b){playPoMatch(s,p.final,'总决赛');return;}
  // 对阵残缺：只从已有赛果回填 a/b，禁止填假队名（会把整届季后赛一口气打完）
  let repaired=false;
@@ -560,6 +592,7 @@ function matchDayTick(s){
  });
  try{if(s.day%WAGE_EVERY===0)payWage(s);}catch(e){}
  try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
+ try{if(s.mode==='player'&&typeof playerMediaDayTick==='function')playerMediaDayTick(s);}catch(e){} // 比赛日也偶发媒体（旧版只在 nextDay 触发，选手全年摸不到）
  try{natCampTick(s);}catch(e){}
  try{kjiaTick(s);}catch(e){}
  try{kjiaDayTick(s);}catch(e){}
@@ -656,28 +689,34 @@ function payWage(s){
  try{scrubWages(s);}catch(e){}
  const annual=weeklyWage(s); // 年薪合计
  const wage=Math.max(0,Math.round(annual/ECON.payWeeks)); // 周结 = 年薪/52
- // 选手代言收入：人气 × ENDORSE_PER_POP 万 × 粉丝系数（商业价值对冲工资帽压力）
- const endorse=Math.round((s.players||[]).reduce((t,p)=>t+((p.popularity||0)*ENDORSE_PER_POP),0)*fanMul(s,300));
+ // 选手代言收入：人气 × ENDORSE_PER_POP × 粉丝系数；怠政时商务也停摆
+ const endorseRaw=(s.players||[]).reduce((t,p)=>t+((p.popularity||0)*ENDORSE_PER_POP),0)*fanMul(s,300);
+ const endorse=Math.round(endorseRaw*idleMul(s));
+ const ops=(typeof clubOpsCost==='function')?clubOpsCost(s):0;
+ const reserveFee=(typeof cashReserveFee==='function')?cashReserveFee(s):0;
  s.fund-=wage;
+ s.fund-=ops;
+ s.fund-=reserveFee;
  s.fund+=endorse;
  let tax=0;
  if(annual>s.wageCap){
- // KPL 工资帽（年薪帽）：超帽部分缴纳 60% 奢侈税，按周摊
- tax=Math.round((annual-s.wageCap)*0.6/ECON.payWeeks);
- s.fund-=tax;
- logEvent(s,' 发薪：年薪 '+annual+'万（本周 '+wage+'万）· 超帽 '+ (annual-s.wageCap) +'万，本周奢侈税 '+tax+'万（帽 '+s.wageCap+'万）');
- }else{
- logEvent(s,' 发放周结 '+wage+'万（年薪 '+annual+'万 / 帽 '+s.wageCap+'万）');
+  // KPL 工资帽（年薪帽）：超帽部分缴纳 60% 奢侈税，按周摊
+  tax=Math.round((annual-s.wageCap)*0.6/ECON.payWeeks);
+  s.fund-=tax;
  }
- if(endorse>0)logEvent(s,' 选手代言收入 '+endorse+'万（人气变现）');
+ const spend=wage+ops+reserveFee+tax;
+ // 周结总账：收支分列，杜绝「只看见进账、感觉没有扣费」
+ logEvent(s,' 周结总账：收入 代言+'+endorse+' · 支出 工资-'+wage+' 编制-'+ops+(reserveFee?' 储备费-'+reserveFee:'')+(tax?' 奢侈税-'+tax:'')
+  +'（净 '+(endorse-spend>=0?'+':'')+(endorse-spend)+'万 · 年薪合计 '+annual+'万 / 帽 '+s.wageCap+'万）');
  if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0; // 防 NaN 写入存档（JSON 会变 null）
  if(s.fund<0){
- s.fund=Math.max(0,s.fund);
- s.players.forEach(p=>p.morale=clamp(p.morale-15,20,100));
- logEvent(s,' 资金不足！拖欠工资导致全员士气大降');
+  s.fund=Math.max(0,s.fund);
+  s.players.forEach(p=>p.morale=clamp(p.morale-15,20,100));
+  logEvent(s,' 资金不足！拖欠工资导致全员士气大降');
  }else{
- s.players.forEach(p=>p.morale=clamp(p.morale+3,20,100));
+  s.players.forEach(p=>p.morale=clamp(p.morale+3,20,100));
  }
+ try{if(typeof toast==='function'&&spend>0)toast(' 周结：支出 '+spend+'万（工资+编制+税费）');}catch(e){}
  try{if(typeof boardCashPulse==='function')boardCashPulse(s);}catch(e){}
 }
 /* ================= 王朝反制（连冠≥2 触发） =================
@@ -724,6 +763,9 @@ function recordSeasonAwards(s){
  if(s.mode==='player'&&s.career&&t1.some(x=>x.p.id===s.career.me)){
  s.career.allstar=(s.career.allstar||0)+1;
  logEvent(s,' 你入选了赛季最佳阵容一阵——生涯履历再添一笔');
+ }else if(s.mode==='player'&&s.career&&t2.some(x=>x.p.id===s.career.me)){
+ s.career.allstar=(s.career.allstar||0)+1; // 二阵也算全明星履历（旧版只记一阵，导致「随队夺冠但全明星 0」）
+ logEvent(s,' 你入选了赛季最佳阵容二阵——生涯履历再添一笔');
  }
  logEvent(s,' KPL 赛季最佳阵容揭晓：一阵——'+t1.map(x=>POS[x.p.pos][1]+' '+x.p.name+'（'+x.team+'）').join('、'));
  logEvent(s,' 二阵——'+t2.map(x=>POS[x.p.pos][1]+' '+x.p.name+'（'+x.team+'）').join('、'));
@@ -734,6 +776,8 @@ function newSeason(s){
  try{storeSet(slotKey()+'_auto',serializeForSave(s));}catch(e){} // 赛季轮转自动备份（roguelike 惯例）：误触重置/存档损坏可回滚上一年
  try{recordSeasonAwards(s);}catch(e){logEvent(s,' 最佳阵容结算异常：'+(e&&e.message)+'（不影响赛季轮换）');} // 上赛季最佳阵容入册（趁阵容还没跨季老化）；失败不得挡住 newSeason
  s.season++;s.day=1;s.trained=false;s.marketRefreshed=false;
+ try{if(typeof applyHistoricalLeague==='function')applyHistoricalLeague(s);}catch(e){} // 史实跨年：升降级/更名换队
+ try{if(typeof histPromotionSkip==='function')histPromotionSkip(s);}catch(e){} // 史实降级空窗→快进到重返年
  s.pick={}; // 清掉上赛季末的英雄选择残留（BP 确认后才会重新写入）
  s._poError=null; // 季后赛异常标记按赛季归零：干净走完的赛季必须保持为空（诊断用，勿静默）
  s.academyTrained=false;
@@ -817,22 +861,32 @@ function newSeason(s){
  retireToCoach(s,p);
  }
  });
- // 王朝反制②：连冠队伍工资帽成长减半（保住豪华阵容越来越难）
+ // 王朝反制②：连冠队伍工资帽成长大幅放缓（保住豪华阵容越来越难）
  const st=dynastyStreak(s,s.teamName);
- const capGrow=st>=2?40:80; // 年薪帽：正常 +80；王朝 +40（约一半）
+ const capGrow=st>=3?15:st>=2?30:st>=1?55:80; // 年薪帽：正常+80 · 1连冠+55 · 2连冠+30 · 3连冠+15
  s.wageCap=clamp((s.wageCap||ECON.wageCapDefault)+capGrow,ECON.wageCapMin,ECON.wageCapMax);
- // 王朝反制③：版本针对——力度随连冠次数加码
- if(st>=2){
- logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长减半（+'+capGrow+'万，正常 +6）');
- const core=s.players.slice().sort((a,b)=>overall(b)-overall(a))[0];
- if(core){
+ // 王朝反制③：版本针对 + 明星溢价——力度随连冠次数加码（旧版只削 1 人 1 点，三年 11 冠无感）
+ if(st>=1){
+ logEvent(s,' 联盟公平条款：'+s.teamName+' 已'+st+'连冠，新赛季工资帽成长放缓（+'+capGrow+'万，正常 +80）');
+ const cores=s.players.slice().sort((a,b)=>overall(b)-overall(a)).slice(0,Math.min(3,st+1));
+ cores.forEach((core,i)=>{
+ if(!core)return;
  const key=pick(['lane','farm','team','mind']);
- core.attrs[key]=clamp(core.attrs[key]-st,40,99);
- core.morale=clamp(core.morale-5*st,20,100);
- core.val=clamp((core.val||100)-10,70,150);
- logEvent(s,' 版本针对：全联盟都在研究你——新版本削弱了核心 '+core.name+' 的招牌体系（属性-'+st+' · 士气-'+5*st+'%点 · 状态-10%）');
+ const hit=st+(i===0?1:0);
+ core.attrs[key]=clamp(core.attrs[key]-hit,40,99);
+ core.morale=clamp(core.morale-4*st,20,100);
+ core.val=clamp((core.val||100)-6*st,70,150);
+ // 连冠核心涨薪：豪门留人成本上升（周结/奢侈税压力）
+ const raise=Math.min(40,5*st+ (i===0?8:0));
+ if(typeof core.wage==='number'&&isFinite(core.wage)){
+ core.wage=Math.min(PLAYER_WAGE_MAX,core.wage+raise);
  }
+ });
+ if(cores[0])logEvent(s,' 版本针对：全联盟都在研究你——削弱核心 '+cores.map(c=>c&&c.name).filter(Boolean).join('、')+'（属性-'+st+'~'+(st+1)+' · 状态-'+6*st+'%）');
+ logEvent(s,' 王朝溢价：连冠核心集体要求涨薪（约 +'+Math.min(40,5*st+8)+'万/人年薪），豪华阵容越来越贵');
  }
+ // 王朝反制④：对手研究加成在 simSeriesResult 已生效；再记一条可见提示
+ if(st>=2)logEvent(s,' 对手研究：对阵你时全联盟战力 +'+Math.round(st*4.5)+'%（王朝被重点研究）');
  // 租借选手：新赛季开始前一律归队（租借不跨赛季）
  (s.players||[]).filter(p=>p.loan).forEach(p=>{
   const from=p.loan.from||'原队';
@@ -1024,13 +1078,16 @@ function yearCalendarHtml(s){
  const stages=calendarStages(st0);
  const cur=currentCalendarKey(st0);
  const curIdx=stages.findIndex(x=>x.k===cur);
- return '<div class="panel"><h3>年度赛历 <span class="tag">2026 赛制</span></h3><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch">'
+ const pct=stages.length<=1?0:Math.round(Math.max(0,Math.min(stages.length-1,curIdx))/(stages.length-1)*100);
+ return '<div class="panel"><h3>年度赛历 <span class="tag">2026 赛制 · '+pct+'%</span></h3>'
+  +'<div class="cal-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>'
+  +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch;margin-top:8px">'
   +stages.map((st,i)=>{
    const on=st.k===cur;
    const done=i<curIdx;
-   return '<div style="flex:1;min-width:72px;text-align:center;padding:8px 4px;border:1px solid '+(on?'var(--accent)':'var(--line)')+';border-radius:8px;background:'+(on?'rgba(121,170,255,.12)':'var(--raise)')+';opacity:'+(done&&!on?0.55:1)+'">'
-    +'<div style="font-size:13px;font-weight:800;color:'+(on?'var(--accent)':'var(--txt)')+'">'+st.n+'</div>'
-    +'<div style="font-size:10px;color:var(--faint);margin-top:2px">'+st.hint+(on?' · 进行中':done?' · 已完':'')+'</div></div>';
+   return '<div class="cal-step'+(on?' on':'')+(done?' done':'')+'">'
+    +'<div class="cal-n">'+st.n+'</div>'
+    +'<div class="cal-h">'+st.hint+(on?' · 进行中':done?' · 已完':'')+'</div></div>';
   }).join('')
   +'</div><div class="hint" style="margin-top:8px">顺序：春季赛 → 挑战者杯 → 夏季赛 → EWC（夏休）→ 亚运会（亚运年）→ 年度总决赛</div></div>';
 }

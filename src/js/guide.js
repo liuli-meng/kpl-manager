@@ -87,13 +87,16 @@ function seasonQuestState(){
 }
 function saveSeasonQuest(m){try{localStorage.setItem(SEASONQ_KEY,JSON.stringify(m));}catch(_){}}
 function seasonQuestDefs(mode){
- if(mode==='player')return [
+ if(mode==='player'){
+  const underAge=(()=>{try{const st=(typeof S!=='undefined')?S:null;const me=st&&myPlayer(st);return !!(me&&(me.age||0)<MATCH_MIN_AGE);}catch(_){return false;}})();
+  return [
   {id:'q1',title:'加练一次',page:'career',done:s=>!!(s.career&&s.career.stats&&s.career.stats.trained>=1)},
-  {id:'q2',title:'打完一场',page:'club',done:s=>!!(s.career&&s.career.stats&&s.career.stats.matches>=1)},
+  {id:'q2',title:underAge?'训练赛出场一次':'打完一场',page:underAge?'career':'club',done:s=>!!(s.career&&s.career.stats&&((s.career.stats.matches||0)>=1||(s.career.stats.scrim||0)>=1))},
   {id:'q3',title:'更衣室互动',page:'career',done:s=>!!(s.career&&s.career.stats&&s.career.stats.social>=1)},
   {id:'q4',title:'关注身价/目标',page:'career',done:s=>!!(s.career&&(s.career.stats&&s.career.stats.matches>=3||s.val>=105))},
   {id:'q5',title:'打完整赛季',page:'club',done:s=>['champion','eliminated'].includes(s.phase)},
- ];
+  ];
+ }
  return [
   {id:'q1',title:'凑齐 5 人首发',page:'lineup',
    done:s=>POS_ORDER.every(pos=>(s.players||[]).some(p=>p.pos===pos&&(s.lineup||[]).includes(p.id)))},
@@ -137,7 +140,7 @@ function seasonQuestStrip(s){
  const p=seasonQuestProgress(s);
  if(p.done||!p.list.length)return '';
  return `<div class="mission-strip" style="margin:0 0 8px;padding:8px 10px;border:1px solid rgba(92,138,245,.45);border-radius:8px;background:rgba(92,138,245,.08);font-size:12px">
- <span> <b>第 1 赛季主线</b>（${p.total-p.list.length}/${p.total}）：${p.list.map(q=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${q.page}')">${q.title}</button>`).join('')}</span>
+ <span> <b>第 1 赛季主线</b>（${p.total-p.list.length}/${p.total}）：${p.list.map(q=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${q.page}')" title="前往该页完成目标「${_escAttr(q.title)}」">→ ${q.title}</button>`).join('')}</span>
  </div>`;
 }
 /* 每页一行提示；× 单页关闭（km_hints 按页记忆）。
@@ -148,7 +151,7 @@ function _hintState(){
  try{_hintCache=JSON.parse(localStorage.getItem(HINT_KEY)||'{}')||{};}catch(_){_hintCache={};}
  return _hintCache;
 }
-function pageHint(name){
+ function pageHint(name){
  const hide=_hintState();
  if(hide&&hide[name])return '';
  let txt=PAGE_HINTS[name];if(!txt)return '';
@@ -158,6 +161,15 @@ function pageHint(name){
  }
  if(name==='market'&&S&&S.mode==='coach'){
   txt='教练工作台：应急租借与引援申请（买断谈判由俱乐部打理）';
+ }
+ if(name==='market'&&S&&S.mode==='player'){
+  txt='转会观察：看市场水位与同位置竞争；买卖由俱乐部打理，转会申请去「生涯」页';
+ }
+ if(name==='career'&&S&&S.mode!=='player'){
+  txt='队内队员视角：挑一名选手看状态/意愿（训练续约仍走阵容与训练页）';
+ }
+ if(name==='biz'&&S&&(S.mode==='player'||S.mode==='coach')){
+  txt='财政观察：赞助与工资帽水位（经营决策由俱乐部董事会/经理打理）';
  }
  return `<div class="page-hint"><span>${txt}</span><button class="ph-x" onclick="dismissHint('${name}')" title="不再显示这条">×</button></div>`;
 }
@@ -172,20 +184,24 @@ function dismissHint(name){
 function tourSteps(){
  const mode=(S&&S.mode)||'manager';
  const pages=MODE_PAGES[mode]||MODE_PAGES.manager;
- const modeName=mode==='player'?'选手生涯':mode==='coach'?'教练生涯':'经理模式';
+ const modeName=mode==='player'?'职业选手':mode==='coach'?'主教练':'俱乐部经理';
  const steps=[{page:null,title:'欢迎来到 王者电竞经理·KPL 篇',text:'你是'+modeName+'。下面带你把各页面走一遍，看懂就能上手；想随时重看：存档管理 → 重玩新手引导。'}];
  pages.forEach(p=>steps.push({page:p,title:TOUR_TITLES[p]||p,text:PAGE_HINTS[p]||''}));
  steps.push({page:null,title:'存档与目标',text:'进度自动保存在本机浏览器，「管理」里可 3 槽切换、导出备份、导入换机。目标只有一个：捧起银龙杯。上阵！'});
  return steps;
 }
-/* 3 步上手：目标驱动，不按页码背书 */
+/* 3 步上手：目标驱动，不按页码背书。每步带「去试试」直达目标页。 */
 function quickSteps(){
  const mode=(S&&S.mode)||'manager';
- const modeName=mode==='player'?'选手生涯':mode==='coach'?'教练生涯':'经理模式';
+ const modeName=mode==='player'?'职业选手':mode==='coach'?'主教练':'俱乐部经理';
  const m=missionDefs(mode);
+ const tryOf=(x)=>{
+  const label=(typeof pageLabel==='function')?pageLabel(x.page):(TOUR_TITLES[x.page]||x.page||'');
+  return {label:'去试试 · '+label,act:'go:'+(x.page||'club')};
+ };
  return [
   {page:null,title:'3 步上手 · '+modeName,text:'不用读完所有页面。先完成这三件事，比赛节奏就通了。之后随时「管理 → 重玩新手引导」看完整说明。'},
-  ...m.map(x=>({page:x.page,title:x.title,text:x.text,mission:true})),
+  ...m.map(x=>({page:x.page,title:x.title,text:x.text,mission:true,tryBtn:tryOf(x)})),
   {page:null,title:'冲！',text:'目标：捧起银龙杯。进度自动存本机；前 3 天顶部会有任务条提醒。'},
  ];
 }
@@ -211,12 +227,23 @@ function startQuickOnboard(){ // 首进默认：3 步上手
 /* 新版规则引导：手机分区页签 / 开局青训 / 租借窗口 / 选秀竞拍 */
 function whatsNewSteps(){
  return [
-  {page:null,title:'新版速览 · 手机怎么玩',text:'手机上每页顶部有【分区页签】，一屏只看一块，点标签切换，不用长页上下滑。底部金色【主操作条】是「下一步/开赛」，旁边 3 个快捷页签；更多页用右下角「换页」。'},
-  {page:null,title:'开局自带 2 名青训',text:'常规赛禁止租借后，伤病/集训必须有人顶。开档自动进 2 名满 18 岁、可出战的青训替补（低薪），在阵容页替补席可见。'},
-  {page:null,title:'租借只在杯赛开窗',text:'【常规赛（春/夏）】不能租借，大名单 10 人全是自家签约。【挑战者杯】出征 7 人（含租借）最多租 2；【年度总决赛】出征 7 人最多租 1。租借占名额，不额外加人。'},
-  {page:'market',title:'选秀：先竞拍签位，再点名',text:'转会期顶部「选秀大会」：叫价拍下签位后，池子展开为可点卡片，点「点名签约」。大名单满 10 人只能放弃；自家青训第一轮不可选。'},
-  {page:null,title:'还能回来看',text:'管理 →「重玩新手引导 / 新版说明」随时再看。进度自动存本机，换机请先导出存档。冲银龙杯！'},
+  {page:null,title:'新版速览 · 手机怎么玩',text:'手机上每页顶部有【分区页签】，一屏只看一块，点标签切换。底部金色【主操作条】是「下一步/开赛」。',tryBtn:{label:'看一眼俱乐部页签',act:'demo-club'}},
+  {page:null,title:'开局自带 2 名青训',text:'常规赛禁止租借后，伤病必须有人顶。开档自动进 2 名可出战青训替补，在「阵容」替补席。',tryBtn:{label:'打开阵容页看看',act:'go:lineup'}},
+  {page:null,title:'租借只在杯赛开窗',text:'常规赛不能租借。挑战者杯出征 7 人最多租 2；年总最多租 1。杯赛页可点「出征名单」勾选。',tryBtn:{label:'打开联赛页',act:'go:league'}},
+  {page:'market',title:'选秀：先竞拍签位，再点名',text:'转会期「选秀大会」：叫价拍下签位后点卡片签约。满 10 人只能放弃。',tryBtn:{label:'去转会页看选秀',act:'go:market'}},
+  {page:null,title:'还能回来看',text:'管理 →「新版说明 / 重玩新手引导」随时再看。冲银龙杯！'},
  ];
+}
+function tourTry(act){
+ try{
+  if(act==='demo-club'){
+   goPage('club');
+   toast('看顶部一排分区标签：点一下只展开那一块');
+  }else if(String(act).indexOf('go:')===0){
+   goPage(String(act).slice(3));
+   toast('已打开该页，看完点引导里「下一步」');
+  }
+ }catch(e){toast('打开失败，可从底部导航进入');}
 }
 function startWhatsNew(){
  _tour={on:true,i:0,mode:'new'};
@@ -226,25 +253,38 @@ function renderTour(){
  const mode=_tour.mode||'quick';
  const steps=mode==='quick'?quickSteps():(mode==='new'?whatsNewSteps():tourSteps());
  const st=steps[_tour.i]||steps[0];
- if(st.page)goPage(st.page); // goPage 会再进 maybeStartTour：_tour.on 守卫挡住，不递归
+ // 人性化：已在目标页就不强行跳；需要跨页时只在下一步才切，避免讲一条弹窗先把整页甩走
+ const cur=(typeof curPageNameSafe==='function')?curPageNameSafe():null;
+ const needNav=st.page&&st.page!==cur;
  const n=steps.length;
  const isQuick=mode==='quick';
  const isNew=mode==='new';
  $('#app-modal-body').innerHTML=`<h2>${_escTxt(st.title)}</h2>
  <div class="hint" style="margin-bottom:10px">${st.text}</div>
+ ${needNav?`<div class="hint" style="margin-bottom:10px">下一步将打开 <b>${_escTxt((typeof pageLabel==='function')?pageLabel(st.page):st.page)}</b> 页对照着看。</div>`:''}
+ ${st.tryBtn?`<div style="margin:0 0 12px"><button class="btn sm gold" onclick="tourTry('${_escAttr(st.tryBtn.act)}')">${_escTxt(st.tryBtn.label)}</button></div>`:''}
  <div style="display:flex;gap:4px;margin-bottom:14px">${steps.map((_,i)=>`<span style="flex:1;height:3px;border-radius:2px;background:${i<=_tour.i?'var(--gold)':'var(--line)'}"></span>`).join('')}</div>
  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  ${_tour.i>0?'<button class="btn sm" onclick="tourPrev()">上一步</button>':''}
  <button class="btn sm" onclick="tourSkip()">跳过</button>
  ${(isQuick||isNew)?'<button class="btn sm" onclick="startTour()">看完整引导</button>':''}
- ${_tour.i<n-1?'<button class="btn sm primary" onclick="tourNext()">下一步</button>':'<button class="btn sm gold" onclick="tourFinish()">'+((isQuick||isNew)?'开始上手':'开始征程')+'</button>'}
+ ${_tour.i<n-1?`<button class="btn sm primary" onclick="tourNext()">${needNav?'下一步 · 打开'+((typeof pageLabel==='function')?pageLabel(st.page):st.page):'下一步'}</button>`:'<button class="btn sm gold" onclick="tourFinish()">'+((isQuick||isNew)?'开始上手':'开始征程')+'</button>'}
  </div>`;
  $('#app-modal').classList.add('on');
 }
 function tourNext(){
  const mode=_tour.mode||'quick';
  const steps=mode==='quick'?quickSteps():(mode==='new'?whatsNewSteps():tourSteps());
- const n=steps.length;if(_tour.i<n-1){_tour.i++;renderTour();}else tourFinish();
+ const n=steps.length;
+ if(_tour.i>=n-1){tourFinish();return;}
+ // 先关弹窗再切页（若目标页不同），再开下一步——避免 goPage 时弹窗盖住导航
+ const cur=steps[_tour.i];
+ const nxt=steps[_tour.i+1];
+ if(nxt&&nxt.page&&nxt.page!==((typeof curPageNameSafe==='function')?curPageNameSafe():null)){
+  try{goPage(nxt.page);}catch(_){}
+ }
+ _tour.i++;
+ renderTour();
 }
 function tourPrev(){if(_tour.i>0){_tour.i--;renderTour();}}
 function _tourEnd(msg){

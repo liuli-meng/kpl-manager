@@ -50,7 +50,9 @@ const scored = p => [p.wb, p.lb, p.lb2, p.lb3].flat().concat([p.wf, p.lb4, p.lbf
   const n0 = scored(JSON.parse(before)), n1 = scored(JSON.parse(r.after));
   check(n1 > n0, `② 点「快进季后赛」（字符串入参）没推进任何场次：${n0} → ${n1}`);
   check(r.ls1, '② 季后赛推进后未写存档（刷新就丢进度）');
-  check(r.a && r.a.type === 'startPlayoff', `② nextAction(S) 在季后赛期没给出入口：${JSON.stringify(r.a)}`);
+  // 全 AI 对阵会一口气快进打完：未打完仍应是 startPlayoff，打完则交赛历（advanceCalendar）——两者都是有效出口
+  check(r.a && (r.a.type === 'startPlayoff' || r.a.type === 'advanceCalendar'),
+    `② nextAction(S) 在季后赛期没给出入口：${JSON.stringify(r.a)}`);
 }
 
 // ──  正确调用形式（传 S）同样推进 ──

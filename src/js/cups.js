@@ -1,4 +1,4 @@
-/* 年度杯赛：挑战者杯/EWC/亚运会/年总 + 杯赛通用流程（season.js 机械拆出） */
+﻿/* 年度杯赛：挑战者杯/EWC/亚运会/年总 + 杯赛通用流程（season.js 机械拆出） */
 /* ================= 挑战者杯（2026 KPL 春季赛后最高关注度杯赛） =================
  真实赛制简化建模：32 队（18 KPL 全员 + 14 挑战者：K甲/全国大赛/青训/高校/职工/主播/全球七大赛道）
  → 单败淘汰 32→16（BO5）→16→8（BO7），春季赛冠军/亚军为一二号种子分半区
@@ -33,7 +33,7 @@ function genChallengerDef(s,i,teamName,band){
  used.add(name);
  const pos=POS_ORDER[i%5];
  // 赛道强度：K甲≈75 / 全球≈78 / 主播≈68 / 次级（全国/青训/高校/职工）≈65
- const baseLv=band==='K甲'?75:band==='全球'?78:band==='主播'?68:65;
+ const baseLv=band==='K甲'?70:band==='全球'?72:band==='主播'?62:58;
  const b=v=>clamp(v+rnd(-5,5),55,86);
  return {id:'ch'+gameYear(s)+'_'+i,name,pos,team:teamName,tags:['特权'],
  base:[b(baseLv),b(baseLv-1),b(baseLv),b(baseLv-1)],
@@ -180,7 +180,7 @@ function genEwcDef(s,i,teamName){
  const pos=POS_ORDER[i%5];
  const b=v=>clamp(v+rnd(-4,4),68,88);
  return {id:'ewc'+gameYear(s)+'_'+i,name,pos,team:teamName,tags:['国际'],
- base:[b(80),b(78),b(80),b(79)],skill:{n:'海外劲旅',t:pick(['lane','farm','team','mind']),d:'国际赛场淬炼的体系战力'},
+ base:[b(76),b(74),b(76),b(75)],skill:{n:'海外劲旅',t:pick(['lane','farm','team','mind']),d:'国际赛场淬炼的体系战力'},
  sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,career:gameYear(s)+' EWC 电竞世界杯海外参赛队选手。'};
 }
 function setupEWC(s){
@@ -252,8 +252,16 @@ function finishEWC(s){
  真实建模简化：中国代表队由 KPL 联盟各位置当赛季总值最高者组成（含玩家队选手），
  韩国为最强对手，8 队 BO7 单败淘汰。玩家不直接操控国家队（教练席不在你手里），
  但麾下入选选手会带回来奖牌加成：人气/身价/士气 + 协会奖金，代价是年总体力下滑。 */
-const AG_NATIONS=[['韩国',470],['中国台北',432],['越南',427],['泰国',416],['日本',400],['沙特阿拉伯',385],['印度',365]];
+/* 亚洲战力刻度：中国=KPL 最强之和，韩国唯一对手 */
+const AG_NATIONS=[['韩国',455],['中国台北',410],['越南',398],['泰国',382],['日本',368],['沙特阿拉伯',348],['印度',328]];
 const AG_CITY='名古屋';
+const AG_NATION_NAMES=new Set(['中国代表队',...AG_NATIONS.map(([n])=>n)]);
+function agChinaPower(s,squad){
+ let base=0;
+ (squad||[]).forEach(p=>{base+=playerPower(p,p.sig)+(natCampFormBonus(s,p)||0);});
+ const camp=Math.min(30,Math.max(0,s.natCampDay||0));
+ return Math.round(base*(1.08+camp*0.001));
+}
  function agSelectSquad(s){
  const pool=[];
  (s.players||[]).forEach(p=>{const st=playerStatus(p,s);if(!st.loan&&!st.retiring)pool.push(p);});
@@ -276,10 +284,10 @@ function setupAsianGames(s){
  }).filter(Boolean);
  }
  if(squad.length<5)squad=agSelectSquad(s); // 兜底：名单残缺（退役/异常）按当前最强补
- const myPow=Math.round(squad.reduce((m,p)=>m+playerPower(p)+(natCampFormBonus(s,p)||0),0));
+ const myPow=agChinaPower(s,squad);
  s.aiPower=s.aiPower||{};
  s.aiPower['中国代表队']=myPow;
- AG_NATIONS.forEach(([n,pw])=>{s.aiPower[n]=pw+(gameYear(s)-2026)*3;}); // 海外对手逐年小幅变强
+ AG_NATIONS.forEach(([n,pw])=>{s.aiPower[n]=pw+(gameYear(s)-2026)*2;}); // 海外对手逐年小幅变强（慢于中国队）
  // 韩国固定在下半区 QF4（与中国的 QF1 隔开：两队最强，只能在决赛相遇）；抽签池排除韩国防重复参赛
  const others=shuffle(AG_NATIONS.filter(([n])=>n!=='韩国').map(([n])=>n).slice());
  s.ag={squad:squad.map(p=>({name:p.name,pos:p.pos,mine:ownedIds.has(p.id),ovr:overall(p)})),
@@ -314,7 +322,7 @@ function finishAsianGames(s){
  const bronzes=a.sf.map(loserOf).filter(Boolean);
  a.medal=a.champ==='中国代表队'?'金牌':runner==='中国代表队'?'银牌':bronzes.includes('中国代表队')?'铜牌':'无';
  s.titleHistory=(s.titleHistory||[]).concat([{season:s.season,split:null,event:'亚运会',champ:a.champ}]).slice(-48);
- logEvent(s,' '+gameYear(s)+' 亚运会王者荣耀项目落幕：'+a.champ+' 金牌 · '+(runner==='中国代表队'?'中国队':'韩国等队')+' 银牌');
+ logEvent(s,' '+gameYear(s)+' 亚运会王者荣耀项目落幕：'+a.champ+' 金牌 · '+runner+' 银牌');
  if(a.champ==='中国代表队')logEvent(s,' 中国代表队登顶亚洲之巅——国旗升起时刻，整个 KPL 都在看！');
  else if(a.medal==='无')logEvent(s,' 中国队无缘领奖台，舆论哗然');
  // MVP：冠军队内战力最高者；中国队夺冠时从「实际出征名单」（锁定快照）里评——不能用当下重选，

@@ -190,8 +190,8 @@ function autoFillLineup(s){
 }
 /* 简化模式：同位置把「可出场」里战力更高者换进首发（伤停/集训/K甲锻炼排除）。
   非简化模式直接 return——平衡门禁与默认玩法完全不受影响。 */
-function optimizeLineup(s){
- try{if(!simpleMode())return;}catch(e){return;}
+function optimizeLineup(s,force){
+ try{if(!force&&!simpleMode())return;}catch(e){if(!force)return;}
  POS_ORDER.forEach(pos=>{
   const pool=s.players.filter(p=>p.pos===pos&&!natBusy(s,p)&&(p.kjia||0)<=0);
   if(!pool.length)return;
@@ -536,7 +536,14 @@ function bpSuggest(){
 }
 function bpAuto(){bpSuggest();bpConfirm();}
 function bpAutoAll(){
- if(!confirm('开启后本系列赛剩余局次将自动 BP 并直接开赛，不再弹 BP 界面（想手动参与就别开）。确定开启？'))return;
+ // BP 台已占用 app-modal，不能叠系统 confirm 也不能再开同壳弹窗——二次点击确认
+ if(!window._bpAutoArm){
+  window._bpAutoArm=true;
+  toast('开启后本系列赛剩余局次自动 BP 并直接开赛，不再弹 BP。再点一次确认开启');
+  setTimeout(()=>{window._bpAutoArm=false;},4000);
+  return;
+ }
+ window._bpAutoArm=false;
  S.seriesAuto=true;
  closeModal('app-modal');
  // 草稿已损坏（idx 走完却 0 选人）时也走无 UI 自动局，避免确认按钮点了没反应

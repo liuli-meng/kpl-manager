@@ -2,6 +2,31 @@
 
 /* ============ PART3 ============ */
 
+/* 游戏内确认弹窗（app-modal）：与 BP/谈判同一套 UI，避免系统 confirm 割裂。
+   onOk/onNo 可选；无 DOM 时回落 confirmDanger（引擎/测试沙箱可同步驱动）。 */
+function confirmGame(msg,onOk,onNo){
+ try{
+  const body=document.getElementById('app-modal-body');
+  const wrap=document.getElementById('app-modal');
+  if(!body||!wrap){ if(confirmDanger(msg)){onOk&&onOk();}else{onNo&&onNo();} return; }
+  body.innerHTML=`<h2>请确认</h2>
+   <div class="hint" style="margin:12px 0;line-height:1.7">${String(msg).replace(/\n/g,'<br>')}</div>
+   <div class="center mt16" style="display:flex;gap:10px;justify-content:center">
+    <button class="btn" id="cfm-cancel" type="button">取消</button>
+    <button class="btn primary" id="cfm-ok" type="button">确定</button>
+   </div>`;
+  wrap.classList.add('on');
+  if(typeof ModalStack!=='undefined'&&ModalStack)ModalStack.open('app-modal');
+  const ok=document.getElementById('cfm-ok');
+  const no=document.getElementById('cfm-cancel');
+  const close=()=>{try{closeModal('app-modal');}catch(_){wrap.classList.remove('on');}};
+  if(ok)ok.onclick=()=>{close();onOk&&onOk();};
+  if(no)no.onclick=()=>{close();onNo&&onNo();};
+ }catch(e){
+  if(confirmDanger(msg)){onOk&&onOk();}else{onNo&&onNo();}
+ }
+}
+
 /* ================= 卡牌渲染 ================= */
 function pcard(p,extra,opts){
  if(!p)return '<div class="pcard r"><div class="p-name">选手数据缺失</div></div>';
@@ -215,23 +240,33 @@ function renderHeader(){
  const sp=SPONSORS[spLv]||SPONSORS[0];
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
  const hdPower=teamPower(S),hdWage=weeklyWage(S); // 各算一次：本函数内三处复用
+ const hdWeekCost=Math.round(hdWage/ECON.payWeeks)+(typeof clubOpsCost==='function'?clubOpsCost(S):0); // 周支出预估（工资+编制）
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,44)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>
  <div class="stats">
- <div class="stat k-money"><b data-num="fund">${fmt(S.fund)}</b><small>资金</small></div>
+ <div class="stat k-money"><b data-num="fund">${fmt(S.fund)}</b><small>${S.mode==='player'?'俱乐部资金':'资金'}</small></div>
  <div class="stat k-power"><b data-num="power">${fmt(hdPower)}</b><small>总战力</small></div>
  <div class="stat k-day"><b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
- <div class="stat k-wage ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>年薪/帽</small></div>
+ </div>
+ <button class="hd-btn hd-more" type="button" onclick="toggleHdMore()" aria-expanded="false" title="更多数据">详情</button>
+ <div class="hd-extra" id="hd-extra" hidden>
+ <div class="stat k-wage ${hdWage>S.wageCap?'red':''}"><b>${hdWage}/${S.wageCap}万</b><small>年薪/帽 · 周支≈${hdWeekCost}</small></div>
  ${S.streak>=3?`<div class="stat gold"><b>${S.streak}连胜</b><small>火热</small></div>`:S.streak<=-3?`<div class="stat red"><b>${-S.streak}连败</b><small>低迷</small></div>`:''}
  <div class="stat k-sponsor"><b>${sp.income}万/天</b><small>${sp.name}</small></div>
  ${S.coach?`<div class="stat k-coach"><b>${S.coach.name}</b><small>教练 +${S.coach.bonus}%</small></div>`:''}
- </div>
- <button class="hd-btn" onclick="uiSave()">存档</button>
- <button class="hd-btn" onclick="openSaveMgmt()">管理</button>
+ <div class="hd-audio-m">
  <button class="hd-btn" onclick="toggleSfx()" title="音效开关">${_sfxOn?'音效 开':'音效 关'}</button>
  <button class="hd-btn" onclick="toggleBGM()" title="背景音乐开关">${_bgmOn?"BGM 开":"BGM 关"}</button>
- <button class="hd-btn" onclick="resetGame()">重开</button>`;
+ </div>
+ </div>
+ <div class="hd-actions">
+ <button class="hd-btn" onclick="uiSave()">存档</button>
+ <button class="hd-btn" onclick="openSaveMgmt()">管理</button>
+ <button class="hd-btn hd-audio" onclick="toggleSfx()" title="音效开关">${_sfxOn?'音效 开':'音效 关'}</button>
+ <button class="hd-btn hd-audio" onclick="toggleBGM()" title="背景音乐开关">${_bgmOn?"BGM 开":"BGM 关"}</button>
+ <button class="hd-btn" onclick="resetGame()">重开</button>
+ </div>`;
  // 数字滚动：资金/战力平滑滚数（带 data-num 的 stat）
  try{
  document.querySelectorAll('#header [data-num]').forEach(el=>{
@@ -239,15 +274,42 @@ function renderHeader(){
  tweenNum(el,key,key==='fund'?S.fund:hdPower);
  });
  }catch(_){}
+ // 顶栏「详情」折叠：记住展开态（本机 UI，不进存档）
+ try{
+ const extra=document.getElementById('hd-extra');
+ const btn=document.querySelector('#header .hd-more');
+ if(extra&&btn){
+ const open=!!window._hdMore;
+ extra.hidden=!open;
+ btn.setAttribute('aria-expanded',open?'true':'false');
+ btn.textContent=open?'收起':'详情';
+ }
+ }catch(_){}
+}
+function toggleHdMore(){
+ window._hdMore=!window._hdMore;
+ try{
+ const extra=document.getElementById('hd-extra');
+ const btn=document.querySelector('#header .hd-more');
+ if(extra)extra.hidden=!window._hdMore;
+ if(btn){btn.setAttribute('aria-expanded',window._hdMore?'true':'false');btn.textContent=window._hdMore?'收起':'详情';}
+ }catch(_){}
 }
 /* ================= 董事会终局的 UI 层守卫 =================
  下课是"软终局"：只在 UI 入口拦截，不改进程内部逻辑——平衡门禁（sim/sim-quick/fuzz）
  直接调用 nextDay/startMatch/startCup，若在那里硬守卫，门禁就再也测不出真实数值了。 */
 function boardLocked(){return !!(S&&S.board&&S.board.fired);}
-function seatLocked(){return !!(S&&S.seatLost);}
+function seatLocked(){return !!(S&&S.seatLost)&&!(S&&S.histGap);}
 function uiGuard(msg){
  if(boardLocked()){try{toast(msg||'你已被董事会解约，执教生涯结束');}catch(_){}return true;}
- if(seatLocked()){try{toast(msg||'临时席位被收回，已降入 K甲——执教生涯结束');}catch(_){}return true;}
+ if(S&&S.histGap)return false; // 空窗期：面板可操作
+ if(seatLocked()){
+  const m=S&&S.mode;
+  const hist=S&&S.histReturnYear?('史实降级，'+S.histReturnYear+' 年重返'):'已降入 K甲';
+  const who=m==='player'?'选手生涯暂停':m==='coach'?'执教生涯结束':'执教生涯结束';
+  try{toast(msg||(hist+'——'+who));}catch(_){}
+  return true;
+ }
  return false;
 }
 function uiSave(){if(!requireSave('存档'))return;if(save())toast('存档成功');}
@@ -255,8 +317,84 @@ function playerRetired(s){return !!(s&&s.mode==='player'&&s.career&&s.career.ret
 function uiNextDay(s){if(uiGuard())return;if(!requireSave('推进一天'))return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);renderAll();}
 function uiStartMatch(){if(uiGuard())return;if(!requireSave('开赛'))return;if(playerRetired(S)){toast('职业生涯已退役');return;}startMatch();}
 function uiStartCup(s){if(uiGuard())return;startCup(s);}
-function uiSkipTransfer(s){if(uiGuard())return;skipTransferWindow(s);}
-function uiEndPreseason(s){if(uiGuard())return;endPreseason(s);}
+/* 杯赛出征 7 人勾选（含租借名额）：挑杯≤2 租 / 年总≤1 租 */
+function openCupSquadPicker(s,kind){
+ s=s||S;
+ const key=kind||s.phase;
+ const maxLoan=cupLoanMax(s)||0;
+ ensureCupSquad(s,key);
+ const sq=s.cupSquad;
+ const pool=(s.players||[]).filter(p=>matchEligible(s,p));
+ const selected=new Set(sq.ids||[]);
+ let draft=sq.ids?sq.ids.slice():[];
+ function paint(){
+  const loanN=draft.map(id=>pool.find(p=>p.id===id)).filter(p=>p&&p.loan).length;
+  const rows=pool.map(p=>{
+   const on=selected.has(p.id);
+   const wouldLoan=p.loan&&loanN>=maxLoan&&!on;
+   return `<button type="button" class="btn sm ${on?'primary':''}" style="margin:0 6px 6px 0;opacity:${wouldLoan?'.45':'1'}" data-pid="${p.id}" ${wouldLoan?'disabled':''}>
+   ${on?'✓ ':''}${p.name} · ${POS[p.pos][0]} · ${overall(p)}${p.loan?' <span class="tag cyan">租</span>':''}
+   </button>`;
+  }).join('');
+  const ownN=draft.map(id=>pool.find(p=>p.id===id)).filter(p=>p&&!p.loan).length;
+  $('#app-modal-body').innerHTML=`<h2>出征名单 <span class="tag">${key==='challenger'?'挑战者杯':'年度总决赛'} · ${draft.length}/${CUP_SQUAD}</span></h2>
+  <div class="hint" style="margin-bottom:10px">${typeof cupSquadRule==='function'?cupSquadRule(s):''}<br>点选手切换入选；租借（蓝标）占用出征名额。当前：自家 ${ownN} · 租借 ${loanN}/${maxLoan}</div>
+  <div style="margin-bottom:12px">${rows}</div>
+  <div class="center" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+   <button class="btn" onclick="closeModal('app-modal')">取消</button>
+   <button class="btn gold" onclick="confirmCupSquad('${key}')">确认 ${draft.length} 人出征</button>
+  </div>`;
+  $$('#app-modal-body button[data-pid]').forEach(b=>{
+   b.onclick=function(){
+    const id=b.getAttribute('data-pid');
+    const p=pool.find(x=>x.id===id);
+    if(selected.has(id)){selected.delete(id);draft=draft.filter(x=>x!==id);}
+    else{
+     if(draft.length>=CUP_SQUAD){toast('出征最多 '+CUP_SQUAD+' 人');return;}
+     if(p&&p.loan&&draft.map(i=>pool.find(x=>x.id===i)).filter(x=>x&&x.loan).length>=maxLoan){
+      toast('租借最多 '+maxLoan+' 人（已满）');return;
+     }
+     selected.add(id);draft.push(id);
+    }
+    paint();
+   };
+  });
+ }
+ window._cupSquadDraft=()=>draft.slice();
+ window._cupSquadKey=key;
+ paint();
+ $('#app-modal').classList.add('on');
+}
+function confirmCupSquad(key){
+ const ids=(window._cupSquadDraft&&window._cupSquadDraft())||[];
+ if(!ids.length){toast('至少选 1 人出征');return;}
+ setCupSquad(S,ids,key);
+ closeModal('app-modal');
+ toast('出征 '+ids.length+' 人已锁定');
+ // 确认后继续推进杯赛
+ setTimeout(function(){try{startCup(S);}catch(e){}},80);
+}
+function cupSquadSummary(){
+ if(!S||!S.cupSquad)return '';
+ const ids=S.cupSquad.ids||[];
+ const list=ids.map(id=>(S.players||[]).find(p=>p.id===id)).filter(Boolean);
+ if(!list.length)return '';
+ return list.map(p=>p.name+(p.loan?'（租）':'')).join('、');
+}
+function uiSkipTransfer(s){
+ if(uiGuard())return;
+ const left=(s&&s.transferWindow)||0;
+ if(left<=0){toast('当前不在转会期');return;}
+ confirmGame('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，13万/次）\n· 培养一名青训（潜力优先，17万/次）\n资金不足的天数自动跳过；AI 报价照常进行。',function(){
+  skipTransferWindow(s,{confirmed:true});
+ });
+}
+function uiEndPreseason(s){
+ if(uiGuard())return;
+ confirmGame('确定结束转会期？剩余天数作废，阵容锁定后联赛正式开始',function(){
+  endPreseason(s,{confirmed:true});
+ });
+}
 /* 杯赛/淘汰赛共用：对阵行 + 我方是否还有待打场次（原先每个面板各自复制一份） */
 function cupMatchRow(m,tag,opts){
  opts=opts||{};
@@ -378,7 +516,7 @@ function clubBoardPanel(){
  return `<div class="panel" style="border-color:var(--red)">
  <h3>董事会 <span class="tag" style="color:var(--red)">已解约</span></h3>
  <div style="font-size:13px;margin-bottom:6px">信任度耗尽，董事会在第 ${b.firedSeason||S.season} 赛季结束后与你解约，执教生涯就此结束。</div>
- <div class="hint">执教 ${career.years||0} 个赛季 · ${career.titles||0} 座冠军 · 最佳年度积分第 ${career.lastRank||'—'} 名 · 成就 ${Object.keys(S.achieved||{}).length}/${ACHIEVEMENTS.length}</div>
+ <div class="hint">执教 ${career.years||0} 个赛季 · ${career.titles||0} 座冠军 · 最佳年度积分第 ${career.lastRank||'—'} 名 · 成就 ${Object.keys(S.achieved||{}).length}/${(typeof achievementsFor==='function'?achievementsFor('manager'):ACHIEVEMENTS).length}</div>
  <div style="margin-top:10px"><button class="btn danger" style="width:100%" onclick="resetGame()">结束执教 · 重新开始</button></div>
  </div>`;
  }
@@ -448,7 +586,11 @@ function nextAction(s){
  if(p==='card'){
  const matches=(s.card&&s.card.matches)||[];
  const myPending=matches.some(m=>m&&!m.r&&(m.a===s.teamName||m.b===s.teamName));
- if(myPending||(s.card&&s.card.idx<matches.length))return {type:'startCard',label:' 进行卡位赛',fn:'startCard'};
+ if(myPending||(s.card&&s.card.idx<matches.length)){
+  return s.mode==='player'
+  ?{type:'startCard',label:' 出战卡位赛 · 教练指挥',fn:'startCard'}
+  :{type:'startCard',label:' 进行卡位赛',fn:'startCard'};
+ }
  return null;
  }
  if(p==='playoff'){
@@ -456,13 +598,17 @@ function nextAction(s){
  // 已有进行中的系列赛：走 startPlayoff→playPoMatch→showPreMatch 续赛。
  // 不能指到 uiStartMatch/startMatch——那条路只认常规赛 schedule，季后赛会「赛程已结束」空转。
  if(s.series&&s.series.stage==='po'){
-  return {type:'startPlayoff',label:' 继续季后赛 · BP 开赛',fn:'startPlayoff'};
+  return s.mode==='player'
+  ?{type:'startPlayoff',label:' 继续季后赛 · 教练指挥',fn:'startPlayoff'}
+  :{type:'startPlayoff',label:' 继续季后赛 · BP 开赛',fn:'startPlayoff'};
  }
  if(!pf||!pf.final)return null;
  // 决赛已打完但年度结算未跑（读档丢 _afterMatch）：仍给收尾入口
  if(pf.final.r&&!pf.champ)return {type:'startPlayoff',label:' 季后赛结算 · 推进赛历',fn:'startPlayoff'};
  if(pf.final.r)return null;
- return {type:'startPlayoff',label:' 进行季后赛 / 快进',fn:'startPlayoff'};
+ return s.mode==='player'
+ ?{type:'startPlayoff',label:' 出战季后赛 · 教练指挥',fn:'startPlayoff'}
+ :{type:'startPlayoff',label:' 进行季后赛 / 快进',fn:'startPlayoff'};
  }
  if(p==='challenger'){
  const c=s.challenger;
@@ -471,7 +617,9 @@ function nextAction(s){
      return {type:'advanceCalendar',label:'推进赛历',fn:'uiAdvanceCalendar'};
  }
  if(c.champ)return null;
- return {type:'startCup',label:' 进行挑战者杯',fn:'uiStartCup'};
+ return s.mode==='player'
+ ?{type:'startCup',label:' 出战挑战者杯 · 教练指挥',fn:'uiStartCup'}
+ :{type:'startCup',label:' 进行挑战者杯',fn:'uiStartCup'};
  }
  if(p==='ewc'){
  const e=s.ewc;
@@ -636,7 +784,9 @@ function clubChallengerPanel(){
  }
  return `<div class="panel"><h3>挑战者杯 <span class="tag">32队 · 八大赛道 · 单败+双败</span></h3>
  ${body}
- <div class="hint mt8">18 支 KPL 全员参赛 + K甲/全国大赛/青训/高校/职工/主播/全球赛道挑战者 · 春冠/春亚种子分半区 · 低赛道队对 KPL 有「挑战者的祝福」+5% · 冠军 300 万 + 年总积分 85 + FMVP</div>
+ <div style="margin:8px 0"><button class="btn sm" onclick="openCupSquadPicker(S,'challenger')"> 出征名单（7人·最多租2）</button>
+ ${cupSquadSummary()?`<div class="hint" style="margin-top:6px">已锁定：${cupSquadSummary()}</div>`:''}</div>
+ <div class="hint mt8">18 支 KPL 全员参赛 + K甲/全国大赛/青训/高校/职工/主播/全球赛道挑战者 · 春冠/春亚种子分半区 · 低赛道队对 KPL 有「挑战者的祝福」+3% · 冠军 300 万 + 年总积分 85 + FMVP</div>
  </div>`;
 }
 function clubEwcPanel(){
@@ -699,6 +849,8 @@ function clubAnnualPanel(){
  ${cupRows(list,S.teamName,nx)}
  ${allRounds.length?`<div class="hint" style="margin:8px 0 4px">我方全部轮次</div>${cupRows(allRounds,S.teamName,nx)}`:''}
  <button class="btn primary" style="width:100%;margin-top:8px" onclick="uiStartCup(S)">${btnTxt}</button>
+ <div style="margin:8px 0"><button class="btn sm" onclick="openCupSquadPicker(S,'annual')"> 出征名单（7人·最多租1）</button>
+ ${cupSquadSummary()?`<div class="hint" style="margin-top:6px">已锁定：${cupSquadSummary()}</div>`:''}</div>
  <div class="hint mt8"><b>大师组</b>（积分前6）：${rankLine(st.M,a.masters)}</div>
  <div class="hint"><b>精英组</b>（积分7-12）：${rankLine(st.E,a.elites)}</div>
  <div class="hint mt8">大师组前4 + 精英组第1 直进淘汰赛；大师5/6 与精英2-5 打突围赛；精英第6名直接出局</div>
@@ -868,7 +1020,7 @@ function renderClub(){
   return `<div class="panel" style="border-color:var(--red)"><h3>${tag} 渲染失败</h3><div class="hint">${_escTxt(String(e&&e.message||e))}</div><div class="hint mt8">可先「管理 → 导出存档」备份；点上方导航切换页面通常仍可用。</div></div>`;
  }
  };
- let html=safe(()=>((typeof missionStrip==='function'?missionStrip(S):'')+pageHint('club')+`
+ let html=safe(()=>((typeof missionStrip==='function'?missionStrip(S):'')+(typeof histGapPanelHtml==='function'?histGapPanelHtml():'')+pageHint('club')+`
  <div class="banner" style="border-left:4px solid ${teamColor(S.teamName)}">
  <div>${crest(S.icon,S.teamName,44)}</div>
  <div><div class="big">${S.teamName}</div>
@@ -879,17 +1031,66 @@ function renderClub(){
  <div class="dim" style="font-size:11px">俱乐部资金</div>
  </div>
  </div>`),'club-banner');
+ html+=safe(todayAdviceBar,'club-today');
  html+=safe(clubBoardPanel,'club-board');
  html+=safe(clubCoachDealPanel,'club-coach');
  html+=safe(clubPhasePanel,'club-phase');
  html+=safe(clubFooterPanels,'club-footer');
  $('#page-club').innerHTML=html;
 }
+/* 今日建议：按状态给一个「下一步干嘛」，减少「打开不知道点哪」 */
+function todayAdviceBar(){
+ const s=S;if(!s||!s.players)return '';
+ if(s.board&&s.board.fired)return '';
+ const items=[];
+ const injured=(s.players||[]).filter(p=>p.injury>0).length;
+ const gaps=POS_ORDER.filter(pos=>!(s.players||[]).some(p=>p.pos===pos&&matchEligible(s,p)));
+ if(s.preseason){
+  items.push({t:'先把阵容组好，再点「结束转会期」开赛',act:'go:market',label:'去转会'});
+ }else if(s.series){
+  items.push({t:'系列赛进行中（'+(s.series.mw||0)+':'+(s.series.ow||0)+'）——继续打完或调 BP',act:'match',label:'继续比赛'});
+ }else if((s.schedule||[])[s.matchIdx]){
+  items.push({t:'下一场 vs '+s.schedule[s.matchIdx].opp+'，可先训练再开赛',act:'match',label:'去开赛'});
+ }
+ if(!s.trained&&!s.preseason)items.push({t:'今日还没训练',act:'go:train',label:'去训练'});
+ if(injured)items.push({t:'队内 '+injured+' 人伤停',act:'go:lineup',label:'看阵容'});
+ if(gaps.length)items.push({t:'缺位：'+gaps.map(p=>POS[p][1]).join('/')+'，可紧急补签',act:'go:market',label:'去补强'});
+ if(!items.length)items.push({t:'今日已就绪——推进日历或经营赞助',act:'day',label:'推进一天'});
+ const main=items[0];
+ const canQuick=!s.preseason&&!s.series&&['r1','r2','r3'].includes(s.phase)&&(s.schedule||[])[s.matchIdx]&&s.mode!=='player';
+ return `<div class="today-bar"><span class="tb-label">今日建议</span>
+ <div class="tb-text">${items.map(x=>_escTxt(x.t)).join(' · ')}</div>
+ ${canQuick?`<button class="btn sm" onclick="todayAdviceGo('quick')" title="自动首发+BP 直接开打">⚡ 快打</button>`:''}
+ <button class="btn sm gold" onclick="todayAdviceGo('${main.act}')">${main.label}</button></div>`;
+}
+function todayAdviceGo(act){
+ try{
+  if(act==='go:market'||act==='go:train'||act==='go:lineup')goPage(String(act).slice(3));
+  else if(act==='quick'){
+   if(S.preseason){toast('先结束转会期');return;}
+   if(S.series){quickStartMatch();return;}
+   if(['r1','r2','r3'].includes(S.phase)&&(S.schedule||[])[S.matchIdx]){
+    try{startMatch();}catch(e){uiStartMatch();return;}
+    if(S&&S.series)quickStartMatch();
+   }else uiStartMatch();
+  }
+  else if(act==='match'){
+   if(S.preseason){toast('先结束转会期');return;}
+   if(S.phase==='challenger'||S.phase==='annual'||S.phase==='ewc')uiStartCup(S);
+   else if(S.phase==='playoff')uiStartCup(S);
+   else uiStartMatch();
+  }else if(act==='day')uiNextDay(S);
+ }catch(e){toast('操作失败，可从底部导航进入');}
+}
 /* ================= 经营页（赞助商 / 工资帽 / 荣誉室 / 比赛复盘） ================= */
 function renderBiz(){
  const lv=clamp(S.sponsorLv||0,0,SPONSORS.length-1); // 残档越界只影响展示，不回写 S
  const sp=SPONSORS[lv],next=SPONSORS[lv+1];
- let html=pageHint('biz')+`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
+ let obs='';
+ if(S.mode==='player'||S.mode==='coach'){
+  obs=`<div class="hint" style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--cyan);background:rgba(80,180,255,.08)"><b>财政观察</b> · ${S.mode==='player'?'职业选手':'主教练'}——赞助/工资帽由俱乐部打理</div>`;
+ }
+ let html=pageHint('biz')+obs+`<div class="panel"><h3>赞助商 <span class="tag">每日结算收入</span></h3>`;
  const fansNow=Math.round(S.fans||0);
  const effIncome=Math.round(sp.income*fanMul(S,500));
  html+=`<div class="sponsor"><span class="s-icon">${sp.icon}</span><div><div class="s-name">${sp.name} <span class="gold">(当前)</span></div><div class="s-desc">每日收入 ${sp.income}万${effIncome>sp.income?' <span class="green">→ 实收 '+effIncome+'万（粉丝加成 +'+(effIncome-sp.income)+'）</span>':''}</div></div></div>`;
@@ -976,10 +1177,12 @@ function renderBiz(){
  // 成就（生涯里程碑：解锁一次永久入册，条件在 save 巡检中评估）
  {
  const ach=S.achieved||{};
- const got=ACHIEVEMENTS.filter(a=>ach[a.id]).length;
- html+=`<div class="panel"><h3>成就 <span class="tag">${got}/${ACHIEVEMENTS.length} 已解锁</span></h3>
- <div class="hint" style="margin-bottom:10px">经营生涯的里程碑：冠军、青训、转会、亚运……解锁时全队广播，集齐是对一段存档最好的总结</div>
- <div class="grid g4" style="gap:8px">${ACHIEVEMENTS.map(a=>{
+ const modeAch=(typeof achievementsFor==='function')?achievementsFor(S.mode||'manager'):ACHIEVEMENTS;
+ const got=modeAch.filter(a=>ach[a.id]).length;
+ const modeName=S.mode==='player'?'选手生涯':S.mode==='coach'?'教练生涯':'经理生涯';
+ html+=`<div class="panel"><h3>成就 <span class="tag">${modeName} ${got}/${modeAch.length} 已解锁</span></h3>
+ <div class="hint" style="margin-bottom:10px">只显示当前身份的里程碑（其他视角成就不在此列表）：解锁时全队广播</div>
+ <div class="grid g4" style="gap:8px">${modeAch.map(a=>{
  const yr=ach[a.id];
  return `<div class="pcard" style="min-height:0;padding:10px 12px;${yr?'border-color:var(--gold)':'opacity:.55'}" ${yr?'title="'+yr+' 年解锁"':'title="'+a.desc+'"'}>
  <div style="display:flex;align-items:center;gap:8px">
@@ -1084,7 +1287,7 @@ function renderLeague(){
  const rank=sortGroup(S,g);
  const isMy=g===myG;
  html+=`<div class="panel"><h3>${g} 组 ${isMy?'<span class="tag" style="background:rgba(0,212,255,.15)">本队所在组</span>':''}</h3>
- <table class="tbl"><tr><th>#</th><th>战队</th><th>胜</th><th>负</th><th>积分</th><th>净胜局</th><th>战力</th></tr>
+ <table class="tbl"><tr><th>#</th><th>战队</th><th>胜</th><th>负</th><th>积分</th><th>小局胜</th><th>战力</th></tr>
  ${rank.map((n,i)=>{
  const t=(S.tables[g]||{})[n]||{w:0,l:0,pts:0,pw:0};
  const rk=i+1;const badge=rk===1?'<span class="rank-badge r1">1</span>':rk===2?'<span class="rank-badge r2">2</span>':rk===3?'<span class="rank-badge r3">3</span>':`<span class="rank-n">${rk}</span>`;
@@ -1187,7 +1390,7 @@ function renderKjia(){
  html+=`</div>`;
  // 积分榜
  html+=`<div class="panel"><h3>K甲积分榜 <span class="tag">8队单循环 · 胜者积1分</span></h3>
- <table class="tbl"><tr><th>#</th><th>战队</th><th>胜</th><th>负</th><th>积分</th><th>净胜局</th><th>战力</th></tr>
+ <table class="tbl"><tr><th>#</th><th>战队</th><th>胜</th><th>负</th><th>积分</th><th>小局胜</th><th>战力</th></tr>
  ${rank.map((n,i)=>{
  const t=k.tables[n]||{w:0,l:0,pts:0,pw:0};
  const isMy=n===my;
@@ -1531,7 +1734,9 @@ function getSortKey(key){return _sortPrefs()[key]||'ovr';}
 function getPosFilter(key){return _sortPrefs()[key+'|pos']||'';}
 function setSortKey(key,v){const p=_sortPrefs();p[key]=v;_saveSortPrefs(p);goPage(curPageName());try{const on=document.querySelector('.sort-row .s-chip.on');if(on&&on.scrollIntoView)on.scrollIntoView({inline:'center',block:'nearest'});}catch(_){}}
 function setPosFilter(key,v){const p=_sortPrefs();p[key+'|pos']=v;_saveSortPrefs(p);goPage(curPageName());}
-function curPageName(){const c=document.querySelector('nav button.on');return c&&c.dataset&&c.dataset.page?c.dataset.page:'club';}
+/* 当前页真源：goPage 写的 window._curPage 优先；
+   底栏「更多」里的页不再挂在隐藏按钮的 .on 上，只靠 .on 会读回旧页。 */
+function curPageName(){if(window._curPage)return window._curPage;const c=document.querySelector('nav button.on');return c&&c.dataset&&c.dataset.page?c.dataset.page:'club';}
 const SORTERS={
  ovr:{n:'总值',f:(a,b)=>overall(b)-overall(a)},
  val:{n:'身价',f:(a,b)=>sellAskPrice(b)-sellAskPrice(a)},

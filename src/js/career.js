@@ -38,12 +38,17 @@ function playerYearSettle(s){ // 选手模式年度结算：本赛季个人数�
  const rec={season:s.season,year:gameYear(s),team:s.teamName,apps:me.apps||0,caps:me.caps||0,
  kda:me.caps?[me.kTotal,me.dTotal,me.aTotal].map(x=>Math.round(x/me.caps*10)/10).join('/'):null,
  mvp:me.mvp||0,ovr:overall(me),val:me.val||100,wage:me.wage,
- titles:(s.honors||[]).filter(h=>h.season===s.season&&h.champion).length};
+ titles:(s.honors||[]).filter(h=>h.season===s.season&&h.champion).length,
+ fmvp:(s.fmvpHonor||[]).filter(f=>f.name===me.name&&f.year===gameYear(s)).length,
+ allstar:(s.awards||[]).some(a=>a.season===s.season&&(a.first||[]).some(x=>x.name===me.name)||(a.second||[]).some(x=>x.name===me.name))?1:0};
  s.career.seasons.unshift(rec);
  s.career.seasons=s.career.seasons.slice(0,15);
- s.career.titles+=rec.titles;
+ // 冠军数由 registerChampCore 实时累计；这里用本赛季荣誉回填漏记，不双计
+ const honorTitles=(s.honors||[]).filter(h=>h.season===s.season&&h.champion).length;
+ if(honorTitles>(s.career.titles||0))s.career.titles=honorTitles;
+ // FMVP/一阵已在 awardFMVP / recordSeasonAwards 实时入账，此处只写履历快照，不再累加
  me.kTotal=0;me.dTotal=0;me.aTotal=0;me.caps=0;me.mvp=0;me.apps=0; // 本赛季计数清零（生涯履历已快照）
- logEvent(s,'【赛季结算】'+rec.year+'：'+rec.team+' · 出场 '+rec.apps+' 次'+(rec.kda?' · 场均 '+rec.kda:'')+' · 总值 '+rec.ovr+' · '+(rec.titles?rec.titles+' 冠':'无冠'));
+ logEvent(s,'【赛季结算】'+rec.year+'：'+rec.team+' · 出场 '+rec.apps+' 次'+(rec.kda?' · 场均 '+rec.kda:'')+' · 总值 '+rec.ovr+' · '+(rec.titles?rec.titles+' 冠':'无冠')+(rec.allstar?' · 全明星':''));
 }
 function applyPlayerMove(s){ // 选手赛段间转会：把 pendingMove 落地为新东家阵容
  const mv=s.career&&s.career.pendingMove;
@@ -92,7 +97,7 @@ function playerRequestLoanOut(s){
  s=s||S;
  if(!s||s.mode!=='player')return false;
  if(typeof loanWindowOpen==='function'&&!loanWindowOpen(s)){
-  toast('常规赛（春/夏）不能租借——租借只在挑战者杯 / 年度总决赛开放');
+  toast(typeof loanRuleText==='function'?loanRuleText(s):'常规赛不能租借');
   return false;
  }
  const me=myPlayer(s);
@@ -189,7 +194,7 @@ function clubLoanOutPlayer(s,pid){
  // 人事/交易权 + 赛制：常规赛禁止租借（仅挑战者杯/年总窗口）
  if(typeof denyIfBlocked==='function'&&denyIfBlocked('loanOut',s))return false;
  if(typeof loanWindowOpen==='function'&&!loanWindowOpen(s)){
-  toast('常规赛（春/夏）不能租借——租借只在挑战者杯 / 年度总决赛开放');
+  toast(typeof loanRuleText==='function'?loanRuleText(s):'常规赛不能租借');
   return false;
  }
  if(!s||s.mode==='player'){toast('选手生涯请在「生涯」页自行申请租借');return false;}
@@ -325,7 +330,7 @@ function coachAdvice(s){
   const list=healthyPos(pos);
   const best=list.length?Math.max.apply(null,list.map(p=>overall(p))):0;
   return {pos,best,cnt:list.length};
- }).filter(x=>x.cnt===0||x.best<78).sort((a,b)=>(a.cnt-b.cnt)||(a.best-b.best));
+ }).filter(x=>x.cnt===0||x.best<72).sort((a,b)=>(a.cnt-b.cnt)||(a.best-b.best));
  const loans=(loanCandidates(s)||[]).slice(0,8).map(c=>({
   id:c.p.id,pos:c.p.pos,name:c.p.name,from:c.from,ovr:overall(c.p),rent:c.rent,
   gap:gaps.includes(c.p.pos),age:c.p.age
@@ -373,6 +378,10 @@ function coachRequest(s,type,pid,pos){
   else toast('引援申请已提交（俱乐部将在资金/名单允许时办理）');
  }else if(type==='gap'){
   if(!pos)return;
+  // 阈值收紧：该位已有可出战的合格选手就不必报缺（旧版弱位也连报，噪音大）
+  const ok=(s.players||[]).filter(p=>p.pos===pos&&matchEligible(s,p)&&overall(p)>=68);
+  if(ok.length){toast(POS[pos][0]+'位已有 '+ok[0].name+'（总值 '+overall(ok[0])+') 可出战，无需补位');return;}
+  if(s.coachRecs.some(r=>r.type==='gap'&&r.pos===pos)){toast('已提交过 '+POS[pos][0]+' 位补位申请');return;}
   s.coachRecs.unshift({type:'gap',pos});
   coachAutoSquad(s);
   toast('已申请俱乐部补强 '+POS[pos][0]);

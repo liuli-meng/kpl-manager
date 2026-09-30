@@ -11,6 +11,7 @@
     "sim": "node sim.js",
     "sim:quick": "node tests/sim-quick.js",
     "sim:player": "node tests/sim-player.js",
+    "sim:coach": "node tests/sim-coach.js",
     "sim:yearend": "node tests/sim-yearend.js",
     "test:built": "node tests/verify-built.js"
   },

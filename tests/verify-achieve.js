@@ -26,8 +26,9 @@ const out = vm.runInContext(`
   if(!S.achieved.found)fail('selfBuilt=true 未解锁 found');
   else log('③自建俱乐部: 白手起家 ' + S.achieved.found + ' 年解锁');
 
-  // ③ 签教练 → 良师入帐
+  // ③ 签教练 → 良师入帐（真正签帅才解锁：开局默认青训助教不算）
   S.coach={id:'c1',name:'测试教练',rating:82,style:'team',bonus:4,styleBonus:6,wage:60,skill:{n:'稳',d:'d'}};
+  S.coachHired=true;
   save();
   if(!S.achieved.coach)fail('签约教练未解锁 coach');
   else log('④签下教练: 良师入帐 OK');

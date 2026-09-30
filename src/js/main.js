@@ -48,6 +48,18 @@ function foldCls(key,def){
  const collapsed=v==null?def==='collapsed':v==='1';
  return 'collapsible'+(collapsed?' collapsed':'');
 }
+/* 从市场快捷条展开目标面板并滚过去（玩家偏好一旦写入就不再受默认值影响） */
+function expandFold(key){
+ try{
+  const panel=document.querySelector('.panel[data-fold="'+key+'"]');
+  if(!panel)return false;
+  panel.classList.remove('collapsed');
+  _foldCache.set(key,'0');
+  try{localStorage.setItem('pfold_'+key,'0');}catch(e){}
+  if(panel.scrollIntoView)panel.scrollIntoView({behavior:'smooth',block:'start'});
+  return true;
+ }catch(e){return false;}
+}
 document.addEventListener('click',e=>{
  const h3=e.target.closest('.panel.collapsible>h3');
  if(!h3)return;
@@ -62,51 +74,92 @@ document.addEventListener('click',e=>{
 
 /* ================= 导航（按身份模式适配可见页签） ================= */
 const MODE_PAGES={
- manager:['club','lineup','market','train','league','kjia','union','hall','biz'],
- player:['career','club','league','kjia','union','hall'], // 选手：生涯/球队日程/联赛/二队/联盟/荣誉馆
- // 教练：竞技全权 + 紧急租借/引援建议（买断谈判仍由俱乐部打理，见 renderMarket 教练分支）
- coach:['club','lineup','market','train','league','kjia','union','hall'],
+ // 视角全开：每种身份都能进所有页看世界；能不能动手由 permission.js 收口（只读观察）
+ manager:['career','club','lineup','market','train','league','kjia','union','hall','biz'],
+ player:['career','club','lineup','market','train','league','kjia','union','hall','biz'],
+ coach:['career','club','lineup','market','train','league','kjia','union','hall','biz'],
 };
+/* 页面白名单：唯一真源。未知页名直接忽略——
+   「更多」按钮没有 data-page，旧代码把 undefined 丢进 goPage，
+   结果弹「当前身份没有『undefined』页」并强制跳回首页。 */
+const PAGE_IDS=['career','club','lineup','market','train','league','kjia','union','hall','biz'];
+/* 手机（≤760px）才是「5 主 + 更多」的窄底栏；桌面/平板一屏列全，不做二次展开 */
+function isMobileNav(){
+ try{return !!(window.matchMedia&&window.matchMedia('(max-width:760px)').matches);}catch(_){return false;}
+}
+/* 主导航只放 5 个高频页，其余进「更多」抽屉——10 个页签一排是「乱」的主因 */
+const PRIMARY_NAV={
+ manager:['club','lineup','market','league','biz'],
+ coach:['club','lineup','market','league','train'],
+ player:['career','club','market','league','train'],
+};
+function primaryNavFor(mode){return PRIMARY_NAV[mode]||PRIMARY_NAV.manager;}
+function secondaryNavFor(mode){
+ const all=MODE_PAGES[mode]||MODE_PAGES.manager;
+ const pri=primaryNavFor(mode);
+ return all.filter(p=>!pri.includes(p));
+}
 function applyModeNav(){
- const pages=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
- let changed=false;
+ const mode=(S&&S.mode)||'manager';
+ const pages=MODE_PAGES[mode]||MODE_PAGES.manager;
+ const mob=isMobileNav();
+ const pri=mob?primaryNavFor(mode):pages; // 桌面宽度够：全部平铺，不藏进「更多」
+ const more=document.getElementById('nav-more');
+ if(more)more.style.display=(mob&&secondaryNavFor(mode).length)?'':'none';
  $$('#nav button').forEach(b=>{
- const show=pages.includes(b.dataset.page);
- if(show&&b.style.display==='none')changed=true;
- b.style.display=show?'':'none';
+  if(b.id==='nav-more')return;
+  b.style.display=(pages.includes(b.dataset.page)&&(!mob||pri.includes(b.dataset.page)))?'':'none';
  });
- const cur=document.querySelector('nav button.on');
- if(cur&&cur.style.display==='none'){cur.classList.remove('on');goPage(pages[0]);}
+ // 当前页不在本身份可见集里（切身份/读旧档）：回落到主入口
+ const curPage=curPageNameSafe();
+ if(curPage&&!pages.includes(curPage))goPage(pri[0]||'club');
  syncPageDock();
 }
 function pageLabel(id){
- const m={career:'生涯',club:'俱乐部',lineup:'阵容',market:'转会',train:'训练',league:'联赛',kjia:'二队',union:'联盟',hall:'荣誉馆',biz:'经营'};
+ const m={career:'生涯',club:'主场',lineup:'阵容',market:'转会',train:'训练',league:'联赛',kjia:'二队',union:'联盟',hall:'荣誉',biz:'经营'};
  return m[id]||id;
 }
 function curPageNameSafe(){
- try{if(typeof curPageName==='function')return curPageName();}catch(_){}
+ if(window._curPage&&PAGE_IDS.includes(window._curPage))return window._curPage;
+ try{if(typeof curPageName==='function'&&curPageName())return curPageName();}catch(_){}
  const c=document.querySelector('nav button.on');
  return (c&&c.dataset&&c.dataset.page)||'club';
 }
 function renderPageDock(){
  const dock=document.getElementById('page-dock');
  if(!dock)return;
- const pages=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
+ const mode=(S&&S.mode)||'manager';
+ const all=MODE_PAGES[mode]||MODE_PAGES.manager;
+ const pri=primaryNavFor(mode);
+ const sec=secondaryNavFor(mode);
  const cur=curPageNameSafe();
- dock.innerHTML='<h4>更换页面</h4>'+pages.map(id=>
-  '<button type="button" data-page="'+id+'" class="'+(id===cur?'on':'')+'" '+(id===cur?'aria-current="page"':'')+'>'+pageLabel(id)+'</button>'
- ).join('');
+ const row=id=>'button type="button" data-page="'+id+'" class="'+(id===cur?'on':'')+'" '+(id===cur?'aria-current="page"':'')+'">'+pageLabel(id)+'</button>';
+ dock.innerHTML='<h4>快捷页</h4><div class="dock-grid">'+pri.map(id=>'<'+row(id)).join('')+'</div>'
+  +(sec.length?'<h4 style="margin-top:10px">其他页</h4><div class="dock-grid">'+sec.map(id=>'<'+row(id)).join('')+'</div>':'');
  $$('#page-dock button').forEach(b=>{
   b.onclick=function(){goPage(b.dataset.page);var d=document.getElementById('page-dock');if(d)d.classList.remove('open');};
  });
 }
+/* 选中态写入：桩 DOM 的元素没有 setAttribute/removeAttribute，统一在这里兜底 */
+function _navOn(el,on){
+ if(!el)return;
+ try{if(el.classList)el.classList.toggle('on',!!on);}catch(_){}
+ try{
+  if(on){if(el.setAttribute)el.setAttribute('aria-current','page');}
+  else if(el.removeAttribute)el.removeAttribute('aria-current');
+ }catch(_){}
+}
 function syncPageDock(){
+ const mode=(S&&S.mode)||'manager';
  const cur=curPageNameSafe();
+ const mob=isMobileNav();
+ const inPri=primaryNavFor(mode).includes(cur);
  $$('#nav button').forEach(b=>{
-  var on=b.dataset.page===cur;
-  b.classList.toggle('on',on);
-  if(on)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+  if(b.id==='nav-more')return;
+  _navOn(b,b.dataset.page===cur&&b.style.display!=='none');
  });
+ // 走到「更多」里的页时，底栏要有落点：把「更多」点亮，否则整条底栏没有选中态
+ _navOn(document.getElementById('nav-more'),mob&&!inPri);
  renderPageDock();
 }
 function togglePageDock(){
@@ -122,12 +175,14 @@ function initPageDock(){
  document.addEventListener('click',function(e){
   var dock=document.getElementById('page-dock');
   if(!dock||!dock.classList.contains('open'))return;
-  if(e.target.closest('#page-dock')||e.target.closest('#page-fab'))return;
+  if(e.target.closest('#page-dock')||e.target.closest('#page-fab')||e.target.closest('#nav-more'))return;
   dock.classList.remove('open');
  });
  renderPageDock();
 }
 function goPage(name){
+ if(name==='_more'){togglePageDock&&togglePageDock();return;}
+ if(!PAGE_IDS.includes(name))return; // 未知页名：忽略（历史坑：nav-more 无 data-page → 「undefined」页 toast）
  // 身份门禁：导航只藏不够——教练/选手程序化 goPage 仍会进转会/经营等经理专属页
  const allowed=MODE_PAGES[(S&&S.mode)||'manager']||MODE_PAGES.manager;
  if(S&&!allowed.includes(name)){
@@ -135,15 +190,20 @@ function goPage(name){
   toast('当前身份没有「'+(TOUR_TITLES[name]||name)+'」页，已回到'+(TOUR_TITLES[fallback]||fallback));
   name=fallback;
  }
- $$('nav button').forEach(b=>{
-  var on=b.dataset.page===name;
-  b.classList.toggle('on',on);
-  if(on)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+ const prev=curPageNameSafe();
+ window._curPage=name;
+ $$('#nav button').forEach(b=>{
+  if(b.id==='nav-more')return;
+  _navOn(b,b.dataset.page===name);
  });
- $$('section.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+name));
+ $$('section.page').forEach(p=>{try{p.classList.toggle('on',p.id==='page-'+name);}catch(_){}});
  renderHeader();
  renderPage(name);
  syncPageDock();
+ // 换页才回到内容顶部；同页刷新不乱跳
+ if(prev!==name){
+  try{window.scrollTo({top:0,behavior:'auto'});}catch(_){try{window.scrollTo(0,0);}catch(_){}}
+ }
  try{if(typeof detectAndPlayBGM==='function')detectAndPlayBGM();}catch(_){}
  maybeStartTour(); // 首访自动开引导（km_tour 标记只弹一次；引导内部导航由 _tour.on 守卫）
 }
@@ -168,7 +228,24 @@ function renderPage(name){
   if(row){const on=row.querySelector('.s-chip.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'nearest'});}
  }catch(e){}
 }
-/* 手机端游玩舒适层：分区页签（一屏一区块，切换不靠长滑）+ 底部主操作条 */
+/* 手机端游玩舒适层：分区页签（一屏一区块）+ 底部主操作条
+   跳转原则：能不滚就不滚、能停在原处就停、记住上次看到的区块 */
+const _secMem={}; // pageName -> panelId
+function _secMemLoad(){
+ if(_secMem._loaded)return _secMem;
+ try{
+  const raw=JSON.parse(localStorage.getItem('km_secmem')||'{}');
+  Object.keys(raw).forEach(k=>{_secMem[k]=raw[k];});
+ }catch(_){}
+ _secMem._loaded=1;
+ return _secMem;
+}
+function _secMemSave(){
+ try{
+  const o={};Object.keys(_secMem).forEach(k=>{if(k!=='_loaded'&&_secMem[k])o[k]=_secMem[k];});
+  localStorage.setItem('km_secmem',JSON.stringify(o));
+ }catch(_){}
+}
 function enhanceMobileChrome(name){
  const page=document.getElementById('page-'+name);
  const bar=document.getElementById('action-bar');
@@ -183,33 +260,36 @@ function enhanceMobileChrome(name){
  const isMob=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
  const panels=[...page.querySelectorAll(':scope > .panel')];
  if(isMob&&panels.length>=2){
-  // 区块页签：只显示当前块，避免「折叠了还是要上下找」
   const meta=panels.map((p,i)=>{
    if(!p.id)p.id='sec-'+name+'-'+i;
    const h=p.querySelector('h3');
    let label='';
    if(h)label=(h.childNodes[0]&&h.childNodes[0].textContent||h.textContent||'');
-   // 无 h3（荣誉馆横幅等）：抓首段有字文案，避免「块1」
    if(!String(label).trim()){
     const t=(p.querySelector('.banner .big,.banner,h2,.hint')||p).textContent||'';
     label=t;
    }
    label=String(label).replace(/\s+/g,' ').trim().replace(/^[\s·|·-]+/,'').slice(0,10)||('');
-   // 横幅抽出来是年份/赛制时改用页面名，避免「2026 赛季 ·」
    if(!label||/^\d{4}/.test(label)||label.length<=2){
     const pageN=(typeof pageLabel==='function')?pageLabel(name):name;
     label=(i===0?pageN:pageN+(i+1));
    }
    return {id:p.id,label};
   });
+  // 记住上次看的区块：回这页不再从第一块重来
+  const mem=_secMemLoad();
+  let startIdx=0;
+  if(mem[name]){
+   const j=meta.findIndex(x=>x.id===mem[name]);
+   if(j>=0)startIdx=j;
+  }
   const tabs=document.createElement('div');
   tabs.className='sec-tabs';
   tabs.setAttribute('role','tablist');
-  tabs.innerHTML=meta.map((x,i)=>`<button type="button" role="tab" class="sec-tab${i===0?' on':''}" data-sec="${x.id}" aria-selected="${i===0}">${x.label}</button>`).join('');
+  tabs.innerHTML=meta.map((x,i)=>`<button type="button" role="tab" class="sec-tab${i===startIdx?' on':''}" data-sec="${x.id}" aria-selected="${i===startIdx}">${x.label}</button>`).join('');
   page.insertBefore(tabs,page.firstChild);
   page.classList.add('sec-host');
-  panels.forEach((p,i)=>p.classList.toggle('sec-on',i===0));
-  // 默认展开当前块（取消折叠态，页签模式下折叠无意义）
+  panels.forEach((p,i)=>p.classList.toggle('sec-on',i===startIdx));
   panels.forEach(p=>p.classList.remove('collapsed'));
   tabs.addEventListener('click',e=>{
    const b=e.target.closest('.sec-tab');if(!b)return;
@@ -220,25 +300,34 @@ function enhanceMobileChrome(name){
     t.setAttribute('aria-selected',on?'true':'false');
    });
    panels.forEach(p=>p.classList.toggle('sec-on',p.id===id));
-   // 切换后回到内容区顶部，而不是页中间
-   window.scrollTo({top:Math.max(0,page.offsetTop-8),behavior:'instant' in window?'instant':'auto'});
-   try{const on=tabs.querySelector('.sec-tab.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'center'});}catch(_){}
+   mem[name]=id;_secMemSave();
+   // 人性化跳转：只在区块被顶栏挡住时才轻推，不强制甩回页顶
+   try{
+    const rect=page.getBoundingClientRect();
+    const stick=56+48; // header + tabs 粗估
+    if(rect.top<-stick||rect.top>8){
+     window.scrollTo({top:Math.max(0,window.scrollY+rect.top-stick),behavior:'smooth'});
+    }
+    const on=tabs.querySelector('.sec-tab.on');
+    if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'center'});
+   }catch(_){}
   });
  }
- // 主操作条：推进/开赛等 nextAction 常驻（参考 weui/vant action-bar）
+ // 主操作条
  if(!bar)return;
  const act=(typeof nextAction==='function'&&S)?nextAction(S):null;
  const mode=(S&&S.mode)||'manager';
- // 只放 4 个快捷页（含当前页）：6 个 chip 在 48% 宽里横滑后 3 个中心点点不到
  const all=(MODE_PAGES[mode]||MODE_PAGES.manager);
  const cur=curPageNameSafe();
  const rest=all.filter(id=>id!==cur);
  const navPages=[cur].concat(rest).slice(0,3).filter(Boolean);
- bar.innerHTML=(act?`<button class="btn primary ab-main" onclick="uiDoNextAction(S)">${act.label}</button>`:
+ bar.innerHTML=(act?`<button class="btn primary ab-main" onclick="uiDoNextAction(S)" title="${_escAttr(act.label)}">${act.label}</button>`:
   `<button class="btn ab-main" onclick="uiDoNextAction(S)">推进下一步</button>`)
-  +`<div class="ab-chips">${navPages.map(id=>`<button type="button" class="ab-chip${cur===id?' on':''}" onclick="goPage('${id}')">${pageLabel(id)}</button>`).join('')}</div>`;
+  +`<div class="ab-chips">${navPages.map(id=>`<button type="button" class="ab-chip${cur===id?' on':''}" onclick="goPage('${id}')" title="${_escAttr(pageLabel(id))}">${pageLabel(id)}</button>`).join('')}</div>`;
+ // 有主操作条时 toast 要抬到它上方（手机端 CSS 用这个钩子，桌面端位置不变）
+ try{document.body.classList.toggle('has-actionbar',!!bar.innerHTML);}catch(_){}
 }
-function renderAll(){renderHeader();applyModeNav();const cur=document.querySelector('nav button.on');if(cur)renderPage(cur.dataset.page);}
+function renderAll(){renderHeader();applyModeNav();renderPage(curPageNameSafe());}
 
 /* ================= 存档管理（多槽位 + 导出/导入） ================= */
 function saveHowtoHtml(){
@@ -690,14 +779,15 @@ function initStart(){
  const clubs=CLUB_TEMPLATES.map((c,i)=>clubCardHTML(c,i)).join('');
  const eraBtns=Object.keys(KPL_ERAS).map(id=>`<button class="btn sm" id="era-btn-${id}" onclick="pickEra('${id}')">${KPL_ERAS[id].name}</button>`).join('');
  $('#start-modal-body').innerHTML=`
- <h2>王者电竞经理 · KPL 篇</h2> <div class="center dim" style="font-size:12px;margin-bottom:14px">化身战队经理：签约选手、经营俱乐部、征战联赛、冲击总冠军</div>
- <div class="center start-tabs" style="margin-bottom:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
- <button class="btn sm" id="tab-player" onclick="switchStartTab('player')">选手生涯</button>
- <button class="btn sm" id="tab-coach" onclick="switchStartTab('coach')">教练生涯</button>
- <button class="btn sm primary" id="tab-self" onclick="switchStartTab('self')">经理模式</button>
- <button class="btn sm" id="tab-club" onclick="switchStartTab('club')">执教现役俱乐部</button>
- <button class="btn sm" id="tab-era" onclick="switchStartTab('era')">历代联盟</button>
+ <h2>王者电竞经理 · KPL 篇</h2> <div class="center dim" style="font-size:12px;margin-bottom:14px" id="start-tagline">选一个身份开打：选手上场争首发 · 主教练排兵布阵 · 俱乐部经理经营冲冠</div>
+ <div class="center start-tabs" style="margin-bottom:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+ <button class="btn sm" id="tab-player" onclick="switchStartTab('player')">职业选手</button>
+ <button class="btn sm" id="tab-coach" onclick="switchStartTab('coach')">主教练</button>
+ <button class="btn sm primary" id="tab-self" onclick="switchStartTab('self')">自建俱乐部</button>
+ <button class="btn sm" id="tab-club" onclick="switchStartTab('club')">俱乐部经理</button>
+ <button class="btn sm" id="tab-era" onclick="switchStartTab('era')">历代王朝</button>
  </div>
+ <div class="center hint" id="start-role-tip" style="margin-bottom:10px;min-height:2.2em">自己建队开档：定队名徽、组班底、管转会与财政，目标是把新军带上领奖台</div>
  <div id="tab-scenario" style="margin-bottom:12px">
  <div class="center dim" style="font-size:12px;margin-bottom:6px">开局剧本（难度档 · 可选）</div>
  <div class="center" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
@@ -706,7 +796,7 @@ function initStart(){
  <div class="center hint" id="sc-desc" style="margin-top:6px">${SCENARIOS[0].desc}</div>
  </div>
  <div id="tab-player-body" style="display:none">
- <div class="hint" style="text-align:center;margin-bottom:10px">扮演一名职业选手：签约球队 → 竞争首发 → 打出数据 → 收报价转会 → 冲击总冠军与 FMVP（比赛由教练组指挥，你专注成长与表现）</div>
+ <div class="hint" style="text-align:center;margin-bottom:10px"><b>职业选手</b>：签约球队 → 竞争首发 → 打出数据 → 收报价转会 → 冲击总冠军与 FMVP（比赛由教练组指挥，你专注成长与表现）</div>
  <div class="center dim" style="font-size:12px;margin-bottom:6px">选择时代（决定联盟阵容与起始年份）</div>
  <div class="center" style="margin-bottom:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" id="pc-era-btns"></div>
  <div class="center hint" id="pc-era-desc" style="margin-bottom:10px"></div>
@@ -716,33 +806,33 @@ function initStart(){
  <div class="center dim" style="font-size:12px;margin:6px 0">选择加盟球队（签 2 年合同，队内同位置需要竞争首发）</div>
  <div class="grid g3" id="pc-teams" style="gap:8px"></div>
  <div class="center mt8"><button class="btn sm" onclick="rollPlayerTeams()">换一批球队</button></div>
- <div class="center start-cta"><button class="btn primary" style="padding:12px 40px;font-size:15px" onclick="createPlayerCareer()">开启选手生涯</button></div>
+ <div class="center start-cta"><button class="btn primary" style="padding:12px 40px;font-size:15px" onclick="createPlayerCareer()">开启职业选手生涯</button></div>
  </div>
  <div id="tab-coach-body" style="display:none">
- <div class="hint" style="margin-bottom:10px;text-align:center">只管竞技的执教生涯：BP/战术/训练/首发全权负责，转会与资金由俱乐部打理——成绩好被豪门挖角，连年失利会被解约（从任意一队起步）</div>
+ <div class="hint" style="margin-bottom:10px;text-align:center"><b>主教练</b>：只管竞技——BP/战术/训练/首发全权负责，转会与资金由俱乐部打理。成绩好被豪门挖角，连年失利会被解约（从任意一队起步）</div>
  <div class="center dim" style="font-size:12px;margin-bottom:6px">选择时代（决定联盟阵容与起始年份）</div>
  <div class="center" style="margin-bottom:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap" id="coach-era-btns"></div>
  <div class="center hint" id="coach-era-desc" style="margin-bottom:10px"></div>
  <div class="grid g4" id="coach-clubs" style="gap:8px">${CLUB_TEMPLATES.map((c,i)=>coachCardHTML(c,i)).join('')}</div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="coach-pick-tip"> 点击选择执教的俱乐部</div>
- <div class="center start-cta"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyCoachClub()" id="coach-apply-btn" disabled>开始执教生涯</button></div>
+ <div class="center start-cta"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyCoachClub()" id="coach-apply-btn" disabled>出任主教练</button></div>
  </div>
  <div id="tab-self-body">
  <div class="center" style="margin-bottom:12px">
  <span class="dim">战队名称：</span><input id="new-team-name" maxlength="8" style="background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:15px;width:180px" placeholder="输入队名" oninput="refreshCrUI()">
  </div>
  <div class="cr-builder">${crestBuilderHTML('')}</div>
- <div class="hint" style="margin:6px 0 14px;text-align:center">初始资金 1300万 · 工资帽 150万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
- <div class="center start-cta"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建战队</button></div>
+ <div class="hint" style="margin:6px 0 14px;text-align:center"><b>自建俱乐部</b>：初始资金 ${ECON.budgetMid}万 · 工资帽 ${ECON.wageCapDefault}万 · 开局组建你的 KPL 战队（含一名 90+ 王牌）</div>
+ <div class="center start-cta"><button class="btn primary" style="padding:12px 44px;font-size:16px" onclick="createTeam()">创建俱乐部 · 开始经营</button></div>
  </div>
  <div id="tab-club-body" style="display:none">
- <div class="hint" style="margin-bottom:10px;text-align:center">直接执教一支现役 KPL 俱乐部——豪门预算拉满，草根从零挑战，继承该队首发阵容与主教练</div>
+ <div class="hint" style="margin-bottom:10px;text-align:center"><b>俱乐部经理</b>：接管一支现役 KPL 俱乐部——豪门预算拉满，草根从零挑战；经营 + 竞技全权，继承该队首发与主教练</div>
  <div class="grid g4" style="gap:8px">${clubs}</div>
  <div class="hint" style="margin:10px 0;text-align:center;color:var(--cyan)" id="club-pick-tip"> 点击选择俱乐部</div>
- <div class="center start-cta"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyClub()" id="club-apply-btn" disabled>执教所选俱乐部</button></div>
+ <div class="center start-cta"><button class="btn gold" style="padding:12px 44px;font-size:16px" onclick="applyClub()" id="club-apply-btn" disabled>上任俱乐部经理</button></div>
  </div>
  <div id="tab-era-body" style="display:none">
- <div class="hint" style="margin-bottom:10px;text-align:center">2K 经典球队式开档：选择一个 KPL 时代，扮演那个时代的真实俱乐部——联盟对手、阵容、教练全部回到当年（明星阵容按史实收录，年代久远的席位由游戏演绎；赛制沿用现行年度赛历）</div>
+ <div class="hint" style="margin-bottom:10px;text-align:center"><b>历代王朝</b>：选择一个 KPL 时代，扮演那个时代的真实俱乐部——联盟对手、阵容、教练全部回到当年（明星按史实收录，久远席位游戏演绎；赛制沿用现行年度赛历）</div>
  <div class="center" style="margin-bottom:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${eraBtns}</div>
  <div class="hint" id="era-desc" style="margin:0 0 10px;text-align:center;color:var(--cyan)">点击上方选择时代</div>
  <div class="grid g4" id="era-clubs" style="gap:8px"></div>
@@ -827,15 +917,23 @@ function pickPlayerTeam(n){ // 只改选中态，禁止整批重掷——否则�
     <div class="hint" style="font-size:10px">战力约 ${c.seed||'—'} · ${c.desc}</div></div>`).join('');
   }
 }
-/* 开局身份切换（选手/教练/经理/执教/历代）
+/* 开局身份切换（职业选手/主教练/自建/俱乐部经理/历代）
  各页时代选择独立：player=_eraSelPlayer / coach=_eraSelCoach / era=_eraSel / club·self=现役。
  切页时按目标页重装联盟，避免 A 页选的时代污染 B 页名单。 */
+const START_ROLE_TIP={
+ player:'职业选手：选位置和出身，签进俱乐部打比赛、涨身价、收报价，冲击 FMVP。比赛由教练组指挥。',
+ coach:'主教练：BP / 战术 / 训练 / 首发全权负责。转会与资金由俱乐部打理；成绩好被豪门挖角，连年失利会被解约。',
+ self:'自建俱乐部：从零开档——定队名与队徽，组班底，管转会、工资帽与财政，把新军带上领奖台。',
+ club:'俱乐部经理：直接接管一支现役 KPL 俱乐部。豪门预算拉满，草根从零挑战，经营 + 竞技全权。',
+ era:'历代王朝：回到 QG 王朝 / eStar 双冠等真实年代，扮演当时的俱乐部（阵容按史实收录，久远席位游戏演绎）。',
+};
 function switchStartTab(tab){
  const tabs=['player','coach','self','club','era'];
  tabs.forEach(t=>{const b=document.getElementById('tab-'+t);if(b)b.className='btn sm'+(t===tab?' primary':'');});
  ['player','coach','self','club','era'].forEach(t=>{
  const body=document.getElementById('tab-'+t+'-body');if(body)body.style.display=t===tab?'':'none';
  });
+ {const tip=$('#start-role-tip');if(tip)tip.textContent=START_ROLE_TIP[tab]||'';}
  {const d=$('#sc-desc');if(d)d.textContent=tab==='player'?PLAYER_ARCHETYPES[_pcArch].desc:scenarioById(_scenario).desc;}
  if(tab==='player'){
  installEra(_eraSelPlayer);
@@ -1237,11 +1335,17 @@ function playIntro(){
 /* 全局异常兜底：控制台可观测 + 用户侧提示（不白屏、不静默） */
 window.__errLog=[]; // 最近 20 条异常（调试用，导出存档时随档带走也无妨）
 /* PWA 离线可玩（借鉴开源浏览器游戏 Goooool.net 模式）：仅 https/localhost 注册 service worker；
- file:// 双击场景自动跳过，不影响单文件玩法 */
+ file:// 双击场景自动跳过，不影响单文件玩法。
+ manifest 不能写死在 <link>：file:// 下浏览器会因 CORS 报 ERR_FAILED（控制台红字吓人）。
+ 这里按协议动态注入，http(s) 才挂 PWA。 */
 (function(){
  try{
+ if(location.protocol==='file:')return;
+ const link=document.createElement('link');
+ link.rel='manifest';link.href='manifest.webmanifest';
+ document.head.appendChild(link);
  if(!('serviceWorker' in navigator))return;
- if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')return;
+ if(location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'&&location.protocol!=='https:')return;
  window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
  }catch(e){}
 })();
@@ -1259,7 +1363,20 @@ function _reportErr(tag,msg){
 }
 window.addEventListener('error', e => _reportErr('全局异常', e.message||'未知错误'));
 window.addEventListener('unhandledrejection', e => _reportErr('Promise拒绝', e.reason));
-$$('nav button').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
+$$('nav button').forEach(b=>{
+ if(b.id==='nav-more'||!b.dataset.page)return; // 「更多」没 data-page，别把 undefined 丢给 goPage
+ b.addEventListener('click',()=>goPage(b.dataset.page));
+});
+(function(){
+ const more=document.getElementById('nav-more');
+ if(more)more.addEventListener('click',e=>{e.preventDefault();togglePageDock();});
+ // 断点切换（转屏/缩放窗口）：底栏形态跟着换，不留半截导航
+ try{
+  const mq=window.matchMedia('(max-width:760px)');
+  const onMq=function(){if(S&&S.teamName){try{renderAll();}catch(_){}}};
+  if(mq.addEventListener)mq.addEventListener('change',onMq); else if(mq.addListener)mq.addListener(onMq);
+ }catch(_){}
+})();
 try{initPageDock();}catch(_){}
 applyUiPrefs(); // 本机偏好（简化/高对比）立即生效
 initTabGuard(); // 双开检测：多标签互写存档时提示

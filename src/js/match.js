@@ -282,6 +282,9 @@ function singleGame(my,op,opts){
   if(w)myK=opK+1+rnd(0,1);else opK=myK+1+rnd(0,1);
  }
  myK=clamp(myK,3,28);opK=clamp(opK,3,28);
+ // 夹取边界会把胜负打成平局（双方都贴 28/3）——重新拉开 1 杀，保持「胜方击杀更多」
+ if(w&&myK<=opK){myK=Math.min(28,opK+1);opK=Math.max(3,myK-1);}
+ else if(!w&&opK<=myK){opK=Math.min(28,myK+1);myK=Math.max(3,opK-1);}
  return {w,myK,opK,gold:Math.round(gold),pWin,evs};
 }
 /* 每局表现结算：为全体首发生成 KDA，滚动更新身价（均衡值=100×平均表现），并选出 MVP
@@ -316,6 +319,12 @@ function playerPlayAndFinish(s,opName,bo,meta){
  st.series=sr;
  if(st!==S)S.series=sr; // finishSeries 读全局 S
  finishSeries(sr.mw>sr.ow);
+ // 自动打完后若有媒体邀约，自动作答（否则 stats.media 永远是 0，生涯页像坏了一样）
+ try{
+  if(st.mode==='player'&&st.career&&st.career.media&&typeof playerRespondMedia==='function'){
+   playerRespondMedia(st,0);
+  }
+ }catch(e){}
 }
 function startPlayerMatch(){
  if(typeof denyIfBlocked==='function'&&denyIfBlocked('playerStartMatch',S))return; // 常规赛入口（选手模式：代替 startMatch 的赛前准备+BP）
@@ -328,8 +337,20 @@ function startPlayerMatch(){
  else if(me&&(me.kjia||0)>0)logEvent(S,' 你正在 K甲锻炼（剩 '+me.kjia+' 天），一场比赛由队友顶上');
  else if(me&&!matchEligible(S,me)){
  const why=matchIneligibleReason(S,me);
- if((me.age||0)<MATCH_MIN_AGE)logEvent(S,' 注册规则：'+me.name+'（'+me.age+'岁）未满 '+MATCH_MIN_AGE+' 岁，本场不可登场——教练会安排其他选手顶上');
- else logEvent(S,' '+me.name+' '+why+'，本场由队友顶上');
+ if((me.age||0)<MATCH_MIN_AGE){
+  logEvent(S,' 注册规则：'+me.name+'（'+me.age+'岁）未满 '+MATCH_MIN_AGE+' 岁，本场不可登场——教练会安排其他选手顶上');
+  // 观战不白看：给跟训反馈，避免「连打 N 场只能看戏」的空窗感
+  const n=((S.career&&S.career.stats&&S.career.stats.watched)||0)+1;
+  S.career=S.career||{};S.career.stats=S.career.stats||{trained:0,social:0,media:0,matches:0,scrim:0};
+  S.career.stats.watched=n;
+  const tips=[
+   '你坐在替补席记笔记：对面打野的开野路线被你标进了本子。',
+   '教练中场把你叫到战术板前，复盘了一手边线换血。',
+   '你在观众席拆解了对方 BP 顺序，轮到自己时会更有数。',
+   '队医和数据组给你看了一段对手中路习惯——跟训也在积累。',
+  ];
+  logEvent(S,' 观战笔记（第 '+n+' 场）：'+tips[n%tips.length]+'（训练赛出场可继续计场次）');
+ }else logEvent(S,' '+me.name+' '+why+'，本场由队友顶上');
  }
  const mid=m.mid||('reg_'+(S.phase||'r1')+'_'+(S.matchIdx+1));
  m.mid=mid;tagMatch(S,m,mid);
@@ -464,14 +485,29 @@ function renderPreMatch(){
  ${swapPanel}
  <div style="font-size:12px;font-weight:800;margin:10px 0 2px">对手情报 <span class="tag"> 为最强点 · BP 优先 BAN</span></div>
  ${opRows||'<div class="hint">对方情报未知（盲选局）</div>'}
- <div class="center mt12" style="display:flex;gap:8px;justify-content:center">
+ <div class="center mt12" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
  <button class="btn" onclick="closeModal('app-modal')">返回</button>
+ <button class="btn" onclick="quickStartMatch()" title="按战力自动优化首发并自动 BP，直接开打">⚡ 快速开赛</button>
  <button class="btn primary" onclick="closeModal('app-modal');openBP(window._prepTitle,playGame)">进入 BP 选英雄 →</button>
  </div>`;
  $('#app-modal').classList.add('wide');
  $('#app-modal').classList.add('on');
 }
 function prepChoosePos(pos){window._prepPos=pos;renderPreMatch();}
+/* 快速开赛：按战力优化首发 → 自动 BP → 直接打（跳过手动调整/BP 点选，给赶节奏的玩家） */
+function quickStartMatch(){
+ if(!S||!S.series){toast('当前没有进行中的系列赛');return;}
+ try{
+  autoFillLineup(S);
+  optimizeLineup(S,true); // 快速开赛=省操作承诺，无视简化模式开关强制优化
+  autoFillLineup(S);
+ }catch(e){}
+ closeModal('app-modal');
+ window._draft=null;
+ S.seriesAuto=true;
+ toast('⚡ 快速开赛：自动首发 + 自动 BP');
+ autoPlayNext();
+}
 function prepSwapIn(pid){
  const p=S.players.find(x=>x.id===pid);
  if(!p){toast('选手已不在阵中');renderPreMatch();return;}
@@ -747,6 +783,20 @@ function closeMatchContinue(){
  // 再 nextDay 会日历连跳两天（表现为「时间不对」、发薪/伤停错位）。
  goPage(S&&S.mode==='player'?'career':'club');
 }
+/* 赛后「⚡ 直接下一场」：不回俱乐部，立刻开下一战（自动首发+BP） */
+function closeAndQuickNext(){
+ closeModal('app-modal');
+ const after=S&&S._afterMatch;
+ if(S)S._afterMatch=null;
+ if(typeof after==='function'){after();return;}
+ if(!S||!['r1','r2','r3'].includes(S.phase)||!(S.schedule||[])[S.matchIdx]){
+  goPage(S&&S.mode==='player'?'career':'club');
+  return;
+ }
+ try{startMatch();}catch(e){goPage('club');return;}
+ if(S&&S.series)quickStartMatch();
+ else goPage('club');
+}
 function showMatchModal(r,title){
  try{(r.win?SFX.win():SFX.lose());}catch(_){}
  // 系列赛 MVP 高光：按局数计票 + 各局 KDA 合计（字符串 r.mvps：「名字（k/d/a）」）
@@ -762,8 +812,18 @@ function showMatchModal(r,title){
  const p=S.players.find(x=>x.name===best);
  mvpCard=`<div class="mvp-card">${avatar(p||{name:best},46)}<div><div class="mvp-tag">SERIES MVP</div><div class="mvp-name">${best}${p?' · '+((S.pick&&S.pick[p.pos])||p.sig||''):''}</div><div class="mvp-kda">${cnt[best]} 局 MVP · 合计 ${kda[best]?kda[best].join(' / '):'—'}</div></div></div>`;
  }
- const mb=$('#app-modal');$('#app-modal-body').innerHTML=`
+ const mb=$('#app-modal');
+ // 系列赛局点灯：赢绿输红，一眼看出打了几局
+ const [myN,opN]=String(r.score||'0:0').split(':').map(x=>parseInt(x,10)||0);
+ const maxGames=(S.series&&S.series.max)||((myN+opN)>=5?5:5);
+ const pips=[];
+ for(let i=0;i<Math.max(myN+opN,1);i++){
+  const cls=i<myN?'w':(i<myN+opN?'l':'n');
+  pips.push('<i class="'+cls+'"></i>');
+ }
+ $('#app-modal-body').innerHTML=`
  <h2>${title||(r.win?'比赛胜利':'比赛失利')}</h2>
+ <div class="series-pips" title="系列赛局分">${pips.join('')}</div>
  <div class="result-band ${r.win?'win':'lose'}"><span class="rb-team">${crest((AI_TEAMS.find(x=>x.name===S.teamName)||{}).icon||S.icon||'队',S.teamName,20)} ${S.teamName}</span><b class="rb-score"><small>${r.stageTxt||''}</small>${r.score||''}</b><span class="rb-team op">${r.opName||''} ${crest((AI_TEAMS.find(x=>x.name===r.opName)||{}).icon||'队',r.opName||'',20)}</span></div>
  ${mvpCard}
  <div class="logbox" style="max-height:60vh">${r.logs.map(l=>`<div class="${l.includes('胜')?'win':l.includes('负')?'lose':'info'}">${l}</div>`).join('')}</div>
@@ -771,9 +831,13 @@ function showMatchModal(r,title){
  <div class="center mt16">
  ${(S.phase==='champion'||S.phase==='eliminated')?`<button class="btn gold" onclick="closeMatchContinue()">${calendarNextLabel(S)}</button>`
  :(S.preseason?`<button class="btn gold" onclick="closeMatchContinue()"> 进入转会期（组队备战）</button>`
- :`<button class="btn primary" onclick="closeMatchContinue()">${S._afterMatch?'继续下一场':'继续（推进一天）'}</button>`)}
+ :`<button class="btn" onclick="closeMatchContinue()">回俱乐部</button>
+ <button class="btn primary" onclick="closeMatchContinue()">${S._afterMatch?'继续下一场':'继续（推进一天）'}</button>
+ ${(S.mode!=='player'&&!S._afterMatch&&['r1','r2','r3'].includes(S.phase)&&(S.schedule||[])[S.matchIdx])?
+  `<button class="btn gold" onclick="closeAndQuickNext()" title="跳过回俱乐部，直接自动首发+BP 开打">⚡ 直接下一场</button>`:''}`)}
  </div>`;
  mb.classList.add('on');
+ if(r.win){try{if(typeof playMoment==='function')playMoment(1,'比赛胜利',r.score+' vs '+(r.opName||''),'win');}catch(_){}}
  if(aiEnabled())aiFillReport(r); // 异步填充，成败都不阻塞赛后流程
 }
 /* ================= AI 赛后战报（可选增强 · 默认关闭 · 失败静默回退） =================

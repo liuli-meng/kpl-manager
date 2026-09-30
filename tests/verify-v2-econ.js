@@ -10,7 +10,7 @@ const q = (code) => vm.runInContext(code, dom);
 T.check(q('ECON.wageUnit') === 'year', 'p.wage 单位必须是年薪');
 T.check(q('ECON.playerWageMax') === 400, '顶薪 400 万/年');
 T.check(q('ECON.transferCap') === 12000, '转会封顶 1.2 亿');
-T.check(q('ECON.budgetRich') === 15000, '豪门预算 1.5 亿');
+T.check(q('ECON.budgetRich') === 12000, '豪门预算 1.2 亿');
 T.check(q('TRANSFER_CAP') === 12000, 'TRANSFER_CAP 与 ECON.transferCap 同步');
 T.check(q('PLAYER_WAGE_MAX') === 400, 'PLAYER_WAGE_MAX 与 ECON.playerWageMax 同步');
 T.check(q('wageOf(99)') === 400, 'wageOf(99) 顶到 400');

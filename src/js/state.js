@@ -436,7 +436,15 @@ function tacticWeights(){
 }
 function playerPower(p,heroId){if(!p)return 0;
  const a=p&&p.attrs?{lane:p.attrs.lane||70,farm:p.attrs.farm||70,team:p.attrs.team||70,mind:p.attrs.mind||70}:{lane:70,farm:70,team:70,mind:70};
- const w=tacticWeights();
+ // 战术权重 × 位置权重：对位属性才是本职，纯战术加点也能打但不如本职顺手
+ const tw=tacticWeights();
+ const pw=(typeof POS_W!=='undefined'&&POS_W[p.pos])||{lane:.25,farm:.25,team:.25,mind:.25};
+ const w={
+  lane:(tw.lane||.25)*0.55+(pw.lane||.25)*0.45,
+  farm:(tw.farm||.25)*0.55+(pw.farm||.25)*0.45,
+  team:(tw.team||.25)*0.55+(pw.team||.25)*0.45,
+  mind:(tw.mind||.25)*0.55+(pw.mind||.25)*0.45,
+ };
  let pow=a.lane*w.lane+a.farm*w.farm+a.team*w.team+a.mind*w.mind;
  const sk=p&&p.skill?p.skill:null;
  if(sk&&sk.t==='lane')pow+=a.lane*0.12*w.lane;
@@ -503,7 +511,7 @@ function aiChampBondPct(s,tn){
  if(!cc||!cc.titles)return 0;
  const tier=aiTierOf(s,tn);
  const base=cc.titles>=2?6:4;
- const scale=tier==='elite'?1.25:tier==='mid'?0.8:0.35;
+ const scale=tier==='elite'?1.05:tier==='mid'?0.85:0.4;
  return Math.round(base*scale*10)/10;
 }
 /* picks 可选：BP 进行中实时结算用（未选位置回退招牌）；缺省走 S.pick */
@@ -539,7 +547,17 @@ function teamPower(s,picks){
  if(s.fumbleBoost)pow*=1+clamp(s.fumbleBoost,-6,0)/100;
  // 队长加成：队长在首发阵中，全队战力 +2%（队长被卖/退役/换下则不生效）
  if(s.captain&&ls.some(p=>p.id===s.captain))pow*=1.02;
+ // 新援磨合：大换血有代价——近 15 天内加盟 ≥2 人时全队战力打折（随并肩场次自然恢复）
+ pow*=1-newSignChemPenalty(s);
  return Math.round(pow);
+}
+/* 新援磨合惩罚（0~0.12）：joinedDay 由买入/签约写入；1 名新援不罚，2 人起 -3.5%/人 */
+function newSignChemPenalty(s){
+ if(!s)return 0;
+ const day=s.day||0;
+ const news=(s.players||[]).filter(p=>p&&p.joinedDay!=null&&!p.loan&&(day-p.joinedDay)<15);
+ if(news.length<=1)return 0;
+ return Math.min(0.12,(news.length-1)*0.035);
 }
 function activeBonds(s){
  const ls=rosterLineup(s),cnt={};
@@ -571,6 +589,10 @@ function registerChampCore(s,title){
  if(!ids.length)return;
  const prev=s.champCore;
  s.champCore={ids,titles:((prev&&prev.titles)||0)+1,label:title||'',names:ls.map(p=>p.name)};
+ // 选手模式：随队夺冠实时入账（旧版只等年度结算，赛季中看生涯页像没拿冠）
+ if(s.mode==='player'&&s.career&&s.career.me&&ids.indexOf(s.career.me)>=0){
+  s.career.titles=(s.career.titles||0)+1;
+ }
  try{logEvent(s,' 冠军班底成型！'+(s.champCore.names||[]).join('、')+'——此后同场 ≥3 人触发羁绊加成'+(s.champCore.titles>=2?'（连冠加成已升级）':''));}catch(e){}
 }
 /* 全队基本工资合计（年薪，万/年）。历史函数名 weeklyWage 保留以免大改调用点，

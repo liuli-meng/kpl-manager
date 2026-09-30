@@ -56,8 +56,8 @@ const out = vm.runInContext(`
   // 模拟 nav 按钮
   const pages=['career','club','lineup','market'];
   // applyModeNav 使用 $$('#nav button') 桩返回空，改为直接检查 MODE_PAGES
-  ok(MODE_PAGES.manager.indexOf('career')<0,'MODE_PAGES.manager 不应含 career');
-  ok(MODE_PAGES.player.indexOf('lineup')<0,'MODE_PAGES.player 不应含 lineup');
+  ok(MODE_PAGES.manager.indexOf('career')>=0,'MODE_PAGES.manager 应含 career（队员视角）');
+  ok(MODE_PAGES.player.indexOf('lineup')>=0,'MODE_PAGES.player 应含 lineup（观察视角）');
 
   // ⑥ 教练邀约缺模板时不再静默
   S=newState('教练X','⚔');S.mode='coach';S.teamName='旧队';

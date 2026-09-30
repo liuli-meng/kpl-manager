@@ -16,12 +16,13 @@ const out = vm.runInContext(`
   S=newState('探针队','⚔️');
   fillRoster(S);
 
-  // ① 首年 KPI：按分组档位下发（S组→前4 / A组→前8 / B组→前12；开档 G1/G2/G3 同口径）
+  // ① 首年 KPI：按分组档位下发（S组→前5 / A组→前10 / B组→前14；开档 G1/G2/G3 同口径）
+  // 中档校准：目标放宽为 5/10/14，避免「前 4/8/12」把中游队逼成必夺冠
   const kpiOf=g=>{S.groups={S:[],A:[],B:[],G1:[],G2:[],G3:[]};S.groups[g]=['探针队'];S.managerCareer={years:0,titles:0,lastRank:null};setBoardKpi(S);return S.board.kpi.target;};
   const kS=kpiOf('S'),kA=kpiOf('A'),kB=kpiOf('B');
   const kG1=kpiOf('G1'),kG2=kpiOf('G2'),kG3=kpiOf('G3');
-  if(kS!==4||kA!==8||kB!==12)fail('首年 KPI 未按分组档位下发: S='+kS+' A='+kA+' B='+kB);
-  else if(kG1!==4||kG2!==8||kG3!==12)fail('开档 G1/G2/G3 未映射 KPI: G1='+kG1+' G2='+kG2+' G3='+kG3);
+  if(kS!==5||kA!==10||kB!==14)fail('首年 KPI 未按分组档位下发: S='+kS+' A='+kA+' B='+kB);
+  else if(kG1!==5||kG2!==10||kG3!==14)fail('开档 G1/G2/G3 未映射 KPI: G1='+kG1+' G2='+kG2+' G3='+kG3);
   else log('① 首年 KPI：S/G1→前'+kS+' / A/G2→前'+kA+' / B/G3→前'+kB);
 
   // ② 有历史名次时按名次定目标
@@ -29,7 +30,7 @@ const out = vm.runInContext(`
   const tTop=S.board.kpi.target;
   S.managerCareer={years:1,titles:0,lastRank:15};setBoardKpi(S);
   const tLow=S.board.kpi.target;
-  if(tTop!==4||tLow!==12)fail('有历史名次时目标错误: 第3名→'+tTop+' 第15名→'+tLow);
+  if(tTop!==5||tLow!==14)fail('有历史名次时目标错误: 第3名→'+tTop+' 第15名→'+tLow);
   else log('② 依上季名次定目标：第3名→前'+tTop+' · 第15名→前'+tLow);
 
   // ③ 达成 KPI → 信任度上升且封顶 100

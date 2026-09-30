@@ -2,6 +2,11 @@
 function renderLineup(){
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
+ // 选手模式：阵容是俱乐部排的——开放观察视角（看首发/竞争，不代排）
+ let obsBanner='';
+ if(S.mode==='player'){
+  obsBanner=`<div class="hint" style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--cyan);background:rgba(80,180,255,.08)"><b>阵容观察</b> · 职业选手——首发由教练组排定，表现去「生涯」页</div>`;
+ }
  // 教练模式：伤停/缺位时给出「去应急租借」入口（此前教练没有转会页，伤了只能干瞪眼）
  let gapBanner='';
  if(S.mode==='coach'){
@@ -15,7 +20,7 @@ function renderLineup(){
    </div></div>`;
   }
  }
- let html=gapBanner+pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
+ let html=obsBanner+gapBanner+pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
  <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 年薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
  <div class="grid g5">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);

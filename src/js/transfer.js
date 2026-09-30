@@ -31,7 +31,7 @@ function ensureAiRosters(s,teamName){
  });
  s.aiRosters[teamName]=roster;
  s.aiPower[teamName]=aiRosterPower(roster,s,teamName); // AI 战力=真实阵容结算（与玩家 teamPower 同刻度）
- if(s.challDefMap&&s.challDefMap[teamName])s.aiPower[teamName]=Math.round(s.aiPower[teamName]*1.05); // 挑战者的祝福：低赛道队 vs KPL +5%（玩家对局同规则）
+ if(s.challDefMap&&s.challDefMap[teamName])s.aiPower[teamName]=Math.round(s.aiPower[teamName]*1.03); // 挑战者的祝福：低赛道队 vs KPL +3%（原 +5% 冷门过频）
  return roster;
 }
 /* 后期存档 GC：杯赛临时 def / 退役 def / AI 青训幽灵 id
@@ -146,8 +146,12 @@ function genAcademyDef(pos,usedNames,season){
  const cands=HEROES.filter(h=>h.pos[0]===pos);
  const boost=Math.min(2*((season||1)-1),14);
  const b=v=>clamp(v+boost,40,99);
+ // 位置专精底子（旧版全员 [68,68,70,72] 游走向，中路/对抗路看起来「不对位」）
+ const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,68,72):[68,68,70,72];
+ const base=raw.map(b);
+ const sk=(typeof posSkillPool==='function')?pick(posSkillPool(pos)):['team','团战体系','团战属性额外+8%'];
  return {id:'ac_'+pos+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:['青训'],
- base:[b(68),b(68),b(70),b(72)],skill:{n:'青训体系',t:'team',d:'团战属性额外+8%'},
+ base,skill:{n:sk[1],t:sk[0],d:sk[2]},
  sig:pick(cands.length?cands:HEROES).n,career:'本队青训营提拔，阶梯赛历练稳定。'};
 }
 /* 开局自带可出场青训替补：常规赛禁止租借后，伤停/集训必须有人顶。
@@ -264,16 +268,16 @@ function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额�
 }
 /* 新星出道：生成一名新秀 def 进入联盟流转（补真实选手的退役折损）
  底子随赛季水涨船高（每赛季+2，封顶+12）：新生代一代比一代强，联盟整体缓慢上探 */
-function genStarDef(s,usedNames,forcePos){
+ function genStarDef(s,usedNames,forcePos){
  const pos=forcePos||pick(POS_ORDER);
  const name=poolName(ACADEMY_NAMES,usedNames); // 池尽回退 combName，不再生成「新星N」
  usedNames.add(name);
- const sk=pick([['lane','线霸体系','对线属性额外+10%'],['farm','运营体系','运营属性额外+10%'],
- ['team','团战体系','团战属性额外+10%'],['mind','大心脏体系','心态属性额外+10%']]);
+ const sk=(typeof posSkillPool==='function')?pick(posSkillPool(pos)):['team','团战体系','团战属性额外+10%'];
  const boost=Math.min(2*((s.season||1)-1),12);
  const b=v=>clamp(v+boost,40,99);
+ const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,74,84):[0,1,2,3].map(()=>rnd(74,84));
  return {id:'ns_'+s.season+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:['青训'],
- base:[b(rnd(74,84)),b(rnd(74,84)),b(rnd(74,84)),b(rnd(74,84))],
+ base:raw.map(b),
  skill:{n:sk[1],t:sk[0],d:sk[2]},sig:pick(HEROES.filter(h=>h.pos[0]===pos)).n,
  career:'赛季'+s.season+'从青训营出道的新生代，天赋肉眼可见。'};
 }
@@ -285,15 +289,15 @@ function aiTierOf(s,tn){
  // AI_TEAMS 用 power；CLUB_TEMPLATES 用 seed——两者都认，避免时代档/现役档口径不一致
  const seed=t.seed!=null?t.seed:(t.power||450);
  const p=s.aiPower&&s.aiPower[tn]!=null?s.aiPower[tn]:seed;
- if(seed>=560||p>=520)return 'elite';
- if(seed>=470||p>=470)return 'mid';
+ if(seed>=520||p>=520)return 'elite';
+ if(seed>=460||p>=460)return 'mid';
  return 'weak';
 }
 function aiDiffMul(s,tn){
  // 全局：玩家 ≥2 连冠 → 全联盟决策更积极（研究/挖角/青训加码）
  const pressure=1+Math.min(dynastyStreak(s,s.teamName),3)*0.08;
  const t=aiTierOf(s,tn);
- return (t==='elite'?1.35:t==='mid'?1:0.72)*pressure;
+ return (t==='elite'?1.18:t==='mid'?1:0.88)*pressure;
 }
 /* AI 智能系数（0.35~1.6）：统一驱动战术读盘 / BP 盯防 / 选边复盘 / 转会积极性。
  = 对手档位难度(aiDiffMul) × 玩家开局剧本难度(SCENARIOS.hard 加压)
@@ -856,7 +860,9 @@ function buyoutPrice(p){
  const powBonus=1+Math.max(0,(playerPower(p,p.sig)-55)/200);
  const wil=p.willingness||0;
  const wilMult=wil>=60?1:wil>=30?1.5:2.2;
- return capFee(base*powBonus*wilMult*(p.transferRequest?0.85:1));
+ // 豪门溢价：买家现金越厚，卖方越敢要价（最多 +25%）——压「巨款无敌扫货」
+ const rich=1+clamp((((typeof S!=='undefined'&&S&&S.fund)||0)-30000)/120000,0,0.25);
+ return capFee(base*powBonus*wilMult*(p.transferRequest?0.85:1)*rich);
 }
 /* 非卖品强挖：2.5倍溢价（同样受 1500 封顶，顶星与主力同价时更看意愿/成功率），成功率=意愿缺口，失败意愿-10 */
 function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
@@ -904,6 +910,7 @@ function negoComplete(s,p,fee){
  delete p.ownerTeam;delete p.untouchable;delete p.freeAgent;delete p.signCost;
  if(fee!=null)p.acqCost=fee; // 买入价锚定（自由球员记 0，转售按保底价压）
  if(p.contract==null)p.contract=2; // 签约即给合同年限
+ p.joinedDay=s.day; // 新援磨合：大换血有代价（见 newSignChemPenalty）
  // 同一 def 可能同时挂在挂牌/自由市场/租借台：入册前查重，防 ns_/fa_ 双份进名单
  if(s.players.some(x=>x.id===p.id)){
   if(isFA)s.freeAgents=(s.freeAgents||[]).filter(x=>x.id!==p.id);
@@ -1531,8 +1538,8 @@ function endTransferWindow(s){
 /* ================= 赛前转会期（开局/新赛季先组队，再开赛） =================
  转会期内：转会市场全开放（买断/挂牌/自由市场每日首刷免费·再刷 5 万/次/顶星供给增加），
  不能打比赛；天数用完自动结束，也可随时提前结束。 */
-function endPreseason(s){
- if(!confirm('确定结束转会期？剩余天数作废，阵容锁定后联赛正式开始'))return;
+function endPreseason(s,opts){
+ if(!(opts&&opts.confirmed)&&!confirmDanger('确定结束转会期？剩余天数作废，阵容锁定后联赛正式开始'))return;
  autoFillLineup(s);
  const miss=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos&&!p.loan)); // 与 nextDay 自动开赛同口径
  if(miss.length){toast(' '+miss.map(pos=>POS[pos][0]).join('、')+' 位置无人，无法开始联赛，请先签约选手');return;}
@@ -1547,10 +1554,10 @@ function endPreseason(s){
 }
 /* 跳过剩余转会期：每天自动训练核心选手 + 培养青训（不浪费天数），AI 报价照常走，
  天数走完后自动结束转会期并开赛（与 endPreseason 的阵容校验一致） */
-function skipTransferWindow(s){
+function skipTransferWindow(s,opts){
  const left=s.transferWindow||0;
  if(left<=0){toast('当前不在转会期');return;}
- if(!confirm('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，13万/次）\n· 培养一名青训（潜力优先，17万/次）\n资金不足的天数自动跳过；AI 报价照常进行。'))return;
+ if(!(opts&&opts.confirmed)&&!confirmDanger('跳过剩余 '+left+' 天转会期？期间每天自动：\n· 训练一名核心选手（练最弱属性，13万/次）\n· 培养一名青训（潜力优先，17万/次）\n资金不足的天数自动跳过；AI 报价照常进行。'))return;
  autoFillLineup(s);
  const miss=POS_ORDER.filter(pos=>!s.players.some(p=>p.pos===pos));
  if(miss.length){toast(' '+miss.map(pos=>POS[pos][0]).join('、')+' 位置无人，无法开赛，请先签约选手');return;}
@@ -1643,6 +1650,7 @@ function signCoach(s,c){
  if(s.coach)logEvent(s,' 换帅！'+s.coach.name+' 离任，'+c.name+' 出任主教练');
  else logEvent(s,' 签约主教练 '+c.name+'（'+(c.rating||80)+'评分·'+COACH_STYLE[c.style]+'型）');
  s.coach={...c};
+ s.coachHired=true; // 真正从市场签帅（开局默认青训助教不算）——成就「良师入帐」用
  save();renderAll();toast(c.name+' 执教！全队战力+'+c.bonus+'%');
 }
 /* 解雇主教练：无教练期间全队无教练加成 */
@@ -1694,14 +1702,47 @@ function loanCap(s){
  // 常规赛 0；杯赛按官方出征名额（挑杯 2 / 年总 1）
  return loanWindowOpen(s)?cupLoanMax(s):0;
 }
-/* 杯赛出征 7 人：自家可战优先，再补租借（不超过 cupLoanMax），总人数固定 7——租借占名额不加人 */
+/* 杯赛出征 7 人（含租借）：勾选 s.cupSquad.ids；未勾选时自动择优。
+ 租借占名额不加人——挑杯最多租 2、年总最多租 1，总数固定 7。 */
 function cupTravelRoster(s,size,maxLoan){
  const n=size||CUP_SQUAD;
  const cap=maxLoan==null?cupLoanMax(s):maxLoan;
  const eligible=(s.players||[]).filter(p=>matchEligible(s,p));
+ const byId={};eligible.forEach(p=>{byId[p.id]=p;});
+ const chosen=(s&&s.cupSquad&&Array.isArray(s.cupSquad.ids)?s.cupSquad.ids:[]).map(id=>byId[id]).filter(Boolean);
+ if(chosen.length){
+  let loanN=0;
+  const out=[];
+  chosen.forEach(p=>{
+   if(out.length>=n)return;
+   if(p.loan){if(loanN>=cap)return;loanN++;}
+   out.push(p);
+  });
+  if(out.length)return out;
+ }
  const own=eligible.filter(p=>!p.loan);
  const loans=eligible.filter(p=>p.loan).slice(0,Math.max(0,cap));
  return own.concat(loans).slice(0,n);
+}
+function cupSquadRule(s){
+ const m=cupLoanMax(s);
+ return '出征固定 '+CUP_SQUAD+' 人（含租借）· 最多租 '+m+' 人 —— 自家 '+(CUP_SQUAD-m)+' + 租 '+m+'，租借占 '+CUP_SQUAD+' 个名额';
+}
+/* 进杯赛前确认出征名单（可改）；未确认则自动择优 7 人并写入 */
+function ensureCupSquad(s,kind){
+ if(!s)return null;
+ const key=kind||s.phase;
+ if(s.cupSquad&&s.cupSquad.key===key&&s.cupSquad.ids&&s.cupSquad.ids.length)return s.cupSquad;
+ const auto=cupTravelRoster(s).map(p=>p.id);
+ s.cupSquad={key:key,ids:auto,locked:false};
+ return s.cupSquad;
+}
+function setCupSquad(s,ids,kind){
+ s=s||S;
+ const key=kind||s.phase;
+ s.cupSquad={key:key,ids:(ids||[]).slice(0,CUP_SQUAD),locked:true};
+ save();renderAll();
+ return s.cupSquad;
 }
 function loanCandidates(s){
  const U=untouchableSet();

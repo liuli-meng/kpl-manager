@@ -71,12 +71,48 @@ function careerMatchPanel(){
  <div class="hint" style="margin:6px 0 8px">${b.sub||''}</div>
  ${action}</div>`;
 }
-/* ================= 生涯页（选手模式主页：成长 / 竞争 / 报价 / 履历） ================= */
+/* ================= 生涯页（选手模式主页：成长 / 竞争 / 报价 / 履历） =================
+ 经理/教练进这里 = 「队内队员视角」：挑一名选手看他的状态/表现/意愿，
+ 补上「经理看不到选手怎么想」的那块视角（只读观察，不代打训练）。 */
+function renderClubmateView(){
+ const list=(S.players||[]).slice().sort((a,b)=>overall(b)-overall(a));
+ if(!list.length)return '<div class="hint">暂无选手</div>';
+ const pickId=window._mateViewId&&list.some(p=>p.id===window._mateViewId)?window._mateViewId:(list[0]&&list[0].id);
+ window._mateViewId=pickId;
+ const p=list.find(x=>x.id===pickId)||list[0];
+ const starter=S.lineup.includes(p.id);
+ const avg=p.caps?[p.kTotal,p.dTotal,p.aTotal].map(x=>Math.round(x/p.caps*10)/10).join('/'):'—';
+ const form=(p.val||100)>=112?'火热':(p.val||100)<=85?'低迷':'平稳';
+ const chips=list.slice(0,12).map(x=>`<button class="btn sm ${x.id===p.id?'primary':''}" onclick="window._mateViewId='${x.id}';renderAll()">${x.name}</button>`).join('');
+ return pageHint('career')+`
+ <div class="hint" style="margin:0 0 10px;padding:6px 10px;border-left:2px solid var(--cyan);background:rgba(80,180,255,.08)"><b>队内队员视角</b> · ${S.mode==='coach'?'主教练':'俱乐部经理'}——看状态/意愿，训练续约走各自页</div>
+ <div class="panel">
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${chips}</div>
+ <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+ ${avatar(p,56)}
+ <div><div style="font-size:18px;font-weight:800">${p.name} <span class="tag">${POS[p.pos][0]} · ${p.age}岁</span>${starter?' <span class="tag" style="border-color:var(--green);color:var(--green)">首发</span>':' <span class="tag">替补</span>'}</div>
+ <div class="dim" style="font-size:12px">总值 <b style="color:${ovrColor(overall(p))}">${overall(p)}</b> · 年薪 ${p.wage||0}万 · 合同 ${p.contract>0?p.contract+' 年':'到期'} · 状态 <b class="${form==='火热'?'green':form==='低迷'?'red':''}">${form}</b>（${p.val||100}%）</div></div>
+ </div>
+ <div class="g4" style="margin-top:12px">
+ <div class="stat"><b>${p.energy==null?100:p.energy}</b><small>体力</small></div>
+ <div class="stat"><b>${p.morale||70}</b><small>士气</small></div>
+ <div class="stat"><b>${p.popularity||0}</b><small>人气</small></div>
+ <div class="stat"><b>${p.willingness==null?'—':p.willingness}</b><small>留队意愿</small></div>
+ </div>
+ <div class="hint" style="margin-top:10px">近况：${(()=>{try{const st=playerStatus(p,S);return st.injury?'<span class="red">伤停 '+st.injury+' 天</span>':st.kjia?'K甲锻炼中':st.loanOut?'外租中':st.busy?(st.label||'暂不可出场'):'可出战';}catch(e){return '可出战';}})()} · 场均 KDA ${avg} · ${p.willingness!=null&&p.willingness<=25?'<span class="red">有离队倾向</span>':p.willingness>=75?'死忠留队':'心思活络'}</div>
+ <div class="hint mt8">想加练/续约？去「阵容」「训练」；这里是队员视角，不动你的经营决策。</div>
+ </div>`;
+}
 function renderCareer(){
  const el=$('#page-career');
- if(S.mode!=='player'){el.innerHTML='<div class="hint">生涯页仅选手生涯模式可用</div>';return;}
+ if(S.mode!=='player'){
+  el.innerHTML=renderClubmateView();
+  return;
+ }
  const c=S.career||{};
  const me=myPlayer(S);
+ let gap='';
+ try{if(typeof histGapPanelHtml==='function')gap=histGapPanelHtml();}catch(e){}
  // 退役后本人已从名单移除：用 legacy 快照渲染结算屏（否则会误报「选手数据缺失」）
  if(c.retired){
  const L=c.legacy||{};
@@ -107,7 +143,7 @@ function renderCareer(){
  const myPow=playerPower(me,(S.pick&&S.pick[me.pos])||me.sig),rivPow=rival?playerPower(rival,rival.sig):0;
  const myOffers=(S.offers||[]).filter(o=>o.pid===me.id);
  const avg=me.caps?[me.kTotal,me.dTotal,me.aTotal].map(x=>Math.round(x/me.caps*10)/10).join('/'):'—';
- let html=(typeof missionStrip==='function'?missionStrip(S):'')+pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
+ let html=(typeof missionStrip==='function'?missionStrip(S):'')+gap+pageHint('career')+`<div class="panel" style="border-left:4px solid ${POS_HUE[me.pos]||'var(--accent)'}">
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
  ${avatar(me,64)}
  <div><div style="font-size:20px;font-weight:800">${me.name} <span class="tag">${POS[me.pos][0]} · ${me.age}岁 · ${ageStage(me)}</span>${starter?' <span class="tag" style="border-color:var(--green);color:var(--green)">首发</span>':' <span class="tag" style="border-color:var(--gold);color:var(--gold)">替补</span>'}</div>
@@ -127,16 +163,17 @@ function renderCareer(){
  const fl=(typeof formLabel==='function')?formLabel(form):(form>=80?'火热':form>=55?'平稳':'低迷');
  html+=`<div class="panel"><h3>成长训练 <span class="tag">${S.trained?'今日已完成':trainBlock||'每天一项'} · 合同角色：${role.n} · 状态：<span style="color:${form>=80?'var(--green)':form>=55?'var(--gold)':'var(--red)'}">${fl} ${form}</span></span></h3>
  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(me,84)}
- <div class="hint">对线 ${me.attrs.lane}${peak?'/'+peak.lane:''} · 运营 ${me.attrs.farm}${peak?'/'+peak.farm:''} · 团战 ${me.attrs.team}${peak?'/'+peak.team:''} · 心态 ${me.attrs.mind}${peak?'/'+peak.mind:''} <span class="dim">（当前/天花板）</span><br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次 · 比赛 ${((S.career.stats||{}).matches)||0} 场<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：可加练成长，满 '+MATCH_MIN_AGE+' 岁才能代表俱乐部出场</span>':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}<br><span class="dim">${role.d}</span></div></div>
+ <div class="hint">对线 ${me.attrs.lane}${peak?'/'+peak.lane:''} · 运营 ${me.attrs.farm}${peak?'/'+peak.farm:''} · 团战 ${me.attrs.team}${peak?'/'+peak.team:''} · 心态 ${me.attrs.mind}${peak?'/'+peak.mind:''} <span class="dim">（当前/天花板）</span><br>本赛季：出场 ${me.apps||0} 次 · 场均 ${avg} · 单场MVP ${me.mvp||0} 次 · 比赛 ${((S.career.stats||{}).matches)||0} 场<br>招牌：${heroIcon(me.sig,16)} ${me.sig}（${HERO_LV[heroLv(me,me.sig)].n}）· 体力 ${me.energy} · 士气 ${me.morale}${underAge?'<br><span class="gold">未满 '+MATCH_MIN_AGE+' 岁：正赛按 KPL 注册规则不能上场</span>（下赛季长一岁后可注册）· 跟训路径：加练 + 训练赛出场'+((S.career&&S.career.stats)?('（训练赛 '+((S.career.stats.scrim)||0)+' · 观战 '+((S.career.stats.watched)||0)+'）'):'')+'':''}${me.injury>0?'<br><span class="red">伤停 '+me.injury+' 天：休息可加速恢复</span>':''}${c.mentorName?'<br>老将带新：'+c.mentorName+' 在年度结算时点拨过你（属性 +1~2）':''}${c.mentoredCount?' · 你已带训新人 '+c.mentoredCount+' 人次':''}<br><span class="dim">${role.d}</span></div></div>
  <div style="display:flex;gap:6px;flex-wrap:wrap">
  <button class="btn sm" onclick="playerTrain('lane')" ${canTrain?'':'disabled'}>练对线</button>
  <button class="btn sm" onclick="playerTrain('farm')" ${canTrain?'':'disabled'}>练运营</button>
  <button class="btn sm" onclick="playerTrain('team')" ${canTrain?'':'disabled'}>练团战</button>
  <button class="btn sm" onclick="playerTrain('mind')" ${canTrain?'':'disabled'}>练心态</button>
  <button class="btn sm gold" onclick="playerHeroTrain()" ${canHero?'':'disabled'}>英雄特训（练绝活）</button>
+ <button class="btn sm ${underAge?'gold':''}" onclick="playerScrim()" ${trainLock?'':'disabled'} title="${underAge?'未满注册年龄的正式出场通道：队内训练赛照样计出场、攒状态':'队内对抗赛：计出场、看状态给成长'}">训练赛出场${underAge?'（跟训）':''}</button>
  <button class="btn sm" onclick="playerRest()" ${S.trained?'disabled':''}>休息（体力+55 · 养伤）</button>
  </div>
- <div class="hint mt8">加练看状态：火热更易涨、低迷常白练；到个人天花板后只能维持，过巅峰会衰减。英雄特训不受天花板限制。</div>
+ <div class="hint mt8">加练看状态：火热更易涨、低迷常白练；到个人天花板后只能维持，过巅峰会衰减。英雄特训不受天花板限制。${underAge?'<br><span class="gold">新秀跟训赛季</span>：正赛受注册规则限制，用「训练赛出场」保持比赛感觉——出场会计入生涯场次，满龄后无缝切正式赛。':''}</div>
  <div class="hint mt8">合同角色：${Object.keys(PLAYER_ROLES).map(rk=>`<button class="btn sm ${rk===roleKey?'primary':''}" onclick="setPlayerRole(S,'${rk}')" title="${PLAYER_ROLES[rk].d}">${PLAYER_ROLES[rk].n}</button>`).join(' ')}</div>
  </div>`;
  // 更衣室/社交（与训练并行）
@@ -228,6 +265,11 @@ function playerHeroTrain(){
 }
 function playerRest(){
  const r=playerRestDay(S);
+ if(!r.ok){if(r.reason)toast(r.reason);return;}
+ save();renderAll();
+}
+function playerScrim(){
+ const r=playerScrimDay(S);
  if(!r.ok){if(r.reason)toast(r.reason);return;}
  save();renderAll();
 }

@@ -565,7 +565,6 @@ function draftPanelHtml(){
  // 在 render 里重建会吞掉进行中的竞拍；坏值交给 draftRepair 归一化即可。
  const d=draftRepair(s,s.draft)||initDraft(s);
  if(!d)return '';
- const kj=d.kjiaTier||draftKjiaTier(s);
  const taken=d.picks.filter(x=>x.playerId).length;
  const rosterCount=s=>(s.players||[]).filter(p=>!(p.kjia>0)).length;
   const rosterNow=rosterCount(s); // 与 rosterFull 同口径：K甲下放不占一线名额（显示 s.players.length 会把下放算成第 10 人）
@@ -573,8 +572,8 @@ function draftPanelHtml(){
  const meAuction=d.phase==='auction'&&!d.done&&!d.passed[s.teamName]&&!myFull;
  const mePick=d.phase==='pick'&&!d.done;
  const alive=d.order.filter(t=>!d.passed[t]&&draftStillWant(s,t));
- let html=`<div class="panel ${foldCls('mdraft')}" data-fold="mdraft"><h3>KPL 选秀大会 <span class="tag">${d.done?'已收官':(d.phase==='auction'?'竞拍签位':'点名')} · 已签 ${taken} · 第${Math.min(d.slot+1,d.order.length)}签 · 大名单 ${rosterNow}/${ROSTER_MAX} · 自留签剩 ${reserveLeft(s)}</span></h3>
- <div class="hint" style="margin-bottom:8px">流程：先<strong>竞拍签位</strong>（前8签 ${DRAFT_BID_TOP}万起 / 第9签起 ${DRAFT_BID_REST}万起，加价 ${DRAFT_BID_STEP} 万；叫价受<strong>本队签位预算上限</strong>约束，玩家与 AI 同一口径），拍到再<strong>点名</strong>。池子=训练营+K甲突出者（本届二队名次影响 K甲前三档：${kj.n}人 · 底子${kj.base}+）。<strong>不能选自家青训</strong>；自家苗子用训练页自留签（每季2个）；大名单上限 ${ROSTER_MAX} 人。</div>`;
+ let html=`<div class="panel ${foldCls('mdraft',d.done?'collapsed':'')}" data-fold="mdraft"><h3>KPL 选秀大会 <span class="tag">${d.done?'已收官':(d.phase==='auction'?'竞拍签位':'点名')} · 已签 ${taken} · 第${Math.min(d.slot+1,d.order.length)}签 · 大名单 ${rosterNow}/${ROSTER_MAX} · 自留签剩 ${reserveLeft(s)}</span></h3>
+ <div class="hint" style="margin-bottom:8px">先<strong>竞拍签位</strong>（${DRAFT_BID_TOP}万起 / 后段 ${DRAFT_BID_REST}万起 · 加价 ${DRAFT_BID_STEP} 万 · 受本队签位预算上限约束），拍到再<strong>点名</strong>。不能选自家青训；自留签走训练页；上限 ${ROSTER_MAX} 人。</div>`;
  if(!d.done&&d.phase==='auction'){
  html+=`<div class="match" style="border-color:var(--gold);margin-bottom:8px">
  <div class="vs"><div class="tname">第${d.slot+1}签</div><div class="power">起拍 ${draftSlotPrice(d.slot)}万</div></div>

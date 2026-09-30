@@ -15,21 +15,21 @@ function myAnnualRank(s){ // 本队年度积分排名（从 1 起）；本队不
  const i=list.indexOf(me);
  return i<0?null:i+1;
 }
-function boardKpiTarget(prevRank,s){ // 豪门保前4 / 争冠组保前8 / 其余保前12（进年总线）
- if(prevRank)return prevRank<=4?4:prevRank<=8?8:12;
+function boardKpiTarget(prevRank,s){ // 豪门保前4-5 / 争冠组保前10 / 其余保前14（中档不苛求必夺冠）
+ if(prevRank)return prevRank<=4?5:prevRank<=8?10:14;
  // 首年没有历史名次：按分组档位定目标。
  // S/A/B=第一轮后重组分组；G1/G2/G3=开档抽签组（按真实战力蛇形）——两者都认，避免开档时全员「前12」。
  const inG=g=>(s&&s.groups&&s.groups[g]||[]).indexOf(s.teamName)>=0;
- if(inG('S')||inG('G1'))return 4;
- if(inG('A')||inG('G2'))return 8;
- return 12;
+ if(inG('S')||inG('G1'))return 5;
+ if(inG('A')||inG('G2'))return 10;
+ return 14;
 }
 function setBoardKpi(s){
  s.board=s.board||{};
  s.managerCareer=s.managerCareer||{years:0,titles:0,lastRank:null};
  const prev=s.managerCareer.lastRank||null;
  const target=boardKpiTarget(prev,s);
- s.board.kpi={target,from:prev,label:'赛季末年度积分进前 '+target};
+ s.board.kpi={target,from:prev,label:target<=5?'争冠/保前'+target:(target<=10?'冲击前'+target:'保级并进前'+target)};
  return s.board.kpi;
 }
 function boardSettle(s){
@@ -49,8 +49,16 @@ function boardSettle(s){
  }else{
   note='本赛季缺少完整积分数据，董事会未作评价';
  }
- if(champs){delta+=6*champs;note+='；年内 '+champs+' 冠额外嘉奖';} // 拿冠军永远算成绩
- if(delta>20)delta=20; // 单赛季上限：防信任度靠一次夺冠暴涨到满
+ // 冠军是硬成绩：大幅嘉奖 + 信任地板（旧版夺冠仍被赛中负反馈冲到 21）
+ if(champs){
+  delta+=10*champs;
+  note+='；年内 '+champs+' 冠额外嘉奖';
+  if(delta<8){delta=8;note+='（冠军赛季信任不倒扣）';}
+ }
+ // 亚军也记功：长期「差一口气」不应被当成失败
+ const runners=(s.honors||[]).filter(h=>h.season===s.season&&!h.champion).length;
+ if(!champs&&runners){delta+=3*runners;note+='；'+runners+' 亚记功';}
+ if(delta>24)delta=24; // 单赛季上限：防信任度靠一次夺冠暴涨到满
  const before=s.board.trust==null?60:s.board.trust;
  s.board.trust=clamp(before+delta,0,100);
  s.board.log=s.board.log||[];
@@ -61,7 +69,7 @@ function boardSettle(s){
  s.managerCareer.lastRank=rank;
  logEvent(s,'【董事会】'+note+'：信任度 '+(delta>=0?'+':'')+delta+'（当前 '+s.board.trust+'）');
  // 连续未达成累计警告；信任耗尽的赛季必须有一个"保级期"，故要求 warn 达标才解约
- s.board.warn=delta<0?((s.board.warn||0)+1):0;
+ if(champs)s.board.warn=0; else s.board.warn=delta<0?((s.board.warn||0)+1):0; // 夺冠清零警告
  if(!s.board.fired&&(s.board.trust<=0||(s.board.warn>=3&&s.board.trust<=BOARD_WARN_TRUST))){
   s.board.fired=true;
   s.board.firedSeason=s.season;
@@ -79,7 +87,7 @@ function boardApplyEffect(s){
  if(t<=BOARD_WARN_TRUST){
   const cut=Math.max(1,Math.round((s.wageCap||150)*0.1));
   s.wageCap=Math.max(50,(s.wageCap||150)-cut);
-  logEvent(s,' 董事会介入：对战绩不满，压缩工资帽 '+cut+'万（本赛季上限 '+s.wageCap+'万/周）——请用更低的成本打出成绩');
+  logEvent(s,' 董事会介入：对战绩不满，压缩工资帽 '+cut+'万（本赛季上限 '+s.wageCap+'万）——请用更低的成本打出成绩');
   try{if(typeof playMoment==='function'&&t<40)playMoment(2,'董事会警告','信任度 '+t+' · 工资帽已压缩','alert');}catch(e){}
  }else if(t>=BOARD_FAVOR_TRUST){
   s.fund+=130;
@@ -148,6 +156,8 @@ function boardCashPulse(s){
  if(!s)return;
  if(s.mode==='player')return;
  if(s.board&&s.board.fired)return;
+ // 当季已有冠军：现金流告警降噪，成绩优先于营运细账
+ if((s.honors||[]).some(h=>h.season===s.season&&h.champion))return;
  const annual=weeklyWage(s);
  const weekly=Math.max(1,Math.round(annual/ECON.payWeeks));
  const runway=Math.floor((s.fund||0)/weekly);

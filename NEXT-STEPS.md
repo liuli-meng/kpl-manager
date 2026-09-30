@@ -108,7 +108,7 @@
 | **1** | stateStore 薄适配、permission、变更探针 | **去** UI 临时态剥离、脏标记局部渲染；**+ mid/续打红线 + 错误自动存快照** |
 | **2** | Command、phase 守卫、AI/玩家转会拆分、nextDay 分层 | **去** singleGame 纯化；**+ aiCoach 行为等价测试** |
 | **3** | 模板拆分、事件委托、modal 栈 | 虚拟列表**降为可选** |
-| **4** | UT、调试面板 | 错误快照已在 Phase1 |
+| **4** | UT、调试面板 | ✅ `tests/verify-pure.js`（10 项纯函数）+ `src/js/debug-panel.js`（km_debug=1）· 顺手修 `singleGame` 夹取边界平局 |
 
 ---
 

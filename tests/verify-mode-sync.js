@@ -27,25 +27,20 @@ const out = vm.runInContext(`
     return S;
   }
 
-  // ① MODE_PAGES 身份差异
+  // ① 视角全开：三身份都能进市场/阵容/经营/生涯；写操作由 permission 收口
   const mp=MODE_PAGES;
-  if(mp.manager.includes('market')&&mp.player.includes('market'))fail('选手不应有转会页');
-  else if(!mp.coach.includes('market'))fail('教练应有市场页（应急租借）');
-  else if(mp.coach.includes('biz'))fail('教练不应有经营页');
-  else if(mp.player.includes('lineup'))fail('选手不应有阵容管理页');
-  else log('① MODE_PAGES：经理全量 · 教练含市场无经营 · 选手无阵容/市场');
+  if(!(mp.manager.includes('market')&&mp.player.includes('market')&&mp.coach.includes('market')))fail('三身份都应能进转会页（观察/操作分级）');
+  else if(!(mp.player.includes('biz')&&mp.coach.includes('biz')&&mp.manager.includes('biz')))fail('三身份都应能进经营页（观察/操作分级）');
+  else if(!(mp.manager.includes('career')&&mp.coach.includes('career')))fail('经理/教练应有「队员视角」生涯页');
+  else log('① MODE_PAGES：三身份视角全开（写操作由 permission 收口）');
 
-  // ② goPage 门禁
+  // ② goPage 视角全开：选手/教练都能进市场/经营页（观察视角）
   mk('player');
-  goPage('market');
-  const onPage=document.querySelector('section.page.on')&&document.querySelector('section.page.on').id;
-  if(onPage==='page-market')fail('选手 goPage(market) 应被拦截');
-  else log('② 选手 goPage(转会) → 回落到 '+onPage);
+  if(!MODE_PAGES.player.includes('market'))fail('选手 MODE_PAGES 应含 market（观察视角）');
+  else log('② 选手可进转会页（观察视角，写操作另拦）');
   mk('coach');
-  goPage('biz');
-  const cPage=document.querySelector('section.page.on')&&document.querySelector('section.page.on').id;
-  if(cPage==='page-biz')fail('教练 goPage(biz) 应被拦截');
-  else log('③ 教练 goPage(经营) → 回落到 '+cPage);
+  if(!MODE_PAGES.coach.includes('biz'))fail('教练 MODE_PAGES 应含 biz（观察视角）');
+  else log('③ 教练可进经营页（观察视角，写操作另拦）');
 
   // ④ 引擎层身份限制
   mk('coach');

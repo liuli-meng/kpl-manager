@@ -34,9 +34,9 @@ const Permissions = (function () {
     // 比赛
     startMatch: ['manager', 'coach'],
     playerStartMatch: ['player'],
-    startCard: ['manager', 'coach'],
-    startPlayoff: ['manager', 'coach'],
-    startCup: ['manager', 'coach'],
+    startCard: ['manager', 'coach', 'player'],
+    startPlayoff: ['manager', 'coach', 'player'],
+    startCup: ['manager', 'coach', 'player'],
     openBP: ['manager', 'coach'],
     // 青训 / 选秀 / 转位置
     recruitRookie: ['manager'],

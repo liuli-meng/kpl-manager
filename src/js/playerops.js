@@ -111,7 +111,8 @@ function maybeOpenMedia(s,ctx){
   else q=pool.find(x=>x.id==='form');
   if(!q)q=pool[0];
   s.career.media={id:q.id,q:q.q,opts:q.opts.map(o=>({id:o.id,l:o.l,tip:o.tip})),day:s.day,ctx:ctx||'day'};
-  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0};
+  s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0,mediaOffers:0};
+  s.career.stats.mediaOffers=(s.career.stats.mediaOffers||0)+1;
   logEvent(s,' 媒体：赛后发布会邀约——去「生涯」页接受采访（三选一会影响人气/士气/心态）');
   return true;
 }
@@ -315,4 +316,45 @@ function playerRestDay(s){
  s.trained=true;
  logEvent(s,' 休息一天：'+me.name+' 体力恢复'+(injBefore>0?'，伤情 '+injBefore+'→'+me.injury+' 天':''));
  return {ok:true};
+}
+/* 跟队训练赛（scrim）：未满注册年龄 / 暂时打不上正式赛时的「有球可打」。
+   不改正赛规则（KPL 满 18 才能上场），但补一条可计数、有成长、有叙事的出场路径。 */
+function playerScrimDay(s){
+ s=s||S;
+ if(!s||s.mode!=='player')return {ok:false,reason:''};
+ if(s.trained)return {ok:false,reason:'今天已经有过行动了（训练/休息/训练赛三选一）'};
+ const me=myPlayer(s);if(!me)return {ok:false,reason:''};
+ if(s.career&&s.career.retired)return {ok:false,reason:'职业生涯已结束'};
+ const blocked=trainBlockedReason(s,me);
+ if(blocked)return {ok:false,reason:blocked};
+ if(me.energy<12)return {ok:false,reason:'体力不足（需 12），先休息'};
+ const form=(typeof playerForm==='function')?playerForm(me):50;
+ const roleKey=playerRole(s);
+ const lucky=form>=75||roleKey==='proj';
+ // 属性小幅浮动成长（不看天花板太死，给新秀盼头）
+ const keys=['lane','farm','team','mind'];
+ const k=pick(keys);
+ const gain=lucky&&Math.random()<0.55?1:0;
+ if(gain)me.attrs[k]=clamp(me.attrs[k]+1,40,99);
+ me.energy=clamp(me.energy-12,0,ENERGY_MAX);
+ me.morale=clamp(me.morale+(gain?2:1),20,100);
+ s.trained=true;
+ s.career=s.career||{};
+ s.career.stats=s.career.stats||{trained:0,social:0,media:0,matches:0,scrim:0};
+ s.career.stats.scrim=(s.career.stats.scrim||0)+1;
+ s.career.stats.matches=(s.career.stats.matches||0)+1; // 计入「打完一场」类目标
+ const under=(me.age||0)<MATCH_MIN_AGE;
+ const pool=(s.players||[]).filter(p=>p.id!==me.id&&matchEligible(s,p)).slice(0,2);
+ const mates=pool.map(p=>p.name).join('、')||'青训组';
+ const lines=under
+  ?['未满注册年龄，教练安排你打训练赛热身——跟 '+mates+' 合练，位置感更扎实。',
+    '青年队对抗赛：你被推上主力位，'+(gain?'对线细节被教练点名表扬。':'整体中规中矩，继续磨。'),
+    '队内 BO3 训练赛打完——观众席没有欢呼，但教练本子上记了你的名字。']
+  :['队内训练赛：你主动请缨打满三局，状态被拉起来了。',
+    '跟替补合练的内部对抗：'+(gain?'关键团处理得很冷静。':'还在找节奏。'),
+    '训练赛收官——为下一场首发竞争攒下了资本。'];
+ logEvent(s,' 训练赛：'+me.name+' '+(under?'（跟训）':'')+'出战队内对抗 · '+(gain?({lane:'对线',farm:'运营',team:'团战',mind:'心态'}[k])+' +1 · ':'')+'士气小幅上扬'+(under?'（满 '+MATCH_MIN_AGE+' 岁后计正式出场）':''));
+ logEvent(s,' '+pick(lines));
+ try{toast(under?'训练赛出场！满 18 岁后会计入正式出场':'训练赛完成'+(gain?'，属性有成长':''));}catch(_){}
+ return {ok:true,gain,scrim:true};
 }
