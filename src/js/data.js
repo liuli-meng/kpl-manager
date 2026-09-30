@@ -1090,6 +1090,11 @@ const KPL_ERAS={
   coaches:[
    {id:'coe2',name:'寒夜',rating:82,style:'mind',bonus:5,styleBonus:4,wage:150,cost:1400,skill:{n:'黑八教父',d:'全队战力+5%，心态属性额外+4%（2016 年率仙阁上演黑八奇迹）'}},
    {id:'coe3',name:'胡啸',rating:76,style:'lane',bonus:4,styleBonus:3,wage:110,cost:900,skill:{n:'稳健教头',d:'全队战力+4%，对线属性额外+3%（2017 年 AG超玩会主教练）'}},
+   {id:'coe17a',name:'Gemini',rating:84,style:'mind',bonus:6,styleBonus:5,wage:160,cost:1500,skill:{n:'QG军师',d:'全队战力+6%，心态属性额外+5%（2017 QGhappy 冠军教练组）'}},
+   {id:'coe17b',name:'贝克曼',rating:74,style:'team',bonus:4,styleBonus:3,wage:100,cost:850,skill:{n:'铁血治军',d:'全队战力+4%，团战属性额外+3%（2017 XQ 教练组）'}},
+   {id:'coe17c',name:'凉晨',rating:72,style:'farm',bonus:4,styleBonus:3,wage:95,cost:800,skill:{n:'运营教头',d:'全队战力+4%，运营属性额外+3%（2017 eStar 教练组）'}},
+   {id:'coe17d',name:'小七',rating:70,style:'lane',bonus:3,styleBonus:3,wage:90,cost:750,skill:{n:'对线特训',d:'全队战力+3%，对线属性额外+3%（2017 新锐教练）'}},
+   {id:'coe17e',name:'老白',rating:68,style:'team',bonus:3,styleBonus:2,wage:85,cost:700,skill:{n:'稳字当头',d:'全队战力+3%，团战属性额外+2%（2017 中游教头）'}},
   ],
   bonds:{
    'QG':{min:3,full:5,bonusMin:4,bonusFull:10,descMin:'QG王朝羁绊（≥3人）：全队战力+4%',descFull:'QG五虎聚首！全队战力+10%'},
@@ -1117,18 +1122,18 @@ const KPL_ERAS={
    'VgHow':{p:[null,null,null,null,null],u:[]},
   },
   clubs:[
-   {name:'QGhappy',icon:'翼',budget:13998,cap:2178,coach:'co7',seed:640,players:['a17_fly','a17_alan','a17_cat17','a17_hurt','a17_yang'],desc:'卫冕王朝 · QG五虎全盛 · 大满贯之师'},
+   {name:'QGhappy',icon:'翼',budget:13998,cap:2178,coach:'coe17a',seed:640,players:['a17_fly','a17_alan','a17_cat17','a17_hurt','a17_yang'],desc:'卫冕王朝 · QG五虎全盛 · 大满贯之师'},
    {name:'AG超玩会',icon:'焰',budget:13002,cap:2097,coach:'coe3',seed:600,players:['a17_vv','a17_meng','a17_laoshuai','a17_liusu','a17_lanxi'],desc:'三年三亚 · 梦泪老帅率领的信仰之师'},
-   {name:'eStarPro',icon:'★',budget:10998,cap:1953,coach:'co4',seed:560,players:['a17_dake','a17_nuoyan','a17_weizhuang','a17_xingchen','a17_tiger'],desc:'老牌豪门 · 诺言伪装领衔 · 秋季大引援'},
-   {name:'XQ',icon:'戒',budget:10500,cap:1917,coach:'co11',seed:555,players:['g2017_XQ_top','g2017_XQ_jg','a17_ata','g2017_XQ_ad','g2017_XQ_sup'],desc:'阿泰军团 · 国服第一中单 · 秋亚余威'},
+   {name:'eStarPro',icon:'★',budget:10998,cap:1953,coach:'coe17c',seed:560,players:['a17_dake','a17_nuoyan','a17_weizhuang','a17_xingchen','a17_tiger'],desc:'老牌豪门 · 诺言伪装领衔 · 秋季大引援'},
+   {name:'XQ',icon:'戒',budget:10500,cap:1917,coach:'coe17b',seed:555,players:['g2017_XQ_top','g2017_XQ_jg','a17_ata','g2017_XQ_ad','g2017_XQ_sup'],desc:'阿泰军团 · 国服第一中单 · 秋亚余威'},
    {name:'AS仙阁',icon:'仙',budget:9000,cap:1773,coach:'coe2',seed:520,players:['a17_wuhen','a17_xiaoyu','a17_chengui','a17_togo','a17_yuqiu'],desc:'卫冕冠军 · 黑八奇迹班底'},
-   {name:'JC',icon:'竞',budget:8502,cap:1683,coach:'co8',seed:505,players:['g2017_JC_top','g2017_JC_jg','a17_qingfeng','g2017_JC_ad','g2017_JC_sup'],desc:'新锐劲旅 · 竞技之都'},
-   {name:'RNG.M',icon:'冠',budget:8802,cap:1728,coach:'co5',seed:500,players:['g2017_RNGM_top','g2017_RNGM_jg','g2017_RNGM_mid','g2017_RNGM_ad','a17_zero'],desc:'皇族新军 · 初生牛犊不怕虎'},
-   {name:'GK',icon:'山',budget:7998,cap:1620,coach:'co9',seed:480,players:['g2017_GK_top','g2017_GK_jg','g2017_GK_mid','g2017_GK_ad','g2017_GK_sup'],desc:'升班黑马 · 山城新锐'},
-   {name:'EDG.M',icon:'电',budget:7500,cap:1575,coach:'co10',seed:460,players:['g2017_EDGM_top','g2017_EDGM_jg','g2017_EDGM_mid','g2017_EDGM_ad','g2017_EDGM_sup'],desc:'超电新军 · 潜力股'},
-   {name:'BA黑凤梨',icon:'梨',budget:7800,cap:1593,coach:'co12',seed:440,players:['g2017_BA黑凤梨_top','g2017_BA黑凤梨_jg','g2017_BA黑凤梨_mid','g2017_BA黑凤梨_ad','g2017_BA黑凤梨_sup'],desc:'黑凤梨起航 · 未来可期'},
-   {name:'YTG',icon:'拓',budget:6498,cap:1467,coach:'co11',seed:420,players:['g2017_YTG_top','g2017_YTG_jg','g2017_YTG_mid','g2017_YTG_ad','g2017_YTG_sup'],desc:'草根之师 · 敢打敢拼'},
-   {name:'WF.D',icon:'海',budget:6198,cap:1422,coach:'co12',seed:400,players:['g2017_WFD_top','g2017_WFD_jg','g2017_WFD_mid','g2017_WFD_ad','g2017_WFD_sup'],desc:'WeFun · 青春风暴'},
+   {name:'JC',icon:'竞',budget:8502,cap:1683,coach:'coe17d',seed:505,players:['g2017_JC_top','g2017_JC_jg','a17_qingfeng','g2017_JC_ad','g2017_JC_sup'],desc:'新锐劲旅 · 竞技之都'},
+   {name:'RNG.M',icon:'冠',budget:8802,cap:1728,coach:'coe17e',seed:500,players:['g2017_RNGM_top','g2017_RNGM_jg','g2017_RNGM_mid','g2017_RNGM_ad','a17_zero'],desc:'皇族新军 · 初生牛犊不怕虎'},
+   {name:'GK',icon:'山',budget:7998,cap:1620,coach:'coe17d',seed:480,players:['g2017_GK_top','g2017_GK_jg','g2017_GK_mid','g2017_GK_ad','g2017_GK_sup'],desc:'升班黑马 · 山城新锐'},
+   {name:'EDG.M',icon:'电',budget:7500,cap:1575,coach:'coe17e',seed:460,players:['g2017_EDGM_top','g2017_EDGM_jg','g2017_EDGM_mid','g2017_EDGM_ad','g2017_EDGM_sup'],desc:'超电新军 · 潜力股'},
+   {name:'BA黑凤梨',icon:'梨',budget:7800,cap:1593,coach:'coe17b',seed:440,players:['g2017_BA黑凤梨_top','g2017_BA黑凤梨_jg','g2017_BA黑凤梨_mid','g2017_BA黑凤梨_ad','g2017_BA黑凤梨_sup'],desc:'黑凤梨起航 · 未来可期'},
+   {name:'YTG',icon:'拓',budget:6498,cap:1467,coach:'coe17c',seed:420,players:['g2017_YTG_top','g2017_YTG_jg','g2017_YTG_mid','g2017_YTG_ad','g2017_YTG_sup'],desc:'草根之师 · 敢打敢拼'},
+   {name:'WF.D',icon:'海',budget:6198,cap:1422,coach:'coe17d',seed:400,players:['g2017_WFD_top','g2017_WFD_jg','g2017_WFD_mid','g2017_WFD_ad','g2017_WFD_sup'],desc:'WeFun · 青春风暴'},
   ],
  },
  '2019':{
@@ -1352,8 +1357,20 @@ function buildYearEra(year){
  teams.forEach((t,i)=>{t.power=elite.includes(t.name)?620-i*2:480-(i%10)*12;});
  const used=new Set();
  const defs=[],rosters={},clubs=[];
- const coachIds=COACH_POOL.map(c=>c.id);
+ // 每队配「当年教头」：id 带年份前缀，不与现役 COACH_POOL 混淆
+ const coaches=[];
+ const styles=['lane','farm','team','mind'];
+ const styleName={lane:'对线',farm:'运营',team:'团战',mind:'心态'};
  teams.forEach((t,i)=>{
+  const cid='cy'+y+'_'+i;
+  const st=styles[i%4];
+  const rating=elite.includes(t.name)?78+(i%5):62+(i%8);
+  coaches.push({
+   id:cid,name:(t.name.slice(0,2)+'教头'),rating,style:st,
+   bonus:Math.round(rating/12),styleBonus:3+Math.round(rating/30),
+   wage:Math.round(rating*1.1),cost:rating*10,
+   skill:{n:y+'·'+styleName[st]+'教头',d:'全队战力+'+Math.round(rating/12)+'%，'+styleName[st]+'属性额外+'+(3+Math.round(rating/30))+'%（'+y+' 赛季 '+t.name+' 教练组 · 阵容演绎）'},
+  });
   const p=[];
   for(let k=0;k<5;k++){
    const pos=POS_ORDER[k];
@@ -1366,7 +1383,7 @@ function buildYearEra(year){
   clubs.push({
    name:t.name,icon:t.icon,
    budget:4000+t.power*12,cap:1200+t.power*2,
-   coach:coachIds[i%coachIds.length],
+   coach:cid,
    seed:t.power,
    players:p,
    desc:elite.includes(t.name)?(y+' 豪门 · 争冠热门'):(y+' 参赛队 · 阵容演绎'),
@@ -1376,7 +1393,7 @@ function buildYearEra(year){
   name:meta.name,year:String(y),
   rules:Object.assign({},fmt),
   desc:meta.desc,
-  teams,defs,fa:[],coaches:[],bonds:{},rosters,clubs,
+  teams,defs,fa:[],coaches,bonds:{},rosters,clubs,
  };
 }
 /* 手写精修档（2017/2019）保留；其余年份合成。2016 必须可进。 */
