@@ -853,3 +853,108 @@ section.page.on {
   .toast.on  { animation: none; }
   .stat b.num-flash, .stat b.num-down { animation: none; }
 }
+
+/* ===== 选手卡紧凑模式（单行列表视图） ===== */
+.pcompact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+.pcard-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(165deg, #1C1730 0%, var(--surface2) 70%);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+  position: relative;
+  min-height: 44px;
+}
+.pcard-compact:hover {
+  border-color: var(--line2);
+  background: var(--raise);
+  transform: translateY(-1px);
+}
+.pcard-compact.ssr {
+  border-color: rgba(232,195,74,.35);
+  box-shadow: 0 0 0 1px rgba(232,195,74,.08);
+}
+.pcard-compact::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 8px; right: 8px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: transparent;
+  pointer-events: none;
+}
+.pcard-compact.ssr::after { background: var(--gold); opacity: .7; }
+.pcard-compact.sr::after  { background: var(--sr);  opacity: .45; }
+.pcard-compact .pc-avatar { flex: none; display: flex; align-items: center; }
+.pcard-compact .pc-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.pcard-compact .pc-name {
+  font-weight: 800;
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: .01em;
+}
+.pcard-compact .pc-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.pcard-compact .pc-ovr {
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+.pcard-compact .pc-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+  flex: none;
+}
+.pcard-compact .pc-actions .btn {
+  padding: 4px 9px;
+  font-size: 11.5px;
+  min-height: 30px;
+}
+@media (max-width: 640px) {
+  .pcard-compact {
+    padding: 8px 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pcard-compact .pc-stats {
+    gap: 8px;
+    font-size: 11px;
+    width: 100%;
+    order: 3;
+    padding-top: 4px;
+    border-top: 1px dashed var(--line);
+    margin-top: 2px;
+  }
+  .pcard-compact .pc-actions {
+    margin-left: auto;
+    order: 2;
+  }
+}
+

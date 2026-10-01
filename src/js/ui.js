@@ -31,6 +31,7 @@ function confirmGame(msg,onOk,onNo){
 function pcard(p,extra,opts){
  if(!p)return '<div class="pcard r"><div class="p-name">选手数据缺失</div></div>';
  opts=opts||{};
+ if(opts.compact||(opts.autoCompact&&typeof compactMode==='function'&&compactMode()))return pcardCompact(p,extra,opts);
  // 残缺档兜底：attrs/skill/pos 任一缺失都不能把阵容/转会整页打崩
  if(!p.attrs)p.attrs={lane:70,farm:70,team:70,mind:70};
  if(!p.skill)p.skill={n:'—',d:'—',t:'team'};
@@ -78,6 +79,46 @@ function pcard(p,extra,opts){
  ${opts.hideProfile?'':`<button class="btn sm" style="margin-top:6px" onclick="event.stopPropagation();showCareer(findPlayerCard('${p.id}'))">选手档案</button>`}
  ${extra||''}
  </div>`;
+}
+/* ================= 紧凑选手卡（单行列表视图） ================= */
+function pcardCompact(p,extra,opts){
+ if(!p)return '<div class="pcard-compact r"><div class="pc-name">选手数据缺失</div></div>';
+ opts=opts||{};
+ if(!p.attrs)p.attrs={lane:70,farm:70,team:70,mind:70};
+ if(!p.skill)p.skill={n:'—',d:'—',t:'team'};
+ if(!POS[p.pos])p.pos='mid';
+ const o=overall(p),oc=ovrColor(o);
+ const pst=playerStatus(p,S);
+ const picked=pickedHero(S,p);
+ const pow=playerPower(p,picked);
+ const hpTag=p.injury>0?`<span class="tag red">伤停${p.injury}天</span>`:(p.morale<40?'<span class="tag red">低迷</span>':'');
+ const capTag=S.captain===p.id?`<span class="tag gold">队长</span>`:'';
+ const statusTag=pst.kjia?`<span class="tag cyan">K甲${pst.kjiaDays}天</span>`:pst.loanOut?`<span class="tag cyan">租借${pst.loanOutDays}天</span>`:'';
+ const contractTxt=(p.contract==null||p.loan)?'':(p.contract>0?`合同${p.contract}年`:'<span class="red">到期</span>');
+ const teamHtml=p.team&&p.team!==S.teamName?`<span class="dim" style="font-size:11px"> · ${p.team}</span>`:'';
+ return `<div class="pcard-compact ${ovrCls(o)}" data-pos="${p.pos}">
+  <div class="pc-avatar">${avatar(p,28)}</div>
+  <div class="pc-info">
+   <span class="p-pos" data-pos="${p.pos}" title="${POS[p.pos][0]}">${POS[p.pos][1]}</span>
+   <b class="pc-name">${p.name}</b>${teamHtml}
+   ${capTag}${hpTag}${statusTag}
+   ${contractTxt?`<span class="dim" style="font-size:11px">${contractTxt}</span>`:''}
+  </div>
+  <div class="pc-stats">
+   <span title="总值" style="color:${oc}"><small style="font-size:10px;opacity:.75">总</small> <b class="pc-ovr">${o}</b></span>
+   <span title="实时战力"><small style="font-size:10px;color:var(--faint)">战</small> <b>${pow}</b></span>
+   <span title="年薪"><small style="font-size:10px;color:var(--faint)">薪</small> <b class="gold">${p.wage}万</b></span>
+   <span title="身价"><small style="font-size:10px;color:var(--faint)">价</small> <b class="${(p.val||100)>=110?'green':(p.val||100)<90?'red':''}">${sellAskPrice(p)}万</b></span>
+  </div>
+  <div class="pc-actions">
+   ${opts.hideProfile?'':`<button class="btn sm" onclick="event.stopPropagation();showCareer(findPlayerCard('${p.id}'))" title="选手档案">档案</button>`}
+   ${extra||''}
+  </div>
+ </div>`;
+}
+function compactViewToggle(){
+ const c=typeof compactMode==='function'&&compactMode();
+ return `<button class="btn sm ${c?'gold':''}" type="button" onclick="toggleCompactMode()" style="margin-left:auto" title="切换紧凑列表与大卡片网格">${c?'☰ 紧凑':'▦ 大卡'}</button>`;
 }
 function findPlayerCard(id){
   // 选秀池/自由市场也要能打开档案：原来只查 players/market，选秀卡上点「选手档案」永远「选手已不在」
@@ -232,7 +273,7 @@ function decoratePanelMarks(root){
  // 卡内文字竖排成一条。CSS 用 [data-wide] 处理；不用 :has()——老 webview 不支持时
  // 整条规则会被丢弃，宁可降级也不要漏。
  root.querySelectorAll('.panel').forEach(p=>{
-  if(p.querySelector('.tbl')||p.querySelector('.g3 .pcard,.g4 .pcard,.g5 .pcard'))p.dataset.wide='1';
+  if(p.querySelector('.tbl')||p.querySelector('.g3 .pcard,.g4 .pcard,.g5 .pcard,.pcompact-list,.pcard-compact'))p.dataset.wide='1';
  });
 }
 function renderHeader(){

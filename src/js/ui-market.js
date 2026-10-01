@@ -248,11 +248,13 @@ function renderMarket(){
  }).join('')||'<div class="hint">市场空空如也，刷新一下吧</div>'}</div>
  <button class="btn mt12" onclick="refreshMarket(S)"> 刷新市场${marketRefreshFree(S)?'（今日免费）':'（'+MARKET_REFRESH_COST+'万）'}</button>
  </div>`;
- const minePanel=`<div class="panel" data-fold="mine"><h3>我的队员</h3>
- ${S.players.length?`${sortChips('mine')}<div class="grid g4">${applySortPref('mine',S.players.filter(p=>!S.lineup.includes(p.id))).map(p=>{const listed=(S.listed||[]).some(x=>x.id===p.id);
- return pcard(p,`<button class="btn sm primary" onclick="swapPlayer('${p.id}')">↑ 放入首发</button><div style="display:flex;gap:6px;margin-top:8px">${listed
+ const isCompact=typeof compactMode==='function'&&compactMode();
+ const minePanel=`<div class="panel" data-fold="mine"><h3>我的队员 ${typeof compactViewToggle==='function'?compactViewToggle():''}</h3>
+ ${S.players.length?`${sortChips('mine')}<div class="${isCompact?'pcompact-list':'grid g4'}">${applySortPref('mine',S.players.filter(p=>!S.lineup.includes(p.id))).map(p=>{const listed=(S.listed||[]).some(x=>x.id===p.id);
+ const extra=isCompact?`<button class="btn sm primary" onclick="swapPlayer('${p.id}')">首发</button>${listed?`<button class="btn sm danger" onclick="delistPlayer(S,'${p.id}')">撤牌</button>`:`<button class="btn sm danger" onclick="openSellNego(S,'${p.id}')">出售</button><button class="btn sm" onclick="listPlayer(S,'${p.id}')">挂牌</button>`}`:`<button class="btn sm primary" onclick="swapPlayer('${p.id}')">↑ 放入首发</button><div style="display:flex;gap:6px;margin-top:8px">${listed
  ?`<button class="btn sm danger" style="flex:1" onclick="delistPlayer(S,'${p.id}')">撤牌</button>`
- :`<button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button><button class="btn sm" style="flex:1" onclick="listPlayer(S,'${p.id}')"> 挂牌</button>`}</div>`);}).join('')||'<div class="hint">全部队员都在首发阵容中</div>'}</div>`:'<div class="hint">还没有队员</div>'}
+ :`<button class="btn sm danger" style="flex:1" onclick="openSellNego(S,'${p.id}')"> 出售</button><button class="btn sm" style="flex:1" onclick="listPlayer(S,'${p.id}')"> 挂牌</button>`}</div>`;
+ return isCompact?pcardCompact(p,extra):pcard(p,extra);}).join('')||'<div class="hint">全部队员都在首发阵容中</div>'}</div>`:'<div class="hint">还没有队员</div>'}
  </div>`;
  // 分区页签：一次只看一块（选秀/买人/卖人/特惠/教练/更多），不再叠长页
  const draftActive=!!draftHtml&&!(S.draft&&S.draft.done);

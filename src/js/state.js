@@ -260,6 +260,12 @@ function toggleHighContrast(){
  try{renderAll();}catch(e){}
  toast(highContrast()?' 高对比已开启：描边/正文加亮，胜负辅以标记':' 高对比已关闭');
 }
+function compactMode(){return uiPref('compact');}
+function toggleCompactMode(){
+ setUiPref('compact',!compactMode());
+ try{renderAll();}catch(e){}
+ toast(compactMode()?' 紧凑列表模式已开启':' 紧凑列表已切换为卡片网格');
+}
 
 /* ================= 双开检测（同一 origin 多标签会互写 localStorage） =================
   锁键 km_tab_lock 只记 tabId+时间戳，不是存档；BroadcastChannel 即时互通，

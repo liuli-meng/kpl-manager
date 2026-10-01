@@ -20,25 +20,33 @@ function renderLineup(){
    </div></div>`;
   }
  }
- let html=obsBanner+gapBanner+pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span></h3>
+ const isCompact=typeof compactMode==='function'&&compactMode();
+ let html=obsBanner+gapBanner+pageHint('lineup')+`<div class="panel"><h3>首发阵容 <span class="tag">${POS_ORDER.length}人</span> ${typeof compactViewToggle==='function'?compactViewToggle():''}</h3>
  <div class="dim" style="font-size:12px;margin-bottom:10px">总战力 <b class="cyan">${fmt(teamPower(S))}</b> · 总身价 <b class="gold">${fmt(ls.reduce((t,p)=>t+sellAskPrice(p),0))}</b> · 士气均值 ${Math.round(ls.reduce((t,p)=>t+p.morale,0)/Math.max(1,ls.length))}% · 年薪合计 <b class="gold">${weeklyWage(S)}万</b></div>
- <div class="grid g5">${POS_ORDER.map(pos=>{
+ <div class="${isCompact?'pcompact-list':'grid g5'}">${POS_ORDER.map(pos=>{
  const p=ls.find(x=>x.pos===pos);
- if(!p)return `<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;
- return pcard(p,`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div>${(S.mode||'manager')==='manager'?`<button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`:''}`);
+ if(!p)return isCompact?`<div class="pcard-compact" style="border-style:dashed;color:var(--dim);font-size:12px;justify-content:center"><span class="p-pos" data-pos="${pos}">${POS[pos][1]}</span> ${POS[pos][0]} · 空缺</div>`:`<div class="pcard" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;min-height:120px">${POS[pos][1]} ${POS[pos][0]}<br>空缺</div>`;
+ const extra=isCompact?`<button class="btn sm" onclick="swapPlayer('${p.id}')">换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" onclick="setCaptain('${p.id}')">${S.captain===p.id?'摘袖标':'任队长'}</button>${(S.mode||'manager')==='manager'?`<button class="btn sm danger" onclick="openSellNego(S,'${p.id}')">出售</button>`:''}`:`<div style="display:flex;gap:6px"><button class="btn sm" style="flex:1" onclick="swapPlayer('${p.id}')">→ 换下</button><button class="btn sm ${S.captain===p.id?'gold':''}" style="flex:1" onclick="setCaptain('${p.id}')" title="队长在阵时全队战力+2%，任命时全队士气提升">${S.captain===p.id?'摘袖标':'任队长'}</button></div>${(S.mode||'manager')==='manager'?`<button class="btn sm danger" style="width:100%;margin-top:6px" onclick="openSellNego(S,'${p.id}')"> 出售</button>`:''}`;
+ return isCompact?pcardCompact(p,extra):pcard(p,extra);
  }).join('')}</div></div>`;
- html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.filter(p=>!(p.kjia>0)).length}人${bn.some(p=>p.kjia>0)?' + K甲'+bn.filter(p=>p.kjia>0).length:''}</span></h3>
+ html+=`<div class="panel"><h3>替补席 <span class="tag">${bn.filter(p=>!(p.kjia>0)).length}人${bn.some(p=>p.kjia>0)?' + K甲'+bn.filter(p=>p.kjia>0).length:''}</span> ${typeof compactViewToggle==='function'?compactViewToggle():''}</h3>
  <div class="hint" style="margin-bottom:8px">板凳不是终点：教练/经理可把没出场的选手 <b>下放 K甲</b>（二队练级）或 <b>外租</b>（去缺人的队打主力）；选手生涯则在「生涯」页自己申请。归队都带成长；练满 ${KJIA_MIN_RECALL} 天可提前召回。</div>
- ${bn.length?`<div class="grid g4">${bn.map(p=>{
+ ${bn.length?`<div class="${isCompact?'pcompact-list':'grid g4'}">${bn.map(p=>{
  const lo=p.loanOut;
  const busy=playerBusy(S,p);
  const onKjia=p.kjia>0;
- return pcard(p,`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${onKjia?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天 · 已练 ${kjiaDaysServed(p)} 天</div>`:''}
+ const extra=isCompact?`
+ ${onKjia?`<button class="btn sm primary" onclick="recallKjia('${p.id}')">召回</button>`:`<button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${busy?'disabled':''}>首发</button>
+ ${S.mode==='manager'?`<button class="btn sm danger" onclick="openSellNego(S,'${p.id}')" ${busy?'disabled':''}>出售</button>`:''}
+ <button class="btn sm" onclick="sendKjia('${p.id}')">下放</button>
+ ${(S.mode||'manager')==='manager'&&(typeof loanWindowOpen==='function'&&loanWindowOpen(S))?`<button class="btn sm" onclick="clubLoanOutPlayer(S,'${p.id}')">外租</button>`:''}`}`
+ :`${lo?`<div class="hint" style="margin-bottom:6px;color:var(--cyan)">租借 ${lo.team} · 剩 ${lo.days} 天</div>`:''}${onKjia?`<div class="hint" style="margin-bottom:6px">K甲锻炼中 · 剩 ${p.kjia} 天 · 已练 ${kjiaDaysServed(p)} 天</div>`:''}
  ${onKjia?`<button class="btn sm primary" onclick="recallKjia('${p.id}')" title="提前召回：至少练满 ${KJIA_MIN_RECALL} 天，成长按已练天数折算">↩ 召回一队</button>`:`
  <button class="btn sm primary" onclick="swapPlayer('${p.id}')" ${busy?'disabled':''}>↑ 放入首发</button>
  ${S.mode==='manager'?`<button class="btn sm danger mt8" onclick="openSellNego(S,'${p.id}')" ${busy?'disabled':''}> 出售（谈判）</button>`:''}
  <button class="btn sm mt8" onclick="sendKjia('${p.id}')" title="下放 K甲 ${KJIA_DAYS} 天：二队真实出战，归队带成长"> 下放 K甲</button>
- ${(S.mode||'manager')==='manager'&&(typeof loanWindowOpen==='function'&&loanWindowOpen(S))?`<button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="杯赛窗口外租：占出征名额，归队带成长"> 外租练级</button>`:''}`}`);
+ ${(S.mode||'manager')==='manager'&&(typeof loanWindowOpen==='function'&&loanWindowOpen(S))?`<button class="btn sm mt8" onclick="clubLoanOutPlayer(S,'${p.id}')" title="杯赛窗口外租：占出征名额，归队带成长"> 外租练级</button>`:''}`}`;
+ return isCompact?pcardCompact(p,extra):pcard(p,extra);
  }).join('')}</div>`:'<div class="hint">暂无替补——转会市场签人，或等俱乐部自动引援</div>'}
  </div>`;
  // 战术板：选倾向 = 改四维权重（没有最优解，只有最适合阵容的解）；克制 ±3% 在比赛模拟处结算
