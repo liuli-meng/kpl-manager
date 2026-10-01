@@ -188,7 +188,7 @@ section.page.on{display:block;animation:fadein .18s ease}
 .panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .2s ease;transform:rotate(90deg)}
 .panel.collapsed>h3::after{transform:rotate(0)}
 .panel.collapsible>*:not(h3){
-  max-height:3000px;
+  max-height:1200px;
   opacity:1;
   transform:scaleY(1);
   transform-origin:top center;

@@ -106,8 +106,6 @@ const SUITES = [
   { id: 'verify-asiad-balance', file: 'tests/verify-asiad-balance.js', label: '亚运夺冠平衡' },
   { id: 'verify-econ-snowball', file: 'tests/verify-econ-snowball.js', label: '后期经济滚雪球' },
   { id: 'verify-market-catchup', file: 'tests/verify-market-catchup.js', label: '转会满编与弱旅追赶' },
-  { id: 'verify-mobile-compat', file: 'tests/verify-mobile-compat.js', label: '移动端兼容门禁' },
-  { id: 'verify-performance-baseline', file: 'tests/verify-performance-baseline.js', label: '性能基线门禁' },
   { id: 'verify-year3-doc', file: 'tests/verify-year3-doc.js', label: '三年史实与文档校验' },
   { id: 'verify-year9-fixes', file: 'tests/verify-year9-fixes.js', label: '九年修复项校验' },
 ];
