@@ -5,7 +5,7 @@
   ③ 池子：官方新秀训练营 + K甲/次级突出者——K甲前三档强度挂钩你二队本届名次
  落选进自由市场。合同 DRAFT_CONTRACT 年 · 周薪 DRAFT_WAGE 万。 */
 const DRAFT_SIZE=20;
-const DRAFT_WAGE=3;
+const DRAFT_WAGE=15; // 对齐 Econ v2 年薪标准（最低年薪 12 万，选秀新秀保底年薪 15 万/年）
 const DRAFT_CONTRACT=3;
 const DRAFT_BID_TOP=60;   // 前 8 签起拍
 const DRAFT_BID_REST=50;  // 后 8 签起拍
@@ -280,6 +280,7 @@ function draftAiAuction(s){ // AI 叫价直到轮到玩家或签位落定
 function draftWinSlot(s,team,cost){
  const d=s.draft;
  if(!d)return;
+ if(d)d.lastSlotCost=cost; // 记录当前签位拍得成本（供 draftPick 锚定买入价 acqCost）
  // 玩家大名单已满：这一签拍下来也用不上，别扣钱（原来先扣款再判满员，白花几十万）
  const playerFull=(team===s.teamName)&&!draftStillWant(s,team);
  if(cost>0&&!playerFull){
@@ -397,6 +398,8 @@ function draftAiPick(s,team){
   return null;
  }
  if(s.players.some(x=>x.id===best.id)){d.log.push(best.name+' 已在一队，点名作废');return null;}
+ best.acqCost=(d&&d.lastSlotCost!=null)?d.lastSlotCost:(d?d.bid:DRAFT_BID_REST);
+ best.joinedDay=s.day;
  s.players.push(best);
  if(!s.lineup.includes(best.id)&&!s.players.some(x=>x.id!==best.id&&x.pos===best.pos&&s.lineup.includes(x.id)))s.lineup.push(best.id);
  }else{
@@ -461,7 +464,7 @@ function d_logDraftOut(s,team,p){
    缺 signCost → 自由球员面板直接显示「undefined万」。 */
 function draftFaInit(p){
  p.team=null;
- p.wage=Math.max(2,DRAFT_WAGE-1);
+ p.wage=Math.max((typeof ECON!=='undefined'&&ECON.playerWageMin)||12,DRAFT_WAGE);
  p.freeAgent=true;
  p.signCost=Math.round(valueOf(overall(p))*0.58);
  p.willingness=rnd(70,100);
@@ -493,6 +496,8 @@ function draftPick(s,id){
  d.pool=d.pool.filter(x=>x.id!==id);
  if(s.players.some(x=>x.id===p.id)){d.log.push(p.name+' 已在一队，点名作废');return null;}
  p.team=s.teamName;
+ p.acqCost=(d&&d.lastSlotCost!=null)?d.lastSlotCost:(d?d.bid:DRAFT_BID_REST);
+ p.joinedDay=s.day;
  s.players.push(p);
  if(!s.lineup.includes(p.id)&&!s.players.some(x=>x.id!==p.id&&x.pos===p.pos&&s.lineup.includes(x.id)))s.lineup.push(p.id);
  d.picks.push({slot:d.slot,team:s.teamName,playerId:p.id});

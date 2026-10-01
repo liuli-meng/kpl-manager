@@ -108,6 +108,7 @@ const SUITES = [
   { id: 'verify-market-catchup', file: 'tests/verify-market-catchup.js', label: '转会满编与弱旅追赶' },
   { id: 'verify-year3-doc', file: 'tests/verify-year3-doc.js', label: '三年史实与文档校验' },
   { id: 'verify-year9-fixes', file: 'tests/verify-year9-fixes.js', label: '九年修复项校验' },
+  { id: 'verify-paycadence', file: 'tests/verify-paycadence.js', label: '发薪节奏与年薪结算对齐' },
 ];
 
 // 门禁完整性自检：tests/ 目录下所有 verify-*.js / sim-*.js 必须在 SUITES 显式注册，杜绝未执行的虚设门禁
