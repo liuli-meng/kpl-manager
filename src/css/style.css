@@ -185,9 +185,29 @@ section.page.on{display:block;animation:fadein .18s ease}
 
 /* ===== 面板折叠（点标题收起/展开，偏好存 localStorage） ===== */
 .panel.collapsible>h3{cursor:pointer;user-select:none}
-.panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .18s;transform:rotate(90deg)}
+.panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .2s ease;transform:rotate(90deg)}
 .panel.collapsed>h3::after{transform:rotate(0)}
-.panel.collapsed>*:not(h3){display:none}
+.panel.collapsible>*:not(h3){
+  max-height:3000px;
+  opacity:1;
+  transform:scaleY(1);
+  transform-origin:top center;
+  transition:max-height .28s cubic-bezier(0.4,0,0.2,1),opacity .22s ease,transform .22s ease,margin .22s ease,padding .22s ease;
+  overflow:hidden;
+}
+.panel.collapsed>*:not(h3){
+  max-height:0 !important;
+  opacity:0 !important;
+  transform:scaleY(0.95);
+  padding-top:0 !important;
+  padding-bottom:0 !important;
+  margin-top:0 !important;
+  margin-bottom:0 !important;
+  border-top-width:0 !important;
+  border-bottom-width:0 !important;
+  pointer-events:none;
+  overflow:hidden !important;
+}
 .panel.collapsed{padding-bottom:12px}
 
 /* ===== Player card：左侧一条位置色竖杠 = 整列可扫读；总值是这张脸的数字 ===== */
@@ -840,18 +860,13 @@ section.page.on {
   75%      { transform: translateX(3px); }
 }
 
-/* 6. 面板折叠平滑过渡（替代硬切 display:none） */
-.panel.collapsible > *:not(h3) {
-  transition: max-height .22s ease, opacity .18s ease, margin .18s ease, padding .18s ease;
-  overflow: hidden;
-}
-
 /* Phase1 动效降级 */
 @media (prefers-reduced-motion: reduce) {
   section.page.on { animation: none; }
   .pcard.ssr { animation: none; }
   .toast.on  { animation: none; }
   .stat b.num-flash, .stat b.num-down { animation: none; }
+  .panel.collapsible > *:not(h3) { transition: none !important; }
 }
 
 /* ===== 选手卡紧凑模式（单行列表视图） ===== */
