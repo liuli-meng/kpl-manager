@@ -451,8 +451,7 @@ function resetRuntimeGlobals(){
 /* 赛季轮转自动备份的恢复：把 _auto 快照写回当前槽（覆盖前先把它再挪一份，防二次误操作） */
 function restoreAutoBackup(){
  const raw=storeGet(slotKey()+'_auto');
- if(!raw){toast('当前槽没有赛季备份（每完成一个赛季自动生成）');return;}
- if(!confirm('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
+ if(!confirmDanger('用上一年赛季末的备份覆盖当前存档？当前进度将先被挪到「恢复前备份」'))return;
  try{
  const cur=storeGet(slotKey());
  if(cur)storeSet(slotKey()+'_pre_restored',cur);
@@ -755,7 +754,7 @@ function coachCardHTML(c,i){
 }
 /* 从游戏内「历代联盟·史册」页进入时代选择：打开开局面板并切到历代标签（当前存档保留，真正开新档才覆盖） */
 function gotoEraStart(){
- if(S&&S.teamName&&!confirm('体验历史时代将开一个新档（当前存档不会被立即清除；只有你完成选档开新局才会覆盖，建议先导出存档备份）——继续？'))return;
+ if(S&&S.teamName&&!confirmDanger('体验历史时代将开一个新档（当前存档不会被立即清除；只有你完成选档开新局才会覆盖，建议先导出存档备份）——继续？'))return;
  initStart();pickScenario('normal');
  switchStartTab('era');
  const firstEra=Object.keys(KPL_ERAS)[0];
@@ -1412,3 +1411,132 @@ playIntro(); // 进场动画（仅首访播放）
   }, 50);
  };
 })();
+
+/* ================= KPI 数字动画 ================= */
+function animateStatChange(selector, newValue, oldValue) {
+    if (newValue === oldValue) return;
+    const el = document.querySelector(selector);
+    if (!el) return;
+    
+    // 尊重系统的减弱动画偏好，如果用户不需要动画则直接返回
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    // 清除旧动画类，以确保新动画可以触发
+    el.classList.remove('num-flash', 'num-down');
+    
+    // 触发重绘
+    void el.offsetWidth;
+
+    // 添加对应的新动画类
+    if (newValue > oldValue) {
+        el.classList.add('num-flash');
+    } else {
+        el.classList.add('num-down');
+    }
+
+    // 动画时长为 300ms，完成后移除类，不阻塞渲染
+    setTimeout(() => {
+        if (el) el.classList.remove('num-flash', 'num-down');
+    }, 300);
+}
+
+// 缓存上一次的统计数值
+let _prevStats = { fund: null, power: null, wage: null };
+
+function trackHeaderStats() {
+    if (!window.S) return;
+    
+    // 获取当前各 stat 的数值
+    const currentPower = typeof teamPower === 'function' ? teamPower(S) : 0;
+    const currentWage = typeof weeklyWage === 'function' ? weeklyWage(S) : 0;
+    
+    const currentStats = {
+        fund: S.fund || 0,
+        power: currentPower,
+        wage: currentWage
+    };
+
+    // 第一次渲染只记录值，不触发动画
+    if (_prevStats.fund !== null) {
+        animateStatChange('.stat.k-money b', currentStats.fund, _prevStats.fund);
+        animateStatChange('.stat.k-power b', currentStats.power, _prevStats.power);
+        animateStatChange('.stat.k-wage b', currentStats.wage, _prevStats.wage);
+    }
+
+    _prevStats = currentStats;
+}
+
+// 挂钩 renderHeader 函数
+if (typeof renderHeader === 'function') {
+    const _originalRenderHeader = renderHeader;
+    window.renderHeader = function() {
+        _originalRenderHeader.apply(this, arguments);
+        trackHeaderStats();
+    };
+}
+
+/* ================= 桌面端键盘快捷键 ================= */
+document.addEventListener('keydown', function(e) {
+ // 如果按下修饰键（Ctrl/Alt/Meta），不拦截（保留浏览器原生快捷键）
+ if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+ // 只在没有聚焦输入框时生效
+ const t = document.activeElement;
+ if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+ const key = e.key;
+
+ // 数字键 1-9, 0 -> 切换到对应页签（按 MODE_PAGES 顺序）
+ if (/^[0-9]$/.test(key)) {
+  const num = parseInt(key, 10);
+  const idx = num === 0 ? 9 : num - 1;
+  const mode = (typeof S !== 'undefined' && S && S.mode) ? S.mode : 'manager';
+  const pages = (typeof MODE_PAGES !== 'undefined' && MODE_PAGES[mode]) ? MODE_PAGES[mode] : null;
+  if (pages && pages[idx]) {
+   if (typeof goPage === 'function') goPage(pages[idx]);
+  }
+  return;
+ }
+
+ // Space -> 如果有 action-bar 中的主按钮，点击它
+ if (key === ' ' || key === 'Spacebar') {
+  e.preventDefault(); // 空格键需要 preventDefault 避免页面滚动
+  const abMain = document.querySelector('#action-bar .ab-main');
+  if (abMain && !abMain.disabled) {
+   abMain.click();
+  }
+  return;
+ }
+
+ // Enter -> 如果有 modal 弹窗中的 primary 按钮，点击它
+ if (key === 'Enter') {
+  let topModal = null;
+  if (typeof ModalStack !== 'undefined' && ModalStack && ModalStack.top()) {
+   topModal = document.getElementById(ModalStack.top());
+  } else {
+   // 兜底：找最后一个带有 'on' 类的 modal
+   const modals = document.querySelectorAll('.modal.on, .app-modal.on');
+   if (modals.length > 0) {
+    topModal = modals[modals.length - 1];
+   }
+  }
+  if (topModal) {
+   const primaryBtn = topModal.querySelector('.btn.primary, .primary');
+   if (primaryBtn && !primaryBtn.disabled) {
+    primaryBtn.click();
+   }
+  }
+  return;
+ }
+
+ // Escape -> 关闭最上层弹窗（如果 ModalStack 有内容）
+ if (key === 'Escape') {
+  if (typeof ModalStack !== 'undefined' && ModalStack && ModalStack.top()) {
+   if (typeof closeModal === 'function') {
+    closeModal(ModalStack.top());
+   }
+  }
+  return;
+ }
+});

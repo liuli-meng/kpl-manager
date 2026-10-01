@@ -939,7 +939,7 @@ function overCapTax(s,extraWage){
 function negoCapCheck(s,p){
  const {over,tax}=overCapTax(s,p.wage);
  if(over<=0)return true;
- return confirm(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需按 60% 缴纳奢侈税（'+tax+'万）。\n多花钱可以，确定签下？');
+ return confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需按 60% 缴纳奢侈税（'+tax+'万）。\n多花钱可以，确定签下？');
 }
 function negoComplete(s,p,fee){
  const from=p.ownerTeam,isFA=p.freeAgent;
@@ -1063,18 +1063,18 @@ function negoSubmit(){
 	const score=(n.freeAgent?1:feeRatio)*0.55+wageRatio*0.30+(wil/100)*0.15+(p.transferRequest?0.08:0);
 	const willingOk=score>=0.92;
 	if(feeOk&&wageOk&&willingOk){
- if(!negoCapCheck(s,p))return; // 超帽需确认（奢侈税），取消则留在谈判
- if(!n.freeAgent)s.fund-=fee;
- p.wage=Math.min(PLAYER_WAGE_MAX,wage); // 个人顶薪封顶
- const fromTeam=n.freeAgent?'自由球员':(p.ownerTeam||'原俱乐部');
- negoComplete(s,p,n.freeAgent?0:fee);
- recordTransfer(s,'in',p,n.freeAgent?0:fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
- logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
- if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
- window._nego=null;closeModal('app-modal');
- try{SFX.gold();}catch(_){}
- save();renderAll();toast(' 谈判成功！'+p.name+' 加盟');
- return;
+		if(!negoCapCheck(s,p))return; // 超帽需确认（奢侈税），取消则留在谈判
+		if(!n.freeAgent)s.fund-=fee;
+		p.wage=Math.min(PLAYER_WAGE_MAX,wage); // 个人顶薪封顶
+		const fromTeam=n.freeAgent?'自由球员':(p.ownerTeam||'原俱乐部');
+		negoComplete(s,p,n.freeAgent?0:fee);
+		recordTransfer(s,'in',p,n.freeAgent?0:fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
+		logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
+		if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
+		window._nego=null;closeModal('app-modal');
+		try{SFX.gold();}catch(_){}
+		save();renderAll();toast(' 谈判成功！'+p.name+' 加盟');
+		return;
  }
  // 被拒：接近要价则要价微降（愿意谈），差太远才小幅上涨
 	n.round++;

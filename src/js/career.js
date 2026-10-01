@@ -119,8 +119,7 @@ function playerRequestLoanOut(s){
  return {tn,has,pow,need:!has||pow<460};
  }).filter(x=>x.need).sort((a,b)=>a.pow-b.pow);
  const dest=cands[0]?cands[0].tn:pick(AI_TEAMS.filter(t=>t.name!==s.teamName).map(t=>t.name));
- if(!dest){toast('暂时没有俱乐部愿意接手租借');return false;}
- if(!confirm('申请租借离队？\n将租借至 '+dest+' '+LOAN_DAYS+' 天寻求出场，母队会补同位置替补；归队时按表现带回成长。'))return false;
+ if(!confirmDanger('申请租借离队？\n将租借至 '+dest+' '+LOAN_DAYS+' 天寻求出场，母队会补同位置替补；归队时按表现带回成长。'))return false;
  me.loanOut={team:dest,days:LOAN_DAYS,gain:0};
  const li=s.lineup.indexOf(me.id);
  if(li>=0)s.lineup.splice(li,1);
@@ -144,8 +143,7 @@ function playerRequestKjia(s){
  if((me.kjia||0)>0){toast('已在 K甲锻炼');return false;}
  if(me.injury>0){toast('伤停中，先养伤');return false;}
  if(typeof natCamping==='function'&&natCamping(s,me)){toast('国家队集训期间不能下放');return false;}
- if(s.lineup.includes(me.id)){toast('你目前是首发——先让教练把你换下，再申请下放');return false;}
- if(!confirm('申请下放 K甲？\n加入二队征战次级联赛 '+KJIA_DAYS+' 天，真实出战积累数据，归队时带属性成长。'))return false;
+ if(!confirmDanger('申请下放 K甲？\n加入二队征战次级联赛 '+KJIA_DAYS+' 天，真实出战积累数据，归队时带属性成长。'))return false;
  sendKjia(s,me.id);
  s.career.benchDays=0;
  s.career.kjiaStint=(s.career.kjiaStint||0)+1;
@@ -218,7 +216,7 @@ function clubLoanOutPlayer(s,pid){
  const dest=cands[0]?cands[0].tn:pick(AI_TEAMS.filter(t=>t.name!==s.teamName).map(t=>t.name));
  if(!dest){toast('暂无俱乐部愿意接手租借');return false;}
  const fee=Math.round(loanRent(p)); // 租入方付租金：俱乐部小赚，选手换出场
- if(!confirm('将 '+p.name+' 外租至 '+dest+' '+LOAN_DAYS+' 天？\n租金 +'+fee+'万；选手在那边打主力练级，归队时带回成长。'))return false;
+ if(!confirmDanger('将 '+p.name+' 外租至 '+dest+' '+LOAN_DAYS+' 天？\n租金 +'+fee+'万；选手在那边打主力练级，归队时带回成长。'))return false;
  s.fund+=fee;
  p.loanOut={team:dest,days:LOAN_DAYS,gain:0};
  const li=s.lineup.indexOf(pid);
@@ -558,8 +556,8 @@ function signFreeAgent(s,id){
  p.signCost=signFee;
  if(s.fund<signFee){toast('资金不足（签约费 '+signFee+'万）');return;}
  if(weeklyWage(s)+(p.wage||0)>s.wageCap){
- const {over,tax}=overCapTax(s,p.wage||0);
- if(!confirm(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+(p.wage||0))+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return;
+  const {over,tax}=overCapTax(s,p.wage||0);
+  if(!confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+(p.wage||0))+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return;
  }
  s.fund-=signFee;
  p.acqCost=signFee; // 买入价锚定（转售保护用）
