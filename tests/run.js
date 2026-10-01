@@ -110,6 +110,21 @@ const SUITES = [
   { id: 'verify-year9-fixes', file: 'tests/verify-year9-fixes.js', label: '九年修复项校验' },
 ];
 
+// 门禁完整性自检：tests/ 目录下所有 verify-*.js / sim-*.js 必须在 SUITES 显式注册，杜绝未执行的虚设门禁
+const fs = require('fs');
+const KNOWN_EXCLUDED = new Set([
+  'verify-no-deadend.js', // 诊断脚本，未挂进门禁（文档化理由见该文件首行）
+]);
+const testDirFiles = fs.readdirSync(__dirname).filter(f => /^verify-.*\.js$/.test(f) || /^sim-.*\.js$/.test(f));
+const suiteFiles = new Set(SUITES.map(s => path.basename(s.file)));
+const unregistered = testDirFiles.filter(f => !suiteFiles.has(f) && !KNOWN_EXCLUDED.has(f));
+if (unregistered.length) {
+  console.error('\n❌ [门禁自检失败] 发现未在 run.js 注册的测试文件（禁止存在未接入的测试）：');
+  unregistered.forEach(f => console.error('   ✗ ' + f));
+  console.error('请将其接入 SUITES 或在 KNOWN_EXCLUDED 中写明排除理由。\n');
+  process.exit(1);
+}
+
 const argv = process.argv.slice(2);
 const failFast = argv.includes('--fail-fast');
 const only = (argv.find(a => a.startsWith('--only=')) || '').split('=')[1];

@@ -139,7 +139,7 @@ const r4 = vm.runInContext(`
   S.lineup=S.players.map(p=>p.id).slice(0,5);
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
   S.fund=5000;
-  S.wageCap=200; // 直签工资帽校验需要帽额余量
+  S.wageCap=ECON.wageCapDefault; // 直签工资帽校验需要帽额余量
   initGroups(S);
   S.preseason=false;S.transferWindow=0;
   // 自由市场买一个顶星（star 档）

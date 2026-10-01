@@ -620,6 +620,15 @@ function sanitizeImport(obj){
 	['fund','wageCap','day','season','matchIdx','fans'].forEach(k=>{
 		if(obj[k]!=null&&typeof obj[k]==='number'&&!isFinite(obj[k])){delete obj[k];dropped.push(k+':NaN');}
 	});
+	// 版本号归一化到 [1, SAVE_VERSION]，截断负数与极小值（防 -1e999 冻死页面）
+	if(obj.v!=null){
+		const vNum=Number(obj.v);
+		if(!Number.isFinite(vNum)||vNum<1){obj.v=1;dropped.push('v:sub-1');}
+		else if(vNum>SAVE_VERSION){obj.v=SAVE_VERSION;dropped.push('v:clamp-max');}
+		else obj.v=Math.floor(vNum);
+	}else{
+		obj.v=1;
+	}
 	if(dropped.length){
 		try{gameLog.warn('import','sanitize dropped keys',{dropped:dropped.slice(0,40)});}catch(_){}
 		try{console.warn('[import] sanitized dropped:',dropped.slice(0,20));}catch(_){}
@@ -648,10 +657,14 @@ function applyImport(d,from){
 function resetGame(){
  if(uiDebounce('reset',800))return;
  // 重开前自动备份当前槽（误点也能在下次用「从文件导入」或手动恢复找回）
- try{
  const raw=storeGet(slotKey());
- if(raw)storeSet(slotKey()+'_pre_reset',raw);
- }catch(e){}
+ if(raw){
+  const ok=storeSet(slotKey()+'_pre_reset',raw);
+  if(!ok){
+   toast('备份失败：存储空间不足，无法创建重开备份。已中止重开以防丢档。');
+   return;
+  }
+ }
  const season=(S&&S.season)?('第'+S.season+'赛季'):('空档');
  const team=(S&&S.teamName)||'当前槽';
  if(!confirmDanger('确定重新开始？\n将清空「'+team+' · '+season+'」存档（槽'+curSlot+'）。\n系统已把当前进度备份到「恢复前重开备份」。'))return;

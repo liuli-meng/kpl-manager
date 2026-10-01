@@ -555,9 +555,15 @@ function signFreeAgent(s,id){
  if(typeof isWeakClub==='function'&&isWeakClub(s)){signFee=Math.max(30,Math.round(signFee*0.8));p.discount=0.8;} // 弱旅直签 8 折
  p.signCost=signFee;
  if(s.fund<signFee){toast('资金不足（签约费 '+signFee+'万）');return;}
- if(weeklyWage(s)+(p.wage||0)>s.wageCap){
+ const totalWage=weeklyWage(s)+(p.wage||0);
+ const hardCap=(typeof hardWageCap==='function'?hardWageCap(s):Math.round(s.wageCap*1.35));
+ if(totalWage>hardCap){
+  toast('签约被联盟否决：全队年薪 '+totalWage+'万 超过硬工资帽（'+hardCap+'万 · 软帽135%），严禁引援！');
+  return;
+ }
+ if(totalWage>s.wageCap){
   const {over,tax}=overCapTax(s,p.wage||0);
-  if(!confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+(p.wage||0))+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return;
+  if(!confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+totalWage+'万（软帽 '+s.wageCap+'万 · 硬帽 '+hardCap+'万），超出 '+over+'万 需按 60% 缴纳奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return;
  }
  s.fund-=signFee;
  p.acqCost=signFee; // 买入价锚定（转售保护用）

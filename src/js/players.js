@@ -57,9 +57,15 @@ function buyPlayer(s,p){
  if(s.fund<cost){toast('资金不足');return false;}
  if(s.players.some(x=>x.id===p.id)){toast('已拥有该选手');return false;}
  p.wage=Math.min(p.wage,PLAYER_WAGE_MAX); // 个人顶薪封顶
- if(weeklyWage(s)+p.wage>s.wageCap){
- const {over,tax}=overCapTax(s,p.wage);
- if(!confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需每周缴纳 60% 奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return false;
+ const totalWage=weeklyWage(s)+p.wage;
+ const hardCap=(typeof hardWageCap==='function'?hardWageCap(s):Math.round(s.wageCap*1.35));
+ if(totalWage>hardCap){
+  toast('签约被联盟否决：全队年薪 '+totalWage+'万 超过硬工资帽（'+hardCap+'万 · 软帽135%），严禁引援！');
+  return false;
+ }
+ if(totalWage>s.wageCap){
+  const {over,tax}=overCapTax(s,p.wage);
+  if(!confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+totalWage+'万（软帽 '+s.wageCap+'万 · 硬帽 '+hardCap+'万），超出 '+over+'万 需按 60% 缴纳奢侈税（'+tax+'万）。\n多花钱可以，确定签下？'))return false;
  }
  s.fund-=cost;p.acqCost=cost;p.joinedDay=s.day;s.players.push(p); // acqCost：买入价锚定（转售保护用）；joinedDay：新援磨合
  if(p.contract==null)p.contract=2; // 签约即给合同年限

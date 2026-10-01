@@ -937,9 +937,15 @@ function overCapTax(s,extraWage){
  return {over,tax:Math.round(over*0.6)};
 }
 function negoCapCheck(s,p){
+ const total=weeklyWage(s)+(p.wage||0);
+ const hardCap=(typeof hardWageCap==='function'?hardWageCap(s):Math.round(s.wageCap*1.35));
+ if(total>hardCap){
+  toast('签约被联盟否决：全队年薪 '+total+'万 超过硬工资帽（'+hardCap+'万 · 软帽135%），严禁引援！');
+  return false;
+ }
  const {over,tax}=overCapTax(s,p.wage);
  if(over<=0)return true;
- return confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+(weeklyWage(s)+p.wage)+'万（帽 '+s.wageCap+'万），超出 '+over+'万 需按 60% 缴纳奢侈税（'+tax+'万）。\n多花钱可以，确定签下？');
+ return confirmDanger(' 超帽签约：签下 '+p.name+' 后年薪 '+total+'万（软帽 '+s.wageCap+'万 · 硬帽 '+hardCap+'万），超出 '+over+'万 需按 60% 缴纳奢侈税（'+tax+'万）。\n多花钱可以，确定签下？');
 }
 function negoComplete(s,p,fee){
  const from=p.ownerTeam,isFA=p.freeAgent;

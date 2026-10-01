@@ -165,14 +165,21 @@ function storeAvailable(){
  return _storeOk;
 }
 function storeGet(k){
- try{const v=localStorage.getItem(k);return (v===null&&(k in _memStore))?_memStore[k]:v;}
- catch(_){return (k in _memStore)?_memStore[k]:null;}
+ if(k in _memStore) return _memStore[k];
+ try{
+  const v=localStorage.getItem(k);
+  if(v!==null){_memStore[k]=v;return v;}
+  return null;
+ }catch(_){return null;}
 }
 function storeSet(k,v){
- try{localStorage.setItem(k,v);return true;}catch(_){_memStore[k]=String(v);return false;}
+ const sv=String(v);
+ _memStore[k]=sv;
+ try{localStorage.setItem(k,sv);return true;}catch(_){return false;}
 }
 function storeDel(k){
- try{localStorage.removeItem(k);}catch(_){delete _memStore[k];}
+ delete _memStore[k];
+ try{localStorage.removeItem(k);}catch(_){}
 }
 function storeWarnOnce(){
  if(_storeWarned)return;_storeWarned=true;
@@ -948,9 +955,11 @@ function rebindSeriesMatch(s){
 function migrateSave(){
  if(!S)return;
  S.era=(S.era&&KPL_ERAS[S.era])?S.era:null;
- // 版本号必须是数字：非数字（"3a"）会让 S.v<SAVE_VERSION 恒为 false，整条迁移链被静默跳过
- S.v=Number(S.v)||3;
- while(S.v<SAVE_VERSION){
+ // 版本号必须是有限正整数：非数字、负数（-1e999）或极小值截断到合法区间，防无限死循环
+ const vNum=Number(S.v);
+ S.v=(Number.isFinite(vNum)&&vNum>=1)?Math.min(Math.floor(vNum),SAVE_VERSION):1;
+ let _migSteps=0;
+ while(S.v<SAVE_VERSION && _migSteps++ < 50){
  const step=MIGRATIONS[S.v];
  if(step){
   try{step(S);}

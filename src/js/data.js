@@ -25,8 +25,11 @@ const ECON={
  budgetLow:6500,
  budgetMid:8000,
  budgetRich:12000,
- payWeeks:52,
+ payWeeks:12, // 对齐单游戏年真实发薪周数（年天数/7 ≈ 10-12），使名义年薪与商业流水同量级结算
 };
+function hardWageCap(s){
+ return Math.round(((s&&s.wageCap)||ECON.wageCapDefault)*1.35); // 联盟硬工资帽：超软帽35%熔断否决（原 systems-real.js:192 活化）
+}
 
 // 年份经济参数（相对 2026 基准的倍率；transfer_cap 为该年封顶，万）
 const YEAR_ECONOMY = {
