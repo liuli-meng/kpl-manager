@@ -122,7 +122,7 @@ function compactViewToggle(){
 }
 function findPlayerCard(id){
   // 选秀池/自由市场也要能打开档案：原来只查 players/market，选秀卡上点「选手档案」永远「选手已不在」
-  return (S.players||[]).find(x=>x.id===id)
+  return (typeof findPlayer==='function'?findPlayer(S,id):(S.players||[]).find(x=>x.id===id))
     ||(S.market||[]).find(x=>x.id===id)
     ||(S.draft&&S.draft.pool||[]).find(x=>x.id===id)
     ||(S.freeAgents||[]).find(x=>x.id===id)
@@ -371,6 +371,20 @@ function uiGuard(msg){
  }
  return false;
 }
+/* 待业期的整页闸门：下课的人不该再有货架、训练位与首发席可点。
+   为什么收整页而不是给每颗按钮补 uiGuard：实测 fired 态市场页 9 颗经营按钮、
+   训练页 24 颗 doTrain、阵容页 6 颗出售议价——逐函数加守卫要动 6 个引擎入口，
+   漏一个就是"点了真扣钱"（曾经就是这样：买断可花掉 93万、名单 6→7）。
+   页级闸门一处收全，且玩家看到的是"这些页面暂时不属于你"，而不是二十颗灰按钮。 */
+function joblessPageHtml(what){
+ const offers=(S.jobOffers||[]).length;
+ return `<div class="panel" style="border-color:var(--red)"><h3>待业中 <span class="tag" style="color:var(--red)">已不再是 ${S.teamName} 的主教练</span></h3>
+ <div class="hint">${what}由俱乐部新任主帅接管：买卖、续约、训练与首发都不是你现在能定的事。</div>
+ <div class="hint mt8">去「俱乐部」页的董事会面板处理下一份合同${offers?('（手上 '+offers+' 份报价待回应）'):'（还没有报价，投一份简历出去）'}，或者挂印退役给这份生涯封笔。</div>
+ <div style="margin-top:10px"><button class="btn sm primary" onclick="goPage('club')">去俱乐部页 · 处理合同</button></div>
+ </div>`;
+}
+function joblessGate(pageId,what){const el=$(('#'+pageId));if(el)el.innerHTML=joblessPageHtml(what);return true;}
 function uiSave(){if(!requireSave('存档'))return;if(save())toast('存档成功');}
 function playerRetired(s){return !!(s&&s.mode==='player'&&s.career&&s.career.retired);}
 function uiNextDay(s){if(uiGuard())return;if(!requireSave('推进一天'))return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);renderAll();}
@@ -572,11 +586,31 @@ function clubBoardPanel(){
  const b=S.board||{trust:60},t=b.trust==null?60:b.trust,career=S.managerCareer||{};
  const col=b.fired?'var(--red)':t>=BOARD_FAVOR_TRUST?'var(--green)':t>=60?'var(--cyan)':t>=BOARD_WARN_TRUST?'var(--gold)':'var(--red)';
  if(b.fired){
- return `<div class="panel" style="border-color:var(--red)">
- <h3>董事会 <span class="tag" style="color:var(--red)">已解约</span></h3>
- <div style="font-size:13px;margin-bottom:6px">信任度耗尽，董事会在第 ${b.firedSeason||S.season} 赛季结束后与你解约，执教生涯就此结束。</div>
- <div class="hint">执教 ${career.years||0} 个赛季 · ${career.titles||0} 座冠军 · 最佳年度积分第 ${career.lastRank||'—'} 名 · 成就 ${Object.keys(S.achieved||{}).length}/${(typeof achievementsFor==='function'?achievementsFor('manager'):ACHIEVEMENTS).length}</div>
- <div style="margin-top:10px"><button class="btn danger" style="width:100%" onclick="resetGame()">结束执教 · 重新开始</button></div>
+  const line=`<div class="hint">执教 ${career.years||0} 个赛季 · ${career.titles||0} 座冠军 · 最佳年度积分第 ${career.lastRank||'—'} 名 · 成就 ${Object.keys(S.achieved||{}).length}/${(typeof achievementsFor==='function'?achievementsFor('manager'):ACHIEVEMENTS).length}</div>`;
+  // 封笔之后才是真终局：报价与求职全部收走，只剩另起一份生涯
+  if(S.careerEnd){
+   return `<div class="panel" style="border-color:var(--red)">
+ <h3>教练生涯 <span class="tag" style="color:var(--red)">已封笔</span></h3>
+ <div style="font-size:13px;margin-bottom:6px">${S.careerEnd.year||gameYear(S)} 年：第 ${S.careerEnd.firedSeason||S.careerEnd.season||S.season} 赛季被 ${S.careerEnd.club||S.teamName} 解约后，你选择挂印退役，不再出任任何队伍的教练。</div>
+ ${line}
+ <div style="margin-top:10px"><button class="btn danger" style="width:100%" onclick="resetGame()">另起一份新生涯</button></div>
+ </div>`;
+  }
+  const offers=S.jobOffers||[];
+  return `<div class="panel" style="border-color:var(--red)">
+ <h3>董事会 <span class="tag" style="color:var(--red)">已解约 · 待业</span></h3>
+ <div style="font-size:13px;margin-bottom:6px">信任度耗尽，${S.teamName} 董事会在第 ${b.firedSeason||S.season} 赛季结束后与你解约——这支队伍的指挥席不再属于你，但你的执教生涯还没有结束。</div>
+ ${line}
+ ${offers.length?`<div class="event-card" style="margin-top:10px"><div class="et">手上的执教报价（${offers.length} 份）</div>
+ ${offers.map(o=>`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+ <b style="font-size:13px">${o.team}</b><span class="hint">战力 ${o.power||'—'} · 预算 ${o.budget||0}万 · ${o.years||2} 年合同</span>
+ <button class="btn sm gold" onclick="acceptJobOffer('${o.team}')">接手执教 · 转会</button></div>`).join('')}
+ </div>`:'<div class="hint mt8">经纪人手上还没有报价——投一份简历出去。</div>'}
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+ <button class="btn sm primary" onclick="seekJob()">投递简历 · 找下一份合同</button>
+ <button class="btn sm" onclick="retireFromCoaching()">挂印退役 · 封笔</button>
+ <button class="btn sm danger" onclick="resetGame()">结束生涯 · 重新开始</button>
+ </div>
  </div>`;
  }
  const kpi=b.kpi,last=(b.log||[])[0];
@@ -728,7 +762,12 @@ function uiFinishAnnual(s){
  catch(e){toast('年度轮换失败：'+(e&&e.message||e));return;}
  save();renderAll();
 }
-function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
+function uiAsiadStep(s){if(uiGuard())return;s=s||S;
+ // 对阵表缺失时 asiadStep 第一行就 return（不抛错、不写日志），玩家连点几下界面纹丝不动。
+ // 成因是存档 phase='asiad' 而 S.ag 丢了（老档/异常写入）：读档侧若有重建最好，
+ // 但 UI 至少要说清「为什么点了没反应」，别把静默零反馈留给玩家自己猜。
+ if(!s.ag||!(s.ag.qf||[]).length){toast(' 亚运会对阵表数据缺失：点「推进赛历」重开本届，或导出存档反馈');return;}
+ asiadStep(s);}
 /* ================= 俱乐部页：赛段入口面板（renderClub 按 phase 分发） ================= */
 function clubLeaguePhasePanel(){
  const m=(S.schedule||[])[S.matchIdx]; // 缺赛程时走下方 !m，不能整页 TypeError
@@ -971,6 +1010,13 @@ function clubResultPanel(){
 }
 function clubPhasePanel(){
  const p=S.phase;
+ // 下课是「待业」，不是「生涯结束」：引擎照跑，只有 UI 拦。但赛段面板此前照旧渲染「赛前准备 ·
+ // 开赛」，点下去只回一句 toast——真人看到的是「按钮还在、我还能指挥」。推进入口在这里全部收掉
+ // （nextAction 在 fired 时本就返回 null，兜底按钮也不会再加），出口交给董事会面板的报价与退役。
+ if(boardLocked())return `<div class="panel" style="border-color:var(--red)"><h3>已离队 <span class="tag" style="color:var(--red)">董事会已解约 · 待业</span></h3>
+ <div class="hint">${PHASE_NAME[p]||p}仍在日程上，但指挥席已不属于你：本赛段剩下的比赛由俱乐部新任主帅带队，页面不再提供开赛/推进按钮。</div>
+ <div class="hint mt8">上方「董事会」面板是你现在唯一的办公桌：接手报价就是转会再就业，或者挂印退役给这份生涯封笔。</div>
+ </div>`;
  let html='';
  if(p==='r1'||p==='r2'||p==='r3')html=clubLeaguePhasePanel();
  else if(p==='card')html=clubCardPanel();
@@ -1265,6 +1311,7 @@ function renderBiz(){
  $('#page-biz').innerHTML=html;
 }
 function renderTrain(){
+ if(boardLocked())return joblessGate('page-train','训练位'); // 待业闸门：下课者不能再花俱乐部的钱练人（实测曾漏 24 颗 doTrain）
  let html=pageHint('train')+`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性13万 / 英雄特训25万</span></h3>
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
  ${sortChips('train')}

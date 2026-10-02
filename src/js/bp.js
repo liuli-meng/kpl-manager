@@ -251,12 +251,13 @@ function showNoGoModal(title,onConfirm,noGo){
  try{autoFillLineup(S);}catch(e){}
  const still=lineupNoGo(S);
  if(!still.length){openBP(title,onConfirm);return;} // 补齐后直接开 BP，不再弹窗卡住
+ const coachMode=S.mode==='coach'; // 教练档的市场页是工作台：能租借/提交引援申请，不能自己直签挂牌
  $('#app-modal-body').innerHTML=`
  <h2>无法出战 · 阵容缺位 <span class="tag">${still.map(pos=>POS[pos][1]).join(' / ')}</span></h2>
  <div class="hint" style="margin-bottom:10px">${noGoDetail(S,still)} 无法出战。KPL 不会因伤停推迟——补齐阵容立即开赛。</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap">
  <button class="btn primary" onclick="uiNoGoEmergency()">紧急补签自由球员并继续</button>
- <button class="btn" onclick="closeModal('app-modal');goPage('market')">前往转会市场签约</button>
+ <button class="btn" onclick="closeModal('app-modal');goPage('market')">${coachMode?'前往转会市场 · 应急租借 / 申请直签':'前往转会市场签约'}</button>
  <button class="btn" onclick="closeModal('app-modal');goPage('train')">前往训练 · 青训晋升</button>
  </div>`;
  $('#app-modal').classList.add('on');

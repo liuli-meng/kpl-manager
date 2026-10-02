@@ -388,7 +388,7 @@ function coachRequest(s,type,pid,pos){
  save();renderAll();
 }
 function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；接受=换队执教，履历入册）
- if(s.board&&s.board.fired)return;
+ if(s.board&&s.board.fired)return; // 已下课的人走 jobOffers（再就业报价），不是「被挖角」
  const rank=s.managerCareer?s.managerCareer.lastRank:null;
  const trust=s.board?s.board.trust:60;
  if(rank&&rank<=4&&trust>=70&&Math.random()<0.45){
@@ -396,6 +396,80 @@ function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；
  const t=pool.length?pick(pool):null;
  if(t){s.coachOffer={team:t.name};logEvent(s,' 豪门邀约：'+t.name+' 向你发出执教邀请——俱乐部页可回应（接受=换队，婉拒=留任）');}
  }
+}
+/* ── 下课后的再就业（经理/教练两档共用）───────────────────────────
+ 下课 ≠ 执教生涯结束：被解约只是丢掉这份工作，人还在市场上。引擎照跑、UI 拦推进，
+ 所以报价**必须在解约那一次结算里就生成**——等下个年结才报价，那个年结永远不会来
+ （推进入口全被 uiGuard 锁死）。同一理由，出口也必须恒 ≥1 条：待业期给不出报价，
+ 就是把玩家锁进"状态还在、无路可走"的死局，这正是本轮在 coach 档修掉的那类欠账。 */
+function jobOfferCount(s){
+ const c=s.managerCareer||{};
+ const titles=c.titles||0,rank=c.lastRank||12;
+ if(titles>=3||rank<=2)return 3;
+ if(titles>=1||rank<=4)return 2;
+ return 1;
+}
+/* 报价档次跟着履历走：带冠军的人挑豪门，履历平平的只能去中下游。
+   档位边界取 seed 排序后的分位而非写死阈值——CLUB_TEMPLATES 的战力分布会随版本挪。 */
+function genJobOffers(s){
+ const pool=CLUB_TEMPLATES.filter(t=>t&&t.name!==s.teamName);
+ const n=Math.min(jobOfferCount(s),pool.length);
+ if(!n)return [];
+ const c=s.managerCareer||{};
+ const rank=c.lastRank||12;
+ const prestige=Math.min(1,(c.titles||0)*0.3+(rank<=4?0.4:rank<=8?0.2:0));
+ const sorted=pool.slice().sort((a,b)=>(b.seed||0)-(a.seed||0));
+ const band=sorted.slice(0,Math.max(n,Math.round(sorted.length*(0.35+0.45*prestige))));
+ const out=[],taken=new Set();
+ for(let i=0;i<n;i++){
+  const cand=band.filter(t=>!taken.has(t.name));
+  if(!cand.length)break;
+  const t=pick(cand);taken.add(t.name);
+  out.push({team:t.name,icon:t.icon,years:rnd(2,3),power:t.seed||400,budget:t.budget||0,firedFrom:s.teamName,year:gameYear(s)});
+ }
+ return out;
+}
+/* 投递简历：待业期时间不推进，"等下一份合同"只能由玩家主动触发。
+   刻意不限次数——这里没有任何可刷的资源（钱/天/属性都不因点它而变化），
+   卡次数只会造出一个新的死路：三份报价都看不上又不能等，就只剩退役一条。 */
+function seekJob(){
+ if(!S)return;
+ if(!(S.board&&S.board.fired)){toast('你仍在任，不用四处投递简历');return;}
+ if(S.careerEnd){toast('生涯已经封笔，请另起一份新档');return;}
+ const fresh=genJobOffers(S).filter(o=>!(S.jobOffers||[]).some(x=>x.team===o.team));
+ S.jobOffers=[...(S.jobOffers||[]),...fresh];
+ logEvent(S,' 你把简历投向了联盟：'+(fresh.length?fresh.map(o=>o.team).join('、')+' 有了回音':'这一次没有人回应，但合同总会有的'));
+ save();renderAll();
+}
+/* 你走后那家俱乐部不能空着帅位：优先让名宿市场里最好的自由名宿接任（与 AI 换帅同一批人、
+   同一条"旧帅回流"规则），其次沿用该队模板帅。少了这一步，"董事会解约"在世界里不留任何痕迹。 */
+function announceSuccessor(s,leftTeam){
+ if(!s||!leftTeam)return null;
+ s.retiredCoaches=s.retiredCoaches||[];
+ const st=aiCoachState(s);
+ const free=s.retiredCoaches.filter(r=>r&&r.type==='coach');
+ let name=null;
+ if(free.length){
+  const best=free.slice().sort((a,b)=>(b.bonus||0)-(a.bonus||0))[0];
+  s.retiredCoaches=s.retiredCoaches.filter(r=>r.id!==best.id);
+  st[leftTeam]={id:best.id,name:best.name,rating:best.rating,bonus:best.bonus,styleBonus:best.styleBonus,style:best.style};
+  name=best.name;
+ }else{
+  const cur=st[leftTeam];
+  name=(cur&&cur.name)||null;
+  if(!name){ // 名宿池空、且该队不在 CLUB_TEMPLATES 里（自建队从来没有 AI 帅位记录）：
+   // 从 COACH_POOL 挑一个当前没在任何 AI 队执教的、且不是玩家本人的教练接手。
+   const mine=(s.coach&&s.coach.id)||null;
+   const busy=new Set(Object.keys(st).map(k=>st[k]&&st[k].id));
+   const free=COACH_POOL.filter(c=>c&&c.id!==mine&&!busy.has(c.id)).sort((a,b)=>(b.bonus||0)-(a.bonus||0));
+   const tmpl=CLUB_TEMPLATES.find(t=>t.name===leftTeam);
+   const cc=free[0]||(tmpl&&COACH_POOL.find(x=>x.id===tmpl.coach))||null;
+   if(cc){st[leftTeam]={id:cc.id,name:cc.name,rating:cc.rating,bonus:cc.bonus,styleBonus:cc.styleBonus,style:cc.style};name=cc.name;}
+  }
+ }
+ // 三层都取不到（极端旧档/COACH_POOL 全被占用）也要留一句官宣：宁可写"代理"，不能写 undefined
+ logEvent(s,'【官宣】'+leftTeam+' 任命 '+(name||'一线队教练组代理')+' 接任主教练，帅位更迭就此落定');
+ return name||'一线队教练组代理';
 }
 /* 一条龙生涯：选手退役后转型执教（同档延续，履历写入教练合同）。
  能力按生涯荣誉折算评分/加成；班底仍为现俱乐部，信任度小幅回正。

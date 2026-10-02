@@ -51,12 +51,16 @@ function cashReserveFee(s){
  return Math.round(Math.min(maxFee,excess*rate));
 }
 /* 俱乐部周度编制成本：后勤/青训/场馆/差旅/数据组——真实俱乐部开销大头不在选手年薪。
-   旧版只有象征性周薪，fund 只涨不跌（玩家反馈「没有扣费」）。挂机时对外活动停摆，编制同步缩减。 */
+   旧版只有象征性周薪，fund 只涨不跌（玩家反馈「没有扣费」）。挂机时对外活动停摆，编制同步缩减。
+   ECO-01 量纲收敛：随商业级别与粉丝规模配置主场场馆与公关法务维保，平抑豪门顶配单周流水与硬扣费的剪刀差。 */
 function clubOpsCost(s){
  if(!s)return 0;
  const roster=(s.players||[]).filter(p=>p&&!p.loan).length;
  const pop=(s.players||[]).reduce((t,p)=>t+((p&&p.popularity)||0),0);
- const base=40 + roster*22 + pop*0.28;
+ const spLv=clamp(s.sponsorLv||0,0,3);
+ const spBase=spLv*80; // 豪门赞助配套的基地设施与商务运维（0/80/160/240万/周）
+ const fanBase=Math.round(fanEff(s)*0.25); // 粉丝群体的主场运维/公关/会员服务（0~150万/周）
+ const base=40 + roster*22 + pop*0.28 + spBase + fanBase;
  return Math.round(base*(0.55+0.45*idleMul(s)));
 }
 /* ================= 赛事奖金 70/30 分成（KPL 硬规则） =================

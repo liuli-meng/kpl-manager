@@ -718,6 +718,71 @@ function upgradeSponsor(){
  logEvent(S,` 签约新赞助商「${next.name}」，每日收入 ${next.income}万（粉丝 ${fans} 万）`);
  save();renderAll();toast(`赞助商升级成功！`);
 }
+/* 换队执教的共同核心：队名/队徽/预算/班底/战力 + 赛制中段重建。
+   respondCoachOffer（在任被挖）与 acceptJobOffer（下课后再就业）必须共用这一份——
+   历史上「换队后市场里躺着新班底的人、名单翻倍」就是只在一处补 rebuild 造成的。
+   刻意不碰信任度与下课标记：这两件事两个入口的语义不同，留给调用方。 */
+function switchClubTo(s,tmpl){
+ const myCoach=s.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
+ s.teamName=tmpl.name;s.icon=tmpl.icon;
+ s.fund=tmpl.budget;s.wageCap=tmpl.cap;
+ s.players=[];
+ tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)s.players.push(genPlayer(def));});
+ s.lineup=buildBestLineup(s);
+ if(myCoach)s.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
+ else s.coach={...coachDef(tmpl.coach)};
+ s.seedPower=teamPower(s)||tmpl.seed;
+ // 赛制中段换队：分组/赛程/积分/AI名册都绑旧队名，必须重建，否则比赛入口与积分失真
+ s.aiRosters={};s.aiInj={};s.series=null;s._afterMatch=null;
+ try{if(typeof setBoardKpi==='function')setBoardKpi(s);}catch(e){}
+ try{initGroups(s);}catch(e){}
+ if(!s.preseason&&(s.phase==='r1'||s.phase==='r2'||s.phase==='r3')){
+ try{genRoundSchedule(s);}catch(e){} // 当前轮赛程按新队名重生成（积分表 initGroups 已重置）
+ }
+ // 自由市场是按「旧东家」排除构建的：换队后 transferList/freeAgents 里可能正躺着新班底的人，
+ // 而 coachAutoSquad 的直签路径不查归属——会把已属自己的选手再签一遍（名单翻倍），故必须重建
+ try{buildTransferMarket(s);}catch(e){}
+ return s;
+}
+/* 接下再就业报价＝下课后的「转会」。清 fired 必须与换队在同一次调用里做完：
+   只换队不清标记，人会带着解约标记落进新俱乐部，推进与经营全被闸门锁死
+   ——那正是本轮在 coach 档修掉的「按钮还在、点了没反应」那一类。 */
+function acceptJobOffer(team){
+ if(!S)return;
+ if(S.careerEnd){toast('生涯已经封笔，请另起一份新档');return;}
+ if(!(S.board&&S.board.fired)){toast('你仍在任，无需接受求职报价');return;}
+ const o=(S.jobOffers||[]).find(x=>x.team===team);
+ if(!o){toast('该报价已失效');return;}
+ const tmpl=CLUB_TEMPLATES.find(c=>c.name===o.team);
+ if(!tmpl){S.jobOffers=(S.jobOffers||[]).filter(x=>x.team!==team);toast('那家俱乐部退出了本赛季');save();renderAll();return;}
+ const left=S.teamName;
+ const d=S.coachDeal=S.coachDeal||{years:0,honors:[],log:[]};
+ d.log.unshift({year:gameYear(S),note:'下课后再就业：'+left+' → '+tmpl.name});
+ d.log=d.log.slice(0,8);
+ d.years=o.years||2;
+ switchClubTo(S,tmpl);
+ S.board.fired=false;S.board.firedSeason=0;S.board.warn=0;
+ S.board.trust=clamp(70,0,100); // 待业签下的人：新东家是在赌你的履历，不背旧队的信任账
+ S.jobOffers=[];
+ logEvent(S,' 你以自由身接手 '+tmpl.name+'（签约 '+(o.years||2)+' 年 · 预算 '+(o.budget||0)+'万）：新班底战力 '+fmt(teamPower(S)));
+ save();renderAll();
+}
+/* 挂印退役：下课本身不是终点，这一步才是。写封笔总结、清报价，此后推进与经营全部
+   留在 boardLocked 闸门之后，只剩「另起一份生涯」。 */
+function retireFromCoaching(){
+ if(!S)return;
+ if(S.careerEnd){toast('这份生涯已经封笔了');return;}
+ if(!(S.board&&S.board.fired)){toast('仍在任的教练不能直接封笔：先把这个赛季带完');return;}
+ if(!confirmDanger('挂印退役？'+S.teamName+' 的帅位已经与你无关，此后联盟里不再有你的名字。'))return;
+ const c=S.managerCareer||{};
+ S.careerEnd={year:gameYear(S),season:S.season,club:S.teamName,years:c.years||0,titles:c.titles||0,bestRank:c.lastRank||null,firedSeason:S.board.firedSeason||S.season};
+ S.jobOffers=[];
+ const d=S.coachDeal=S.coachDeal||{years:0,honors:[],log:[]};
+ d.log.unshift({year:gameYear(S),note:'挂印退役，结束执教生涯（'+(c.years||0)+'季 · '+(c.titles||0)+'冠）'});
+ d.log=d.log.slice(0,8);
+ logEvent(S,'【官宣】'+((S.coach&&S.coach.name)||'你')+' 挂印退役，不再出任任何队伍的教练');
+ save();renderAll();
+}
 /* 教练生涯：回应豪门邀约（接受=换队执教重建班底，婉拒=留任加信任） */
 function respondCoachOffer(accept){
  if(!S||!S.coachOffer)return;
@@ -734,24 +799,9 @@ function respondCoachOffer(accept){
  }
  d.log.unshift({year:gameYear(S),note:'离任 '+S.teamName+'，转投 '+tmpl.name});
  d.log=d.log.slice(0,8);
- const myCoach=S.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
- S.teamName=tmpl.name;S.icon=tmpl.icon;
- S.fund=tmpl.budget;S.wageCap=tmpl.cap;
- S.players=[];
- tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
- S.lineup=buildBestLineup(S);
- if(myCoach)S.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
- else S.coach={...coachDef(tmpl.coach)};
- S.seedPower=teamPower(S)||tmpl.seed;
+ switchClubTo(S,tmpl); // 队名/班底/赛制重建与「下课后再就业」共用同一份实现
  S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
  S.board.warn=0;
- // 赛制中段换队：分组/赛程/积分/AI名册都绑旧队名，必须重建，否则比赛入口与积分失真
- S.aiRosters={};S.aiInj={};S.series=null;S._afterMatch=null;
- try{if(typeof setBoardKpi==='function')setBoardKpi(S);}catch(e){}
- try{initGroups(S);}catch(e){}
- if(!S.preseason&&(S.phase==='r1'||S.phase==='r2'||S.phase==='r3')){
- try{genRoundSchedule(S);}catch(e){} // 当前轮赛程按新队名重生成（积分表 initGroups 已重置）
- }
  logEvent(S,' 你接受 '+tmpl.name+' 的邀约：新班底战力 '+fmt(teamPower(S))+'——用成绩证明他们的选择');
  }else{
  d.log.unshift({year:gameYear(S),note:'婉拒 '+o.team+' 邀约，留任 '+S.teamName});
@@ -1026,6 +1076,7 @@ function applyCoachClub(){
  S.preseason=false;S.transferWindow=0; // 俱乐部引援自动处理，无需转会期
  setBoardKpi(S);initFans(S);
  initKjia(S);
+ buildTransferMarket(S); // 教练档开局就要有自由球员池：引援建议/申请直签/缺位签约全读 s.freeAgents
  logEvent(S,' 教练生涯开启：你出任 '+tmpl.name+' 主教练（合同 2 年）——竞技全权负责，转会资金由俱乐部打理');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'（'+gameYear(S)+' 起）：联盟与阵容回到当年，赛制沿用现行年度赛历');
  logEvent(S,' 目标：带队出成绩。连续未达标会被解约；打出名气会有豪门来挖你');

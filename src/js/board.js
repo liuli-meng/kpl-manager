@@ -73,7 +73,13 @@ function boardSettle(s){
  if(!s.board.fired&&(s.board.trust<=0||(s.board.warn>=3&&s.board.trust<=BOARD_WARN_TRUST))){
   s.board.fired=true;
   s.board.firedSeason=s.season;
-  logEvent(s,'【董事会】信任度耗尽——'+s.teamName+' 董事会宣布与你解约，执教生涯结束（第 '+s.season+' 赛季）');
+  logEvent(s,'【董事会】信任度耗尽——'+s.teamName+' 董事会宣布与你解约，你已不再是这支队伍的主教练（第 '+s.season+' 赛季）');
+  // 解约不等于封笔：同一次结算里就把再就业报价送到手上。此时候选推进入口全被 uiGuard 锁死，
+  // 下个年结永远不会自己来，报价只能在这里生成（缺这一步＝把人锁在待业空壳里）。
+  try{s.jobOffers=genJobOffers(s);}catch(e){s.jobOffers=[];}
+  // 俱乐部当场官宣继任者：你走后那支队必须还有人执教，否则联盟里留下一支"无帅队"
+  try{announceSuccessor(s,s.teamName);}catch(e){}
+  if(s.jobOffers&&s.jobOffers.length)logEvent(s,' 经纪人送来 '+s.jobOffers.length+' 份执教邀约：'+s.jobOffers.map(o=>o.team).join('、')+'（俱乐部页回应）');
  }
  return {rank,delta,note};
 }

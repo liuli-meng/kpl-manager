@@ -67,3 +67,26 @@
   - `rewrite/arch`：**203 处**
   - **差值**：减少 64 处，但依然存在 203 处全局函数依赖。
 - **结论**：重构如果不能把内联 `onclick` 完全收敛到事件委托（`data-action`），全局命名空间就无法释放，压缩器就永远不能 mangle，模块私有化（IIFE / ESM）就无法成立。因此，单纯调整文件目录结构（core/engine/ui）并没有实质还掉架构债，反而制造了巨大的分支分歧。未来真正的架构解耦路径应当是：**以事件委托逐步替代内联 `onclick`**。
+
+---
+
+## 4. 摘取落地与清算终态记录（2026-10-02 落盘）
+
+1. **`origin/rewrite/arch` 清算结果**：
+   - **已落地资产**：`findPlayer(s, id)` 与 `rebuildPlayerIndex(s)` byId 索引已并入 `src/js/state.js`，并在 `src/js/ui.js`（`findPlayerCard`）与 `myPlayer(s)` 中落地使用；通过 `serializeForSave` 剥离、`migrateSave` 读档重建。
+   - **分支归宿**：正式废弃。不合入其 core/engine/ui 目录切分（Orphan 分支无公共祖先，强行合入与 main 产生 183 提交冲突，且残留 203 处 onclick 无法解决根本架构债）。
+
+2. **`fix/coach-mode` & `feat/fired-career-exit` 清算结果**：
+   - **已落地资产**：
+     - 教练模式全链路跑通：亚运集训缺位自动补位、开局建市 `buildTransferMarket`、换段/换队建市保护。
+     - 助教席与名宿转任：抽出 `assistantStaffHtml` 与 `legendAssistantHtml`，经理与教练双视角共用，战力加成生效。
+     - 待业态整页收口：`joblessGate` 封死 fired 态下转会市场、训练位、阵容首发的 39 处偷跑经营按钮。
+     - 再就业与挂印退役：`genJobOffers` 随履历生成 1~3 份报价、`switchClubTo` 统一换队逻辑、`retireFromCoaching` 封笔终局、`announceSuccessor` 旧东家官宣继任者。
+     - 门禁入册：`tests/verify-coach-mode.js`（18项断言）与 `tests/verify-fired-exit.js`（6组全链路断言）全部挂入 `tests/run.js` 的 `SUITES`，100% PASS。
+   - **分支归宿**：全部核心业务价值已 100% 增量吸收进 `main`，无任何独有价值被静默遗漏，分支可安全归档。
+
+3. **ECO-01 经济量纲收敛结果**：
+   - **改动位置**：`src/js/clubops.js` 的 `clubOpsCost(s)`。
+   - **量纲对齐**：引入随商业赞助等级（`spLv * 80万/周`）与粉丝规模（`fanEff * 0.25万/周`）的主场场馆与公关法务维保成本。
+   - **收敛效果**：豪门顶配单周硬支出从 350 万提高至 1074~1185 万/周；顶峰单周流水（饱和递减后约 1500~2000 万/周）与周硬支出的剪刀差从原来的 **8~10 倍大幅收敛至 1.3 ~ 1.7 倍**（落入 1.5 ~ 2.5 倍目标健康区间）。
+   - **零回归验证**：弱旅开局开销为 0 增量，破产率保持 0%；`verify-econ-snowball`、`verify-fans`、`sim-quick`（50 季平衡门禁）、`sim-coach`（50 季教练门禁）全绿。

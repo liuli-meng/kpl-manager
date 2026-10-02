@@ -1,5 +1,6 @@
 /* 阵容页 UI（从 ui.js 拆出：只搬渲染，引擎仍在 train/transfer/clubops） */
 function renderLineup(){
+ if(boardLocked())return joblessGate('page-lineup','阵容与首发'); // 待业闸门：下课者不能再排首发/挂牌出售（实测曾漏 6 颗 openSellNego）
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
  // 选手模式：阵容是俱乐部排的——开放观察视角（看首发/竞争，不代排）

@@ -2617,9 +2617,25 @@ function newState(teamName,icon){
  };
 }
 function rosterAll(s){return s.players;}
+
+function rebuildPlayerIndex(s){
+ if(!s)return {};
+ const idx=Object.create(null);
+ (s.players||[]).forEach(p=>{if(p&&p.id)idx[p.id]=p;});
+ s.playersById=idx;
+ return idx;
+}
+function findPlayer(s,id){
+ if(!s||!id)return null;
+ const idx=s.playersById;
+ if(idx&&idx[id]&&idx[id].id===id)return idx[id];
+ const p=(s.players||[]).find(x=>x&&x.id===id)||null;
+ if(p&&idx)idx[id]=p;
+ return p;
+}
 function rosterLineup(s){const set=new Set(s.lineup);return s.players.filter(p=>set.has(p.id));}
 function rosterBench(s){const set=new Set(s.lineup);return s.players.filter(p=>!set.has(p.id));}
-function myPlayer(s){return (s&&s.mode==='player'&&s.career)?s.players.find(p=>p.id===s.career.me)||null:null;} // 选手生涯：我扮演的选手
+function myPlayer(s){return (s&&s.mode==='player'&&s.career)?findPlayer(s,s.career.me):null;} // 选手生涯：我扮演的选手
 
 function playerStatus(p,s){
  p=p||{};
@@ -2949,11 +2965,12 @@ function scrubStateIntegrity(s){
 
 function serializeForSave(s){
  if(!s)return 'null';
- const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList,_afterMatch:s._afterMatch};
+ const cache={aiRosters:s.aiRosters,matches:s.matches,transferList:s.transferList,_afterMatch:s._afterMatch,playersById:s.playersById};
  s.aiRosters={};
  s.matches={};
  s.transferList=[]; // 可重建缓存：buildTransferMarket 开窗重建，落盘可占全文 1/3+
  s._afterMatch=null; // 函数无法 JSON 化
+ s.playersById=undefined;
  try{return JSON.stringify(s);}
  finally{Object.assign(s,cache);} // 原样还原（含 undefined 情形），只影响序列化产物
 }
@@ -3222,6 +3239,7 @@ function migrateSave(){
   if(typeof initTempSeats==='function')initTempSeats(S);
  }}catch(e){}
  S.aiRosters={};
+ try{rebuildPlayerIndex(S);}catch(e){}
  migrateFixZeroZero(S);
  if(S.series&&!S.series.side)S.series.side='blue';
 
@@ -6794,16 +6812,15 @@ function startSplit(s,split){
 
  s._afterMatch=null;
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
- if(s.mode==='coach')coachAutoSquad(s); // 俱乐部自动引援与续约（教练只管用）
- if(s.mode==='player'){
- applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队
- coachAutoSquad(s); // 俱乐部同样自动续约/补缺——选手只管自己，班底不能散架
- }
- try{autoFillLineup(s);}catch(e){} // 自动运营后立刻补齐首发空位（教练/选手退役空位不能拖到开赛）
- s.pick={};
+ if(s.mode==='player')applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队（归属先定，后面征召/引援才按新队算）
+ aiTransferWindow(s); // AI 俱乐部生态照常演化（与经理档同一时点：在构建市场之前）
+
+ if(s.mode==='coach')buildTransferMarket(s);
 
  if(split==='summer'&&isAsiadYear(s)&&!s.natAnnounced)announceNatCamp(s);
- aiTransferWindow(s); // AI 俱乐部生态照常演化
+ coachAutoSquad(s); // 俱乐部自动续约与引援：此时集训缺席已登记，缺位会被真补上（选手档同样保住班底）
+ try{autoFillLineup(s);}catch(e){} // 自动运营后立刻补齐首发空位（教练/选手退役空位不能拖到开赛）
+ s.pick={};
  s.aiRosters={};s.aiInj={};
  initGroups(s);
  initKjia(s);
@@ -7069,7 +7086,12 @@ function boardSettle(s){
  if(!s.board.fired&&(s.board.trust<=0||(s.board.warn>=3&&s.board.trust<=BOARD_WARN_TRUST))){
   s.board.fired=true;
   s.board.firedSeason=s.season;
-  logEvent(s,'【董事会】信任度耗尽——'+s.teamName+' 董事会宣布与你解约，执教生涯结束（第 '+s.season+' 赛季）');
+  logEvent(s,'【董事会】信任度耗尽——'+s.teamName+' 董事会宣布与你解约，你已不再是这支队伍的主教练（第 '+s.season+' 赛季）');
+
+  try{s.jobOffers=genJobOffers(s);}catch(e){s.jobOffers=[];}
+
+  try{announceSuccessor(s,s.teamName);}catch(e){}
+  if(s.jobOffers&&s.jobOffers.length)logEvent(s,' 经纪人送来 '+s.jobOffers.length+' 份执教邀约：'+s.jobOffers.map(o=>o.team).join('、')+'（俱乐部页回应）');
  }
  return {rank,delta,note};
 }
@@ -7302,7 +7324,10 @@ function clubOpsCost(s){
  if(!s)return 0;
  const roster=(s.players||[]).filter(p=>p&&!p.loan).length;
  const pop=(s.players||[]).reduce((t,p)=>t+((p&&p.popularity)||0),0);
- const base=40 + roster*22 + pop*0.28;
+ const spLv=clamp(s.sponsorLv||0,0,3);
+ const spBase=spLv*80; // 豪门赞助配套的基地设施与商务运维（0/80/160/240万/周）
+ const fanBase=Math.round(fanEff(s)*0.25); // 粉丝群体的主场运维/公关/会员服务（0~150万/周）
+ const base=40 + roster*22 + pop*0.28 + spBase + fanBase;
  return Math.round(base*(0.55+0.45*idleMul(s)));
 }
 
@@ -9781,7 +9806,7 @@ function coachRequest(s,type,pid,pos){
  save();renderAll();
 }
 function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；接受=换队执教，履历入册）
- if(s.board&&s.board.fired)return;
+ if(s.board&&s.board.fired)return; // 已下课的人走 jobOffers（再就业报价），不是「被挖角」
  const rank=s.managerCareer?s.managerCareer.lastRank:null;
  const trust=s.board?s.board.trust:60;
  if(rank&&rank<=4&&trust>=70&&Math.random()<0.45){
@@ -9789,6 +9814,72 @@ function coachPoach(s){ // 执教出色 → 豪门邀约（俱乐部页回应；
  const t=pool.length?pick(pool):null;
  if(t){s.coachOffer={team:t.name};logEvent(s,' 豪门邀约：'+t.name+' 向你发出执教邀请——俱乐部页可回应（接受=换队，婉拒=留任）');}
  }
+}
+
+function jobOfferCount(s){
+ const c=s.managerCareer||{};
+ const titles=c.titles||0,rank=c.lastRank||12;
+ if(titles>=3||rank<=2)return 3;
+ if(titles>=1||rank<=4)return 2;
+ return 1;
+}
+
+function genJobOffers(s){
+ const pool=CLUB_TEMPLATES.filter(t=>t&&t.name!==s.teamName);
+ const n=Math.min(jobOfferCount(s),pool.length);
+ if(!n)return [];
+ const c=s.managerCareer||{};
+ const rank=c.lastRank||12;
+ const prestige=Math.min(1,(c.titles||0)*0.3+(rank<=4?0.4:rank<=8?0.2:0));
+ const sorted=pool.slice().sort((a,b)=>(b.seed||0)-(a.seed||0));
+ const band=sorted.slice(0,Math.max(n,Math.round(sorted.length*(0.35+0.45*prestige))));
+ const out=[],taken=new Set();
+ for(let i=0;i<n;i++){
+  const cand=band.filter(t=>!taken.has(t.name));
+  if(!cand.length)break;
+  const t=pick(cand);taken.add(t.name);
+  out.push({team:t.name,icon:t.icon,years:rnd(2,3),power:t.seed||400,budget:t.budget||0,firedFrom:s.teamName,year:gameYear(s)});
+ }
+ return out;
+}
+
+function seekJob(){
+ if(!S)return;
+ if(!(S.board&&S.board.fired)){toast('你仍在任，不用四处投递简历');return;}
+ if(S.careerEnd){toast('生涯已经封笔，请另起一份新档');return;}
+ const fresh=genJobOffers(S).filter(o=>!(S.jobOffers||[]).some(x=>x.team===o.team));
+ S.jobOffers=[...(S.jobOffers||[]),...fresh];
+ logEvent(S,' 你把简历投向了联盟：'+(fresh.length?fresh.map(o=>o.team).join('、')+' 有了回音':'这一次没有人回应，但合同总会有的'));
+ save();renderAll();
+}
+
+function announceSuccessor(s,leftTeam){
+ if(!s||!leftTeam)return null;
+ s.retiredCoaches=s.retiredCoaches||[];
+ const st=aiCoachState(s);
+ const free=s.retiredCoaches.filter(r=>r&&r.type==='coach');
+ let name=null;
+ if(free.length){
+  const best=free.slice().sort((a,b)=>(b.bonus||0)-(a.bonus||0))[0];
+  s.retiredCoaches=s.retiredCoaches.filter(r=>r.id!==best.id);
+  st[leftTeam]={id:best.id,name:best.name,rating:best.rating,bonus:best.bonus,styleBonus:best.styleBonus,style:best.style};
+  name=best.name;
+ }else{
+  const cur=st[leftTeam];
+  name=(cur&&cur.name)||null;
+  if(!name){ // 名宿池空、且该队不在 CLUB_TEMPLATES 里（自建队从来没有 AI 帅位记录）：
+
+   const mine=(s.coach&&s.coach.id)||null;
+   const busy=new Set(Object.keys(st).map(k=>st[k]&&st[k].id));
+   const free=COACH_POOL.filter(c=>c&&c.id!==mine&&!busy.has(c.id)).sort((a,b)=>(b.bonus||0)-(a.bonus||0));
+   const tmpl=CLUB_TEMPLATES.find(t=>t.name===leftTeam);
+   const cc=free[0]||(tmpl&&COACH_POOL.find(x=>x.id===tmpl.coach))||null;
+   if(cc){st[leftTeam]={id:cc.id,name:cc.name,rating:cc.rating,bonus:cc.bonus,styleBonus:cc.styleBonus,style:cc.style};name=cc.name;}
+  }
+ }
+
+ logEvent(s,'【官宣】'+leftTeam+' 任命 '+(name||'一线队教练组代理')+' 接任主教练，帅位更迭就此落定');
+ return name||'一线队教练组代理';
 }
 
 function playerToCoach(s){
@@ -10660,6 +10751,8 @@ function activeMissions(s){
 function missionStrip(s){
  const list=activeMissions(s);
  const seasonBar=seasonQuestStrip(s);
+
+ if(s&&s.board&&s.board.fired)return '';
  if(!list.length&&!seasonBar)return '';
  const dayTag=list.length?`<span> <b>新手任务</b>（第 ${Math.min((s&&s.day)||1,3)} 天）：${list.map(m=>`<button class="btn sm" style="margin-left:4px" onclick="goPage('${m.page}')" title="${_escAttr(m.text)}">${m.title}</button>`).join('')}</span>`:'';
  return dayTag+seasonBar;
@@ -11118,12 +11211,13 @@ function showNoGoModal(title,onConfirm,noGo){
  try{autoFillLineup(S);}catch(e){}
  const still=lineupNoGo(S);
  if(!still.length){openBP(title,onConfirm);return;} // 补齐后直接开 BP，不再弹窗卡住
+ const coachMode=S.mode==='coach'; // 教练档的市场页是工作台：能租借/提交引援申请，不能自己直签挂牌
  $('#app-modal-body').innerHTML=`
  <h2>无法出战 · 阵容缺位 <span class="tag">${still.map(pos=>POS[pos][1]).join(' / ')}</span></h2>
  <div class="hint" style="margin-bottom:10px">${noGoDetail(S,still)} 无法出战。KPL 不会因伤停推迟——补齐阵容立即开赛。</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap">
  <button class="btn primary" onclick="uiNoGoEmergency()">紧急补签自由球员并继续</button>
- <button class="btn" onclick="closeModal('app-modal');goPage('market')">前往转会市场签约</button>
+ <button class="btn" onclick="closeModal('app-modal');goPage('market')">${coachMode?'前往转会市场 · 应急租借 / 申请直签':'前往转会市场签约'}</button>
  <button class="btn" onclick="closeModal('app-modal');goPage('train')">前往训练 · 青训晋升</button>
  </div>`;
  $('#app-modal').classList.add('on');
@@ -12762,7 +12856,7 @@ function compactViewToggle(){
 }
 function findPlayerCard(id){
 
-  return (S.players||[]).find(x=>x.id===id)
+  return (typeof findPlayer==='function'?findPlayer(S,id):(S.players||[]).find(x=>x.id===id))
     ||(S.market||[]).find(x=>x.id===id)
     ||(S.draft&&S.draft.pool||[]).find(x=>x.id===id)
     ||(S.freeAgents||[]).find(x=>x.id===id)
@@ -13000,6 +13094,16 @@ function uiGuard(msg){
  }
  return false;
 }
+
+function joblessPageHtml(what){
+ const offers=(S.jobOffers||[]).length;
+ return `<div class="panel" style="border-color:var(--red)"><h3>待业中 <span class="tag" style="color:var(--red)">已不再是 ${S.teamName} 的主教练</span></h3>
+ <div class="hint">${what}由俱乐部新任主帅接管：买卖、续约、训练与首发都不是你现在能定的事。</div>
+ <div class="hint mt8">去「俱乐部」页的董事会面板处理下一份合同${offers?('（手上 '+offers+' 份报价待回应）'):'（还没有报价，投一份简历出去）'}，或者挂印退役给这份生涯封笔。</div>
+ <div style="margin-top:10px"><button class="btn sm primary" onclick="goPage('club')">去俱乐部页 · 处理合同</button></div>
+ </div>`;
+}
+function joblessGate(pageId,what){const el=$(('#'+pageId));if(el)el.innerHTML=joblessPageHtml(what);return true;}
 function uiSave(){if(!requireSave('存档'))return;if(save())toast('存档成功');}
 function playerRetired(s){return !!(s&&s.mode==='player'&&s.career&&s.career.retired);}
 function uiNextDay(s){if(uiGuard())return;if(!requireSave('推进一天'))return;if(playerRetired(s)){toast('职业生涯已退役——「生涯」页查看履历，或重新开始');return;}nextDay(s);renderAll();}
@@ -13201,11 +13305,31 @@ function clubBoardPanel(){
  const b=S.board||{trust:60},t=b.trust==null?60:b.trust,career=S.managerCareer||{};
  const col=b.fired?'var(--red)':t>=BOARD_FAVOR_TRUST?'var(--green)':t>=60?'var(--cyan)':t>=BOARD_WARN_TRUST?'var(--gold)':'var(--red)';
  if(b.fired){
- return `<div class="panel" style="border-color:var(--red)">
- <h3>董事会 <span class="tag" style="color:var(--red)">已解约</span></h3>
- <div style="font-size:13px;margin-bottom:6px">信任度耗尽，董事会在第 ${b.firedSeason||S.season} 赛季结束后与你解约，执教生涯就此结束。</div>
- <div class="hint">执教 ${career.years||0} 个赛季 · ${career.titles||0} 座冠军 · 最佳年度积分第 ${career.lastRank||'—'} 名 · 成就 ${Object.keys(S.achieved||{}).length}/${(typeof achievementsFor==='function'?achievementsFor('manager'):ACHIEVEMENTS).length}</div>
- <div style="margin-top:10px"><button class="btn danger" style="width:100%" onclick="resetGame()">结束执教 · 重新开始</button></div>
+  const line=`<div class="hint">执教 ${career.years||0} 个赛季 · ${career.titles||0} 座冠军 · 最佳年度积分第 ${career.lastRank||'—'} 名 · 成就 ${Object.keys(S.achieved||{}).length}/${(typeof achievementsFor==='function'?achievementsFor('manager'):ACHIEVEMENTS).length}</div>`;
+
+  if(S.careerEnd){
+   return `<div class="panel" style="border-color:var(--red)">
+ <h3>教练生涯 <span class="tag" style="color:var(--red)">已封笔</span></h3>
+ <div style="font-size:13px;margin-bottom:6px">${S.careerEnd.year||gameYear(S)} 年：第 ${S.careerEnd.firedSeason||S.careerEnd.season||S.season} 赛季被 ${S.careerEnd.club||S.teamName} 解约后，你选择挂印退役，不再出任任何队伍的教练。</div>
+ ${line}
+ <div style="margin-top:10px"><button class="btn danger" style="width:100%" onclick="resetGame()">另起一份新生涯</button></div>
+ </div>`;
+  }
+  const offers=S.jobOffers||[];
+  return `<div class="panel" style="border-color:var(--red)">
+ <h3>董事会 <span class="tag" style="color:var(--red)">已解约 · 待业</span></h3>
+ <div style="font-size:13px;margin-bottom:6px">信任度耗尽，${S.teamName} 董事会在第 ${b.firedSeason||S.season} 赛季结束后与你解约——这支队伍的指挥席不再属于你，但你的执教生涯还没有结束。</div>
+ ${line}
+ ${offers.length?`<div class="event-card" style="margin-top:10px"><div class="et">手上的执教报价（${offers.length} 份）</div>
+ ${offers.map(o=>`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+ <b style="font-size:13px">${o.team}</b><span class="hint">战力 ${o.power||'—'} · 预算 ${o.budget||0}万 · ${o.years||2} 年合同</span>
+ <button class="btn sm gold" onclick="acceptJobOffer('${o.team}')">接手执教 · 转会</button></div>`).join('')}
+ </div>`:'<div class="hint mt8">经纪人手上还没有报价——投一份简历出去。</div>'}
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+ <button class="btn sm primary" onclick="seekJob()">投递简历 · 找下一份合同</button>
+ <button class="btn sm" onclick="retireFromCoaching()">挂印退役 · 封笔</button>
+ <button class="btn sm danger" onclick="resetGame()">结束生涯 · 重新开始</button>
+ </div>
  </div>`;
  }
  const kpi=b.kpi,last=(b.log||[])[0];
@@ -13352,7 +13476,10 @@ function uiFinishAnnual(s){
  catch(e){toast('年度轮换失败：'+(e&&e.message||e));return;}
  save();renderAll();
 }
-function uiAsiadStep(s){if(uiGuard())return;asiadStep(s);}
+function uiAsiadStep(s){if(uiGuard())return;s=s||S;
+
+ if(!s.ag||!(s.ag.qf||[]).length){toast(' 亚运会对阵表数据缺失：点「推进赛历」重开本届，或导出存档反馈');return;}
+ asiadStep(s);}
 
 function clubLeaguePhasePanel(){
  const m=(S.schedule||[])[S.matchIdx]; // 缺赛程时走下方 !m，不能整页 TypeError
@@ -13595,6 +13722,11 @@ function clubResultPanel(){
 }
 function clubPhasePanel(){
  const p=S.phase;
+
+ if(boardLocked())return `<div class="panel" style="border-color:var(--red)"><h3>已离队 <span class="tag" style="color:var(--red)">董事会已解约 · 待业</span></h3>
+ <div class="hint">${PHASE_NAME[p]||p}仍在日程上，但指挥席已不属于你：本赛段剩下的比赛由俱乐部新任主帅带队，页面不再提供开赛/推进按钮。</div>
+ <div class="hint mt8">上方「董事会」面板是你现在唯一的办公桌：接手报价就是转会再就业，或者挂印退役给这份生涯封笔。</div>
+ </div>`;
  let html='';
  if(p==='r1'||p==='r2'||p==='r3')html=clubLeaguePhasePanel();
  else if(p==='card')html=clubCardPanel();
@@ -13888,6 +14020,7 @@ function renderBiz(){
  $('#page-biz').innerHTML=html;
 }
 function renderTrain(){
+ if(boardLocked())return joblessGate('page-train','训练位'); // 待业闸门：下课者不能再花俱乐部的钱练人（实测曾漏 24 颗 doTrain）
  let html=pageHint('train')+`<div class="panel"><h3>选手训练 <span class="tag">每天限1次 · 属性13万 / 英雄特训25万</span></h3>
  <div class="hint" style="margin-bottom:12px">${S.trained?'今日已完成训练，明日再来':'选择选手：练属性提升战力，或英雄特训扩充英雄池（全局BP下英雄池越深越稳）'}</div>
  ${sortChips('train')}
@@ -14452,6 +14585,7 @@ function sortChips(key,pos){
 </script>
 <script>
 function renderLineup(){
+ if(boardLocked())return joblessGate('page-lineup','阵容与首发'); // 待业闸门：下课者不能再排首发/挂牌出售（实测曾漏 6 颗 openSellNego）
  const ls=rosterLineup(S),bn=rosterBench(S);
  const bonds=activeBonds(S);
 
@@ -14583,6 +14717,8 @@ function marketSecHost(sections,activeKey){
 }
 function renderMarket(){
 
+ if(boardLocked())return joblessGate('page-market','转会市场');
+
  if(S.mode==='coach'){renderCoachMarket();return;}
 
  if(S.mode==='player'){
@@ -14643,25 +14779,7 @@ function renderMarket(){
  coachHtml+=`<div class="hint" style="margin-bottom:10px">暂无主教练！签约一名教练提升全队战力（无教练全队战力打折扣）</div>`;
  }
 
- const asCnt=(S.assistants||[]).length;
- coachHtml+=`<div style="margin:12px 0 6px;font-weight:800;font-size:12px">助教席 <span class="tag">${asCnt}/2 · 与主教练叠加</span></div>`;
- coachHtml+=asCnt?`<div class="g2">${S.assistants.map(a=>`
- <div class="sponsor"><span class="s-icon">助</span>
- <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]||'—'}型 · ${(a.skill&&a.skill.d)||'—'} · 年薪 ${a.wage||0}万</div></div>
- <button class="btn sm danger" onclick="fireAssistant(S,'${a.id}')">解约</button>
- </div>`).join('')}</div>`
- :`<div class="hint" style="margin-bottom:8px">未聘助教——每名助教提供小额全队加成，与主教练叠加（买替补工资帽之外的第二处长期开销）</div>`;
- coachHtml+=`<div class="g3">${ASSISTANT_POOL.filter(a=>!(S.assistants||[]).some(x=>x.id===a.id)).map(a=>{
- const oc=ovrColor(a.rating||75);
- return `<div class="pcard ${ovrCls(a.rating||75)}" style="text-align:center">
- <div style="margin:6px 0;color:var(--faint)"></div>
- <div class="p-name" style="font-weight:800">${a.name}</div>
- <div class="p-rarity" style="color:${oc}"><span class="pr-label">评分</span><b class="pr-num">${a.rating}</b><span class="pr-meta">${COACH_STYLE[a.style]||'—'}型</span></div>
- <div class="p-skill"> ${(a.skill&&a.skill.d)||'—'}</div>
- <div class="p-foot"><span class="pf"><i>签约费</i><b>${a.cost}万</b></span><span class="pf"><i>年薪</i><b>${a.wage}万</b></span></div>
- <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
- </div>`;
- }).join('')}</div>`;
+ coachHtml+=assistantStaffHtml('与主教练叠加');
  if((S.coachMarket||[]).length){
  coachHtml+=`<div class="g3">${(S.coachMarket||[]).map(c=>{
  const oc=ovrColor(c.rating||80);
@@ -14826,6 +14944,41 @@ function renderMarket(){
  $('#page-market').innerHTML=windowBanner+pageHint('market')+tempHtml+marketSecHost(secs,active);
 }
 
+function assistantStaffHtml(tag){
+ const asCnt=(S.assistants||[]).length;
+ let h=`<div style="margin:12px 0 6px;font-weight:800;font-size:12px">助教席 <span class="tag">${asCnt}/2 · ${tag||'与主教练叠加'}</span></div>`;
+ h+=asCnt?`<div class="g2">${S.assistants.map(a=>`
+ <div class="sponsor"><span class="s-icon">助</span>
+ <div><div class="s-name">${a.name}</div><div class="s-desc">${a.rating||75}评分 · ${COACH_STYLE[a.style]||'—'}型 · ${(a.skill&&a.skill.d)||'—'} · 年薪 ${a.wage||0}万</div></div>
+ <button class="btn sm danger" onclick="fireAssistant(S,'${a.id}')">解约</button>
+ </div>`).join('')}</div>`
+ :`<div class="hint" style="margin-bottom:8px">未聘助教——每名助教提供小额全队加成，与主教练叠加（买替补工资帽之外的第二处长期开销）</div>`;
+ h+=`<div class="g3">${ASSISTANT_POOL.filter(a=>!(S.assistants||[]).some(x=>x.id===a.id)).map(a=>{
+ const oc=ovrColor(a.rating||75);
+ const poor=(S.fund||0)<a.cost;
+ return `<div class="pcard ${ovrCls(a.rating||75)}" style="text-align:center">
+ <div style="margin:6px 0;color:var(--faint)"></div>
+ <div class="p-name" style="font-weight:800">${a.name}</div>
+ <div class="p-rarity" style="color:${oc}"><span class="pr-label">评分</span><b class="pr-num">${a.rating}</b><span class="pr-meta">${COACH_STYLE[a.style]||'—'}型</span></div>
+ <div class="p-skill"> ${(a.skill&&a.skill.d)||'—'}</div>
+ <div class="p-foot"><span class="pf"><i>签约费</i><b>${a.cost}万</b></span><span class="pf"><i>年薪</i><b>${a.wage}万</b></span></div>
+ <button class="btn sm primary" onclick="hireAssistant(S,'${a.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':(poor?'资金不足（'+a.cost+'万）':'聘为助教')}</button>
+ </div>`;
+ }).join('')}</div>`;
+ return h;
+}
+
+function legendAssistantHtml(){
+ const list=(S.retiredCoaches||[]).filter(r=>r.type==='coach');
+ const asCnt=(S.assistants||[]).length;
+ if(!list.length)return '<div class="hint">暂无可转任助教的名宿——30+ 选手退役后转型教练才会进入名宿市场</div>';
+ return list.map(r=>`<div class="match" style="margin-bottom:6px;padding:8px 10px">
+ <div class="vs"><span class="tname" style="font-size:13px">${r.name} <span style="color:var(--dim);font-size:10px">(名宿教练 · +${r.bonus||0}% · ${r.origin?('由 '+r.origin+' 转型'):'退役'})</span></span></div>
+ <div class="score" style="font-size:12px;min-width:0">6 折 ${Math.round((r.cost||0)*0.6)}万 <s style="color:var(--faint)">${r.cost||0}万</s></div>
+ <button class="btn sm primary" style="margin:0" onclick="hireAssistant(S,'${r.id}')" ${asCnt>=2?'disabled':''}>${asCnt>=2?'助教席已满':'聘为助教'}</button>
+ </div>`).join('');
+}
+
 function renderCoachMarket(){
  const adv=coachAdvice(S);
  const gaps=adv.gaps||[];
@@ -14843,6 +14996,13 @@ function renderCoachMarket(){
  ${gaps.length?`<div class="hint" style="color:var(--red);margin-bottom:8px">⚠ ${gaps.map(p=>POS[p][0]).join('、')} 位置当前无人可打——建议立刻租借补位</div>`:''}
  ${injured.length?`<div class="hint" style="margin-bottom:8px">非健康名单：${injured.map(p=>{const st=playerStatus(p,S);return p.name+'（'+(st.injury?st.injuryDays+'天伤停':st.kjia?'K甲':st.loanOut?'外租':'集训')+'）';}).join(' · ')}</div>`:''}
  ${recs.length?`<div class="hint" style="margin-bottom:8px"><b>待处理申请：</b>${recs.map(r=>(r.type==='loan'?'租借 ':(r.type==='sign'?'直签 ':'补位 '))+(r.name||(r.pos?POS[r.pos][0]:'—'))).join(' · ')}</div>`:''}
+ </div>`;
+
+ html+=`<div class="panel"><h3>教练组 · 助教席 <span class="tag">${(S.assistants||[]).length}/2 · 全队战力加成与你的执教叠加</span></h3>
+ <div class="hint" style="margin-bottom:8px">助教由你点定，签约费与周薪走俱乐部账（每名约 +2~4% 全队战力）。<b>主教练是你本人</b>，所以教练档没有换帅与教练市场——那两样属于经理档。</div>
+ ${assistantStaffHtml('与你（主教练）叠加')}
+ <div style="margin:12px 0 6px;font-weight:800;font-size:12px">退役名宿 · 转任助教 <span class="tag">签约费 6 折</span></div>
+ ${legendAssistantHtml()}
  </div>`;
 
  const winOpen=typeof loanWindowOpen==='function'&&loanWindowOpen(S);
@@ -16217,7 +16377,7 @@ let _lastActiveModalTrigger=null;
 function closeModal(id){
  const el=$('#'+id);if(!el)return;
  el.classList.remove('on');el.classList.remove('wide');
- el.setAttribute('aria-hidden','true');
+ if(el.setAttribute)el.setAttribute('aria-hidden','true');
  if(typeof ModalStack!=='undefined'&&ModalStack)ModalStack.remove(id);
  if(_lastActiveModalTrigger&&_lastActiveModalTrigger.focus){
   try{_lastActiveModalTrigger.focus();}catch(_){}
@@ -16248,7 +16408,7 @@ function openModal(id,opt){
  _lastActiveModalTrigger=document.activeElement;
  if(opt&&opt.wide)el.classList.add('wide');
  el.classList.add('on');
- el.setAttribute('aria-hidden','false');
+ if(el.setAttribute)el.setAttribute('aria-hidden','false');
  if(typeof ModalStack!=='undefined'&&ModalStack)ModalStack.open(id);
  setTimeout(()=>{
   try{
@@ -16909,6 +17069,64 @@ function upgradeSponsor(){
  save();renderAll();toast(`赞助商升级成功！`);
 }
 
+function switchClubTo(s,tmpl){
+ const myCoach=s.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
+ s.teamName=tmpl.name;s.icon=tmpl.icon;
+ s.fund=tmpl.budget;s.wageCap=tmpl.cap;
+ s.players=[];
+ tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)s.players.push(genPlayer(def));});
+ s.lineup=buildBestLineup(s);
+ if(myCoach)s.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
+ else s.coach={...coachDef(tmpl.coach)};
+ s.seedPower=teamPower(s)||tmpl.seed;
+
+ s.aiRosters={};s.aiInj={};s.series=null;s._afterMatch=null;
+ try{if(typeof setBoardKpi==='function')setBoardKpi(s);}catch(e){}
+ try{initGroups(s);}catch(e){}
+ if(!s.preseason&&(s.phase==='r1'||s.phase==='r2'||s.phase==='r3')){
+ try{genRoundSchedule(s);}catch(e){} // 当前轮赛程按新队名重生成（积分表 initGroups 已重置）
+ }
+
+ try{buildTransferMarket(s);}catch(e){}
+ return s;
+}
+
+function acceptJobOffer(team){
+ if(!S)return;
+ if(S.careerEnd){toast('生涯已经封笔，请另起一份新档');return;}
+ if(!(S.board&&S.board.fired)){toast('你仍在任，无需接受求职报价');return;}
+ const o=(S.jobOffers||[]).find(x=>x.team===team);
+ if(!o){toast('该报价已失效');return;}
+ const tmpl=CLUB_TEMPLATES.find(c=>c.name===o.team);
+ if(!tmpl){S.jobOffers=(S.jobOffers||[]).filter(x=>x.team!==team);toast('那家俱乐部退出了本赛季');save();renderAll();return;}
+ const left=S.teamName;
+ const d=S.coachDeal=S.coachDeal||{years:0,honors:[],log:[]};
+ d.log.unshift({year:gameYear(S),note:'下课后再就业：'+left+' → '+tmpl.name});
+ d.log=d.log.slice(0,8);
+ d.years=o.years||2;
+ switchClubTo(S,tmpl);
+ S.board.fired=false;S.board.firedSeason=0;S.board.warn=0;
+ S.board.trust=clamp(70,0,100); // 待业签下的人：新东家是在赌你的履历，不背旧队的信任账
+ S.jobOffers=[];
+ logEvent(S,' 你以自由身接手 '+tmpl.name+'（签约 '+(o.years||2)+' 年 · 预算 '+(o.budget||0)+'万）：新班底战力 '+fmt(teamPower(S)));
+ save();renderAll();
+}
+
+function retireFromCoaching(){
+ if(!S)return;
+ if(S.careerEnd){toast('这份生涯已经封笔了');return;}
+ if(!(S.board&&S.board.fired)){toast('仍在任的教练不能直接封笔：先把这个赛季带完');return;}
+ if(!confirmDanger('挂印退役？'+S.teamName+' 的帅位已经与你无关，此后联盟里不再有你的名字。'))return;
+ const c=S.managerCareer||{};
+ S.careerEnd={year:gameYear(S),season:S.season,club:S.teamName,years:c.years||0,titles:c.titles||0,bestRank:c.lastRank||null,firedSeason:S.board.firedSeason||S.season};
+ S.jobOffers=[];
+ const d=S.coachDeal=S.coachDeal||{years:0,honors:[],log:[]};
+ d.log.unshift({year:gameYear(S),note:'挂印退役，结束执教生涯（'+(c.years||0)+'季 · '+(c.titles||0)+'冠）'});
+ d.log=d.log.slice(0,8);
+ logEvent(S,'【官宣】'+((S.coach&&S.coach.name)||'你')+' 挂印退役，不再出任任何队伍的教练');
+ save();renderAll();
+}
+
 function respondCoachOffer(accept){
  if(!S||!S.coachOffer)return;
  const o=S.coachOffer;
@@ -16924,24 +17142,9 @@ function respondCoachOffer(accept){
  }
  d.log.unshift({year:gameYear(S),note:'离任 '+S.teamName+'，转投 '+tmpl.name});
  d.log=d.log.slice(0,8);
- const myCoach=S.coach; // 执教身份是你本人，不能被目标队模板教练覆盖
- S.teamName=tmpl.name;S.icon=tmpl.icon;
- S.fund=tmpl.budget;S.wageCap=tmpl.cap;
- S.players=[];
- tmpl.players.forEach(pid=>{const def=PLAYER_POOL.find(x=>x.id===pid);if(def)S.players.push(genPlayer(def));});
- S.lineup=buildBestLineup(S);
- if(myCoach)S.coach=myCoach; // 保留玩家教练（评分/技能/名宿出身）
- else S.coach={...coachDef(tmpl.coach)};
- S.seedPower=teamPower(S)||tmpl.seed;
+ switchClubTo(S,tmpl); // 队名/班底/赛制重建与「下课后再就业」共用同一份实现
  S.board.trust=clamp((S.board?S.board.trust:60)+10,0,100); // 新东家信任重置偏高
  S.board.warn=0;
-
- S.aiRosters={};S.aiInj={};S.series=null;S._afterMatch=null;
- try{if(typeof setBoardKpi==='function')setBoardKpi(S);}catch(e){}
- try{initGroups(S);}catch(e){}
- if(!S.preseason&&(S.phase==='r1'||S.phase==='r2'||S.phase==='r3')){
- try{genRoundSchedule(S);}catch(e){} // 当前轮赛程按新队名重生成（积分表 initGroups 已重置）
- }
  logEvent(S,' 你接受 '+tmpl.name+' 的邀约：新班底战力 '+fmt(teamPower(S))+'——用成绩证明他们的选择');
  }else{
  d.log.unshift({year:gameYear(S),note:'婉拒 '+o.team+' 邀约，留任 '+S.teamName});
@@ -17213,6 +17416,7 @@ function applyCoachClub(){
  S.preseason=false;S.transferWindow=0; // 俱乐部引援自动处理，无需转会期
  setBoardKpi(S);initFans(S);
  initKjia(S);
+ buildTransferMarket(S); // 教练档开局就要有自由球员池：引援建议/申请直签/缺位签约全读 s.freeAgents
  logEvent(S,' 教练生涯开启：你出任 '+tmpl.name+' 主教练（合同 2 年）——竞技全权负责，转会资金由俱乐部打理');
  if(S.era)logEvent(S,' 历代联盟 '+KPL_ERAS[S.era].name+'（'+gameYear(S)+' 起）：联盟与阵容回到当年，赛制沿用现行年度赛历');
  logEvent(S,' 目标：带队出成绩。连续未达标会被解约；打出名气会有豪门来挖你');

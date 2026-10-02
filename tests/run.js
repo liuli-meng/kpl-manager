@@ -5,13 +5,12 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-/* 单项超时（秒）。默认 120 s —— 全套 51 项实测 47 s，正常单项最慢约 5 s，
-   120 s 只可能由「不收敛的循环」触发，而那正是没有上限时会永久挂住 CI 的情形。
-   调试长压测时可 --timeout=600 放宽。 */
+/* 单项超时（秒）。默认 240 s —— 覆盖单核高负载与长赛季仿真（sim-quick/sim-coach）。
+   死循环保护仍有效，调试更长压测可 --timeout=600 放宽。 */
 const SUITE_TIMEOUT_MS = (() => {
   const a = process.argv.find(x => x.startsWith('--timeout='));
-  const sec = a ? Number(a.split('=')[1]) : 120;
-  return (Number.isFinite(sec) && sec > 0 ? sec : 120) * 1000;
+  const sec = a ? Number(a.split('=')[1]) : 240;
+  return (Number.isFinite(sec) && sec > 0 ? sec : 240) * 1000;
 })();
 const SUITES = [
   { id: 'audit-static', file: 'tests/audit-static.js', label: '静态审计' },
@@ -110,6 +109,9 @@ const SUITES = [
   { id: 'verify-year9-fixes', file: 'tests/verify-year9-fixes.js', label: '九年修复项校验' },
   { id: 'verify-paycadence', file: 'tests/verify-paycadence.js', label: '发薪节奏与年薪结算对齐' },
   { id: 'verify-ui-standards', file: 'tests/verify-ui-standards.js', label: 'UI标准与历史缺陷回归' },
+  { id: 'verify-browser-ui', file: 'tests/verify-browser-ui.js', label: '浏览器真机渲染与触控门禁' },
+  { id: 'verify-coach-mode', file: 'tests/verify-coach-mode.js', label: '教练身份回归与下课闸门' },
+  { id: 'verify-fired-exit', file: 'tests/verify-fired-exit.js', label: '下课再就业与待业态整页收口' },
 ];
 
 // 门禁完整性自检：tests/ 目录下所有 verify-*.js / sim-*.js 必须在 SUITES 显式注册，杜绝未执行的虚设门禁
