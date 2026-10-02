@@ -1,7 +1,13 @@
+let _lastActiveModalTrigger=null;
 function closeModal(id){
  const el=$('#'+id);if(!el)return;
  el.classList.remove('on');el.classList.remove('wide');
+ if(el.setAttribute)el.setAttribute('aria-hidden','true');
  if(typeof ModalStack!=='undefined'&&ModalStack)ModalStack.remove(id);
+ if(_lastActiveModalTrigger&&_lastActiveModalTrigger.focus){
+  try{_lastActiveModalTrigger.focus();}catch(_){}
+  _lastActiveModalTrigger=null;
+ }
 }
 /* ModalStack — 统一 modal 栈（Phase3）：防叠层/防嵌套关错、ESC 只关最上层 */
 const ModalStack=(function(){
@@ -24,9 +30,17 @@ const ModalStack=(function(){
 })();
 function openModal(id,opt){
  const el=$('#'+id);if(!el)return;
+ _lastActiveModalTrigger=document.activeElement;
  if(opt&&opt.wide)el.classList.add('wide');
  el.classList.add('on');
+ if(el.setAttribute)el.setAttribute('aria-hidden','false');
  if(typeof ModalStack!=='undefined'&&ModalStack)ModalStack.open(id);
+ setTimeout(()=>{
+  try{
+   const f=el.querySelector('button, input, select, textarea, [tabindex="0"]');
+   if(f&&f.focus)f.focus();
+  }catch(_){}
+ },50);
 }
 function scheduleSave(ms){
  if(!S)return;
@@ -83,9 +97,9 @@ const MODE_PAGES={
    「更多」按钮没有 data-page，旧代码把 undefined 丢进 goPage，
    结果弹「当前身份没有『undefined』页」并强制跳回首页。 */
 const PAGE_IDS=['career','club','lineup','market','train','league','kjia','union','hall','biz'];
-/* 手机（≤760px）才是「5 主 + 更多」的窄底栏；桌面/平板一屏列全，不做二次展开 */
+/* 手机（≤640px）才是「5 主 + 更多」的窄底栏；桌面/平板一屏列全，不做二次展开 */
 function isMobileNav(){
- try{return !!(window.matchMedia&&window.matchMedia('(max-width:760px)').matches);}catch(_){return false;}
+ try{return !!(window.matchMedia&&window.matchMedia('(max-width:640px)').matches);}catch(_){return false;}
 }
 /* 主导航只放 5 个高频页，其余进「更多」抽屉——10 个页签一排是「乱」的主因 */
 const PRIMARY_NAV={
@@ -257,7 +271,7 @@ function enhanceMobileChrome(name){
  if(oldTabs)oldTabs.remove();
  page.classList.remove('sec-host');
  page.querySelectorAll(':scope > .panel.sec-on').forEach(p=>p.classList.remove('sec-on'));
- const isMob=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
+ const isMob=window.matchMedia&&window.matchMedia('(max-width:640px)').matches;
  const panels=[...page.querySelectorAll(':scope > .panel')];
  if(isMob&&panels.length>=2){
   const meta=panels.map((p,i)=>{
@@ -301,10 +315,10 @@ function enhanceMobileChrome(name){
    });
    panels.forEach(p=>p.classList.toggle('sec-on',p.id===id));
    mem[name]=id;_secMemSave();
-   // 人性化跳转：只在区块被顶栏挡住时才轻推，不强制甩回页顶
+   // 人性化跳转：只在区块被顶栏挡住时才轻推，不强制甩回页顶（动态测量，防遮挡）
    try{
     const rect=page.getBoundingClientRect();
-    const stick=56+48; // header + tabs 粗估
+    const stick=(typeof getHeaderStickHeight==='function'?getHeaderStickHeight():64)+(tabs?tabs.offsetHeight:44);
     if(rect.top<-stick||rect.top>8){
      window.scrollTo({top:Math.max(0,window.scrollY+rect.top-stick),behavior:'smooth'});
     }
@@ -1384,7 +1398,7 @@ $$('nav button').forEach(b=>{
  if(more)more.addEventListener('click',e=>{e.preventDefault();togglePageDock();});
  // 断点切换（转屏/缩放窗口）：底栏形态跟着换，不留半截导航
  try{
-  const mq=window.matchMedia('(max-width:760px)');
+  const mq=window.matchMedia('(max-width:640px)');
   const onMq=function(){if(S&&S.teamName){try{renderAll();}catch(_){}}};
   if(mq.addEventListener)mq.addEventListener('change',onMq); else if(mq.addListener)mq.addListener(onMq);
  }catch(_){}

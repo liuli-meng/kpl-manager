@@ -23,6 +23,7 @@
   --pos-top:#F0A060; --pos-jg:#C4B0E0; --pos-mid:#9DB8E8; --pos-ad:#8FD9A8; --pos-sup:#E0C86A;
   --r1:8px; --r2:12px; --r3:16px;
   --shadow:0 1px 0 rgba(255,255,255,.05) inset,0 10px 28px rgba(0,0,0,.45);
+  --hd-h:68px; /* 顶栏占用高度基准：JS 根据 header.offsetHeight 动态同步，防盖页签 */
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{color-scheme:dark}
@@ -61,7 +62,15 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px
 .stat.gold b{background:linear-gradient(180deg,#FFF6D6,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
 .stat.red b{color:var(--red)} .stat.green b{color:var(--green)}
 .stat.gold .ic{color:var(--gold)} .stat.red .ic{color:var(--red)} .stat.green .ic{color:var(--green)}
+/* 资金状态视觉系统：覆盖 background-clip 渐变，让告警色穿透生效（H-3 修复） */
 .stat.k-money b{background:linear-gradient(180deg,#FFF6D6,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat.k-money.healthy b{background:linear-gradient(180deg,#FFF6D6,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat.k-money.caution b{background:none;-webkit-background-clip:unset;background-clip:unset;color:var(--gold)!important}
+.stat.k-money.warning b{background:none;-webkit-background-clip:unset;background-clip:unset;color:#ffaa00!important}
+.stat.k-money.danger b{background:none;-webkit-background-clip:unset;background-clip:unset;color:var(--red)!important}
+@keyframes fund-danger-flash{0%,100%{opacity:1}50%{opacity:.45}}
+.stat.k-money.flashing b{animation:fund-danger-flash 1s ease-in-out infinite}
+.stat.k-money.flashing::after{content:' ⚠️';font-size:12px;margin-left:2px;vertical-align:middle}
 .stat.k-power b{color:var(--txt)}
 .stat.k-wage b{color:var(--dim)}
 .stat.k-wage.red b{color:var(--red)}
@@ -114,7 +123,7 @@ nav button.on .ic,nav button[aria-current="page"] .ic{color:#1A1020}
   border:1px solid var(--line2);background:var(--raise);color:var(--dim);cursor:pointer;white-space:nowrap}
 .action-bar .ab-chip.on{color:#1A1020;background:var(--gold);border-color:var(--accent-deep)}
 /* 页内区块页签（手机）：一屏一区块，切换页签即可，不再长页上下找 */
-.sec-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:64px;z-index:40;
+.sec-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--hd-h,68px);z-index:40;
   padding:8px 0 10px;margin:0 0 10px;background:linear-gradient(180deg,var(--bg) 75%,transparent);
   scroll-snap-type:x proximity;border-bottom:1px solid var(--line)}
 .sec-tabs::-webkit-scrollbar{display:none}
@@ -126,7 +135,7 @@ nav button.on .ic,nav button[aria-current="page"] .ic{color:#1A1020}
 .sec-host > .panel.sec-on{display:block;animation:fadein .16s ease}
 .sec-host > .panel.sec-on.collapsed{display:block} /* 页签模式下不再折叠堆叠 */
 /* 转会页分区页签：一次只看一块市场，桌面/手机通用 */
-.msec-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:56px;z-index:35;
+.msec-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--hd-h,68px);z-index:35;
   padding:8px 0 12px;margin:0 0 12px;background:linear-gradient(180deg,var(--bg) 80%,transparent);
   border-bottom:1px solid var(--line)}
 .msec-tabs::-webkit-scrollbar{display:none}
@@ -137,7 +146,7 @@ nav button.on .ic,nav button[aria-current="page"] .ic{color:#1A1020}
 .msec-dot{position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--red);display:block}
 .msec>.panel{margin:0}
 /* 旧锚点样式保留给未升级路径 */
-.sec-jump{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:64px;z-index:40;
+.sec-jump{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--hd-h,68px);z-index:40;
   padding:6px 0 8px;margin:0 0 8px;background:linear-gradient(180deg,var(--bg) 70%,transparent);scroll-snap-type:x proximity}
 .sec-jump::-webkit-scrollbar{display:none}
 .sec-jump a{flex:none;scroll-snap-align:start;padding:6px 11px;border-radius:999px;border:1px solid var(--line);
@@ -449,32 +458,45 @@ footer{background:transparent;border-top:1px solid var(--line);
 
 /* ===== 移动端 ===== */
 @media(max-width:640px){
+  :root{--hd-h:126px}
   body{padding-bottom:76px}
-  .wrap{padding:10px 10px 16px}
-  header{gap:6px;padding:9px 10px;top:0;border-radius:0;border-left:none;border-right:none}
-  .logo{width:32px;height:32px;font-size:16px}
-  .hd-name{font-size:14px}
-  .hd-btn{padding:6px 8px;font-size:11px;min-height:34px}
-  .stats{width:100%;order:5;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-left:0}
-  .stats .stat{min-width:0;padding:5px 8px;display:flex;flex-direction:column;align-items:flex-end}
-  .stats .stat b{font-size:15px;line-height:1.15}
-  .stats .stat small{font-size:9px}
+  .wrap{padding:10px 10px 24px}
+  header{gap:6px 8px;padding:7px 8px;top:0;border-radius:0;border-left:none;border-right:none}
+  .logo{width:28px;height:28px;font-size:14px}
+  .hd-name{font-size:12.5px}
+  .hd-name small{font-size:10px}
+  .stats{width:100%;order:5;display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;margin-left:0}
+  .stats .stat{min-width:0;padding:3px 5px;display:flex;flex-direction:column;align-items:flex-end}
+  .stat.k-money b{font-size:18px}
+  .stat.k-power b{font-size:18px}
+  .stat.k-day b,.stat.k-wage b,.stat.k-sponsor b,.stat.k-coach b{font-size:12.5px}
+  .stat small{font-size:8.5px}
   .hd-extra{order:6;gap:8px 12px;padding-top:6px}
   .hd-extra .stat{min-width:62px;padding:3px 4px;display:flex;flex-direction:column;align-items:flex-end}
   .hd-extra .stat b{font-size:13px;line-height:1.15}
   .hd-extra .stat small{font-size:9px}
   .hd-actions{order:7;width:100%;gap:5px}
-  .hd-actions .hd-btn{flex:1 1 auto;min-height:36px}
   .hd-actions .hd-audio{display:none}
   .hd-audio-m{display:flex;order:9;width:100%;gap:5px}
-  .hd-audio-m .hd-btn{flex:1 1 auto;min-height:34px}
-  .hd-more{order:4;margin-left:auto;min-height:32px;padding:6px 10px}
+  .hd-more{order:4;margin-left:auto;min-height:44px;min-width:44px;padding:6px 10px;display:inline-flex;align-items:center;justify-content:center}
+
+  /* 移动端触控标准：所有可交互元素保证 ≥44px 触控目标（H-2 修复） */
+  .btn,.btn.sm,.hd-btn,.pcard button,.league-btn,.s-chip,.sec-tab,.msec-tab{min-height:44px;box-sizing:border-box}
+  .hd-btn{flex:1 1 auto;padding:6px 10px;font-size:11.5px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .btn{padding:9px 14px;font-size:13px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .btn.sm{padding:6px 10px;font-size:12px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .s-chip{min-height:44px;padding:6px 13px;font-size:12.5px;display:inline-flex;align-items:center;justify-content:center}
+  .btn.primary,.btn.gold{min-height:52px;font-size:15px;font-weight:800;letter-spacing:.04em;
+    box-shadow:0 8px 22px rgba(232,195,74,.28)}
+  .start-tabs .btn{min-height:44px}
+  .ph-x{min-width:44px;min-height:44px}
+
   /* 底部标签栏（PWA 全屏时垫高安全区，避开手机 Home 横条/手势条） */
   nav{position:fixed;bottom:0;left:0;right:0;margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;
     z-index:80;background:var(--surface);box-shadow:0 -1px 0 var(--line);
     padding-bottom:env(safe-area-inset-bottom,0)}
-  nav button{min-width:0;flex:1 1 auto;padding:11px 2px;font-size:11.5px;border-bottom-width:2px}
-  .panel{padding:11px 12px;margin-bottom:9px}
+  nav button{min-width:0;flex:1 1 auto;padding:11px 2px;font-size:11.5px;border-bottom-width:2px;min-height:52px}
+  .panel{padding:11px 12px;margin-bottom:8px}
   .banner{padding:10px;gap:8px}
   .banner .big{font-size:17px}
   .g4{grid-template-columns:repeat(2,1fr);gap:8px}
@@ -484,74 +506,41 @@ footer{background:transparent;border-top:1px solid var(--line);
   .pcard .p-rarity .pr-num{font-size:18px}
   .pcard .p-skill{min-height:0}
   .pcard .p-foot .pf b{font-size:12px}
-  .btn{padding:9px 14px;font-size:13px;min-height:40px}
-  .s-chip{min-height:38px;padding:6px 13px;font-size:12.5px}
-  .btn.sm{padding:7px 10px;font-size:12px;min-height:36px}
   .match{padding:9px 10px;gap:6px}
-  .match .vs .tname{font-size:13px}
+  .match .vs .tname{font-size:13px;white-space:normal;word-break:break-word;overflow:visible;text-overflow:clip}
+  .match .vs .tname span{white-space:normal;word-break:break-word}
   .match .score{font-size:17px;min-width:44px}
-  .tbl{font-size:11px}
-  .tbl th,.tbl td{padding:7px 5px}
+  .tbl{font-size:11px;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  .tbl th,.tbl td{padding:7px 5px;white-space:nowrap}
   .logbox{font-size:12px;max-height:280px}
-  .modal{padding:14px;max-height:92vh}
+  .modal{border-radius:10px;padding:16px 12px;max-height:94dvh}
   .modal h2{font-size:15px}
-  .modal-bg{padding:8px}
+  .modal-bg{padding:6px;align-items:flex-end}
+  .modal-bg .modal{margin-bottom:env(safe-area-inset-bottom,0)}
   .bp-hero{flex:1 1 42%;min-height:44px;display:flex;flex-direction:column;justify-content:center}
   .sponsor{padding:9px}
   .event-card{padding:9px 11px}
   .pbar{font-size:10px}
   .toast{font-size:12px;padding:9px 15px;bottom:calc(64px + env(safe-area-inset-bottom,0));max-width:min(94vw,560px);line-height:1.45}
-  /* 主操作条常驻时，toast 会正好压在「下一步」按钮上：抬到条上沿 */
   body.has-actionbar .toast{bottom:calc(140px + env(safe-area-inset-bottom,0))}
-  /* 市场/转会卡：元数据与队名允许换行，避免移动端挤爆不可见 */
-  .match .vs .tname{white-space:normal;word-break:break-word;overflow:visible;text-overflow:clip}
-  .match .vs .tname span{white-space:normal;word-break:break-word}
   footer{padding:8px;font-size:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}
   #tab-self-body .btn,#tab-club-body .btn{width:100%}
-  /* 2026-09 移动端 pass：触控目标 / 安全区 / 表格横滑 / 弹窗手感 */
-  .btn,.btn.sm,.hd-btn,.pcard button,.league-btn{min-height:42px}
-  .btn.sm{min-height:38px}
-  .btn.primary,.btn.gold{min-height:52px;font-size:15px;font-weight:800;letter-spacing:.04em;
-    box-shadow:0 8px 22px rgba(232,195,74,.28)}
-  .start-tabs .btn{min-height:42px}
-  .ph-x{min-width:36px;min-height:36px}
-  nav button{min-height:52px}
+
   /* 换页 FAB / 面板：抬到底栏之上，避免盖住「荣誉馆/经营」 */
-  .page-fab{bottom:calc(78px + env(safe-area-inset-bottom,0));right:12px;width:48px;height:48px}
+  .page-fab{display:none}
   .page-dock{bottom:calc(138px + env(safe-area-inset-bottom,0));right:12px;max-height:min(62vh,420px)}
-  /* 10 个页签竖排会超出一屏要滚动：双列网格一次全露，点哪都够得着 */
   .page-dock .dock-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
   .page-dock .dock-grid button{margin-bottom:0;justify-content:center;padding:9px 4px}
-  /* 主操作条贴在底栏上方；正文给 sticky 条留空，少来回长滑 */
   .action-bar{bottom:calc(70px + env(safe-area-inset-bottom,0));width:calc(100% - 16px);padding:7px 8px}
   .action-bar .ab-main{min-height:48px;font-size:14px;font-weight:800;letter-spacing:.02em}
-  /* 底栏就在操作条正下方，chip 与底栏页签重复：手机让位给主按钮，点击目标更大 */
   .action-bar .ab-chips{display:none}
-  /* 底栏已有「更多」换页：右下角再放一颗悬浮 FAB 是重复入口，还压正文 */
-  .page-fab{display:none}
-  .sec-tabs{top:56px}
-  .sec-jump{top:56px}
-  /* HUD 收紧：顶栏更矮、数字仍可读，正文多露一截 */
-  header{padding:7px 8px;gap:6px 8px}
-  .logo{width:28px;height:28px;font-size:14px}
-  .hd-name{font-size:12.5px}
-  .hd-name small{font-size:10px}
-  .hd-btn{padding:5px 7px;font-size:10.5px;min-height:32px}
-  .stats{gap:4px 6px}
-  .stats .stat{padding:3px 5px}
-  .stat.k-money b{font-size:18px}
-  .stat.k-power b{font-size:18px}
-  .stat.k-day b,.stat.k-wage b,.stat.k-sponsor b,.stat.k-coach b{font-size:12.5px}
-  .stat small{font-size:8.5px}
-  html{scroll-padding-top:110px;scroll-padding-bottom:140px}
+
+  /* 吸顶防遮挡与滚动间隙（H-1 修复）：动态使用 --hd-h */
+  .sec-tabs{top:var(--hd-h,126px)}
+  .sec-jump{top:var(--hd-h,126px)}
+  .msec-tabs{top:var(--hd-h,126px)}
+  html{scroll-padding-top:calc(var(--hd-h,126px) + 48px);scroll-padding-bottom:140px}
   body{overscroll-behavior-y:contain}
-  .panel{margin-bottom:8px}
-  .wrap{padding:10px 10px 24px}
-  .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
-  .tbl th,.tbl td{white-space:nowrap}
-  .modal{border-radius:10px;padding:16px 12px;max-height:94dvh}
-  .modal-bg{padding:6px;align-items:flex-end}
-  .modal-bg .modal{margin-bottom:env(safe-area-inset-bottom,0)}
   .page-cols{gap:8px}
   .g5,.g4{grid-template-columns:1fr 1fr}
   .banner{flex-wrap:wrap}
@@ -970,6 +959,11 @@ section.page.on {
   .pcard-compact .pc-actions {
     margin-left: auto;
     order: 2;
+  }
+  .pcard-compact .pc-actions .btn {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 12px;
   }
 }
 

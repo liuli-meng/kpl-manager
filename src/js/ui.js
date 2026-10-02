@@ -245,7 +245,7 @@ function showCareer(p){if(!p){toast('选手已不在');return;}
  <div class="event-card"><div class="et">职业生涯</div><p>${p.career||'新秀档案待完善'}</p></div>
  <div style="display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:10px">${radarSvg(p,84)}<div class="hint" style="text-align:left">年龄：${p.age!=null?p.age:'—'}岁${p.age!=null&&p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire-1?'（<b style="color:var(--red)">'+(p.age>=(AGE_MODEL[p.pos]||AGE_MODEL.mid).retire?'已到退役年龄':'即将退役')+'</b>）':''}　·　MVP：${p.mvp||0} 次　·　出场 ${p.caps||0} 场<br>当前身价 <b class="gold">${sellAskPrice(p)}万</b>（表现 ${perfLabel(p)} ${p.val||100}%）· 场均 ${(p.caps?Math.round((p.kTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.dTotal||0)/p.caps*10)/10:0)} / ${(p.caps?Math.round((p.aTotal||0)/p.caps*10)/10:0)}<br>招牌英雄：${heroIcon(p.sig,16)} ${p.sig}（${HERO_LV[heroLv(p,p.sig)].n}）<br>英雄池：${lvDesc}</div></div>
  <div class="center"><button class="btn primary" onclick="closeModal('app-modal')">关闭</button></div>`;
- $('#app-modal').classList.add('on');
+ if(typeof openModal==='function')openModal('app-modal');else $('#app-modal').classList.add('on');
 }
 function energyBar(p){
  const c=p.energy>60?'var(--green)':p.energy>30?'var(--gold)':'var(--red)';
@@ -282,11 +282,12 @@ function renderHeader(){
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
  const hdPower=teamPower(S),hdWage=weeklyWage(S); // 各算一次：本函数内三处复用
  const hdWeekCost=Math.round(hdWage/ECON.payWeeks)+(typeof clubOpsCost==='function'?clubOpsCost(S):0); // 周支出预估（工资+编制）
+ const fundCls=(S.fund<0)?'danger flashing':(S.fund<100)?'warning':(S.fund<500)?'caution':'healthy';
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,44)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>
  <div class="stats">
- <div class="stat k-money"><b data-num="fund">${fmt(S.fund)}</b><small>${S.mode==='player'?'俱乐部资金':'资金'}</small></div>
+ <div class="stat k-money ${fundCls}"><b data-num="fund">${fmt(S.fund)}</b><small>${S.mode==='player'?'俱乐部资金':'资金'}</small></div>
  <div class="stat k-power"><b data-num="power">${fmt(hdPower)}</b><small>总战力</small></div>
  <div class="stat k-day"><b>第${S.day}天</b><small>距发薪${nextPay}天</small></div>
  </div>
@@ -326,6 +327,22 @@ function renderHeader(){
  btn.textContent=open?'收起':'详情';
  }
  }catch(_){}
+ syncHeaderHeight();
+}
+function syncHeaderHeight(){
+ try{
+  const hd=document.getElementById('header')||document.querySelector('header');
+  if(hd&&hd.offsetHeight>0){
+   document.documentElement.style.setProperty('--hd-h',hd.offsetHeight+'px');
+  }
+ }catch(_){}
+}
+function getHeaderStickHeight(){
+ const hd=document.getElementById('header')||document.querySelector('header');
+ return (hd&&hd.offsetHeight>0)?hd.offsetHeight:68;
+}
+if(typeof window!=='undefined'&&window.addEventListener){
+ window.addEventListener('resize',syncHeaderHeight);
 }
 function toggleHdMore(){
  window._hdMore=!window._hdMore;
@@ -335,6 +352,7 @@ function toggleHdMore(){
  if(extra)extra.hidden=!window._hdMore;
  if(btn){btn.setAttribute('aria-expanded',window._hdMore?'true':'false');btn.textContent=window._hdMore?'收起':'详情';}
  }catch(_){}
+ syncHeaderHeight();
 }
 /* ================= 董事会终局的 UI 层守卫 =================
  下课是"软终局"：只在 UI 入口拦截，不改进程内部逻辑——平衡门禁（sim/sim-quick/fuzz）

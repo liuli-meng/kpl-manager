@@ -54,7 +54,8 @@ function makeDom(opts) {
       toString(){ return Array.from(s).join(' '); },
     }; })(), style: {}, innerHTML: '', value: '',
     textContent: '', dataset: {}, disabled: false, addEventListener() {}, appendChild() {},
-    select() {}, querySelector() { return null; }, querySelectorAll() { return []; },
+    select() {}, setAttribute() {}, getAttribute() { return null; }, removeAttribute() {},
+    querySelector() { return null; }, querySelectorAll() { return []; },
   });
   const elCache = {};
   const cachedEl = sel => elCache[sel] || (elCache[sel] = el());

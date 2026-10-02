@@ -16,7 +16,8 @@ function showMarketSec(key){
    b.setAttribute('aria-selected',on?'true':'false');
   });
   _mktSecSave(key);
-  window.scrollTo({top:Math.max(0,host.getBoundingClientRect().top+window.scrollY-72),behavior:'smooth'});
+  const hdH=(typeof getHeaderStickHeight==='function'?getHeaderStickHeight():68);
+  window.scrollTo({top:Math.max(0,host.getBoundingClientRect().top+window.scrollY-hdH-8),behavior:'smooth'});
  }catch(e){}
 }
 function marketSecHost(sections,activeKey){
