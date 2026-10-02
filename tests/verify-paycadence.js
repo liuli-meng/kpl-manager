@@ -1,5 +1,5 @@
 // 发薪节奏与经济刻度对齐门禁：验证单年发薪周数与名义年薪结算比例
-// 杜绝魔数漂移：验证单年 payWage 调用次数 ∈ [9, 13]、单年工资支出/名义年薪 ∈ [0.75, 1.05]
+// 杜绝魔数漂移：验证单年 payWage 调用次数 ∈ [8, 11]、单年工资支出/名义年薪 ∈ [0.90, 1.10]
 // 运行：node tests/verify-paycadence.js
 const fs = require('fs');
 const path = require('path');
@@ -18,9 +18,9 @@ vm.runInContext(headlessMatch[1], dom);
 const errors = [];
 const check = (cond, msg) => { if (!cond) errors.push(msg); };
 
-// ① ECON 常量声明门禁：payWeeks 必须显式声明且为 12
+// ① ECON 常量声明门禁：payWeeks 必须显式声明且为 9（全额结算名义年薪）
 const payWeeksVal = vm.runInContext('ECON.payWeeks', dom);
-check(payWeeksVal === 12, `① ECON.payWeeks 应为 12，实测 ${payWeeksVal}`);
+check(payWeeksVal === 9, `① ECON.payWeeks 应为 9，实测 ${payWeeksVal}`);
 
 // ② 跑单年自然赛历：转会窗 7 天真实推进 + 联赛 + 杯赛全流程
 const CADENCE_TEST = vm.runInContext(`
@@ -108,10 +108,10 @@ const CADENCE_TEST = vm.runInContext(`
 `, dom);
 
 CADENCE_TEST.forEach(r => {
-  check(r.payCount >= 9 && r.payCount <= 13,
-    `② [种子 ${r.seed}] 单年 payWage 调用次数 (${r.payCount}) 越出 [9, 13] 预期区间`);
-  check(r.ratio >= 0.75 && r.ratio <= 1.05,
-    `② [种子 ${r.seed}] 单年工资支出/名义年薪比例 (${r.ratio}) 越出 [0.75, 1.05] 预期区间（实付 ${r.wageSpent}万 / 名义 ${r.initialNominal}万）`);
+  check(r.payCount >= 8 && r.payCount <= 11,
+    `② [种子 ${r.seed}] 单年 payWage 调用次数 (${r.payCount}) 越出 [8, 11] 预期区间`);
+  check(r.ratio >= 0.90 && r.ratio <= 1.10,
+    `② [种子 ${r.seed}] 单年工资支出/名义年薪比例 (${r.ratio}) 越出 [0.90, 1.10] 预期区间（实付 ${r.wageSpent}万 / 名义 ${r.initialNominal}万）`);
 });
 
 if (errors.length) {
@@ -120,7 +120,7 @@ if (errors.length) {
 } else {
   console.log('[PASS] 发薪节奏门禁：单年发薪次数 '
     + CADENCE_TEST.map(r => r.payCount + '次').join(' / ')
-    + ' ∈ [9, 13] · 实付/名义年薪比 '
+    + ' ∈ [8, 11] · 实付/名义年薪比 '
     + CADENCE_TEST.map(r => (r.ratio * 100).toFixed(1) + '%').join(' / ')
-    + ' ∈ [75%, 105%] · ECON.payWeeks=12');
+    + ' ∈ [90%, 110%] · ECON.payWeeks=9');
 }

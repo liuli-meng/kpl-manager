@@ -64,7 +64,7 @@ function genDraftProspect(s,i,used,namePool){
  sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,
  career:tier==='kjia'?'次级联赛（K甲）突出选手，进入选秀大会。':'官方 KPL 新秀训练营结业，参加选秀大会。'
  });
- p.age=18;p.wage=DRAFT_WAGE;p.contract=DRAFT_CONTRACT;
+ p.age=18;p.wage=Math.max(DRAFT_WAGE,Math.round((typeof wageOf==='function'?wageOf(overall(p)):DRAFT_WAGE)*0.65));p.contract=DRAFT_CONTRACT;
  p.val=tier==='kjia'?115:(tier==='hot'?110:95);
  if(i%3===0&&AI_TEAMS.length){
  const src=pick(AI_TEAMS).name;

@@ -25,7 +25,7 @@ const ECON={
  budgetLow:6500,
  budgetMid:8000,
  budgetRich:12000,
- payWeeks:12, // 对齐单游戏年真实发薪周数（年天数/7 ≈ 10-12），使名义年薪与商业流水同量级结算
+ payWeeks:9, // 对齐单游戏年真实发薪周数（实测整年约63天/7 = 9次周结），100%全额结算名义年薪
 };
 function hardWageCap(s){
  return Math.round(((s&&s.wageCap)||ECON.wageCapDefault)*1.35); // 联盟硬工资帽：超软帽35%熔断否决（原 systems-real.js:192 活化）

@@ -206,6 +206,7 @@ function promoteRookie(s,id){
  r.tags=['青训'];
  r.academyGrad=true; // 青训出身永久标记（成就「自家血统/青训门面」判定用）
  r.contract=2; // 晋升一线队签 2 年合同
+ r.wage=Math.max((typeof ECON!=='undefined'&&ECON.playerWageMin)||12,Math.round((typeof wageOf==='function'?wageOf(overall(r)):40)*0.65));
  s.players.push(r);
  if(!s.lineup.includes(r.id)&&!s.players.some(p=>p.id!==r.id&&p.pos===r.pos&&s.lineup.includes(p.id))){
  // 该位置空缺时直接进首发
