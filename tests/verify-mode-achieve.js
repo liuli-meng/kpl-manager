@@ -45,29 +45,37 @@ const out = vm.runInContext(`
   else ok('④ 选手成就：FMVP/冠军/星/转会/国家队');
 
   // ⑤ 空窗面板：教练 histGap
+  //    队名必须用 2017 档联盟里真实存在的名字（简名 AG超玩会）——旧用例塞的是
+  //    '成都AG超玩会'（2019 才启用的队名），与当时 2018 out 表里那个写错的字符串
+  //    恰好吻合，所以它测的是「幽灵队」而不是史实降级；⑥ 也因此恒真（塞进去的名字还在名单里）。
   installEra('2017');
-  S=newState('成都AG超玩会','焰');fillRoster(S,'mid','star');
-  S.era='2017';S.season=1;S.mode='coach';S.teamName='成都AG超玩会';
-  if(!AI_TEAMS.some(t=>t.name==='成都AG超玩会'))AI_TEAMS.push({name:'成都AG超玩会',icon:'焰',power:600});
-  S.season=2;
-  applyHistoricalLeague(S);
-  histPromotionSkip(S);
-  if(!S.histGap)fail('教练降级空窗应进入 histGap，而不是直接跳过');
-  else if(typeof histGapPanelHtml!=='function'||!histGapPanelHtml().includes('等待重返'))fail('空窗面板缺少等待重返');
-  else ok('⑤ 教练空窗：histGap + 面板可选等待/另谋高就');
+  S=newState('AG超玩会','焰');fillRoster(S,'mid','star');
+  S.era='2017';S.season=1;S.mode='coach';S.teamName='AG超玩会';
+  if(!AI_TEAMS.some(t=>t.name==='AG超玩会'))fail('前提：2017 档联盟应含 AG超玩会');
+  else{
+   S.season=2;
+   applyHistoricalLeague(S);
+   if(!S.seatLost)fail('前提：2018 教练版 AG 应 seatLost（实得 '+S.seatLost+'）');
+   else{
+    histPromotionSkip(S);
+    if(!S.histGap)fail('教练降级空窗应进入 histGap，而不是直接跳过');
+    else if(typeof histGapPanelHtml!=='function'||!histGapPanelHtml().includes('等待重返'))fail('空窗面板缺少等待重返');
+    else ok('⑤ 教练空窗：histGap + 面板可选等待/另谋高就');
+   }
+  }
 
-  // ⑥ 等待重返
+  // ⑥ 等待重返（AG 在 2019 以新队名回归；玩家队名随之更新）
   histGapWait(S);
   if(S.seatLost)fail('等待重返未解除 seatLost');
-  else if(!AI_TEAMS.some(t=>t.name==='成都AG超玩会'))fail('等待后 AG 应在名单');
-  else ok('⑥ 等待重返：AG 回到 KPL 名单');
+  else if(!AI_TEAMS.some(t=>t.name==='成都AG超玩会'))fail('等待后 AG 应以成都AG超玩会回到名单');
+  else if(S.teamName!=='成都AG超玩会')fail('等待重返后玩家队名应随更名更新（实得 '+S.teamName+'）');
+  else ok('⑥ 等待重返：AG 以「成都AG超玩会」回到 KPL 名单并解除空窗');
 
   // ⑦ 选手另谋高就
   installEra('2017');
-  S=newState('成都AG超玩会','焰');fillRoster(S,'mid','star');
-  S.era='2017';S.season=1;S.mode='player';S.teamName='成都AG超玩会';
+  S=newState('AG超玩会','焰');fillRoster(S,'mid','star');
+  S.era='2017';S.season=1;S.mode='player';S.teamName='AG超玩会';
   S.career={me:S.players[0].id,seasons:[],titles:0,fmvp:0,allstar:0,nat:0,retired:false,pendingMove:null};
-  if(!AI_TEAMS.some(t=>t.name==='成都AG超玩会'))AI_TEAMS.push({name:'成都AG超玩会',icon:'焰',power:600});
   S.season=2;
   applyHistoricalLeague(S);
   histPromotionSkip(S);
@@ -75,7 +83,7 @@ const out = vm.runInContext(`
   else{
     histGapLeave(S);
     if(S.histGap)fail('另谋高就后仍 histGap');
-    else if(S.teamName==='成都AG超玩会')fail('另谋高就应换队');
+    else if(S.teamName==='AG超玩会')fail('另谋高就应换队');
     else if(S.seatLost)fail('换队后应解除 seatLost');
     else ok('⑦ 选手另谋高就：转会至 '+S.teamName);
   }

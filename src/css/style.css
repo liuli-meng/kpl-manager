@@ -197,7 +197,11 @@ section.page.on{display:block;animation:fadein .18s ease}
 .panel.collapsible>h3::after{content:"▸";margin-left:auto;color:var(--faint);font-size:12px;transition:transform .2s ease;transform:rotate(90deg)}
 .panel.collapsed>h3::after{transform:rotate(0)}
 .panel.collapsible>*:not(h3){
-  max-height:1200px;
+  /* 展开态的高度上限走 --panel-h（JS 在 renderPage/展开点击后按内容实测写入）。
+     为什么不用固定魔数：`overflow:hidden` 是折叠动画的前提，任何硬编码上限都会在
+     内容变高时**静默裁掉**超出部分且没有滚动条 —— 实测点名网格（20 张卡，4320px）
+     就被 1200px 裁掉过。--panel-h 缺失时回落到 1200px（首帧/页面不可见时量不到）。 */
+  max-height:var(--panel-h,1200px);
   opacity:1;
   transform:scaleY(1);
   transform-origin:top center;
@@ -556,7 +560,7 @@ footer{background:transparent;border-top:1px solid var(--line);
   nav{scroll-snap-type:x proximity}
   nav button{scroll-snap-align:center}
 }
-@media (max-width:760px){
+@media (max-width:640px){
   .bp-board{flex-direction:column}
   .bp-center{width:100%;flex-direction:row;justify-content:center}
   .bp-hero{flex:1 1 42%}

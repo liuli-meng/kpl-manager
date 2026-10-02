@@ -7,14 +7,14 @@
 
 | 常量 | 值 | 含义 |
 |---|---|---|
-| TRANSFER_CAP | 1500 | 单笔转会费封顶（万） |
+| TRANSFER_CAP | 12000 | 单笔转会费封顶（万）＝`ECON.transferCap`（1.2 亿） |
 | ROSTER_MAX | 10 | 玩家大名单上限 |
-| PLAYER_WAGE_MAX | 70 | 个人周薪顶薪（万） |
+| PLAYER_WAGE_MAX | 400 | 个人**年薪**顶薪（万/年）＝`ECON.playerWageMax` |
 | OFFER_TTL | 3 | 赛中报价有效期（天） |
 | RENEW_YEARS | 2 | 续约谈判默认年限 |
 | LOAN_DAYS | 21 | 租借天数 |
 | MARKET_REFRESH_COST | 5 | 非转会期刷新市场（万）；窗内每日首刷免费 |
-| 奢侈税 | 超帽部分 ×60%/周 | 发薪日扣，**不是禁止签约** |
+| 奢侈税 | 超帽部分 ×60%/发薪日（一年 `ECON.payWeeks`＝9 次） | 发薪日扣，**不是禁止签约**；UI 必须按发薪日口径展示 |
 | 卖出限制 | 一窗卖出 ≤ 名单一半（向下取整） | `sellGuard` |
 
 ## 隐性规则
@@ -30,7 +30,7 @@
 
 - AI 阵容是 **def id 表**（`aiRosterDefMap`），名册上限 **5**、一位置一人  
 - `aiTransferWindow`：退役 → 续约决策（弱旅更爱放人）→ 自由池补强 → **没有**玩家式资金/工资帽扣费  
-- `aiBidTick`：对玩家挂牌报价（同样受 1500 封顶与转售保护）；非卖品破例被豪门挖走时 `aiAttachDef` 换注册队  
+- `aiBidTick`：对玩家挂牌报价（同样受 TRANSFER_CAP 封顶与转售保护）；非卖品破例被豪门挖走时 `aiAttachDef` 换注册队
 - **`aiAttachDef` / `aiDetachDef`**：入册前全局除名（含青训营），防同一 def 双挂；玩家 `buyPlayer` 后必须 detach  
 
 ### 续约 / 租借

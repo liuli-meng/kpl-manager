@@ -1,3 +1,4 @@
+// ⚠ 诊断脚本，非门禁：仅用于调试与打印发薪日前后资金流水抽样，不包含断言
 const { makeDom } = require('./harness');
 const vm = require('vm');
 const { dom } = makeDom();

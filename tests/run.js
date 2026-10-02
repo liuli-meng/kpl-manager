@@ -14,6 +14,7 @@ const SUITE_TIMEOUT_MS = (() => {
 })();
 const SUITES = [
   { id: 'audit-static', file: 'tests/audit-static.js', label: '静态审计' },
+  { id: 'verify-harness-fidelity', file: 'tests/verify-harness-fidelity.js', label: '沙箱保真（模块加载语义）' },
   { id: 'verify-regression', file: 'tests/verify-regression.js', label: '历史回归' },
   { id: 'verify-ai-coach', file: 'tests/verify-ai-coach.js', label: 'AI 教练' },
   { id: 'verify-annual', file: 'tests/verify-annual.js', label: '年度赛历' },
@@ -112,6 +113,7 @@ const SUITES = [
   { id: 'verify-browser-ui', file: 'tests/verify-browser-ui.js', label: '浏览器真机渲染与触控门禁' },
   { id: 'verify-coach-mode', file: 'tests/verify-coach-mode.js', label: '教练身份回归与下课闸门' },
   { id: 'verify-fired-exit', file: 'tests/verify-fired-exit.js', label: '下课再就业与待业态整页收口' },
+  { id: 'fuzz', file: 'tests/fuzz.js', label: '模糊压测', args: ['--seed=424243'] },
 ];
 
 // 门禁完整性自检：tests/ 目录下所有 verify-*.js / sim-*.js 必须在 SUITES 显式注册，杜绝未执行的虚设门禁
@@ -131,6 +133,15 @@ if (unregistered.length) {
 
 const argv = process.argv.slice(2);
 const failFast = argv.includes('--fail-fast');
+/* 环境依赖型门禁（缺 Chrome / playwright 时）以 exit 3 表示「显式跳过」，
+   绝不能算通过：旧口径 `ok = code===0` 会把 [SKIP] 记成 PASS —— 而 CI 是干净检出
+   （没有 node_modules、package.json 也没有任何依赖），于是唯一一条真机渲染门禁
+   在 CI 上从未真正执行却一直报绿。现在：跳过不计 pass、单列一行，且只有在
+   KNOWN_SKIPABLE 里登记过的 suite 才允许跳过；其他 suite 返回 3 一律判失败。
+   CI 想强制真跑（不放过跳过）用 --require-browser。 */
+const SKIP_EXIT = 3;
+const KNOWN_SKIPABLE = new Set(['verify-browser-ui']);
+const requireBrowser = argv.includes('--require-browser');
 const only = (argv.find(a => a.startsWith('--only=')) || '').split('=')[1];
 const skip = ((argv.find(a => a.startsWith('--skip=')) || '').split('=')[1] || '')
   .split(',').map(s => s.trim()).filter(Boolean);
@@ -157,7 +168,8 @@ for (const s of suites) {
   const t = Date.now();
   // 超时保护：比赛链/赛季推进的重构里，一个不收敛的 while 会让 npm test（和 CI）永久挂住。
   // 全套 51 项实测总耗时 47 s，最慢单项远低于此——120 s 只有「真挂死」才会触发。
-  const r = spawnSync(process.execPath, [s.file], {
+  const args = [s.file, ...(s.args || [])];
+  const r = spawnSync(process.execPath, args, {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -174,9 +186,21 @@ for (const s of suites) {
   if (stdout) process.stdout.write(stdout);
   if (stderr) process.stderr.write(stderr);
   if (timedOut) console.error('\n[TIMEOUT] ' + s.label + ' 超过 ' + (SUITE_TIMEOUT_MS / 1000) + ' s 未结束，已强杀');
-  const ok = code === 0;
+  const isSkip = code === SKIP_EXIT;
+  if (isSkip && !KNOWN_SKIPABLE.has(s.id)) {
+    console.error('\n[SKIP-未登记] ' + s.label + ' 返回跳过码但未在 run.js 的 KNOWN_SKIPABLE 登记 —— 视为失败（禁止用「跳过」掩盖失效门禁）');
+  }
+  const ok = isSkip ? KNOWN_SKIPABLE.has(s.id) : code === 0;
+  if (isSkip && ok) console.log('\n[SKIP] ' + s.label + ' 本次未执行（环境依赖缺失，详见该 suite 输出）');
+  if (isSkip && ok && requireBrowser) {
+    console.error('\n[SKIP-禁止] --require-browser：' + s.label + ' 必须真跑，不允许跳过');
+    failed++;
+    results.push({ id: s.id, label: s.label, ok: false, code, ms, timedOut: false, skipped: true });
+    if (failFast) { console.error('已中止后续测试（--fail-fast）'); break; }
+    continue;
+  }
   if (!ok) failed++;
-  results.push({ id: s.id, label: s.label, ok, code, ms, timedOut });
+  results.push({ id: s.id, label: s.label, ok, code, ms, timedOut, skipped: isSkip && ok });
   if (!ok) {
     console.error('\n[FAIL] ' + s.label + ' (' + s.file + ') ' + (timedOut ? '超时' : 'exit=' + code) + '  耗时 ' + (ms / 1000).toFixed(1) + 's');
     if (failFast) {
@@ -187,10 +211,17 @@ for (const s of suites) {
 }
 
 const totalMs = Date.now() - t0;
-const pass = results.filter(r => r.ok).length;
+const pass = results.filter(r => r.ok && !r.skipped).length;
+const skips = results.filter(r => r.ok && r.skipped);
 const bad = results.filter(r => !r.ok);
 
-console.log('\n=== 汇总 ' + pass + '/' + results.length + ' 通过 · 总耗时 ' + (totalMs / 1000).toFixed(1) + 's ===');
+console.log('\n=== 汇总 ' + pass + '/' + (results.length - skips.length) + ' 通过'
+  + (skips.length ? (' · ' + skips.length + ' 跳过') : '')
+  + ' · 总耗时 ' + (totalMs / 1000).toFixed(1) + 's ===');
+if (skips.length) {
+  console.log('跳过（未被断言，不计入通过）：');
+  skips.forEach(r => console.log('  ⊘ ' + r.label + ' (' + r.id + ') 环境依赖缺失'));
+}
 if (bad.length) {
   console.log('未通过：');
   bad.forEach(r => console.log('  ✗ ' + r.label + ' (' + r.id + ') exit=' + r.code));

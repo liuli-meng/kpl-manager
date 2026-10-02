@@ -17,8 +17,6 @@ const { dom } = makeDom();
 injectHelpers(dom);
 // 种子化沙箱随机（mulberry32，与 fuzz.js 同一实现）：同种子必得同一批数据 → CI 不再有随机红灯
 vm.runInContext('this.Math=(function(a){var f=function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};var M=Object.create(Math);M.random=f;return M;})(' + SEED + ')', dom);
-// 种子化沙箱随机（mulberry32，与 fuzz.js 同一实现）：同种子必得同一批数据 → CI 不再有随机红灯
-vm.runInContext('this.Math=(function(a){var f=function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};var M=Object.create(Math);M.random=f;return M;})(' + SEED + ')', dom);
 
 const HEADLESS = `
 function simSquad(kind){
@@ -127,12 +125,12 @@ function runProbe(kind) {
 }
 function checkTier(name, kind, bands) {
   let r = runProbe(kind);
-  const bad = bands.map(b => b(r)).filter(x => typeof x === 'string');
+  const bad = bands.map(b => b(r)).filter(x => x !== true).map(x => typeof x === 'string' ? x : '未通过断言');
   // 固定种子下重跑必得同一结果，重试无意义；只有随机种子模式才需要"再抽一次"防抖动
   if (bad.length && RANDOM_SEED) {
     console.log('  ⚠ 首轮越界，重跑一次确认（防抽样抖动）…');
     const r2 = runProbe(kind); // 合并两批重评（n 翻倍），仍越界才算真漂移
-    const bad2 = bands.map(b => b(r2)).filter(x => typeof x === 'string');
+    const bad2 = bands.map(b => b(r2)).filter(x => x !== true).map(x => typeof x === 'string' ? x : '未通过断言');
     if (bad2.length) failures.push(...bad2.map(s => name + ': ' + s));
     r = r2;
   } else if (bad.length) {
@@ -156,13 +154,13 @@ const ERA_KIND = {name:'时代AG', era:'2017', template:'AG超玩会'};
 const te = checkTier('2017时代', ERA_KIND, []);
 const champNames = Object.keys(te.champs), total = champNames.reduce((t, k) => t + te.champs[k], 0);
 const qgShare = (te.champs['QGhappy'] || 0) / Math.max(1, total);
-const eraChecks = [ERA_BANDS.qg(qgShare), ERA_BANDS.dist(champNames.length), ERA_BANDS.po(te.po / N)].filter(x => typeof x === 'string');
+const eraChecks = [ERA_BANDS.qg(qgShare), ERA_BANDS.dist(champNames.length), ERA_BANDS.po(te.po / N)].filter(x => x !== true).map(x => typeof x === 'string' ? x : '未通过断言');
 if (eraChecks.length && RANDOM_SEED) {
   console.log('  ⚠ 时代档首轮越界，重跑一次确认…');
   const te2 = runProbe(ERA_KIND);
   const cn2 = Object.keys(te2.champs), tot2 = cn2.reduce((t, k) => t + te2.champs[k], 0);
   const qg2 = (te2.champs['QGhappy'] || 0) / Math.max(1, tot2);
-  const bad2 = [ERA_BANDS.qg(qg2), ERA_BANDS.dist(cn2.length), ERA_BANDS.po(te2.po / N)].filter(x => typeof x === 'string');
+  const bad2 = [ERA_BANDS.qg(qg2), ERA_BANDS.dist(cn2.length), ERA_BANDS.po(te2.po / N)].filter(x => x !== true).map(x => typeof x === 'string' ? x : '未通过断言');
   if (bad2.length) failures.push(...bad2.map(s => '2017时代: ' + s));
   console.log('2017时代  QG夺冠占比 ' + (qg2 * 100).toFixed(0) + '%  冠军多样性 ' + cn2.length + ' 支  AG季后赛 ' + (te2.po / N * 100).toFixed(0) + '%  冠军分布 ' + JSON.stringify(te2.champs));
 } else {

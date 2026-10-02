@@ -674,7 +674,7 @@ function matchDayTick(s){
   const e=p.energy;
   p.energy=(e==null||!isFinite(e))?ENERGY_MAX:clamp(e+35,0,ENERGY_MAX);
  });
- try{if(s.day%WAGE_EVERY===0)payWage(s);}catch(e){}
+ if(s.day%WAGE_EVERY===0)try{payWage(s);}catch(e){logEvent(s,' 发薪异常：'+(e&&e.message));console.error('payWage failed:',e);}
  try{if(typeof enforceRosterCap==='function')enforceRosterCap(s);}catch(e){}
  try{if(s.mode!=='player')inSeasonOfferTick(s);}catch(e){}
  try{if(s.mode==='player'&&typeof playerMediaDayTick==='function')playerMediaDayTick(s);}catch(e){} // 比赛日也偶发媒体（旧版只在 nextDay 触发，选手全年摸不到）
@@ -743,7 +743,8 @@ function nextDayStep(s){
  // 随机事件：连续怠政满一周就不再抽"好事"——赞助商追加、粉丝应援、青训惊喜这些正期望事件
  // 需要一个还在运转的俱乐部做基本盘；顺带把纯挂机的收益方差压下来（门禁才能钉得住）
  if(Math.random()<0.65&&s.players.length&&s.idleDays===0){
- const ev=pick(EVENTS);
+  const validEvs=EVENTS.filter(e=>!e.filter||e.filter(s));
+  const ev=pick(validEvs.length?validEvs:EVENTS);
  const tp=pick(rosterAll(s)); // 公告文案与效果作用同一名选手
  const txt=ev.desc.replace('{p}',()=>tp.name);
  ev.fn(s,tp);
@@ -774,7 +775,7 @@ function nextDay(s){
 function payWage(s){
  try{scrubWages(s);}catch(e){}
  const annual=weeklyWage(s); // 年薪合计
- const wage=Math.max(0,Math.round(annual/ECON.payWeeks)); // 周结 = 年薪/52
+ const wage=Math.max(0,Math.round(annual/ECON.payWeeks)); // 周结 = 年薪/ECON.payWeeks
  // 选手代言收入：人气 × ENDORSE_PER_POP × 粉丝系数；怠政时商务也停摆
  const endorseRaw=(s.players||[]).reduce((t,p)=>t+((p.popularity||0)*ENDORSE_PER_POP),0)*fanMul(s,300);
  const endorse=Math.round(endorseRaw*idleMul(s));

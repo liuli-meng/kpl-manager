@@ -487,10 +487,33 @@ function annualSubSettle(s,sr){
 function annualRank(s){
  return Object.keys(s.annualPts||{}).sort((a,b)=>(s.annualPts[b]||0)-(s.annualPts[a]||0)||powerOf(s,b)-powerOf(s,a));
 }
+function yearEndSettle(s, opts){
+ if(!s||s._annualSettled)return;
+ opts=opts||{};
+ try{
+  s.yearStages=s.yearStages||[];
+  if(opts.annualPlace&&!(s.yearStages||[]).some(x=>x.ev==='KPL年度总决赛')){
+   s.yearStages.push({ev:'KPL年度总决赛',place:opts.annualPlace});
+  }
+  /* 赛季末结算：经理/教练走董事会评价；选手走个人赛季结算（冠军/FMVP 由荣誉室自然累计） */
+  if(s.mode==='player'){
+   if(typeof playerYearSettle==='function')playerYearSettle(s);
+  }else{
+   if(typeof boardSettle==='function')boardSettle(s);
+  }
+  if(s.mode==='coach'&&typeof coachPoach==='function')coachPoach(s); // 教练带队出色 → 豪门挖角邀约
+  if(typeof buildYearReview==='function')buildYearReview(s); // 年度回顾快照：成绩曲线/转会记录/董事会评价/关键战役（必须在 newSeason 前）
+  s._annualSettled=true;
+ }catch(e){
+  s._annualSettled=true; // 失败也标记，避免下次重试双份结算
+  logEvent(s,' 年末结算异常：'+(e&&e.message)+'（继续开启新赛季）');
+ }
+}
 function setupAnnual(s){
- // 年度总决赛 2024 起才有：2017/2019 时代档走年度收官（无圣龙杯）
+ // 年度总决赛 2024 起才有：2016-2023 时代档走年度收官（无圣龙杯，但同样执行董事会/生涯/年度回顾结算）
  if(!fmtOf(s).hasAnnual){
   logEvent(s,' '+gameYear(s)+' 赛季收官（本年代尚无 KPL 年度总决赛）');
+  yearEndSettle(s);
   if(typeof newSeason==='function')newSeason(s);
   return;
  }
@@ -648,22 +671,10 @@ function finishAnnual(s,silent){
  }
  }
  if(!s._annualSettled){
- try{
- s.yearStages=s.yearStages||[];
- const myPlace=p.champ===s.teamName?'冠军':loserOf(p.final)===s.teamName?'亚军'
- :[p.lbf,p.lbs].some(m=>m.r&&loserOf(m)===s.teamName)?'四强'
- :p.lb2.concat(p.lb1).some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'参赛';
- if(!(s.yearStages||[]).some(x=>x.ev==='KPL年度总决赛'))s.yearStages.push({ev:'KPL年度总决赛',place:myPlace});
- /* 赛季末结算：经理/教练走董事会评价；选手走个人赛季结算（冠军/FMVP 由荣誉室自然累计） */
- if(s.mode==='player')playerYearSettle(s);
- else boardSettle(s);
- if(s.mode==='coach')coachPoach(s); // 教练带队出色 → 豪门挖角邀约
- buildYearReview(s); // 年度回顾快照：成绩曲线/转会记录/董事会评价/关键战役（必须在 newSeason 前）
- s._annualSettled=true;
- }catch(e){
- s._annualSettled=true; // 失败也标记，避免下次重试双份结算
- logEvent(s,' 年末结算异常：'+(e&&e.message)+'（继续开启新赛季）');
- }
+  const myPlace=p.champ===s.teamName?'冠军':loserOf(p.final)===s.teamName?'亚军'
+  :[p.lbf,p.lbs].some(m=>m.r&&loserOf(m)===s.teamName)?'四强'
+  :p.lb2.concat(p.lb1).some(m=>m.r&&loserOf(m)===s.teamName)?'八强':'参赛';
+  yearEndSettle(s,{annualPlace:myPlace});
  }
  try{
  newSeason(s); // 年度轮换：年龄/合同/退役结算 → 下一年春季赛

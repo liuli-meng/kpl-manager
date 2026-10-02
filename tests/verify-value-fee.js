@@ -62,6 +62,24 @@ const out = vm.runInContext(`
   if(paid5!==fee||t.acqCost!==fee)fail('谈判扣费/acqCost 错误: fee='+fee+' paid='+paid5+' acq='+t.acqCost);
   else log('⑤ 转会买断 '+paid5+' 万 · acqCost 已锚定');
 
+  // ⑤b 回收商一口价不得绕过转售上限：它是「无俱乐部接盘」的保底退出通道，
+  //     必须和 clubs 报价一样吃 sellCeiling，否则「低价签入 → 走回收商翻卖」就是白赚。
+  S=newState('回收队','回');fillRoster(S,'mid');S.fund=50000;
+  S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
+  const lp=genPlayer(genFreeAgentDef('mid','star',new Set(['测试卖'])));
+  lp.acqCost=2000;lp.caps=0;lp.val=100;
+  S.players.push(lp);            // openSellNego 要求选手在本队名单里（否则 find 不到直接 return）
+  if(!S.lineup.includes(lp.id))S.lineup.push(lp.id);
+  S.preseason=true;S.transferWindow=7;S.transferWindowStart=7;
+  const ceil=sellCeiling(lp);
+  const raw=Math.round(valueOf(overall(lp))*0.65);
+  openSellNego(S,lp.id);
+  const lb=window._sellNego&&window._sellNego.lowball;
+  if(ceil==null)fail('⑤b 前提：有买入记录的选手应算出转售上限');
+  else if(!(lb<=ceil))fail('⑤b 回收商报价 '+lb+' 万超过转售上限 '+ceil+' 万（原式 '+raw+'）→ 可零出场套利');
+  else log('⑤b 回收商一口价 '+lb+' 万 ≤ 转售上限 '+ceil+' 万（原式 '+raw+'）');
+  window._sellNego=null;
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()

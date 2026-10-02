@@ -1048,16 +1048,40 @@ function migrateSave(){
   const needAg=ph==='asiad'&&(!S.ag||!S.ag.squad);
   const needAnn=ph==='annual'&&(!S.annual);
   if(needCh||needEwc||needAg||needAnn){
-   if(needCh&&typeof setupChallenger==='function'){setupChallenger(S);}
-   else if(needEwc&&typeof setupEWC==='function'){try{setupEWC(S);}catch(e){S.phase='champion';}}
-   else if(needAg&&typeof setupAsianGames==='function'){try{setupAsianGames(S);}catch(e){S.phase=S.annual?'annual':'champion';if(!S.annual&&typeof setupAnnual==='function')setupAnnual(S);}}
-   else if(needAnn&&typeof setupAnnual==='function'){setupAnnual(S);}
-   else S.phase='champion';
-   logEvent(S,'读档修复：赛段结构缺失已尝试重建（phase='+S.phase+'）');
+   /* 失败必须留痕，不许把失败当成功上报：旧写法吞掉 setupEWC/setupAsianGames 的异常后
+      直接把 phase 伪造成 'champion'/'annual'，紧接着无条件 logEvent「已尝试重建」——
+      玩家看到的是「修好了」，而实际赛段结构仍然缺失。现在失败写 _migErr（并保留回退 phase
+      以免卡死推进），事件日志按真实结果分岔。 */
+   let rebuilt=true,why='';
+   try{
+    if(needCh&&typeof setupChallenger==='function'){setupChallenger(S);}
+    else if(needEwc&&typeof setupEWC==='function'){setupEWC(S);}
+    else if(needAg&&typeof setupAsianGames==='function'){setupAsianGames(S);}
+    else if(needAnn&&typeof setupAnnual==='function'){setupAnnual(S);}
+    else{rebuilt=false;why='没有可用的重建函数';}
+   }catch(e){
+    rebuilt=false;why=(e&&e.message)||String(e);
+    S._migErr='赛段结构重建失败（'+S.phase+'）: '+why;
+    try{S.phase=S.annual?'annual':'champion';}catch(_){}
+   }
+   if(rebuilt)logEvent(S,'读档修复：赛段结构缺失已重建（phase='+S.phase+'）');
+   else{
+    logEvent(S,'读档修复失败：赛段结构缺失且重建未成功（'+why+'）——已回退到 '+S.phase+'，存档可能不完整');
+    try{if(typeof gameLog!=='undefined')gameLog.warn('migrate','cup structure rebuild failed',{phase:S.phase,why:why});}catch(_){}
+   }
   }
- }catch(e){console.warn('cup-structure recover fail',e);try{S.phase='champion';}catch(_){}}
+ }catch(e){console.warn('cup-structure recover fail',e);try{S._migErr='赛段结构恢复异常: '+((e&&e.message)||e);}catch(_){}try{S.phase='champion';}catch(_){}}
  try{if(typeof scrubStateIntegrity==='function')scrubStateIntegrity(S);}catch(e){}
  try{if(typeof auditSave==='function')auditSave(S,{silent:false});}catch(e){}
+ /* 收尾把读档期完整性异常广播出来：_migErr 以前**只写不读**（全仓唯一读者是测试），
+    于是「迁移步骤失败 / 比赛索引重建失败」这类静默损坏在游戏里完全不可见。
+    这里只播报，不改状态；debug 面板另有一块常驻展示。 */
+ try{
+  if(S._migErr){
+   logEvent(S,'⚠ 读档完整性异常：'+S._migErr);
+   if(typeof gameLog!=='undefined')gameLog.error('migrate','_migErr',{err:S._migErr});
+  }
+ }catch(e){}
 }
 /* 货币缩放（一次性标记）：×10 → ÷6 */
 function migrateMoneyScale(s){

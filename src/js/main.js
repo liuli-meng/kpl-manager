@@ -49,7 +49,7 @@ function scheduleSave(ms){
 }
 let _saveTimer=null;
 /* 构建版本戳：玩家反馈「刷新没用」时先看这里是否已更新 */
-const KM_BUILD='2026-09-19i';
+const KM_BUILD='2026-10-02a';
 
 /* ================= 面板折叠（次要面板默认收起，点标题切换，偏好记忆） =================
    pfold_* 走内存缓存：foldCls 每个可折叠面板都会调用（转会页有 6 个），
@@ -62,12 +62,33 @@ function foldCls(key,def){
  const collapsed=v==null?def==='collapsed':v==='1';
  return 'collapsible'+(collapsed?' collapsed':'');
 }
+/* 展开态高度上限实测：把每个可折叠面板的直接子元素自然高度取最大值写进 --panel-h。
+   不这么做就得靠固定魔数（style.css 里原为 1200px），而 overflow:hidden 会把更高的
+   内容静默裁掉且不给滚动条 —— 点名网格 20 张卡实测 4320px(375) / 3683px(768) /
+   1929px(1280)，三个视口全部被裁。子元素带 overflow:hidden 时 scrollHeight 依然是
+   内容自然高度，所以直接量即可；页面隐藏（display:none）时量到 0，此时跳过写值，
+   让 CSS 的 1200px 兜底生效，等展开点击时再补量一次。 */
+function syncPanelCaps(root){
+ try{
+  const list=(root||document).querySelectorAll('.panel.collapsible');
+  list.forEach(function(p){
+   let m=0;
+   for(let i=0;i<p.children.length;i++){
+    const c=p.children[i];
+    if(c.tagName==='H3')continue;
+    if(c.scrollHeight>m)m=c.scrollHeight;
+   }
+   if(m>0)p.style.setProperty('--panel-h',(m+8)+'px');  // +8：给亚像素/行高取整留余量（上限只会更宽松，不会藏住真裁切）
+  });
+ }catch(e){}
+}
 /* 从市场快捷条展开目标面板并滚过去（玩家偏好一旦写入就不再受默认值影响） */
 function expandFold(key){
  try{
   const panel=document.querySelector('.panel[data-fold="'+key+'"]');
   if(!panel)return false;
   panel.classList.remove('collapsed');
+  syncPanelCaps(panel.parentElement||document);
   _foldCache.set(key,'0');
   try{localStorage.setItem('pfold_'+key,'0');}catch(e){}
   if(panel.scrollIntoView)panel.scrollIntoView({behavior:'smooth',block:'start'});
@@ -80,6 +101,7 @@ document.addEventListener('click',e=>{
  const panel=h3.parentElement;
  const folded=!panel.classList.contains('collapsed');
  panel.classList.toggle('collapsed',folded);
+ if(!folded)syncPanelCaps(panel.parentElement||document); // 展开后补量一次（首帧/内容变更后的兜底）
  const fk=panel.dataset.fold||h3.textContent.trim().slice(0,10);
  const fv=folded?'1':'0';
  _foldCache.set(fk,fv);
@@ -241,6 +263,8 @@ function renderPage(name){
   const row=document.querySelector('#page-'+name+' .sort-row');
   if(row){const on=row.querySelector('.s-chip.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'nearest'});}
  }catch(e){}
+ // 可折叠面板的高度上限按实测内容写入（页面此刻可见，能量到真实高度）
+ syncPanelCaps(document.getElementById('page-'+name));
 }
 /* 手机端游玩舒适层：分区页签（一屏一区块）+ 底部主操作条
    跳转原则：能不滚就不滚、能停在原处就停、记住上次看到的区块 */

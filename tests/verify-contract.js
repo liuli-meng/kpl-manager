@@ -93,6 +93,19 @@ const out = vm.runInContext(`
   S.fund=100000;
   openRenewNego(S,S.players[3].id);
   try{renderRenewNego();log('⑩续约谈判弹窗渲染 OK');}catch(e){fail('谈判弹窗渲染异常: '+e.message);}
+  // ⑪ 自动续约必须把年薪拉回市场价：否则「到期什么都不点」= 永久锁在低薪
+  //    （低薪锚点来自选秀/青训 0.65×wageOf，实测 ovr88 只有 20 万，wageOf=268 万）
+  {
+    const p4=S.players[4];
+    p4.contract=0;p4.wage=20;p4.loan=false;p4.kjia=0;p4.loanOut=false;
+    S.expiring=[p4.id];S.fund=100000;
+    const fair=Math.round(wageOf(overall(p4),p4.age,p4.popularity));
+    endTransferWindow(S);
+    if(p4.contract<=0)fail('⑪自动续约未生效: contract='+p4.contract);
+    else if(!(p4.wage>=fair*0.9))fail('⑪自动续约后年薪仍锁定低薪: wage='+p4.wage+' 市场价='+fair);
+    else log('⑪自动续约按市场价修正年薪: 20万 → '+p4.wage+'万（wageOf='+fair+'）');
+  }
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()

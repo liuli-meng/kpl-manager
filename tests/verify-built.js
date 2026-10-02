@@ -50,12 +50,16 @@ const missingFns = MUST_FNS.filter(fn => !html.includes('function ' + fn + '('))
 T.check(!missingFns.length, 'game.html 缺少关键函数: ' + missingFns.join(', '));
 
 // ⑤ 从产物抽出内联脚本，在沙箱里跑 UI 入口（真·构建产物运行时，而不是再读一遍 src）
-const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
+//    必须逐段 <script> 执行：产物里每个模块就是一段独立 script，拼接起来会改变顶层
+//    const/let 的语义（后置模块的 const 对前序模块本应「未声明」，拼接后变成 TDZ 抛错）。
+const scriptBlocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+const scripts = scriptBlocks.join('\n');
 T.check(scripts.length > 100 * 1024, '内联脚本过短(' + Math.round(scripts.length / 1024) + 'KB)，疑似拼接失败');
+T.check(scriptBlocks.length >= 10, '内联脚本段数过少(' + scriptBlocks.length + ' 段)，疑似模块漏拼或未逐段内联');
 
 let runtime = null;
 try {
-  const { dom } = makeDom({ code: scripts });
+  const { dom } = makeDom({ scripts: scriptBlocks });
   runtime = vm.runInContext(`
 (function(){
   const R=[];
@@ -80,7 +84,11 @@ try {
   if(typeof PLAYER_POOL==='undefined')R.push('缺少 PLAYER_POOL');
   if(typeof CLUB_TEMPLATES==='undefined')R.push('缺少 CLUB_TEMPLATES');
   if(typeof KPL==='undefined')R.push('缺少 KPL');
-  return JSON.stringify({ok:R.length===0, issues:R, pages:pages.length});
+  /* 加载期合成的产物必须真的建起来：ensureYearEras 的失败是 catch 静默的，
+     只有数一遍 KPL_ERAS 才能发现（历史上这里丢过 9/11 个年度档）。 */
+  const eraN=Object.keys(KPL_ERAS||{}).length;
+  if(eraN<11)R.push('时代档只装载 '+eraN+'/11 —— 产物里 ensureYearEras 静默失败');
+  return JSON.stringify({ok:R.length===0, issues:R, pages:pages.length, eraN});
 })()
 `, dom);
 } catch (e) {
@@ -92,6 +100,8 @@ try {
 const rt = JSON.parse(runtime);
 T.check(rt.ok, '产物运行时问题: ' + (rt.issues || []).join(' | '));
 T.check(rt.pages === 10, '页面渲染数量异常: ' + rt.pages);
+T.check(rt.eraN >= 11, '产物时代档装载数异常: ' + rt.eraN + '/11（加载期合成失败是静默的，必须数一遍）');
+console.log('  产物内联脚本段数 ' + scriptBlocks.length + ' · 时代档 ' + rt.eraN + '/11');
 
 // ⑥ 与 src 交叉：产物字节应显著大于单个源模块，且包含每个模块的入口函数名
 const HARNESS_FILES = require('./harness').FILES;

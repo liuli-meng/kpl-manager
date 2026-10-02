@@ -33,21 +33,29 @@ const out = vm.runInContext(`
     else ok('① 2018 名单：仙阁/SC 离开 · Hero/RW 进盟（'+notes.length+' 条日志）');
   }
 
-  // ② 玩家本队不豁免：玩家=AG 时 2018 同样降级（seatLost），2019 按史实重返
+  // ② 玩家本队不豁免：玩家=AG（2017 档里的队名就是简名 AG超玩会）时 2018 同样降级（seatLost），
+  //    2019 按史实以「成都AG超玩会」重返并解除。这里刻意**不再往 AI_TEAMS 里塞全名**：
+  //    旧用例塞的是 '成都AG超玩会'，而 2017 档联盟里根本没有这个名字 —— 它刚好与当时
+  //    2018 out 表里那个写错的字符串吻合，于是用例掩盖了「out 空转、幽灵队留到 2020」
+  //    的真实缺陷（2020-2026 七个年档都多出一支同名队）。
   installEra('2017');
-  S=newState('成都AG超玩会','焰');fillRoster(S,'mid','star');
-  S.era='2017';S.season=1;S.teamName='成都AG超玩会';
-  if(!AI_TEAMS.some(t=>t.name==='成都AG超玩会'))AI_TEAMS.push({name:'成都AG超玩会',icon:'焰',power:600});
-  S.season=2;
-  applyHistoricalLeague(S);
-  if(AI_TEAMS.some(t=>t.name==='成都AG超玩会'))fail('史实降级不应豁免玩家本队 AG');
-  else if(!S.seatLost)fail('玩家 AG 史实降级应 seatLost');
+  S=newState('AG超玩会','焰');fillRoster(S,'mid','star');
+  S.era='2017';S.season=1;S.teamName='AG超玩会';
+  if(!AI_TEAMS.some(t=>t.name==='AG超玩会'))fail('前提：2017 档联盟应含 AG超玩会（简名）');
   else{
-    S.season=3; // 2019 重返
+   S.season=2; // gameYear=2018
+   applyHistoricalLeague(S);
+   if(AI_TEAMS.some(t=>t.name==='AG超玩会'))fail('史实降级不应豁免玩家本队 AG');
+   else if(!S.seatLost)fail('玩家 AG 史实降级应 seatLost');
+   else if(S.histReturnYear!==2019)fail('玩家 AG 的回归年应识别为 2019（更名后重返，实得 '+(S.histReturnYear==null?'null':S.histReturnYear)+'）');
+   else{
+    S.season=3; // 2019 以「成都AG超玩会」重返
     applyHistoricalLeague(S);
-    if(!AI_TEAMS.some(t=>t.name==='成都AG超玩会'))fail('2019 AG 应按史实重返名单');
+    if(!AI_TEAMS.some(t=>t.name==='成都AG超玩会'))fail('2019 AG 应按史实以成都AG超玩会重返名单');
     else if(S.seatLost)fail('AG 重返后应解除 seatLost');
-    else ok('② 玩家 AG：2018 降级 seatLost · 2019 重返解除');
+    else if(S.teamName!=='成都AG超玩会')fail('AG 重返后玩家队名应随更名更新（实得 '+S.teamName+'）');
+    else ok('② 玩家 AG：2018 降级 seatLost · 2019 更名「成都AG超玩会」重返并解除');
+   }
   }
 
   // ③ 2022 更名：QGhappy → 重庆狼队（AI）

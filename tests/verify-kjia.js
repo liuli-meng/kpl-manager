@@ -102,6 +102,21 @@ const out = vm.runInContext(`
   else if(!s5.eventLog.some(e=>/K甲归队/.test(e.txt)))fail('归队日志缺失');
   else log('⑤ 归队成长：30 天归队 K甲成长 +'+g5+'（kjiaGain 口径，含场上即时成长），归队日志已广播');
 
+  // ⑤c 个人天花板：K甲归队成长不得越过 p.peak（否则「下放 7 天→召回」是无限刷属性的通道，
+  //     而且是零成本、可从 UI 反复触发的；其它成长路径（季末/每日训练）都受 peak 约束）
+  {
+    const s5c=newState('峰值队','x');fillRoster(s5c,'mid','star');S=s5c;
+    const t=s5c.players[0];
+    t.peak={lane:t.attrs.lane,farm:t.attrs.farm,team:t.attrs.team,mind:t.attrs.mind}; // 已达峰值
+    const before=JSON.stringify(t.attrs);
+    let grew=0;
+    for(let i=0;i<8;i++)grew+=kjiaGrantReturnGrowth(t,30); // 模拟 8 轮满期归队
+    const over=['lane','farm','team','mind'].filter(k=>t.attrs[k]>t.peak[k]);
+    if(over.length)fail('⑤c 已达峰值仍被 K甲成长顶破: '+over.map(k=>k+' '+t.attrs[k]+'>'+t.peak[k]).join('/'));
+    else if(grew!==0)fail('⑤c 无空间时不应累计成长（实得 +'+grew+'）');
+    else log('⑤c 个人天花板生效：已达峰值的选手 8 轮 K甲归队成长 +0（属性 '+before+' → '+JSON.stringify(t.attrs)+'）');
+  }
+
   // ⑤b 提前召回：未满 KJIA_MIN_RECALL 天拒绝；练满后可召回，成长按已练天数折算
   const s5b=newState('召回队','x');fillRoster(s5b,'mid','star');addBench(s5b);S=s5b;
   initKjia(s5b);

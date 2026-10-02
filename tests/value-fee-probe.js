@@ -1,3 +1,4 @@
+// ⚠ 诊断脚本，非门禁：仅用于调试与打印身价/买断费/签约费计算抽样，不包含断言
 const { makeDom } = require('./harness');
 const vm = require('vm');
 const { dom } = makeDom();

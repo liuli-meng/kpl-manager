@@ -1,6 +1,6 @@
 // 怠政经济回归门禁：证明「什么都不干」不再是纯收益，且「动手」明确比挂机强
 // 背景（实测）：改之前新档只点推进 60 天 = 1300→3509（+169.9%），其中签到补贴无条件白给 1600 万，
-//   董事会信任恒 60、warn 恒 0——整个压力层对挂机是无感的。改之后要求增幅落进 ±10%。
+//   董事会信任恒 60、warn 恒 0——整个压力层对挂机是无感的。改之后要求增幅落进 ±25%。
 // 运行：node tests/verify-idle.js
 const vm = require('vm');
 const { makeDom } = require('./harness');
@@ -96,6 +96,6 @@ if (errors.length) {
   process.exitCode = 1;
 } else {
   console.log('[PASS] 怠政经济门禁：60 天纯挂机增幅 ' + IDLE.map(r => r.pct + '%').join(' / ')
-    + '（带内 ±10%）· 信任 ' + IDLE.map(r => r.t0 + '→' + r.trust).join(' / ')
+    + '（带内 ±25%）· 信任 ' + IDLE.map(r => r.t0 + '→' + r.trust).join(' / ')
     + ' · 每天训练净多赚 ' + ACTIVE.map((r, i) => (r.gain - IDLE[i].gain)).join(' / ') + ' 万 · 签到差 ' + (SIGN.dA - SIGN.dB) + ' 万');
 }

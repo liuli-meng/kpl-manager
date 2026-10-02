@@ -645,6 +645,8 @@ function signFreeAgent(s,id){
  if(p.contract==null)p.contract=2; // 签约即给合同年限
  s.freeAgents=s.freeAgents.filter(x=>x.id!==id);
  s.players.push(p);
+ if(typeof aiDetachDef==='function')aiDetachDef(s,p.id);
+ s.aiRosters={};
  recordTransfer(s,'in',p,signFee,'自由球员','自由市场直签'); // 年度回顾·转会台账
  logEvent(s,' 自由市场签下 '+p.name+'（无球可打选手 · 签约费 '+signFee+'万 · 按身价）');
  save();renderAll();toast(p.name+' 加盟！');

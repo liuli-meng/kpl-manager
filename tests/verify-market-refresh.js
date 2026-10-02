@@ -73,6 +73,11 @@ const out = vm.runInContext(`
 `, dom);
 
 console.log(out);
+/* 沙箱里那半（①~⑤）用 fail()/ok() 记字符串，**必须在这里兜住**：
+   旧写法只让静态口径（⑥）决定退出码，于是运行时断言即使打印 [FAIL] 也照样 exit 0 ——
+   实测把 marketRefreshFree 改成恒 false（窗内首刷也收费）后，三条 [FAIL] 齐出、退出码仍是 0。
+   runner 只看退出码，等于这半边门禁一直是绿的。 */
+if (/\[FAIL\]/.test(String(out))) process.exitCode = 1;
 
 // 静态口径守卫：转会页/转会期日志里不许再出现"窗内一律免费"这类无条件承诺
 const src = {

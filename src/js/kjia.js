@@ -185,8 +185,16 @@ function kjiaGrantReturnGrowth(p,daysServed){ // 归队/召回结算成长；满
  for(let i=0;i<nAttrs;i++){
  const k=keys.splice(Math.floor(Math.random()*keys.length),1)[0];
  const d=rnd(dMin,dMax);
- p.attrs[k]=clamp(p.attrs[k]+d,40,99);
- gain+=d;
+ /* 必须受个人天花板约束：其它成长路径都读 p.peak（season.js 的季末成长、playerops 的每日
+    训练），唯独这条只 clamp 到 40..99 —— 于是「下放 7 天 → 召回」可无限刷属性、零成本越过
+    峰值（实测已达峰值 {78,77,77,76} 的选手，6 轮循环后 team 78→83）。
+    没有空间的属性不加、也不计入 gain，避免日志与成就虚报成长。 */
+ const cap=(p.peak&&p.peak[k]!=null)?p.peak[k]:99;
+ const room=Math.max(0,Math.min(99,cap)-p.attrs[k]);
+ if(room<=0)continue;
+ const add=Math.min(d,room);
+ p.attrs[k]+=add;
+ gain+=add;
  }
  p.kjiaGain=(p.kjiaGain||0)+gain; // 成就「练级成功」依据（含 K甲场上的即时成长）
  return gain;

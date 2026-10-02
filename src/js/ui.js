@@ -1212,8 +1212,8 @@ function renderBiz(){
  const pct=Math.min(100,Math.round(ww/cap*100));
  html+=`<div class="panel"><h3>工资帽 <span class="tag">KPL 联盟制度</span></h3>
  <div class="pbar" style="margin-bottom:6px"><span>年薪 ${ww}万</span><div class="progress"><i style="width:${pct}%;background:${over?'var(--red)':'var(--green)'}"></i></div><span>帽 ${cap}万</span></div>
- ${over?`<div class="hint" style="color:var(--red)">超工资帽 ${ww-cap}万！发薪日将缴纳 60% 奢侈税（${Math.round((ww-cap)*0.6)}万）——KPL 限制薪酬无限扩张</div>`
- :`<div class="hint">KPL 工资帽制度：年薪总额上限 ${cap}万，超帽部分发薪日缴纳 60% 奢侈税；联盟每赛季调整帽额</div>`}
+ ${over?`<div class="hint" style="color:var(--red)">超工资帽 ${ww-cap}万！<b>每个发薪日</b>按超帽部分的 60% 缴纳奢侈税（每股 ${Math.round((ww-cap)*0.6)}万，一年 ${ECON.payWeeks} 次 ≈ ${Math.round((ww-cap)*0.6*ECON.payWeeks)}万）——KPL 限制薪酬无限扩张</div>`
+ :`<div class="hint">KPL 工资帽制度：年薪总额上限 ${cap}万，超帽部分<b>每个发薪日</b>缴纳 60% 奢侈税（一年 ${ECON.payWeeks} 个发薪日）；联盟每赛季调整帽额</div>`}
  </div>`;
  }
  // 荣誉室（多赛季历史）

@@ -112,6 +112,24 @@ const out = vm.runInContext(`
   else if(html.indexOf('一键培养')<0)fail('⑧入口按钮文案缺失');
   else log('⑧训练页已渲染一键培养入口');
 
+  // ⑨ 晋升必须把培养投入写成 acqCost：否则 sellCeiling 返 null（无转售上限），
+  //    青训苗子晋升后可立即按市场价转卖，把培养投入变成无风险套利。
+  {
+    setup(1000,[mk('m',5,[75,75,75,75])]); // 四维和 300 = 达标
+    const r=S.academy[0];
+    r.age=18;r.trainSpend=undefined;
+    trainRookie(S,r.id);                       // 投入一次（17 万）
+    const spent=r.trainSpend||0;
+    S.fund=1000;
+    promoteRookie(S,r.id);
+    const pg=S.players.find(x=>x.id===r.id);
+    if(!pg)fail('⑨晋升未入册');
+    else if(!(spent>0))fail('⑨前提：培养应累计 trainSpend（实得 '+spent+'）');
+    else if(pg.acqCost!==spent)fail('⑨晋升后 acqCost='+pg.acqCost+' 与累计投入 '+spent+' 不符（转售上限失去锚点）');
+    else if(sellCeiling(pg)==null)fail('⑨晋升后转售上限仍为 null（可无上限转卖）');
+    else log('⑨晋升写入 acqCost='+pg.acqCost+' 万 · 转售上限 '+sellCeiling(pg)+' 万');
+  }
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; '));
   return res.join(String.fromCharCode(10));
 })()

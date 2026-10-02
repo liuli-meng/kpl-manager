@@ -19,10 +19,47 @@ function readModuleList() {
 }
 const FILES = readModuleList();
 
+/* 拼接文本：**只给需要扫源码文本的用例用**（audit-static 的正则扫描）。
+   不要再拿它去 runInContext —— 见 loadModules 的说明。 */
 function loadCode() {
   let code = '';
   FILES.forEach(f => { code += fs.readFileSync(path.join(ROOT, 'src', 'js', f), 'utf8') + '\n'; });
   return code;
+}
+
+/* 逐模块加载：与浏览器 <script> 语义对齐（每个模块 = 独立的 Script 记录）。
+   为什么必须这样（2026-10-02 用真实 Chrome 实测的两条语义）：
+   ① 后置模块的顶层 const 对前面的模块是「尚未声明」——前面模块里 `typeof X` 得到 'undefined'，
+      不抛错；而把 40 个模块拼成一个脚本后，同一个表达式命中 TDZ 抛 ReferenceError。
+      真实代价：data.js 的 ensureYearEras 静默失败 → 沙箱里 KPL_ERAS 只剩 2/11 个时代档，
+      浏览器里 11 个全在。门禁因此长期只验证 2/11 个时代档，而且会让人误报线上缺陷。
+   ② 两个模块各自顶层声明同名 const/let：浏览器里**第二个 script 整块报错不执行**
+      （Identifier 'X' has already been declared），拼成一个脚本则整个沙箱起不来。
+      这一条由 audit-static ②b 静态拦下（生产里它等于一整个模块静默失效）。 */
+function loadModules(dom) {
+  FILES.forEach(f => {
+    const src = fs.readFileSync(path.join(ROOT, 'src', 'js', f), 'utf8');
+    vm.runInContext(src, dom, { filename: 'src/js/' + f });
+  });
+  return dom;
+}
+
+/* 逐个执行一段段脚本源码：制造/校验多 <script> 语义时用。
+   默认**把错误抛出去**（模块加载失败必须让门禁当场报红，不能静默）；
+   opts.continueOnError=true 时改为「记下错误继续跑下一个脚本」——那是浏览器对
+   独立 <script> 的真实行为（一个 script 抛错不影响其它 script），
+   verify-harness-fidelity 用它来钉语义。返回收集到的错误数组。 */
+function runScripts(dom, scripts, opts) {
+  const errs = [];
+  scripts.forEach((s, i) => {
+    try {
+      vm.runInContext(s, dom, { filename: '<script#' + (i + 1) + '>' });
+    } catch (e) {
+      if (!(opts && opts.continueOnError)) throw e;
+      errs.push(e);
+    }
+  });
+  return errs;
 }
 
 // 沙箱内辅助：组一支 5 人首发（位置齐全，返回 S）。
@@ -82,8 +119,19 @@ function makeDom(opts) {
   // 无头门禁：结算弹窗无人点「继续」，季后/杯赛挂起推进会卡死——沙箱内自动 flush
   dom.kmAutoAdvance = true;
   vm.createContext(dom);
-  const code = (opts && opts.code != null) ? opts.code : loadCode();
-  vm.runInContext(code, dom);
+  /* 加载策略（优先级从高到低）：
+     opts.code    显式单脚本（历史用法，不保证浏览器语义；仅在确实需要「一段拼接源码」时用）
+     opts.scripts 脚本数组，逐个执行 —— 与浏览器 <script> 一致（verify-built 走这条）
+     opts.prepend 前置桩脚本，之后逐模块加载（verify-storage-fallback 的「存储被禁」桩）
+     默认          逐模块加载 loadModules() —— 与浏览器语义一致，新用例一律走这条 */
+  if (opts && opts.code != null) {
+    vm.runInContext(opts.code, dom);
+  } else if (opts && Array.isArray(opts.scripts)) {
+    runScripts(dom, opts.scripts);
+  } else {
+    if (opts && opts.prepend) vm.runInContext(opts.prepend, dom, { filename: '<prepend>' });
+    loadModules(dom);
+  }
   injectHelpers(dom);
   return { dom, elCache };
 }
@@ -99,19 +147,28 @@ function seedMath(dom, seed) {
 // 断言工具：失败记入 errors，全部跑完再汇总（每个用例可独立失败）
 function makeTester(name) {
   const errors = [];
+  let checks = 0;
   return {
-    check(cond, msg) { if (!cond) errors.push(msg); },
+    check(cond, msg) { checks++; if (!cond) errors.push(msg); },
+    ok(msg) { checks++; },
+    fail(msg) { checks++; errors.push(msg); },
     get errors() { return errors; },
+    get checks() { return checks; },
     report() {
-      if (errors.length) {
-        console.log('[FAIL] ' + name + ':\n  ' + errors.join('\n  '));
+      if (checks < 1) {
+        console.log('[FAIL] ' + name + ' (0 checks):\n  门禁无任何有效断言（零断言违规）');
         process.exitCode = 1;
         return false;
       }
-      console.log('[PASS] ' + name);
+      if (errors.length) {
+        console.log('[FAIL] ' + name + ' (' + (checks - errors.length) + '/' + checks + ' checks):\n  ' + errors.join('\n  '));
+        process.exitCode = 1;
+        return false;
+      }
+      console.log('[PASS] ' + name + ' (' + checks + '/' + checks + ' checks)');
       return true;
     },
   };
 }
 
-module.exports = { makeDom, makeTester, loadCode, injectHelpers, seedMath, FILES };
+module.exports = { makeDom, makeTester, loadCode, loadModules, runScripts, injectHelpers, seedMath, FILES };

@@ -7,7 +7,7 @@
  反向验证同样重要：正常环境里 storeSet 必须真的写进 localStorage、storeDel 必须真的删掉，
  否则「为了不崩」把存档功能整个改没了，门禁还全绿。 */
 const vm = require('vm');
-const { makeDom, loadCode, makeTester } = require('./harness');
+const { makeDom, makeTester } = require('./harness');
 
 const T = makeTester('存储不可用启动兜底');
 
@@ -20,9 +20,11 @@ T.check(vm.runInContext("storeGet('k1')", ok.dom) === 'v1', '正常环境：stor
 vm.runInContext("storeDel('k1')", ok.dom);
 T.check(vm.runInContext("localStorage.getItem('k1')", ok.dom) === null, '正常环境：storeDel 必须真的删掉');
 
-/* ---------- ② 存储抛异常：把 localStorage 换成会抛的 getter，再加载全部模块 ---------- */
+/* ---------- ② 存储抛异常：把 localStorage 换成会抛的 getter，再加载全部模块 ----------
+   用 prepend 前置桩而不是把桩拼进一份 loadCode()：模块必须逐 <script> 加载，
+   否则沙箱的顶层 const TDZ 语义与浏览器不一致（见 harness.loadModules 的说明）。 */
 const blocked = makeDom({
-  code: "Object.defineProperty(this,'localStorage',{configurable:true,get(){throw new Error('SecurityError: localStorage blocked');}});\n" + loadCode(),
+  prepend: "Object.defineProperty(this,'localStorage',{configurable:true,get(){throw new Error('SecurityError: localStorage blocked');}});",
 });
 const D = blocked.dom;
 
@@ -64,5 +66,25 @@ const raw = vm.runInContext(`(function(){
   return e;
 })()`, D);
 T.check(/blocked/.test(raw || ''), '前提校验：被禁的 localStorage 裸读必须抛异常（实得：' + raw + '）');
+
+/* ---------- ⑤ 读正常写抛（配额写满 / QuotaExceededError）：storeSet 降级且不崩溃 ---------- */
+const writeOnlyBlocked = makeDom({
+  prepend: `
+    (function(){
+      const mem = {};
+      Object.defineProperty(this, 'localStorage', {
+        configurable: true,
+        value: {
+          getItem(k) { return mem[k] !== undefined ? mem[k] : null; },
+          setItem(k, v) { throw new Error('QuotaExceededError: quota exceeded'); },
+          removeItem(k) { delete mem[k]; }
+        }
+      });
+    })();
+  `
+});
+const D2 = writeOnlyBlocked.dom;
+T.check(vm.runInContext("storeSet('k_quota','val')", D2) === false, '写满配额：storeSet 应返回 false（降级到内存）');
+T.check(vm.runInContext("storeGet('k_quota')", D2) === 'val', '写满配额：storeGet 仍能从内存读回写入值');
 
 T.report();

@@ -615,7 +615,12 @@ function draftPanelHtml(){
  // 满员时不可点签约：否则点卡片会走 rosterGuard 作废并 draftNextSlot 一口气跑完整届
  const interactive=mePick&&!myFull;
  if(interactive){
- html+=`<div class="grid g4">${d.pool.map(p=>{
+ /* 点名网格必须**自带滚动容器**：它是 .panel.collapsible 的直接子元素，而
+    `.panel.collapsible>*:not(h3)` 带 max-height + overflow:hidden（折叠动画的前提）。
+    20 张完整卡在 375/768/1280 视口下自然高度 4320/3683/1929 px，全都超过那个封顶 ——
+    超出的卡会被**静默裁掉且没有任何滚动条**，玩家点不到（浏览器实测：桌面 4 列也超）。
+    包一层有界滚动容器后子元素高度 ≤ min(72vh,760px)，与下面只读分支同款做法。 */
+ html+=`<div class="draft-pool" style="max-height:min(72vh,760px);overflow-y:auto;padding-right:2px"><div class="grid g4">${d.pool.map(p=>{
  const blocked=interactive&&draftBlockedFor(s,s.teamName,p);
  // 选秀卡不带「选手档案」按钮：它会截走点名点击并弹「选手已不在」，玩家以为选不了人
  // 「点名签约」按钮不挂 onclick：靠外层容器冒泡触发 draftPick，保证一次点击只点一次（见 verify-draft ⑰）
@@ -628,7 +633,7 @@ function draftPanelHtml(){
  return (interactive&&!blocked)
  ?`<div onclick="draftPick('${p.id}')" style="cursor:pointer" title="点击签约">${card}</div>`
  :card;
- }).join('')}</div>`;
+ }).join('')}</div></div>`;
  }else{
  /* 非本队点名回合 / 满员：新秀卡只读紧凑行。满员时绝不能挂 draftPick——
     一点会作废签位并让 AI 跑完整届（manager-subagent P1）。 */

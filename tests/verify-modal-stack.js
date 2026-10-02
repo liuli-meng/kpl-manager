@@ -73,7 +73,7 @@ const out = vm.runInContext(`
 const lines = String(out).split('\n').filter(Boolean);
 for (const ln of lines) {
   if (ln.startsWith('[FAIL]')) t.check(false, ln.slice(6));
-  else if (ln.startsWith('[PASS]')) console.log('  [OK] ' + ln.slice(7));
+  else if (ln.startsWith('[PASS]')) t.ok(ln.slice(7));
 }
 if (!t.report()) process.exit(1);
 process.exit(0);

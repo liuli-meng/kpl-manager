@@ -31,6 +31,39 @@ while ((m2 = reDup.exec(code))) counts[m2[1]] = (counts[m2[1]] || 0) + 1;
 const dupFns = Object.keys(counts).filter(k => counts[k] > 1);
 T.check(!dupFns.length, '重复函数定义(后者覆盖前者): ' + dupFns.join(', '));
 
+// ②b 跨模块顶层同名声明（生产里等于「后一个模块整块不执行」）
+// 浏览器把每个 <script> 当独立的 Script：后一个 script 想在全局词法环境里再建一个已存在的
+// const/let/class 名字时，整个 script 会以 "Identifier 'X' has already been declared" 报错并
+// 完全不执行（2026-10-02 用 Chrome 实测复现）。也就是说：两个模块各自顶层 `const X` =
+// 后一个模块的**全部函数在线上都是 undefined**，而源码里看不出任何异常。
+// 之所以要静态查：拼接式沙箱会把这种情况暴露成「整个沙箱起不来」（很响），
+// 而真实浏览器里它是静默的（很轻）—— 反过来正是 harness 现在的逐模块加载才让这检查有意义。
+{
+  const jsDir = path.join(ROOT, 'src', 'js');
+  const decls = new Map(); // name -> [{file,line,kind}]
+  fs.readdirSync(jsDir).filter(f => f.endsWith('.js')).forEach(f => {
+    fs.readFileSync(path.join(jsDir, f), 'utf8').split(/\r?\n/).forEach((ln, i) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(ln)) return;
+      const m = ln.match(/^(const|let|var|class|function)\s+([A-Za-z_$][\w$]*)/);
+      if (!m) return;
+      const kind = (m[1] === 'const' || m[1] === 'let' || m[1] === 'class') ? 'lexical' : 'var';
+      if (!decls.has(m[2])) decls.set(m[2], []);
+      decls.get(m[2]).push({ file: f, line: i + 1, kind });
+    });
+  });
+  const clash = [];
+  decls.forEach((list, name) => {
+    const files = new Set(list.map(x => x.file));
+    // 同名都出现在同一个模块内不在这里管（那是语法错误，模块根本加载不了）；
+    // 两个 var/function 分属不同模块是合法的覆盖（已由 ② 单独盯 function）；
+    // 只要有 lexical 声明与另一个模块的同名声明相遇，后一个 script 就会整块失败。
+    if (files.size < 2) return;
+    if (!list.some(x => x.kind === 'lexical')) return;
+    clash.push(name + ' → ' + list.map(x => x.file + ':' + x.line).join(' / '));
+  });
+  T.check(!clash.length, '跨模块顶层同名声明（后一个模块在浏览器里会整块不执行）: ' + clash.join('; '));
+}
+
 // ③ 选手状态旗标单一出口（README 架构约定）：一行内裸拼 ≥2 个旗标 = 加新旗标时必漏的位置。
 //    判据用「≥2 个」而非「1 个」：单旗标判断不会因为新增旗标而失效，组合判断才会。
 //    只匹配单字母前缀（p./s./me./r./p1.），刻意不匹配 st./pst. —— 那是 playerStatus() 的返回值，正是合法出口。
@@ -175,14 +208,29 @@ const out = vm_run(dom, `
   const coachBad=COACH_POOL.concat(ASSISTANT_POOL).filter(c=>!['lane','farm','team','mind'].includes(c.style)).map(c=>c.name);
   if(coachBad.length)R.push('教练风格:'+JSON.stringify(coachBad));
   // 历代联盟（2K 经典球队式）：安装每个时代 → 结构校验 + 时代新档全流程
+  /* 队伍数不能钉死 18：年档的联盟规模是史实的（2016 创始 12 队、2019 13 队、
+     2021 16 队…），钉死 18 只会让「沙箱里只有 2017/2019 两个档」的旧口径看起来是对的
+     （harness 修成逐 <script> 加载后 11 个档全部可见，这条才第一次真正生效）。
+     这里换成三条**结构性**不变量 —— 它们才是"年档装错了"会立刻报红的判据：
+     ① 名录内不得有同名队（同名队会让 genEraDef 的 g<年>_<队>_<位置> 键撞车 →
+        同 id 同姓名在 def 池里出现两遍 → defIndex 解析错对象。2020-2026 真的犯过）；
+     ② 规模落在 [10,18]（KPL 历年区间）；
+     ③ 联盟名录条数必须等于该年档的执教模板条数（两条构建路径的交叉校验）。 */
   const eraBad=[];
   const coachBaseCnt=COACH_POOL.length; // 时代安装前教练池基准（泄漏检测用）
   Object.keys(KPL_ERAS).forEach(id=>{
     try{
       installEra(id);
       const era=KPL_ERAS[id];
-      if(AI_TEAMS.length!==18)eraBad.push(id+':队伍数'+AI_TEAMS.length);
-      if(CLUB_TEMPLATES.length<10)eraBad.push(id+':执教模板过少');
+      const names=AI_TEAMS.map(t=>t.name);
+      const dupTeam=names.filter((n,i)=>names.indexOf(n)!==i);
+      if(dupTeam.length)eraBad.push(id+':联盟名录同名队'+JSON.stringify([...new Set(dupTeam)]));
+      if(names.length<10||names.length>18)eraBad.push(id+':队伍数越界'+names.length);
+      /* 执教模板数**不必**等于联盟队数：手写档就是 18 队配 12/15 条模板（可执教俱乐部
+         少于联盟球队是设计内的，见 docs 的口径）。真正该拦的是反过来的方向 ——
+         模板比联盟还多（必然有模板指向不存在的队）或少于 10 条（可选俱乐部太少）。 */
+      if(CLUB_TEMPLATES.length<10)eraBad.push(id+':执教模板过少'+CLUB_TEMPLATES.length);
+      if(CLUB_TEMPLATES.length>names.length)eraBad.push(id+':执教模板'+CLUB_TEMPLATES.length+'条 > 联盟'+names.length+'队');
       const defIds=new Set(),defNames=new Set();
       PLAYER_POOL.forEach(d=>{
         if(defIds.has(d.id))eraBad.push(id+':def id重复'+d.id);

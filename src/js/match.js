@@ -6,50 +6,64 @@
     全部织进句子——同模板在不同对局长出不同文本；
  ③ 系列赛去重：sr._usedTxt 记录用过的句式（随存档持久化），同一场系列赛同一句式不重复。
  纯本地生成零网络依赖；AI 赛后战报是独立的可选增强（maybeAiReport，默认关闭）。 */
+// 解说文案独立随机源（解耦文案生成与比赛模拟核心 PRNG，杜绝文案改动平移数值平衡门禁）
+let _storyRndSeed = 123456789;
+function storyRandom() {
+ _storyRndSeed = (_storyRndSeed + 0x6D2B79F5) | 0;
+ let t = Math.imul(_storyRndSeed ^ (_storyRndSeed >>> 15), 1 | _storyRndSeed);
+ t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+ return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 function storyPick(id,pool,used){
  const key=id+':';
- for(let i=0;i<10;i++){const idx=Math.floor(Math.random()*pool.length);if(!used.includes(key+idx)){used.push(key+idx);return pool[idx];}}
- return pool[Math.floor(Math.random()*pool.length)];
+ for(let i=0;i<10;i++){const idx=Math.floor(storyRandom()*pool.length);if(!used.includes(key+idx)){used.push(key+idx);return pool[idx];}}
+ return pool[Math.floor(storyRandom()*pool.length)];
 }
-/* 事件流直播：按 g.evs（对线/资源/大团）顺序讲局势 */
+/* 事件流直播：按 g.evs（对线/资源/大团）顺序讲局势，比随机模板更像真局 */
 function eventStoryLines(sr,g,mvp){
  const evs=(g&&g.evs)||[];
  if(!evs.length)return null;
  const myLs=rosterLineup(S);
  const opR=ensureAiRosters(S,sr.opName)||[];
- const R=arr=>arr[Math.floor(Math.random()*arr.length)];
+ const R=arr=>arr[Math.floor(storyRandom()*arr.length)];
  const any=arr=>arr.length?R(arr):null;
  const a=()=>any(myLs),o=()=>any(opR);
- const heroOf=p=>{if(!p)return '';const h=(S.pick&&S.pick[p.pos])||p.sig||'';return h?' 的 '+h:'';};
+ const myHero=p=>p?((S.pick&&S.pick[p.pos])||p.sig||''):'';
+ const heroOf=p=>{const h=myHero(p);return h?` 的 ${h}`:'';};
  const lines=[];
- const mins={'对线期':[3,5],'资源团':[9,12,15],'大团':[18,22,26]};
+ const mins={对线期:[3,5],资源团:[9,12,15],大团:[18,22,26]};
+ let goldLead=0;
  evs.forEach((ev,i)=>{
   const span=mins[ev.tag]||[8+i*3];
   const m=span[i%span.length];
   const k=ev.k||0;
   if(ev.flip){
-   const p=a();
-   lines.push('第'+m+'分钟，'+ev.tag+'！落后方韧性拉满，'+(p?p.name:'我方')+heroOf(p)+' 关键团以少换多，硬生生扳回一城！');
+   const p=a(),o2=o();
+   lines.push(`第${m}分钟，${ev.tag}！落后方韧性拉满，${p?p.name:'我方'}${heroOf(p)} 关键团以少换多，硬生生扳回一城！`);
+   goldLead+=k;
    return;
   }
   if(ev.side>0){
-   if(k<=0)lines.push('第'+m+'分钟，'+ev.tag+'节奏被我方控住，资源入袋，局势渐渐打开。');
-   else if(k===1){const p=a();lines.push('第'+m+'分钟，'+ev.tag+'：'+(p?p.name:'我方选手')+heroOf(p)+' 收下人头，我方继续滚经济。');}
-   else{const p=a();lines.push('第'+m+'分钟，'+ev.tag+'大获全胜！'+(p?p.name:'我方')+' 带队打出 '+k+' 换 0，雪球越滚越大。');}
+   goldLead+=k;
+   if(k<=0)lines.push(`第${m}分钟，${ev.tag}节奏被我方控住，资源入袋，局势渐渐打开。`);
+   else if(k===1){const p=a(),o2=o();lines.push(`第${m}分钟，${ev.tag}：${p?p.name:'我方选手'}${heroOf(p)} 收下人头，我方继续滚经济。`);}
+   else{const p=a(),o2=o();lines.push(`第${m}分钟，${ev.tag}大获全胜！${p?p.name:'我方'} 带队打出 ${k} 换 0，雪球越滚越大。`);}
   }else{
-   if(k<=0)lines.push('第'+m+'分钟，'+ev.tag+'被对方压了一头，我方先避战发育。');
-   else if(k===1){const p=a(),o2=o();lines.push('第'+m+'分钟，'+ev.tag+'：'+(o2?o2.name:'对方选手')+' 抓到机会，我方 '+(p?p.name:'选手')+' 送出人头，节奏被按住。');}
-   else{const p=a();lines.push('第'+m+'分钟，'+ev.tag+'崩了！对方打出 '+k+' 换 0，'+(p?p.name:'我方')+' 这波亏麻了。');}
+   goldLead-=k;
+   if(k<=0)lines.push(`第${m}分钟，${ev.tag}被对方压了一头，我方先避战发育。`);
+   else if(k===1){const p=a(),o2=o();lines.push(`第${m}分钟，${ev.tag}：${o2?o2.name:'对方选手'} 抓到机会，我方 ${p?p.name:'选手'} 送出人头，节奏被按住。`);}
+   else{const p=a(),o2=o();lines.push(`第${m}分钟，${ev.tag}崩了！对方打出 ${k} 换 0，${p?p.name:'我方'} 这波亏麻了。`);}
   }
  });
+ // 收官句：按最终分差/经济讲结局
  const diff=g.myK-g.opK;
- if(g.w&&diff>=5)lines.push('终局 '+g.myK+'-'+g.opK+'，我方全程压制，一场漂亮的惨案局。');
- else if(g.w&&Math.abs(diff)<=2)lines.push('终局 '+g.myK+'-'+g.opK+'，焦灼到底，我方笑到最后。');
- else if(g.w)lines.push('终局 '+g.myK+'-'+g.opK+'，中盘建立的优势稳稳守住，我方拿下。');
- else if(diff<=-5)lines.push('终局 '+g.myK+'-'+g.opK+'，对方滚起雪球，我方没能翻盘。');
- else if(Math.abs(diff)<=2)lines.push('终局 '+g.myK+'-'+g.opK+'，差一口气，我方憾负。');
- else lines.push('终局 '+g.myK+'-'+g.opK+'，关键团没接住，我方遗憾落败。');
- if(mvp)lines.push('本局 MVP：'+mvp.name+'（'+mvp.k+'/'+mvp.d+'/'+mvp.a+'）');
+ if(g.w&&diff>=5)lines.push(`终局 ${g.myK}-${g.opK}，我方全程压制，一场漂亮的惨案局。`);
+ else if(g.w&&Math.abs(diff)<=2)lines.push(`终局 ${g.myK}-${g.opK}，焦灼到底，我方笑到最后。`);
+ else if(g.w)lines.push(`终局 ${g.myK}-${g.opK}，中盘建立的优势稳稳守住，我方拿下。`);
+ else if(diff<=-5)lines.push(`终局 ${g.myK}-${g.opK}，对方滚起雪球，我方没能翻盘。`);
+ else if(Math.abs(diff)<=2)lines.push(`终局 ${g.myK}-${g.opK}，差一口气，我方憾负。`);
+ else lines.push(`终局 ${g.myK}-${g.opK}，关键团没接住，我方遗憾落败。`);
+ if(mvp)lines.push(`本局 MVP：${mvp.name}（${mvp.k}/${mvp.d}/${mvp.a}）`);
  return lines;
 }
 function genMatchStory(sr,g,mvp){
@@ -58,7 +72,7 @@ function genMatchStory(sr,g,mvp){
  const used=sr._usedTxt=(sr._usedTxt||[]);
  const myLs=rosterLineup(S);
  const opR=ensureAiRosters(S,sr.opName)||[];
- const R=arr=>arr[Math.floor(Math.random()*arr.length)];
+ const R=arr=>arr[Math.floor(storyRandom()*arr.length)];
  const any=arr=>arr.length?R(arr):null;
  const a=any(myLs),b=any(myLs),o=any(opR),o2=any(opR);
  const myHero=p=>p?((S.pick&&S.pick[p.pos])||p.sig||''):'';
@@ -70,7 +84,7 @@ function genMatchStory(sr,g,mvp){
  const P=(id,pool)=>storyPick(id,pool,used)();
  const lines=[];
  // —— 一血（每侧 8 条，带选用/招牌英雄语境）——
- const fbMy=Math.random()<(win?0.62:0.38);
+ const fbMy=storyRandom()<(win?0.62:0.38);
  lines.push(fbMy?P('fb_my',[
  ()=>`第${mins[0]}分钟，一血爆发！${a?a.name:'我方选手'}${heroTxt(a)} 单杀 ${o?o.name:'对方选手'}，拿下开门红！`,
  ()=>`第${mins[0]}分钟，${a?a.name:'我方选手'} 蹲到 ${o?o.name:'对方选手'} 落单，一套连招带走一血！`,
@@ -93,7 +107,7 @@ function genMatchStory(sr,g,mvp){
  // —— 中盘事件：我方优势侧 6 类 / 被动侧 4 类，全部带人名·英雄·兵线槽位 ——
  for(let i=1;i<mins.length;i++){
  const m=mins[i];
- const myEvent=Math.random()<(win?0.7:0.36);
+ const myEvent=storyRandom()<(win?0.7:0.36);
  const kind=R(myEvent?['kill','kill','obj','tower','fight','fight','steal','skill']:['opkill','opkill','opobj','optower','opfight']);
  const t=(myEvent?{
  kill:[
@@ -192,7 +206,7 @@ function genMatchStory(sr,g,mvp){
  lines.push(`第${m}分钟，${P('ev_'+kind,t)}`);
  }
  // —— 收官（胜方含 MVP 数据钩织 / 败方各 8 条，赛点局语境）——
- const endM=22+Math.floor(Math.random()*10);
+ const endM=22+Math.floor(storyRandom()*10);
  const need=Math.ceil(sr.max/2);
  const decider=sr.mw+sr.ow===sr.max-1&&(sr.mw===need-1||sr.ow===need-1); // 本局即决胜局
  if(g.w&&mvp){
@@ -227,8 +241,11 @@ function genMatchStory(sr,g,mvp){
  ()=>`第${endM}分钟，一波决策失误葬送好局，${close?'本来真的有机会翻。':'这局确实打不过。'}`,
  ]));
  }
- // 解说口播（约一成对局出现一条口癖）
- if(Math.random()<0.1)lines.push(` 解说席：${pick(CASTER)}${close?'这场真是太刺激了。':''}`);
+ // 解说口播（约一成对局出现一条口癖，用 storyRandom 保证不消费主 PRNG）
+ if(storyRandom()<0.1){
+  const casterLine=CASTER[Math.floor(storyRandom()*CASTER.length)];
+  lines.push(` 解说席：${casterLine}${close?'这场真是太刺激了。':''}`);
+ }
  return lines.map(l=>' '+l);
 }
 /* ================= 比赛流程（KPL 赛制：常规赛 BO5 / 季后赛 BO7 全局BP） ================= */

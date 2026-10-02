@@ -9,7 +9,7 @@ const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 /* ================= 真实 KPL 经济系统 v2（单源刻度） =================
    单位约定（全仓唯一，禁止再引入第二套换算）：
    - 资金 / 转会费 / 身价 / 签约费：万 RMB
-   - p.wage / coach.wage / wageCap：**年薪**（万/年）；发薪日扣 年薪/52
+   - p.wage / coach.wage / wageCap：**年薪**（万/年）；发薪日扣 年薪/ECON.payWeeks
    - 豪门开档预算 1.5 亿 = 15000 万；转会封顶 1.2 亿 = 12000 万；个人顶薪 400 万/年
    生成侧（wageOf/valueOf/模板/赞助）与迁移 migrateEconV2 共用本块，禁止旁路常量。 */
 const ECON={
@@ -810,7 +810,7 @@ const EVENTS=[
  {t:'青训惊喜',desc:'青训队出了一个好苗子，俱乐部收到培养奖金。',good:true,fn:s=>s.fund+=13},
  {t:'老将觉醒',desc:'{p} 接受采访时表示要带新人拿冠军，士气大涨！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));mAmt(p,12);}},
  // —— KPL 真实事件 ——
- {t:'亚运征召',desc:'{p} 入选亚运会电竞国家队，为国争光！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.morale=100;p.attrs.mind=Math.min(99,p.attrs.mind+3);}},
+ {t:'亚运征召',desc:'{p} 入选亚运会电竞国家队，为国争光！',good:true,filter:s=>gameYear(s)%4===2,fn:(s,p)=>{p=p||pick(rosterAll(s));p.morale=100;p.attrs.mind=Math.min(99,p.attrs.mind+3);}},
  {t:'FMVP皮肤',desc:'{p} 的FMVP签名皮肤正式上线，俱乐部收到分成！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));s.fund+=42;mAmt(p,10);}},
  {t:'版本更新·削弱',desc:'新版本上线，{p} 擅长的英雄被削弱，需要时间适应。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);mAmt(p,-8);p.attrs[k]=Math.max(55,p.attrs[k]-2);}},
  {t:'版本更新·加强',desc:'新版本上线，{p} 的招牌英雄迎来版本红利，手感火热！',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));const k=pick(['lane','team']);p.attrs[k]=Math.min(99,p.attrs[k]+2);mAmt(p,6);}},
@@ -821,7 +821,7 @@ const EVENTS=[
  {t:'巅峰对决名场面',desc:'训练赛复刻当年巅峰对决的名场面，全队沸腾！',good:true,fn:s=>{moraleAll(s,6);s.fund+=8;}},
  {t:'主场扩容',desc:'俱乐部主场升级完成，门票收入大涨。',good:true,fn:s=>s.fund+=33},
  {t:'降薪传闻',desc:'俱乐部降薪传闻流出，队员人心浮动。',good:false,fn:s=>moraleAll(s,-8)},
- {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,fn:s=>{s.fund+=42;}},
+ {t:'冠军杯启程',desc:'受邀参加世界冠军杯，俱乐部获得赛事奖金预支。',good:true,filter:s=>gameYear(s)>=2018,fn:s=>{s.fund+=42;}},
  {t:'青训挂牌',desc:'青训队新秀在转会市场被争抢，俱乐部收到问价。',good:true,fn:s=>s.fund+=17},
  {t:'转会传闻',desc:'媒体爆料 {p} 收到豪门高额报价，人心浮动。',good:false,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.max(5,(p.willingness||50)-8);p.morale=clamp(p.morale-5,20,100);}},
  {t:'忠诚续约',desc:'{p} 与俱乐部完成续约，表态愿为球队终老。',good:true,fn:(s,p)=>{p=p||pick(rosterAll(s));p.willingness=Math.min(100,(p.willingness||50)+12);p.morale=clamp(p.morale+6,20,100);}},
@@ -899,7 +899,7 @@ const ACHIEVEMENTS=[
  // —— 冠军 ——
  {id:'first_title',icon:'冠',name:'首冠时刻',desc:'夺得队史第一个冠军',test:s=>(s.honors||[]).some(h=>h.champion)},
  {id:'t_spring',icon:'春',name:'银龙加冕',desc:'夺得春季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='春季赛'&&t.champ===s.teamName)},
- {id:'t_summer',icon:'夏',name:'夏季赛登顶',desc:'夺得夏季赛冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='夏季赛'&&t.champ===s.teamName)},
+ {id:'t_summer',icon:'夏',name:'夏季赛登顶',desc:'夺得夏季赛（或早期秋季赛）冠军',test:s=>(s.titleHistory||[]).some(t=>(t.event==='夏季赛'||t.event==='秋季赛')&&t.champ===s.teamName)},
  {id:'t_chall',icon:'挑',name:'挑战者之证',desc:'夺得挑战者杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='挑战者杯'&&t.champ===s.teamName)},
  {id:'t_ewc',icon:'世',name:'世界之巅',desc:'夺得 EWC 电竞世界杯冠军',test:s=>(s.titleHistory||[]).some(t=>t.event==='EWC'&&t.champ===s.teamName)},
  {id:'t_annual',icon:'龙',name:'圣龙王朝',desc:'捧起 KPL 年度总决赛圣龙杯',test:s=>(s.titleHistory||[]).some(t=>t.event==='年总'&&t.champ===s.teamName)},
@@ -914,7 +914,7 @@ const ACHIEVEMENTS=[
  {id:'star90',icon:'星',name:'手握巨星',desc:'阵中拥有总值 ≥90 的选手',test:s=>(s.players||[]).some(p=>overall(p)>=90)},
  {id:'big_sale',icon:'售',name:'天价交易',desc:'单笔出售选手回收 ≥1200万',test:s=>(s.maxSale||0)>=1200},
  {id:'rich',icon:'财',name:'亿万豪门',desc:'俱乐部资金突破 2 亿',test:s=>(s.fund||0)>=20000},
- {id:'five_year',icon:'恒',name:'长情经营',desc:'迎来第五个赛季',test:s=>gameYear(s)>=2030},
+ {id:'five_year',icon:'恒',name:'长情经营',desc:'迎来第五个赛季',test:s=>(s.season||1)>=5},
  // —— 董事会 ——
  {id:'board_fav',icon:'董',name:'董事会宠儿',desc:'把董事会信任度做到 90 以上',test:s=>!!s.board&&s.board.trust>=90},
  {id:'board_survive',icon:'存',name:'力挽狂澜',desc:'信任度跌到 25 以下后重新回到 60（危机自救）',test:s=>!!s.board&&s.board.warn===0&&(s.board.trust||0)>=60&&(s.board.log||[]).some(l=>l.trust<=25)},
@@ -937,7 +937,16 @@ const ACHIEVEMENTS=[
  // —— 教练视角（mode=coach）——
  {id:'co_master',icon:'帅',name:'名帅风范',desc:'教练评分达到 85+',test:s=>s.mode==='coach'&&s.coach&&(s.coach.rating||0)>=85},
  {id:'co_poach',icon:'邀',name:'豪门垂青',desc:'收到豪门执教邀约',test:s=>s.mode==='coach'&&(!!s.coachOffer||(s.coachDeal&&s.coachDeal.log||[]).some(l=>/豪门邀约/.test(String(l.note||l)))||!!s._coachPoached)},
- {id:'co_iron',icon:'铁',name:'铁帅',desc:'连续三年年度结算信任度 ≥70',test:s=>s.mode==='coach'&&(s.board&&s.board.log||[]).filter(l=>(l.trust||0)>=70).length>=3},
+ {id:'co_iron',icon:'铁',name:'铁帅',desc:'连续三年年度结算信任度 ≥70',test:s=>{
+   if(s.mode!=='coach'||!s.board||!s.board.log)return false;
+   const seen=new Set();
+   const valid=(s.board.log||[]).filter(l=>{
+     if(!l||l.mid)return false;
+     if(l.season!=null){if(seen.has(l.season))return false;seen.add(l.season);}
+     return (l.trust||0)>=70;
+   });
+   return valid.length>=3;
+ }},
  {id:'co_reborn',icon:'起',name:'降级重生',desc:'史实降级重返后夺得冠军',test:s=>s.mode==='coach'&&s.histOutYear!=null&&(s.honors||[]).some(h=>h.champion)},
  {id:'co_legend',icon:'宿',name:'名宿执教',desc:'由选手生涯退役转教练',test:s=>s.mode==='coach'&&!!(s.coach&&s.coach.origin)},
  // —— 选手视角（mode=player）——
@@ -970,7 +979,7 @@ function checkAchievements(s){
    co_*=教练专属 · me_*=选手专属 · 经营/董事会/青训/自建=经理 · 其余三模式共用 */
 function achievementsFor(mode){
  mode=mode||'manager';
- const MGR=['found','coach','big_sale','rich','five_year','board_fav','board_survive','youth_first','youth_champ','youth_fmvp'];
+ const MGR=['found','coach','big_sale','rich','board_fav','board_survive','youth_first','youth_champ','youth_fmvp'];
  return ACHIEVEMENTS.filter(a=>{
  const id=a.id||'';
  if(id.indexOf('co_')===0)return mode==='coach';
@@ -1295,10 +1304,11 @@ function installEra(id){
 const KPL_YEAR_CHANGES={
  // 键 = 进入该自然年时应用（gameYear 刚跳到这一年）
  2017:{in:['QGhappy','上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','YTG','WF.D'],out:[],rename:{}},
- 2018:{in:['南京Hero久竞','济南RW侠'],out:['AS仙阁','SC','MU','LK','DL火箭','BWS','VgHow','成都AG超玩会'],rename:{}},
- 2019:{in:['TS','西安WE','厦门VG','成都AG超玩会'],out:['BA黑凤梨','YTG','WF.D'],rename:{}}, // AG 降级一年后重返
+ 2018:{in:['南京Hero久竞','济南RW侠'],out:['AS仙阁','SC','MU','LK','DL火箭','BWS','VgHow','AG超玩会'],rename:{}},
+ 2019:{in:['TS','西安WE','厦门VG','成都AG超玩会'],out:['BA黑凤梨','YTG','WF.D'],
+  rename:{'AG超玩会':'成都AG超玩会'}}, // AG 降级一年后以「成都AG超玩会」重返（更名放在重返年，与 in 同名）
  2020:{in:['苏州KSG','杭州LGD大鹅'],out:['厦门VG'],
-   rename:{'AG超玩会':'成都AG超玩会','eStar':'武汉eStarPro','eStarPro':'武汉eStarPro','Hero久竞':'南京Hero久竞',
+   rename:{'eStar':'武汉eStarPro','eStarPro':'武汉eStarPro','Hero久竞':'南京Hero久竞',
            'QGhappy':'重庆QGhappy','GK':'佛山GK','XQ':'广州XQ','JC':'DYG.JC','EDG.M':'上海EDG.M','RNG.M':'上海RNG.M'}},
  2021:{in:['XYG','MTG'],out:[],rename:{'广州XQ':'广州TTG','DYG.JC':'深圳DYG'}},
  2022:{in:[],out:['MTG'],rename:{'重庆QGhappy':'重庆狼队','QGhappy':'重庆狼队','佛山GK':'佛山DRG.GK'}},
@@ -1348,6 +1358,15 @@ function teamsAtYear(year){
  }
  // 2017 简名对齐手写档习惯
  if(year<=2018)list=list.map(x=>x==='上海EDG.M'?'EDG.M':x==='上海RNG.M'?'RNG.M':x==='佛山GK'?'GK':x==='南京Hero久竞'?'Hero久竞':x);
+ /* 去重是**结构性**要求，不是洁癖：同一年档里出现两个同名队会让 genEraDef 的
+    `g<年>_<队>_<位置>` 键撞车（第二次直接复用第一次的 def），于是该年档的 def 池里
+    同一 id/同一姓名出现两遍，installEra 把它们一起塞进 PLAYER_POOL —— 选手重名、
+    defIndex 解析到错误对象、联盟名录与执教模板各多出一支队。
+    踩过的实例：2018 的 out 写的是全名 '成都AG超玩会'，而当时名单里是简名 'AG超玩会'
+    → 该条 out 空转，球队一直留到 2020 被 rename 成同一个字符串，2020-2026 七个年档
+    全部多出一支幽灵队。表里已修正那处笔误；这里再兜一道，防以后改表再撞。 */
+ const seen=new Set();
+ list=list.filter(n=>{if(seen.has(n))return false;seen.add(n);return true;});
  return list;
 }
 function buildYearEra(year){
@@ -1473,7 +1492,18 @@ function applyHistoricalLeague(s){
   }
   if(n===me){
    // 玩家随队史实降级：软终局（与临时席收回同口径）；若后表有 in 会在回归年解除
-   const backYear=Object.keys(KPL_YEAR_CHANGES).map(Number).filter(y=>y>year&&(KPL_YEAR_CHANGES[y].in||[]).indexOf(n)>=0).sort((a,b)=>a-b)[0]||null;
+   /* 回归年要**跟着更名走**：队名在降级期间改过（AG超玩会 → 成都AG超玩会）时，
+      只按原字符串在后续 in 表里找会一个都找不到 → histReturnYear=null →
+      玩家永久 seatLost，而这是死路（histGapWait 的 guard 到 15 次就放弃）。
+      所以“同名回归”与“更名后回归”都算：既认 in 里的原名，
+      也认「某年的 rename 把 me 映射到 X、且该年 in 含 X」。 */
+   const backYear=Object.keys(KPL_YEAR_CHANGES).map(Number).filter(y=>y>year).map(y=>{
+    const c=KPL_YEAR_CHANGES[y]||{};
+    const inList=c.in||[];
+    if(inList.indexOf(n)>=0)return y;
+    const alias=(c.rename||{})[n];
+    return (alias&&inList.indexOf(alias)>=0)?y:null;
+   }).filter(Boolean).sort((a,b)=>a-b)[0]||null;
    s.seatLost=true;
    s.histOutYear=year;
    s.histReturnYear=backYear;
@@ -1484,7 +1514,13 @@ function applyHistoricalLeague(s){
  });
  // ③ 加入
  (ch.in||[]).forEach(n=>{
-  if(n===me&&s.seatLost&&s.histOutYear!=null){
+  /* 玩家本队重返：同名回归，或「本队在本年更名后回归」（rename[me]===n）——
+     后者是 AG 的形态：2018 以当时队名 'AG超玩会' 离开，2019 以 '成都AG超玩会' 重返。
+     命中后把 s.teamName 一并改成当前队名，否则玩家叫旧名、联盟名录里是新名，
+     「同名队」问题只是从 AI 之间搬到「玩家 vs AI」之间。 */
+  const renamedMe=(ch.rename||{})[me]===n;
+  if((n===me||renamedMe)&&s.seatLost&&s.histOutYear!=null){
+   if(renamedMe)s.teamName=n;
    s.seatLost=false;
    try{logEvent(s,' 史实回归：'+n+' 重返 KPL——执教生涯继续');}catch(e){}
   }

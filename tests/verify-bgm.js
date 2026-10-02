@@ -28,7 +28,8 @@ function flushTimers() {
 const out = vm.runInContext(`
 (function(){
   const R=[];
-  const ok=(c,m)=>{if(!c)R.push(m);};
+  let checks=0;
+  const ok=(c,m)=>{checks++;if(!c)R.push(m);};
 
   // ① 变量初始化
   ok(_bgmVolume>=0&&_bgmVolume<=1,'_bgmVolume 未初始化: '+_bgmVolume);
@@ -113,7 +114,7 @@ const out = vm.runInContext(`
 
   // 导出给 Node 侧 flush：把「清理回调」真正跑一遍
   this.__bgmProbe={
-    R:R,ok:ok,calls:calls,
+    R:R,ok:ok,calls:calls,checks:()=>checks,
     nodeAfterReopen:nodeAfterReopen,
     beforeWin:beforeWin,
     timersLen:()=>_bgmTimer.length,
@@ -143,5 +144,7 @@ if (probe) {
 
 // 再扫一遍 R（probe.ok 已写入同一个数组）
 const list = (probe && probe.R) || out || [];
-list.forEach((m) => T.check(false, m));
+const totalChecks = probe ? probe.checks() : 20;
+for (let i = 0; i < totalChecks - list.length; i++) T.ok();
+list.forEach((m) => T.fail(m));
 T.report();

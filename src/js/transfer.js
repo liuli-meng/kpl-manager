@@ -1,7 +1,11 @@
 /* 生成 AI 战队阵容（BP 界面可见对手选手与招牌英雄） */
 function ensureAiRosters(s,teamName){
  s.aiRosters=s.aiRosters||{};
- if(s.aiRosters[teamName])return s.aiRosters[teamName];
+ if(s.aiRosters[teamName]){
+  const hasOwned = s.aiRosters[teamName].some(p => p && s.players.some(x => x.id === p.id || x.name === p.name));
+  if(!hasOwned)return s.aiRosters[teamName];
+  delete s.aiRosters[teamName];
+ }
  const map=aiRosterDefMap(s);
  const ids=map[teamName]||(s.ewcDefMap||{})[teamName]; // ewcDefMap：EWC 海外队选手（杯赛期间可正常 BP/结算）
  if(!ids)return [];
@@ -210,7 +214,6 @@ function defIndex(){
 }
 function defOf(s,pid){return defIndex()[pid]||(s.extraDefs||[]).find(d=>d.id===pid)||null;}
 function aiDetachDef(s,pid){ // def 被玩家签走/转会：从所有 AI 队与青训营除名，避免同一人挂两队
- if(!defOf(s,pid))return;
  const map=aiRosterDefMap(s);
  for(const tn in map)map[tn]=map[tn].filter(id=>id!==pid);
  // 青训营残留是跨队重名/幽灵双挂的源头：晋升后未摘营，转会走后再被「晋升」回原队
@@ -253,6 +256,7 @@ function parkFreeAgent(s,p,note){
 function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额合法才接收）；返回是否入册
  const def=defOf(s,pid);
  if(!def)return false;
+ if(s.players&&s.players.some(p=>p.id===pid||p.name===def.name))return false; // 玩家已持有：AI 不得签入防双挂
  if(typeof canSign==='function'){
   const chk=canSign(s,{id:pid,name:def.name,pos:def.pos},{actor:'ai',team:teamName});
   if(!chk.ok)return false;
@@ -788,24 +792,6 @@ function buildTransferMarket(s){
  }else if(p.willingness==null){
 				// 非卖品以外也要有意愿：否则谈判断定永远走溢价死路
 				p.willingness=rnd(35,85);
-			}else if(p.willingness==null){
-				// 非卖品以外也要有意愿：否则谈判断定永远走溢价死路
-				p.willingness=rnd(35,85);
-			}else if(p.willingness==null){
-				// 非卖品以外也要有意愿：否则谈判断定永远走溢价死路
-				p.willingness=rnd(35,85);
-			}else if(p.willingness==null){
-				// 非卖品以外也要有意愿：否则谈判断定永远走溢价死路
-				p.willingness=rnd(35,85);
-			}else if(p.willingness==null){
-				// 非卖品以外也要有意愿：否则谈判断定永远走溢价死路
-				p.willingness=rnd(35,85);
-			}else if(p.willingness==null){
-				// 非卖品以外也要有意愿：否则谈判断定永远走溢价死路
-				p.willingness=rnd(35,85);
-			}else if(p.willingness==null){
-				// 非卖品以外也要有意愿：否则谈判断定永远走溢价死路
-				p.willingness=rnd(35,85);
 			}
  s.transferList.push(p);
  });
@@ -854,7 +840,7 @@ const joinWillingness=p=>clamp((p.willingness||0)+(p.transferRequest?15:0),0,100
  口径：p.wage 一律年薪；谈判/续约/发薪/工资帽同一单位——UI 不得写「年薪」。 */
 const TRANSFER_CAP=ECON.transferCap,ROSTER_MAX=ECON.rosterMax,PLAYER_WAGE_MAX=ECON.playerWageMax;
 const capFee=x=>Math.min(Math.round(x),TRANSFER_CAP);
-/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖）；要求离队者八五折——封顶 1500 */
+/* 买断费：基础价（总值曲线） × 战力加成 × 意愿系数（意愿低=更难挖）；要求离队者八五折——封顶 TRANSFER_CAP */
 function buyoutPrice(p){
  const base=valueOf(overall(p));
  const powBonus=1+Math.max(0,(playerPower(p,p.sig)-55)/200);
@@ -864,7 +850,7 @@ function buyoutPrice(p){
  const rich=1+clamp((((typeof S!=='undefined'&&S&&S.fund)||0)-30000)/120000,0,0.25);
  return capFee(base*powBonus*wilMult*(p.transferRequest?0.85:1)*rich);
 }
-/* 非卖品强挖：2.5倍溢价（同样受 1500 封顶，顶星与主力同价时更看意愿/成功率），成功率=意愿缺口，失败意愿-10 */
+/* 非卖品强挖：2.5倍溢价（同样受 TRANSFER_CAP 封顶，顶星与主力同价时更看意愿/成功率），成功率=意愿缺口，失败意愿-10 */
 function untouchablePrice(p){return capFee(buyoutPrice(p)*2.5);}
 function raidChance(p){return clamp((100-effWillingness(p))/100,0.02,0.92);}
 /* 大名单：硬上限 ROSTER_MAX+2（先签后卖宽限），软上限 ROSTER_MAX（需 3 日内裁减） */
@@ -1076,7 +1062,7 @@ function negoSubmit(){
 		negoComplete(s,p,fee);
 		recordTransfer(s,'in',p,fee,fromTeam,n.freeAgent?'自由球员直签':'转会买断');
 		logEvent(s,(n.freeAgent?' 签下自由球员 ':' 转会达成！')+' '+p.name+' 加盟 '+s.teamName+(n.freeAgent?'（签约费 '+fee+'万 · 年薪 '+wage+'万）':'（转会费 '+fee+'万 · 年薪 '+wage+'万）'));
-		if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
+		if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 '+TRANSFER_CAP+' 万封顶');
 		window._nego=null;closeModal('app-modal');
 		try{SFX.gold();}catch(_){}
 		save();renderAll();toast(' 谈判成功！'+p.name+' 加盟');
@@ -1119,7 +1105,7 @@ function sellAskPrice(p){
  const ageF=p.age<=m.gold?1.1:p.age>=m.retire-1?0.7:0.9; // 黄金期溢价，临近退役打折
  const popF=1+(p.popularity||0)/250; // 人气=商业价值
  const valF=(p.val||100)/100; // 比赛表现浮动：状态火热溢价、持续低迷打折（70%~150%）
- return capFee(base*ageF*popF*valF); // 成交价受联盟 1500 万封顶
+ return capFee(base*ageF*popF*valF); // 成交价受联盟 TRANSFER_CAP 封顶
 }
 /* 表现状态标签（身价浮动可视化） */
 function perfLabel(p){
@@ -1166,7 +1152,10 @@ function openSellNego(s,pid){
  clubs.push({name:t.name,max,bid:Math.round(max*rnd(60,78)/100),status:'active'});
  }
  window._sellNego={s,pid,round:1,ask,lock:cap!=null,lockCaps:Math.min(p.caps||0,4),
- lowball:Math.round(valueOf(overall(p))*0.65),
+ /* 回收商一口价也必须吃 sellCeiling：它是「无俱乐部接盘时的保底退出」，而上面 clubs 的
+    报价已经夹过同一上限。不夹就是白送一条绕过转售保护的翻卖通道 —— 实测：ovr89 的自由
+    球员 2136 万签入、转售上限 1922 万，回收商却给 2893 万，零出场净赚 757 万。 */
+ lowball:Math.round(Math.min(valueOf(overall(p))*0.65,sellCeiling(p)!=null?sellCeiling(p):Infinity)),
  clubs,
  msg:clubs.length?'收到 '+clubs.length+' 家俱乐部的初步报价：可直接接受、对某家逐轮抬价，或统一递交心理要价。':'暂无俱乐部感兴趣——可去挂牌等报价，或接受回收商一口价。'};
  renderSellNego();
@@ -1286,7 +1275,7 @@ function completeSale(s,p,fee,team){
  logEvent(s,' '+p.name+' 未能即时入册 '+team+'，转入自由市场待签');
  }
  logEvent(s,' '+p.name+' 转会至 '+team+'（转会费 '+fee+'万）');
- if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 1500 万封顶');
+ if(fee>=TRANSFER_CAP)logEvent(s,' 重磅转会！顶星身价摸到联盟 '+TRANSFER_CAP+' 万封顶');
  else if(fee>=800)logEvent(s,' 重磅转会！联盟震动');
 }
 
@@ -1302,7 +1291,7 @@ function listPlayer(s,pid){
  if(s.lineup.includes(pid)){toast('请先将该选手移出首发');return;}
  if((s.listed||[]).some(x=>x.id===pid)){toast('该选手已在挂牌名单');return;}
  if(!sellGuard(s))return; // 联盟规则：一个转会期卖出不得超过队内一半
- const price=capFee(Math.round(valueOf(overall(p))*(p.willingness>=60?0.8:1.1))); // 成交价封顶 1500
+ const price=capFee(Math.round(valueOf(overall(p))*(p.willingness>=60?0.8:1.1))); // 成交价封顶 TRANSFER_CAP
  s.listed=[...(s.listed||[]),{id:pid,price}];
  toast(p.name+' 已挂牌（'+price+'万）'+(p.willingness>=60?'，本人愿意转会':'，本人不太愿意'));
  logEvent(s,' '+p.name+' 进入转会市场（挂牌 '+price+'万）');
@@ -1330,7 +1319,7 @@ function aiBidTick(s){
  const elite=pool.filter(t=>aiTierOf(s,t.name)==='elite');
  const team=(elite.length&&Math.random()<0.6)?pick(elite):pick(pool);
  const p=s.players.find(x=>x.id===item.id);
- let bid=Math.min(TRANSFER_CAP,Math.round(item.price*(0.85+Math.random()*0.35))); // AI 报价同样受 1500 封顶
+ let bid=Math.min(TRANSFER_CAP,Math.round(item.price*(0.85+Math.random()*0.35))); // AI 报价同样受 TRANSFER_CAP 封顶
  if(p){const cap=sellCeiling(p);if(cap!=null)bid=Math.min(bid,cap);} // 挂牌报价同样受转售保护
  s.bids=[...(s.bids||[]),{id:item.id,team:team.name,bid}];
  if(p)toast(' '+team.name+' 对 '+p.name+' 报价 '+bid+'万！');
@@ -1560,7 +1549,17 @@ function endTransferWindow(s){
  const p=s.players.find(x=>x.id===pid);
  if(p&&!p.loan&&p.contract<=0){
   p.contract=1;
-  logEvent(s,' '+p.name+' 合同自动续约 1 年（转会期未处理）');
+  /* 自动续约也要把年薪拉回市场价：只写 contract=1 等于「不谈判就永远锁在旧价」——
+     低薪锚点是选秀/青训按 0.65×wageOf 发的，于是「什么都不点」成了工资帽的最优解
+     （实测 ovr88 年薪 20 万，而 wageOf(88)=268 万；连年自动续约永不修正）。
+     取 max 而非直接覆盖：老档里本来就更贵的合同不该被降薪。 */
+  const fairWage=Math.round(wageOf(overall(p),p.age,p.popularity));
+  if(Number.isFinite(fairWage)&&fairWage>p.wage){
+   logEvent(s,' '+p.name+' 合同自动续约 1 年（转会期未处理）· 年薪按市场价由 '+p.wage+' 万调整为 '+fairWage+' 万');
+   p.wage=fairWage;
+  }else{
+   logEvent(s,' '+p.name+' 合同自动续约 1 年（转会期未处理）');
+  }
  }
  });
  s.expiring=[];
@@ -1958,7 +1957,7 @@ function inSeasonOfferTick(s){
  // 概率随火热程度上浮（火热顶星 ~6%/天，刚过门槛 ~1.5%/天）
  const heat=(p.val||100)-100;
  if(Math.random()>=clamp(0.015+heat*0.0012,0.015,0.06))return;
- const fee=capFee(buyoutPrice(p)*(0.95+Math.random()*0.4)); // 95%~135% 身价（联盟 1500 封顶）
+ const fee=capFee(buyoutPrice(p)*(0.95+Math.random()*0.4)); // 95%~135% 身价（联盟 TRANSFER_CAP 封顶）
  // 买家偏好：身价越高越可能是豪门在挖（取 AI 队前半段的强队池）
  const pool=AI_TEAMS.filter(t=>t.name!==s.teamName);
  const buyer=pick(pool.slice(0,Math.max(6,Math.round(pool.length*(overall(p)>=88?0.5:1)))));

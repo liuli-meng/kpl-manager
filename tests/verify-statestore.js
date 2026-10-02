@@ -68,8 +68,26 @@ function run() {
     if(typeof sanitizeImport!=='function')fail('sanitizeImport missing');
     else{
       const dirty={teamName:'导入队',players:'nope',lineup:123,fund:NaN,
-        __proto__:{x:1}, evil:function(){return 1;},
-        players2:[{id:'p1',name:'甲'},{id:'',name:'乙'},null,'str', {id:'p2',fn:function(){}}]};
+        __proto__:{x:1}, evil:function(){return 1;}, v:'not-a-num'};
+      sanitizeImport(dirty);
+      if(!Array.isArray(dirty.players))fail('dirty players not coerced to array');
+      else if(dirty.evil)fail('dirty evil function survived');
+      else if(!Array.isArray(dirty.lineup))fail('dirty lineup not coerced to array');
+      else if(dirty.v!==1)fail('dirty v fallback expect 1, got '+dirty.v);
+
+      // v 边界用例测试：-1e9, 0, 'abc', 4.9, null
+      const vTests=[
+        [{v:-1e9},1],
+        [{v:0},1],
+        [{v:'abc'},1],
+        [{v:4.9},4],
+        [{v:null},1],
+      ];
+      vTests.forEach(([item,want])=>{
+        sanitizeImport(item);
+        if(item.v!==want)fail('v boundary failed for '+JSON.stringify(item)+' expect '+want+' got '+item.v);
+      });
+
       // 用真实 players 数组
       const o={teamName:'T',players:[{id:'p1',name:'甲',fn:()=>1},{id:'',name:'乙'},null,{id:'p2',name:'丙'}],lineup:'bad',fund:NaN,keep:'ok'};
       sanitizeImport(o);

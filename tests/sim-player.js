@@ -140,7 +140,11 @@ function bootPlayerCareer(){
   createPlayerCareer();
   // 抬到可竞争首发，避免门禁被「永远板凳」噪音淹没（内容密度才是本门禁重点）
   const me=myPlayer(S);
-  ['lane','farm','team','mind'].forEach(k=>{me.attrs[k]=Math.min(92,me.attrs[k]+12);});
+  ['lane','farm','team','mind'].forEach(k=>{
+    me.attrs[k]=Math.min(92,me.attrs[k]+12);
+    me.peak=me.peak||{};
+    me.peak[k]=Math.max(me.peak[k]||0,me.attrs[k]+6);
+  });
   me.energy=100;me.morale=90;me.injury=0;
   coachPickLineup(S);
   return S;

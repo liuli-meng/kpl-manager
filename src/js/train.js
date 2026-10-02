@@ -125,6 +125,7 @@ function recruitRookie(s){
  if(s.fund<50){toast('招募青训需 50万');return;}
  s.fund-=50;
  const r=genRookie(s);
+ r.trainSpend=50; // 招募费也是投入的一部分（晋升时进 acqCost）
  s.academy=[...(s.academy||[]),r];
  logEvent(s,' 青训营招募新秀 '+r.name+'（'+POS[r.pos][0]+' · 潜力'+r.potential+'）');
  save();renderAll();toast('新秀 '+r.name+' 加入青训营');
@@ -152,6 +153,7 @@ function trainRookie(s,id){
  const rtc=(typeof rookieTrainCost==='function')?rookieTrainCost(s):ROOKIE_TRAIN_COST;
  if(s.fund<rtc){toast('青训培养需 '+rtc+'万');return;}
  s.fund-=rtc;
+ r.trainSpend=(r.trainSpend||0)+rtc; // 累计投入：晋升时写进 acqCost，做转售上限的锚点
  s.academyTrained=true;
  const t=applyRookieTrain(r);
  logEvent(s,' 青训培养：'+r.name+'「'+t.label+'」+'+t.gain+'（潜力'+r.potential+'）');
@@ -174,6 +176,7 @@ function trainAllRookies(s){
   const rtc=typeof rookieTrainCost==="function"?rookieTrainCost(s):ROOKIE_TRAIN_COST;
   if(s.fund<rtc){short++;continue;}
   s.fund-=rtc;spent+=rtc;
+  r.trainSpend=(r.trainSpend||0)+rtc; // 与 trainRookie 同口径累计（晋升时进 acqCost）
   const t=applyRookieTrain(r);
   parts.push(r.name+'「'+t.label+'」+'+t.gain);
   done++;
@@ -206,6 +209,11 @@ function promoteRookie(s,id){
  r.tags=['青训'];
  r.academyGrad=true; // 青训出身永久标记（成就「自家血统/青训门面」判定用）
  r.contract=2; // 晋升一线队签 2 年合同
+ /* 青训是「花钱养出来的人」，晋升时必须把累计投入写成 acqCost —— 否则 sellCeiling 走
+    `acqCost==null` 分支返回 null（无上限），青训苗子晋升后可以按市场价直接转卖，
+    把培养投入变成无风险的套利（实测 356 万投入的 74 总值苗子可卖 1347 万）。
+    老档没有 trainSpend：写 0，交给 sellCeiling 的 30 万兜底锚点。 */
+ r.acqCost=Math.max(0,Math.round(r.trainSpend||0));
  r.wage=Math.max((typeof ECON!=='undefined'&&ECON.playerWageMin)||12,Math.round((typeof wageOf==='function'?wageOf(overall(r)):40)*0.65));
  s.players.push(r);
  if(!s.lineup.includes(r.id)&&!s.players.some(p=>p.id!==r.id&&p.pos===r.pos&&s.lineup.includes(p.id))){

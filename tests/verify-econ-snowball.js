@@ -69,6 +69,30 @@ const out = vm.runInContext(
   if(lateWeekly>earlyWeekly*0.75)fail('后期周净入未放缓: 早期 '+earlyWeekly+' vs 后期 '+lateWeekly);
   else log('⑥ 净流入递减：早期周均 +'+earlyWeekly+' → 后期周均 +'+lateWeekly);
 
+  // ⑦ 巨资档（fund ≥ 软帽·如 80000 顶配）长局收敛门禁：
+  // 验证在储备监管费、商业饱和与工资编制共同作用下，超额资金平缓收敛，既不破产断崖，也不无限膨胀
+  const sRich=newState('巨资收敛','豪门');
+  sRich.preseason=false;sRich.transferWindow=0;sRich._quietSave=true;
+  fillRoster(sRich,'star','star');
+  let g=0;
+  while(sRich.players.length<12&&g++<40){
+    sRich.players.push(genPlayer(genFreeAgentDef(POS_ORDER[sRich.players.length%5],'star',new Set(sRich.players.map(p=>p.name)+g))));
+  }
+  sRich.lineup=sRich.players.slice(0,5).map(p=>p.id);
+  sRich.players.forEach(p=>{p.wage=350;p.popularity=99;});
+  sRich.sponsorLv=3;sRich.fans=600;sRich.fund=80000;
+  const fRich0=sRich.fund;
+  let minFund=fRich0;
+  for(let d=0;d<200;d++){
+    sRich.trained=true;sRich.marketRefreshed=true;
+    nextDay(sRich);
+    if(sRich.fund<minFund)minFund=sRich.fund;
+  }
+  if(sRich.fund<=18000)fail('巨资档过度消耗击穿软帽: 200天剩余 '+Math.round(sRich.fund));
+  else if(sRich.fund>=fRich0)fail('巨资档仍在逆势暴涨: '+Math.round(sRich.fund)+' >= '+fRich0);
+  else if(minFund<10000)fail('巨资档途中发生险情/破产: 最低资金 '+Math.round(minFund));
+  else log('⑦ 巨资收敛：80000(12人顶配) 200天 → '+Math.round(sRich.fund)+'（最低 '+Math.round(minFund)+'，平缓向软帽收敛）');
+
   if(hadFail)throw new Error(res.filter(r=>r.indexOf('FAIL')>=0).join(' ; ')||'未通过');
   return res.join('\\n');
 })()

@@ -40,10 +40,23 @@ T.check(!/const stick=56\+48;/.test(mainJs), 'main.js 必须剔除 stick=56+48 �
 T.check(/min-height:\s*44px/s.test(styleCss), '移动端必须严格声明 44px 触控目标底线');
 T.check(/\.pcard-compact\s+\.pc-actions\s+\.btn\s*\{[^}]*min-height:\s*44px/s.test(styleCss), '移动端紧凑卡片操作按钮必须在媒体查询中提升为 min-height: 44px');
 // 确保同一媒体查询内不存在后置覆盖为 30px/32px 的 .hd-btn 或 .btn
-const mobBlockMatch = styleCss.match(/@media\s*\(max-width:\s*640px\)\s*\{([\s\S]*?)(?=\n@media|\n\/\* =====|$)/);
-T.check(!!mobBlockMatch, '存在 max-width:640px 移动端媒体查询块');
-if (mobBlockMatch) {
-  const mobContent = mobBlockMatch[1];
+function extractMediaBlock(css, targetQuery) {
+  const re = new RegExp(`@media\\s*\\(${targetQuery}\\)\\s*\\{`, 'g');
+  let match, blocks = [];
+  while ((match = re.exec(css)) !== null) {
+    let depth = 1, i = match.index + match[0].length, start = i;
+    while (i < css.length && depth > 0) {
+      if (css[i] === '{') depth++;
+      else if (css[i] === '}') depth--;
+      i++;
+    }
+    blocks.push(css.slice(start, i - 1));
+  }
+  return blocks.join('\n');
+}
+const mobContent = extractMediaBlock(styleCss, 'max-width:\\s*640px');
+T.check(mobContent.length > 0, '存在 max-width:640px 移动端媒体查询块');
+if (mobContent.length > 0) {
   T.check(!/\.hd-btn\{[^}]*min-height:\s*3[0-9]px/.test(mobContent), '移动端媒体查询内不允许出现小于 40px 的 .hd-btn 声明');
   T.check(!/\.btn\.sm\{[^}]*min-height:\s*3[0-9]px/.test(mobContent), '移动端媒体查询内不允许出现小于 40px 的 .btn.sm 声明');
   T.check(!/\.hd-more\{[^}]*min-height:\s*3[0-9]px/.test(mobContent), '移动端媒体查询内不允许出现小于 40px 的 .hd-more 展开按钮');
@@ -61,7 +74,8 @@ T.check(mainJs.includes('aria-hidden'), 'main.js openModal/closeModal 必须同�
 T.check(mainJs.includes('_lastActiveModalTrigger'), 'main.js 必须在 modal 打开与关闭时管理焦点归还');
 
 // ⑤ M-1: 断点体系统一验证
-T.check(!/max-width:760px/.test(mainJs), 'main.js 中的断点已统一为 640px，消灭 641~760px 的界面撕裂');
+T.check(!/max-width:\s*760px/.test(mainJs), 'main.js 中的断点已统一为 640px，消灭 641~760px 的界面撕裂');
+T.check(!/max-width:\s*760px/.test(styleCss), 'style.css 中的断点已统一为 640px，消灭 641~760px 的界面撕裂');
 
 // ⑥ 死文件清理验证
 const deadFiles = [

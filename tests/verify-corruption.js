@@ -82,10 +82,11 @@ const out = vm.runInContext(`
   // ④ 半残导入：players 是对象不是数组 / teamName 空 / v 为字符串
   S=newState('半残','x');S.fund=777;
   applyImport({teamName:'半残',players:{0:{id:'a'}},fund:1,v:'4'},'半残档');
-  if(S.teamName!=='半残'&&S.teamName!=='半残'){}
-  // teamName 若被拒应保持原档
+  // teamName 若为空被拒应保持原档
   applyImport({teamName:'',players:[],fund:1},'空名');
   applyImport({teamName:'字符串v',players:[{id:'z',name:'z',pos:'mid'}],fund:10,season:1,v:'not-a-number',moneyScaled:true,econReal:true,econV2:true},'字符串版本');
+  if(S.teamName!=='字符串v')fail('半残导入后 teamName 未更新');
+  if(typeof S.v!=='number'||isNaN(S.v)||S.v!==4)fail('半残导入后 v 未正确回落/迁移，实得 '+S.v);
   let halfCrash=0;
   try{const t=teamPower(S);if(!isFinite(t))halfCrash++;}catch(e){halfCrash++;}
   if(halfCrash)fail('半残导入后战力异常');

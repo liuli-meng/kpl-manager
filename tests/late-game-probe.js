@@ -8,11 +8,16 @@ const seedArg = (process.argv.find(a => a.startsWith('--seed=')) || '').split('=
 const RANDOM_SEED = seedArg === 'random';
 const SEED = RANDOM_SEED ? (Math.floor(Math.random() * 1e9) || 1) : (parseInt(seedArg, 10) || DEFAULT_SEED);
 const YEARS = Math.max(5, parseInt((process.argv.find(a => a.startsWith('--n=')) || '').split('=')[1], 10) || 15);
-const FORCE_WIN = !process.argv.includes('--lose');
+const hasLose = process.argv.includes('--lose');
+const hasWin = process.argv.includes('--win');
+const TRAJECTORIES = hasLose ? [false] : hasWin ? [true] : [true, false];
 
 const { dom } = makeDom();
 injectHelpers(dom);
-vm.runInContext('this.Math=(function(a){var f=function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};var M=Object.create(Math);M.random=f;return M;})(' + SEED + ')', dom);
+function resetSeed() {
+  vm.runInContext('this.Math=(function(a){var f=function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};var M=Object.create(Math);M.random=f;return M;})(' + SEED + ')', dom);
+}
+resetSeed();
 
 const HEADLESS = `
 function forceSeries(win){
@@ -228,42 +233,51 @@ function sim(nYears,win){
 }
 `;
 
-console.log('=== 后期长赛季压测 ×' + YEARS + ' 年 · 种子 ' + SEED + (RANDOM_SEED ? '（随机）' : '（固定）') + ' · 强制胜负=' + (FORCE_WIN ? '胜' : '败') + ' ===');
+const allFailures = [];
+let totalYearsDone = 0;
 
-const YEARS_LIMIT = YEARS;
-let out;
-try {
-  out = JSON.parse(vm.runInContext('var YEARS_LIMIT=' + YEARS_LIMIT + ';\n' + HEADLESS + 'JSON.stringify(sim(' + YEARS + ',' + FORCE_WIN + '))', dom));
-} catch (e) {
-  console.log('✗ 沙箱异常: ' + (e && e.message || e));
-  console.log(e && e.stack || '');
-  process.exit(1);
-}
+TRAJECTORIES.forEach(forceWin => {
+  resetSeed();
+  console.log('=== 后期长赛季压测 ×' + YEARS + ' 年 · 种子 ' + SEED + (RANDOM_SEED ? '（随机）' : '（固定）') + ' · 强制胜负=' + (forceWin ? '胜' : '败') + ' ===');
 
-console.log(
-  '完赛 ' + out.yearsDone + ' 季' +
-  (out.firedAt != null ? ' · 第' + out.firedAt + '季下课' : '') +
-  ' · 终局 S' + out.season + ' ' + out.phase +
-  ' · 资金 ' + out.fund +
-  ' · 名单 ' + out.roster +
-  ' · 冠军史 ' + out.titleHist +
-  ' · 年度回顾 ' + out.reviews +
-  ' · 日志 ' + out.log
-);
-if (out.notes && out.notes.length) {
-  console.log('notes:');
-  out.notes.slice(0, 20).forEach(n => console.log('  · ' + n));
-}
+  let out;
+  try {
+    out = JSON.parse(vm.runInContext('var YEARS_LIMIT=' + YEARS + ';\n' + HEADLESS + 'JSON.stringify(sim(' + YEARS + ',' + forceWin + '))', dom));
+  } catch (e) {
+    console.log('✗ 沙箱异常: ' + (e && e.message || e));
+    console.log(e && e.stack || '');
+    process.exit(1);
+  }
 
-const failures = out.errs || [];
-if (out.yearsDone < YEARS && out.firedAt == null) {
-  failures.push('未跑满 ' + YEARS + ' 年且未下课（实际 ' + out.yearsDone + '）');
-}
+  console.log(
+    '完赛 ' + out.yearsDone + ' 季' +
+    (out.firedAt != null ? ' · 第' + out.firedAt + '季下课' : '') +
+    ' · 终局 S' + out.season + ' ' + out.phase +
+    ' · 资金 ' + out.fund +
+    ' · 名单 ' + out.roster +
+    ' · 冠军史 ' + out.titleHist +
+    ' · 年度回顾 ' + out.reviews +
+    ' · 日志 ' + out.log
+  );
+  if (out.notes && out.notes.length) {
+    console.log('notes:');
+    out.notes.slice(0, 20).forEach(n => console.log('  · ' + n));
+  }
 
-if (failures.length) {
-  console.log('\n✗ 后期压测发现问题 ' + failures.length + ' 条：');
-  failures.forEach(f => console.log('  - ' + f));
+  const failures = out.errs || [];
+  if (out.yearsDone < YEARS && out.firedAt == null) {
+    failures.push('未跑满 ' + YEARS + ' 年且未下课（实际 ' + out.yearsDone + '）');
+  }
+  if (failures.length) {
+    allFailures.push(...failures.map(f => (forceWin ? '胜线: ' : '败线: ') + f));
+  }
+  totalYearsDone += out.yearsDone;
+});
+
+if (allFailures.length) {
+  console.log('\n✗ 后期压测发现问题 ' + allFailures.length + ' 条：');
+  allFailures.forEach(f => console.log('  - ' + f));
   process.exit(1);
 } else {
-  console.log('\n✓ 后期长赛季压测通过（' + out.yearsDone + ' 年无异常）');
+  console.log('\n✓ 后期长赛季压测通过（' + totalYearsDone + ' 季轨迹无异常）');
 }

@@ -8,7 +8,8 @@ const { dom } = makeDom();
 const out = vm.runInContext(`
 (function(){
   const R=[];
-  const ok=(c,m)=>{if(!c)R.push(m);};
+  let checks=0;
+  const ok=(c,m)=>{checks++;if(!c)R.push(m);};
 
   // ① uiDoNextAction 字符串参数归一化（旧死键按钮）
   S=newState('回归队','⚔');
@@ -164,9 +165,13 @@ const out = vm.runInContext(`
   try{renderClub();clubHtml=(document.getElementById('page-club')||{}).innerHTML||'';}catch(e){clubHtml='ERR:'+e.message;}
   ok(clubHtml.indexOf('uiDoNextAction(S)')>=0||clubHtml.indexOf('startCard(')>=0,'俱乐部页卡位赛无可执行入口: '+clubHtml.slice(0,200));
 
-  return R;
+  return { checks, errors: R };
 })()
 `, dom);
 
-out.forEach(m => T.check(false, m));
+const res = out || { checks: 0, errors: [] };
+const total = res.checks || 0;
+const errs = res.errors || [];
+for (let i = 0; i < total - errs.length; i++) T.ok();
+errs.forEach(m => T.fail(m));
 T.report();

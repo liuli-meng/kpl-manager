@@ -320,6 +320,13 @@ const out = vm.runInContext(`
     const wrap=(h17.match(/onclick="draftPick\\('/g)||[]).length;
     const btn=(h17.match(/<button[^>]*onclick="draftPick\\('/g)||[]).length;
     const prof=(h17.match(/showCareer\\(findPlayerCard/g)||[]).length;
+    /* ⑰c 点名网格必须被有界滚动容器包住：它是 .panel.collapsible 的直接子元素，
+       而该规则带 max-height + overflow:hidden（折叠动画前提）。20 张完整卡的自然高度
+       实测 4320px(375 视口) / 3683px(768) / 1929px(1280)，全部超过展开态上限 ——
+       不包容器就会被静默裁掉且没有滚动条（浏览器实测过）。这里做无浏览器可跑的静态兜底，
+       真机逐元素裁切断言在 verify-browser-ui。 */
+    const pooled=h17.match(/<div class="draft-pool"[^>]*overflow-y:auto[^>]*>\s*<div class="grid g4">/);
+    if(!pooled)fail('⑰c 点名网格没有被 overflow-y:auto 容器包住（会被 .panel.collapsible 的 max-height 静默裁掉）');
     if(!wrap)fail('⑰ 池卡片外层没有 onclick（点卡片本体没反应 → 会被当成选不了人）');
     else if(btn)fail('⑰ 内层按钮也挂了 onclick：点击会冒泡触发两次 draftPick');
     else if(prof)fail('⑰ 选秀卡仍带「选手档案」按钮（会弹「选手已不在」并干扰点名）');
@@ -328,6 +335,7 @@ const out = vm.runInContext(`
     const pid17=d17.pool[0]&&d17.pool[0].id;
     if(pid17&&!findPlayerCard(pid17))fail('⑰ 选秀池选手 findPlayerCard 查不到（档案入口坏）');
     else log('⑰b findPlayerCard 能命中选秀池');
+    if(pooled)log('⑰c 点名网格已包在有界滚动容器内（不会被可折叠面板的 max-height 裁掉）');
   }
 
   // ⑱ 老档 done/phase 不一致 → 归一化，否则面板显示进行中却一个按钮都不给
