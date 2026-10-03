@@ -135,7 +135,7 @@ function settleTempSeats(s,opts){
  if(expired.indexOf(s.teamName)>=0&&awards.indexOf(s.teamName)<0){
   s.seatLost=true;
   s.seatLostReason=(s.seatPlayoff&&!s.seatPlayoff.cancelled)?'tempSeatPlayoffLost':'tempSeatExpired';
-  try{logEvent(s,' 你的临时席位未获授予——按规则回到 K甲 参赛，日后可通过 K甲 冠军或资格赛重回 KPL');}catch(e){}
+  try{logEvent(s,' 你的临时席位未获授予——失去下赛季 KPL 参赛资格（真实规则：回 K甲 征战；本作尚未实现一队 K甲 征程，去向按后续执教流程承接）');}catch(e){}
  }
 
  // ⑦ 席位变动日志
@@ -211,7 +211,7 @@ function tempSeatsPanelHtml(){
  if(!s||!s.tempSeats||!s.tempSeats.length)return '';
  const atRisk=isTempSeat(s,s.teamName);
  let html=`<div class="panel"><h3>临时席位 <span class="tag">固定 16 + 临时 ${TEMP_SEAT_COUNT}</span></h3>
- <div class="hint" style="margin-bottom:8px"><b>临时席位为单赛季授权</b>：K甲 该赛段冠军直授 1 席，另 1 席由资格赛（上届 2 支 KPL 临时席位俱乐部 + K甲 亚/季军）决出。老牌豪门（AG/狼队/eStar 等）是固定席，永不降级。${atRisk?'<b class="red">你执教的是临时席——夺冠可直接保留（并取消该届资格赛）；未获授予者回 K甲 参赛。</b>':'你执教的俱乐部是固定席。'}</div>
+ <div class="hint" style="margin-bottom:8px"><b>临时席位为单赛季授权</b>：K甲 该赛段冠军直授 1 席，另 1 席由资格赛（上届 2 支 KPL 临时席位俱乐部 + K甲 亚/季军）决出。老牌豪门（AG/狼队/eStar 等）是固定席，永不降级。${atRisk?'<b class="red">你执教的是临时席——夺冠可直接保留（并取消该届资格赛）；未获授予者失去下赛季 KPL 参赛资格（真实规则回 K甲 征战）。</b>':'你执教的俱乐部是固定席。'}</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">${s.tempSeats.map(t=>`<span class="tag" style="border-color:var(--gold)">${crest(null,t,14)} ${t} · 临时${t===s.teamName?'（你）':''}</span>`).join('')}</div>`;
  if((s.tempSeatFixed||[]).length){
   html+=`<div class="hint">夺冠保留下赛季席位：${s.tempSeatFixed.map(t=>_escTxt(t)).join('、')}</div>`;

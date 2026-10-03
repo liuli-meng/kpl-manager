@@ -6,10 +6,12 @@
    出处：docs/GUIDE-席位与资格赛-改造指南-2026-10-03.md §4.2 */
 
 /* ── 开关（GUIDE §8）──
-   SEAT_SETTLE_PER_SPLIT: 权威指向 true（每赛季一次）
-   SEAT_LOSS_GOES_TO_KJIA: 权威指向 true（回 K甲 参赛） */
+   SEAT_SETTLE_PER_SPLIT: 已接线（season.js 的 newSeason 与 startSplit('summer') 各结算一次）。 */
 const SEAT_SETTLE_PER_SPLIT=true;   // true → 赛季切换（含夏季赛开幕）时结算；false → 仅 newSeason 处结算
-const SEAT_LOSS_GOES_TO_KJIA=true;  // true → 回 K甲 计积分；false → 复用 joblessGate/genJobOffers
+/* 【已移除的死开关】原 SEAT_LOSS_GOES_TO_KJIA 声明后无任何代码读取，翻不动任何行为（2026-10-03 核验发现）。
+   玩家失去临时席位后的去向（GUIDE §8 开关 2 / PLAN D3）仍是**未决项**：权威规则是"回 K甲 计积分"，
+   但本作尚未实现"玩家一队征战 K甲"的参赛主体，故当前席位到期后由既有教练/经理流程承接。
+   待 owner 拍板后接线，不要再留一个声明即死的开关。 */
 
 /* 资格赛独立 PRNG：杜绝消费全局 Math.random() 产生下游数值/门禁耦合 */
 let _seatRndSeed = 987654321;
@@ -38,12 +40,11 @@ function lastKjiaSplitResult(s){
 /* 构建资格赛参赛方 + 分档
    kglResult: lastKjiaSplitResult(s) 返回值
    prevTempSeats: 上届 KPL 2 支临时席位俱乐部（s.tempSeats 在调用前的值）
-   返回: { teams:[{name,src}], mode:'4to1Bracket'|'3to1RoundRobin'|'2to1Single', slots:1|2 }
+   返回: { teams:[{name,src}], mode:'4to1Bracket'|'3to1RoundRobin'|'2to1Single' }
    【设计偏差说明】：权威规则下 K甲冠亚军是否过审会决定名额数（冠亚军均未过审则有2个名额）；
    本版简化：不模拟俱乐部资质驳回，视为默认全部过审（K甲冠军直接获得1席，资格赛决出1席）。 */
 function buildSeatPlayoff(s,kglResult,prevTempSeats){
  const kglChamp=kglResult.champion;
- const slots=1; // 常态 1 个名额（过审简化）
 
  const teams=[];
  // 上届 2 支 KPL 临时席位俱乐部（排除 K甲冠军——它已直授）
@@ -70,7 +71,7 @@ function buildSeatPlayoff(s,kglResult,prevTempSeats){
  else if(teams.length===3) mode='3to1RoundRobin';
  // 4 队及以上 → 4 晋 1 胜败组淘汰
 
- return {teams:teams.slice(0,4),mode,slots};
+ return {teams:teams.slice(0,4),mode};
 }
 
 /* 模拟一场 BO7（4 胜制）
