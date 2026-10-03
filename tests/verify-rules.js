@@ -34,23 +34,22 @@ const out = vm.runInContext(`
     }
   }
 
-  // ② 临时席位初始化 + 年度收回
+  // ② 临时席位初始化 + 席位轮换（单赛季授权：K甲冠军直授 + 夺冠保留/资格赛）
   const s2=mk();
   initTempSeats(s2);
   if(!s2.tempSeats||s2.tempSeats.length!==TEMP_SEAT_COUNT)fail('临时席应='+TEMP_SEAT_COUNT+'，实际 '+(s2.tempSeats||[]).length);
   else{
     const t0=s2.tempSeats[0];
-    s2.annualPts={};
-    AI_TEAMS.forEach(t=>{s2.annualPts[t.name]=80;});
-    s2.annualPts[t0]=0; // 该临时席垫底
+    const t1=s2.tempSeats[1];
     initKjia(s2);
-    // 让一支非玩家 AI 拿 K甲冠军
-    const other=KJIA_AI_TEAMS[0];
+    // 另一支临时席队 t1 夺冠保留，本届资格赛取消，t0 临时席到期退出
+    s2.titleHistory=[{champ:t1,event:'春季赛',season:s2.season||1}];
+    const other=KJIA_AI_DEFS[0].name;
     s2.kjia.champ=other;
     settleTempSeats(s2);
-    if(s2.tempSeats.includes(t0))fail('垫底临时席未被收回');
-    else if(!s2.tempSeats.length)fail('收回后临时席为空');
-    else log('② 临时席：'+t0+' 收回 → 现席位 '+s2.tempSeats.join('/')+' · 只升不降');
+    if(s2.tempSeats.includes(t0))fail('未获授予临时席未退出');
+    else if(!s2.tempSeats.length)fail('轮换后临时席为空');
+    else log('② 临时席：'+t0+' 席位到期 → 现席位 '+s2.tempSeats.join('/')+' · 单赛季授权');
   }
 
   // ③ 直进青训营
