@@ -62,18 +62,34 @@ function settleTempSeats(s,opts){
  // ① 清理过期保留（一季化；老档无 expiry 视为已过期）
  s.tempSeatFixed=(s.tempSeatFixed||[]).filter(t=>(s.tempSeatFixedExpiry[t]||0)>=curSeason);
 
- // ② 夺冠判定：刚结束那届 KPL 冠军是临时席队 → 保留席位 + 取消资格赛
+ // ② 夺冠判定：刚结束那届 KPL 冠军是临时席队 → 保留席位 + 取消资格赛（出处：D-1 修复）
  const champTeams=[];
- (s.titleHistory||[]).forEach(t=>{
-  if(!t||!t.champ)return;
-  if(t.season!=null&&t.season!==curSeason)return;
-  if(isTempSeat(s,t.champ)&&!isFixedSeatTeam(t.champ)){
-   if(champTeams.indexOf(t.champ)<0)champTeams.push(t.champ);
-   s.tempSeatFixedExpiry[t.champ]=curSeason;
-   if(s.tempSeatFixed.indexOf(t.champ)<0)s.tempSeatFixed.push(t.champ);
-   try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——直接保留下赛季 KPL 临时席位（取消本届资格赛）');}catch(e){}
-  }
+ const concludedSeason = opts.concludedSeason != null
+  ? opts.concludedSeason
+  : (opts.triggeredBy === 'season' ? curSeason - 1 : curSeason);
+ const concludedSplit = opts.concludedSplit || null;
+
+ // 从 titleHistory 倒序寻找最近一届 KPL 联赛冠军（过滤掉挑杯/EWC/亚运会/年总）
+ const nonCupTitles = (s.titleHistory||[]).filter(t => {
+  if(!t || !t.champ) return false;
+  const ev = t.event || '';
+  if(ev === '挑战者杯' || ev === 'EWC' || ev === '亚运会' || ev === '年总') return false;
+  return true;
  });
+
+ const lastLeagueChamp = nonCupTitles.length ? nonCupTitles[nonCupTitles.length - 1] : null;
+ if(lastLeagueChamp){
+  // 核对赛季与赛段（若有指定且记录中有标注）
+  const seasonMatch = concludedSeason == null || lastLeagueChamp.season == null || lastLeagueChamp.season === concludedSeason;
+  const splitMatch = concludedSplit == null || lastLeagueChamp.split == null || lastLeagueChamp.split === concludedSplit;
+  if(seasonMatch && splitMatch && isTempSeat(s, lastLeagueChamp.champ) && !isFixedSeatTeam(lastLeagueChamp.champ)){
+   const champ = lastLeagueChamp.champ;
+   if(champTeams.indexOf(champ) < 0) champTeams.push(champ);
+   s.tempSeatFixedExpiry[champ] = curSeason;
+   if(s.tempSeatFixed.indexOf(champ) < 0) s.tempSeatFixed.push(champ);
+   try{logEvent(s,' '+champ+' 夺得'+(lastLeagueChamp.event||'冠军')+'——直接保留下赛季 KPL 临时席位（取消本届资格赛）');}catch(e){}
+  }
+ }
 
  // 保留席仍占一个临时席，只排除它参与轮换；不得踢出池子
  s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t));

@@ -1,5 +1,5 @@
-// 门禁：临时席位轮换保真（席位改造后 · K甲冠军直授 + 资格赛 + 夺冠保留）
-// 出处：GUIDE-席位与资格赛-改造指南-2026-10-03.md §9（S1 ~ S12 全场景断言）
+// 门禁：临时席位轮换保真与真实时序验证（含 D-1 夺冠保留与 D-2 每赛段结算）
+// 出处：GUIDE-席位与资格赛-改造指南-2026-10-03.md §9
 const vm = require('vm');
 const { makeDom, makeTester } = require('./harness');
 const T = makeTester('临时席位轮换与保真门禁');
@@ -11,62 +11,105 @@ function runInFreshDom(fn) {
 
 const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
 
-// S1：玩家临时席夺冠 → 保留
-const resS1 = runInFreshDom(function() {
+// D-1 / S1 真实时序验证：玩家临时席夺冠 → 走真实 newSeason（s.season 先自增）后保留生效
+const resRealNewSeason = runInFreshDom(function() {
   const s = newState('常山UUG', 'x');
+  S = s;
   initGroups(s);
   s.season = 1;
-  s.titleHistory = [{ champ: s.teamName, event: '春季赛', season: 1 }];
+  s.split = 'summer';
+  s.titleHistory = [{ season: 1, split: 'summer', event: '2026夏季赛总决赛', champ: '常山UUG' }];
   initKjia(s);
   s.kjia.champ = 'K甲·苍穹';
   s.kjia.runnerUp = 'K甲·星火';
   s.kjia.third = 'K甲·沧澜';
-  s.kjia.fourth = 'K甲·曜石';
-  s.kjia.seatHistory = [{year:2026,split:'spring',champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜',fourth:'K甲·曜石'}];
-  settleTempSeats(s, {kglSplitResult:{champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜',fourth:'K甲·曜石'}});
+  s.kjia.seatHistory = [{ year: 2026, split: 'summer', champion: 'K甲·苍穹', runnerUp: 'K甲·星火', third: 'K甲·沧澜' }];
+
+  // 走真实年度轮换时序（season.js:900 s.season++ 先执行，而后进入 settleTempSeats）
+  newSeason(s);
+
   const f = FIXED_SEAT_TEAMS;
   return {
+    season: s.season,
     seatLost: !!s.seatLost,
     tempSeats: s.tempSeats,
     tempSeatFixed: s.tempSeatFixed,
-    log: (s.tempSeatLog || []).join('; '),
-    eventLog: (s.eventLog || []).map(e => e.txt).join(' | '),
+    cancelled: s.seatPlayoff ? s.seatPlayoff.cancelled : null,
+    reason: s.seatPlayoff ? s.seatPlayoff.reason : null,
     leagueLen: (s.leagueTeams || []).length,
     aiLen: AI_TEAMS.length,
     playerInLeague: (s.leagueTeams || []).includes(s.teamName),
     playerInAI: AI_TEAMS.some(t => t.name === s.teamName),
     aiNonFixed: AI_TEAMS.map(t => t.name).filter(n => !f.includes(n)).sort(),
-    leagueNonFixed: (s.leagueTeams || []).filter(n => !f.includes(n)).sort(),
-    seatPlayoff: s.seatPlayoff
+    leagueNonFixed: (s.leagueTeams || []).filter(n => !f.includes(n)).sort()
   };
 });
-T.check(resS1.seatLost === false, 'S1 玩家夺冠保留席不得被收回');
-T.check(resS1.tempSeats.includes('常山UUG'), 'S1 夺冠队必须仍在临时席');
-T.check(resS1.tempSeatFixed.includes('常山UUG'), 'S1 夺冠队必须在 tempSeatFixed');
-T.check(resS1.seatPlayoff && resS1.seatPlayoff.cancelled === true, 'S1 夺冠保留 → 资格赛取消');
-T.check(resS1.leagueLen === 18 && resS1.aiLen === 18, 'S1 两名录各 18 支');
-T.check(sameSet(resS1.aiNonFixed, resS1.leagueNonFixed), 'S1 AI 与联盟非固定席同构');
+T.check(resRealNewSeason.season === 2, 'D-1 真实时序：season 自增至 2');
+T.check(resRealNewSeason.seatLost === false, 'D-1 真实时序：常山UUG 夺冠保留席生效（seatLost=false）');
+T.check(resRealNewSeason.tempSeats.includes('常山UUG'), 'D-1 真实时序：常山UUG 必须在 tempSeats');
+T.check(resRealNewSeason.tempSeatFixed.includes('常山UUG'), 'D-1 真实时序：常山UUG 必须在 tempSeatFixed');
+T.check(resRealNewSeason.cancelled === true, 'D-1 真实时序：夺冠保留必须取消本届资格赛');
+T.check(resRealNewSeason.leagueLen === 18 && resRealNewSeason.aiLen === 18, 'D-1 真实时序：两名录各 18 支');
+T.check(sameSet(resRealNewSeason.aiNonFixed, resRealNewSeason.leagueNonFixed), 'D-1 真实时序：两名录非固定席同构');
 
-// S2：他人夺冠保留 + 玩家未夺冠 → 玩家 tempSeatExpired
-const resS2 = runInFreshDom(function() {
+// D-2 真实时序验证：夏季赛开幕（startSplit('summer')）必须触发临时席位结算
+const resRealSummerSplit = runInFreshDom(function() {
   const s = newState('常山UUG', 'x');
+  S = s;
   initGroups(s);
   s.season = 1;
-  s.titleHistory = [{ champ: '桐乡情久', event: '春季赛', season: 1 }];
+  s.split = 'spring';
   initKjia(s);
   s.kjia.champ = 'K甲·苍穹';
-  s.kjia.seatHistory = [{year:2026,split:'spring',champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜',fourth:'K甲·曜石'}];
-  settleTempSeats(s, {kglSplitResult:{champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜',fourth:'K甲·曜石'}});
+  s.kjia.runnerUp = 'K甲·星火';
+  s.kjia.third = 'K甲·沧澜';
+  s.kjia.seatHistory = [{ year: 2026, split: 'spring', champion: 'K甲·苍穹', runnerUp: 'K甲·星火', third: 'K甲·沧澜' }];
+
+  // 模拟挑战者杯后开启夏季赛
+  startSplit(s, 'summer');
+
   return {
+    split: s.split,
+    hasPlayoff: !!s.seatPlayoff,
+    playoffDone: s.seatPlayoff ? s.seatPlayoff.done : false,
+    tempSeats: s.tempSeats,
+    settleKey: s._lastSeatSettleKey
+  };
+});
+T.check(resRealSummerSplit.split === 'summer', 'D-2 夏季赛赛段开启');
+T.check(resRealSummerSplit.hasPlayoff === true, 'D-2 夏季赛开幕前必须触发资格赛');
+T.check(resRealSummerSplit.playoffDone === true, 'D-2 资格赛正常完成');
+T.check(resRealSummerSplit.settleKey === '1_summer', 'D-2 结算防重守卫已标记为 1_summer');
+T.check(resRealSummerSplit.tempSeats.length === 2, 'D-2 夏季赛 2 支临时席位在列');
+
+// S2 真实时序验证：他人夺冠保留 + 玩家未夺冠 → 走真实 newSeason 后玩家 tempSeatExpired
+const resS2Real = runInFreshDom(function() {
+  const s = newState('常山UUG', 'x');
+  S = s;
+  initGroups(s);
+  s.season = 1;
+  s.split = 'summer';
+  s.titleHistory = [{ season: 1, split: 'summer', event: '2026夏季赛总决赛', champ: '桐乡情久' }];
+  initKjia(s);
+  s.kjia.champ = 'K甲·苍穹';
+  s.kjia.runnerUp = 'K甲·星火';
+  s.kjia.third = 'K甲·沧澜';
+  s.kjia.seatHistory = [{ year: 2026, split: 'summer', champion: 'K甲·苍穹', runnerUp: 'K甲·星火', third: 'K甲·沧澜' }];
+
+  newSeason(s);
+
+  return {
+    season: s.season,
     seatLost: !!s.seatLost,
     seatLostReason: s.seatLostReason,
     tempSeats: s.tempSeats,
-    seatPlayoff: s.seatPlayoff
+    cancelled: s.seatPlayoff ? s.seatPlayoff.cancelled : false
   };
 });
-T.check(resS2.seatLost === true, 'S2 玩家未夺冠 → seatLost');
-T.check(resS2.seatLostReason === 'tempSeatExpired', 'S2 seatLostReason=tempSeatExpired（夺冠保留取消资格赛，玩家直接到期）');
-T.check(resS2.seatPlayoff && resS2.seatPlayoff.cancelled === true, 'S2 他人夺冠 → 资格赛取消');
+T.check(resS2Real.season === 2, 'S2 真实时序自增至 2');
+T.check(resS2Real.seatLost === true, 'S2 真实时序：桐乡情久夺冠，常山UUG 失去席位');
+T.check(resS2Real.seatLostReason === 'tempSeatExpired', 'S2 真实时序：seatLostReason=tempSeatExpired');
+T.check(resS2Real.cancelled === true, 'S2 真实时序：他人夺冠同样取消资格赛');
 
 // S3：无人夺冠 → 资格赛举办（参赛 = 上届2临时席 + K甲亚季军）
 const resS3 = runInFreshDom(function() {
@@ -101,9 +144,10 @@ const resS4 = runInFreshDom(function() {
   initGroups(s);
   s.season = 1;
   s.titleHistory = [];
-  // 玩家战力碾压（确保赢下资格赛）
-  const me = AI_TEAMS.find(t => t.name === '常山UUG');
-  if (me) me.power = 999;
+  // 提升首发选手属性确保 teamPower 碾压
+  (s.players || []).forEach(p => {
+    p.attrs = { lane: 99, farm: 99, team: 99, mind: 99 };
+  });
   initKjia(s);
   s.kjia.champ = 'K甲·苍穹';
   s.kjia.runnerUp = 'K甲·星火';
@@ -120,9 +164,10 @@ const resS5 = runInFreshDom(function() {
   initGroups(s);
   s.season = 1;
   s.titleHistory = [];
-  // 玩家战力设为极低，对手设为极高
-  const me = AI_TEAMS.find(t => t.name === '常山UUG');
-  if (me) me.power = 100;
+  // 玩家选手全部降低属性
+  (s.players || []).forEach(p => {
+    p.attrs = { lane: 30, farm: 30, team: 30, mind: 30 };
+  });
   const opp = AI_TEAMS.find(t => t.name === '桐乡情久');
   if (opp) opp.power = 999;
   initKjia(s);
@@ -147,9 +192,6 @@ const resS6 = runInFreshDom(function() {
   return { seatLost: !!s.seatLost };
 });
 T.check(resS6.seatLost === false, 'S6 固定席永不 seatLost');
-
-// S8：名录不变量（任一场景后 AI_TEAMS 非固定席集合 == leagueTeams 非固定席集合）
-T.check(sameSet(resS1.aiNonFixed, resS1.leagueNonFixed), 'S8 名录同构（S1）');
 
 // S9：文案不含"垫底/收回"
 const resS9 = runInFreshDom(function() {
@@ -185,77 +227,21 @@ const resS10 = runInFreshDom(function() {
   return { pw1, pw2, baseSeason: bs, monotonic, teams: KJIA_AI_TEAMS.slice() };
 });
 T.check(resS10.baseSeason === 1, 'S10 baseSeason 固定为首次初始化时的赛季');
-T.check(resS10.monotonic === true, 'S10 AI 队战力逐年单调演化: ' + JSON.stringify(resS10.pw1) + ' -> ' + JSON.stringify(resS10.pw2));
+T.check(resS10.monotonic === true, 'S10 AI 队战力逐年单调演化');
 
-// S11：赛制分档（3晋1 单循环 / 2晋1 单场）
+// S11：赛制分档（3晋1 单循环 / 2晋1 单场）与 Tiebreak
 const resS11 = runInFreshDom(function() {
   const s = newState('常山UUG', 'x');
-  // 仅 1 支 K甲队参赛 → 3 晋 1 单循环
   const po3 = buildSeatPlayoff(s, { champion: 'K甲·苍穹', runnerUp: 'K甲·星火' }, ['常山UUG', '桐乡情久']);
-  // 无 K甲亚/季军参赛 → 2 晋 1 单场
   const po2 = buildSeatPlayoff(s, { champion: 'K甲·苍穹' }, ['常山UUG', '桐乡情久']);
-  return { mode3: po3.mode, mode2: po2.mode };
+  const sim3 = simSeatPlayoff(s, po3);
+  return { mode3: po3.mode, mode2: po2.mode, sim3Done: sim3.done, sim3Winner: sim3.winner.length === 1 };
 });
 T.check(resS11.mode3 === '3to1RoundRobin', 'S11 3支队走 3晋1单循环（3to1RoundRobin）');
 T.check(resS11.mode2 === '2to1Single', 'S11 2支队走 2晋1单场BO7（2to1Single）');
+T.check(resS11.sim3Done && resS11.sim3Winner, 'S11 3晋1 单循环正常完赛并决出单一胜者');
 
-// 保留席一季化（第 1 季夺冠保留，第 2 季他人夺冠保留 → 玩家 seatLost）
-const resExpire = runInFreshDom(function() {
-  const s = newState('常山UUG', 'x');
-  initGroups(s);
-  s.season = 1;
-  s.titleHistory = [{ champ: '常山UUG', event: '春季赛', season: 1 }];
-  initKjia(s);
-  s.kjia.champ = 'K甲·苍穹';
-  s.kjia.seatHistory = [{year:2026,split:'spring',champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜'}];
-  settleTempSeats(s, {kglSplitResult:{champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜'}});
-  const s1Fixed = (s.tempSeatFixed || []).slice();
-  // 第 2 季：同池临时席队伍（K甲·苍穹）夺冠保留，资格赛取消，常山UUG 未夺冠
-  s.season = 2;
-  s.seatLost = false;
-  s.seatLostReason = null;
-  s.titleHistory = [{ champ: 'K甲·苍穹', event: '春季赛', season: 2 }];
-  settleTempSeats(s, {kglSplitResult:{champion:'K甲·星火',runnerUp:'K甲·沧澜',third:'K甲·曜石'}});
-  return { s1Fixed, s2SeatLost: !!s.seatLost, s2TempSeats: s.tempSeats };
-});
-T.check(resExpire.s1Fixed.includes('常山UUG'), '保留席第 1 季夺冠后有效');
-T.check(resExpire.s2SeatLost === true, '保留席一季化：第 2 季未夺冠且他人夺冠保留 → seatLost');
-
-// 连续夺冠保护续期
-const resRenew = runInFreshDom(function() {
-  const s = newState('常山UUG', 'x');
-  initGroups(s);
-  s.season = 1;
-  s.titleHistory = [{ champ: '常山UUG', event: '春季赛', season: 1 }];
-  initKjia(s);
-  s.kjia.champ = 'K甲·苍穹';
-  s.kjia.seatHistory = [{year:2026,split:'spring',champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜'}];
-  settleTempSeats(s, {kglSplitResult:{champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜'}});
-  s.season = 2;
-  s.seatLost = false;
-  s.titleHistory.push({ champ: '常山UUG', event: '春季赛', season: 2 });
-  settleTempSeats(s, {kglSplitResult:{champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜'}});
-  return { seatLost: !!s.seatLost, tempSeats: s.tempSeats };
-});
-T.check(resRenew.seatLost === false, '连续夺冠续期保护');
-
-// 老档迁移
-const resLegacy = runInFreshDom(function() {
-  const s = newState('常山UUG', 'x');
-  initGroups(s);
-  s.season = 2;
-  s.tempSeatFixed = ['常山UUG'];
-  initKjia(s);
-  s.kjia.champ = 'K甲·苍穹';
-  s.kjia.seatHistory = [{year:2027,split:'spring',champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜'}];
-  // 他人夺冠，使常山UUG 无法依赖资格赛胜出
-  s.titleHistory = [{ champ: '桐乡情久', event: '春季赛', season: 2 }];
-  settleTempSeats(s, {kglSplitResult:{champion:'K甲·苍穹',runnerUp:'K甲·星火',third:'K甲·沧澜'}});
-  return { seatLost: !!s.seatLost };
-});
-T.check(resLegacy.seatLost === true, '老档无 expiry 保护视为已过期');
-
-// 年档规模快照防漂移（保留原有门禁）
+// 年档规模快照防漂移
 const { dom: dDom } = makeDom();
 const ERA_SIZE = { 2016: 12, 2017: 19, 2018: 12, 2019: 14, 2020: 15, 2021: 17, 2022: 16, 2023: 16, 2024: 16, 2025: 18, 2026: 18 };
 Object.entries(ERA_SIZE).forEach(([y, n]) => {

@@ -1034,11 +1034,17 @@ function newSeason(s){
  s.fund+=220; // 联盟赛季启动金（年度轮换只发一次）
  logEvent(s,' 联盟调整工资帽：本年薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
  try{
-  if(typeof settleTempSeats==='function'&&!s._seatSettledThisSplit){
-   settleTempSeats(s,{kglSplitResult:typeof lastKjiaSplitResult==='function'?lastKjiaSplitResult(s):{},triggeredBy:'season'});
-   s._seatSettledThisSplit=true;
+  const settleKey = (s.season||1) + '_spring';
+  if(typeof settleTempSeats==='function' && s._lastSeatSettleKey !== settleKey){
+   s._lastSeatSettleKey = settleKey;
+   settleTempSeats(s,{
+    kglSplitResult: typeof lastKjiaSplitResult==='function'?lastKjiaSplitResult(s):{},
+    triggeredBy: 'season',
+    concludedSeason: (s.season||1) - 1,
+    concludedSplit: 'summer'
+   });
   }
- }catch(e){} // 席位结算（每赛季一次；传入刚结束的 K甲 赛段结果）
+ }catch(e){} // 席位结算（年度轮换进入新春季赛；传入刚结束的 K甲 夏季赛结果）
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
  s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过
@@ -1061,10 +1067,24 @@ function newSeason(s){
  年龄/合同/退役/工资帽结算只在年度轮换（newSeason）做，夏季赛年中直开（不老化）。 */
 function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
- s._seatSettledThisSplit=false; // 每赛段重置席位结算守卫（GUIDE §4.4：防 newSeason+startSplit 重复结算）
- // 换赛段必须清掉挂起推进：_afterMatch 是闭包（不进存档），春季赛最后一场杯赛若把它留在内存里，
- // 夏季赛点「继续」会执行 challengerStep 而不是推进当天（match.js:663 优先跑 after），白丢一天
  s._afterMatch=null;
+ // 席位结算接线（D-2 修复）：若 SEAT_SETTLE_PER_SPLIT=true 且开启夏季赛，结算夏季赛临时席位
+ if(split==='summer'&&typeof SEAT_SETTLE_PER_SPLIT!=='undefined'&&SEAT_SETTLE_PER_SPLIT){
+  const settleKey=(s.season||1)+'_summer';
+  if(s._lastSeatSettleKey!==settleKey){
+   s._lastSeatSettleKey=settleKey;
+   try{
+    if(typeof settleTempSeats==='function'){
+     settleTempSeats(s,{
+      kglSplitResult:typeof lastKjiaSplitResult==='function'?lastKjiaSplitResult(s):{},
+      triggeredBy:'split',
+      concludedSeason:s.season||1,
+      concludedSplit:'spring'
+     });
+    }
+   }catch(e){}
+  }
+ }
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
  if(s.mode==='player')applyPlayerMove(s); // 赛段间转会：接受报价后在此正式加盟新队（归属先定，后面征召/引援才按新队算）
  aiTransferWindow(s); // AI 俱乐部生态照常演化（与经理档同一时点：在构建市场之前）

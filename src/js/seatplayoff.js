@@ -8,8 +8,17 @@
 /* ── 开关（GUIDE §8）──
    SEAT_SETTLE_PER_SPLIT: 权威指向 true（每赛季一次）
    SEAT_LOSS_GOES_TO_KJIA: 权威指向 true（回 K甲 参赛） */
-const SEAT_SETTLE_PER_SPLIT=true;   // true → startSplit 处结算；false → newSeason 处（现状）
+const SEAT_SETTLE_PER_SPLIT=true;   // true → 赛季切换（含夏季赛开幕）时结算；false → 仅 newSeason 处结算
 const SEAT_LOSS_GOES_TO_KJIA=true;  // true → 回 K甲 计积分；false → 复用 joblessGate/genJobOffers
+
+/* 资格赛独立 PRNG：杜绝消费全局 Math.random() 产生下游数值/门禁耦合 */
+let _seatRndSeed = 987654321;
+function seatRandom() {
+ _seatRndSeed = (_seatRndSeed + 0x6D2B79F5) | 0;
+ let t = Math.imul(_seatRndSeed ^ (_seatRndSeed >>> 15), 1 | _seatRndSeed);
+ t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+ return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 
 /* 取 K甲 刚结束赛段的排名结果（供 settleTempSeats 调用）
    读 s.kjia.seatHistory[0]（kjia.js finishKjiaSplit 已留档） */
@@ -29,12 +38,12 @@ function lastKjiaSplitResult(s){
 /* 构建资格赛参赛方 + 分档
    kglResult: lastKjiaSplitResult(s) 返回值
    prevTempSeats: 上届 KPL 2 支临时席位俱乐部（s.tempSeats 在调用前的值）
-   返回: { teams:[{name,src}], mode:'4to1Bracket'|'3to1RoundRobin'|'2to1Single', slots:1|2 } */
+   返回: { teams:[{name,src}], mode:'4to1Bracket'|'3to1RoundRobin'|'2to1Single', slots:1|2 }
+   【设计偏差说明】：权威规则下 K甲冠亚军是否过审会决定名额数（冠亚军均未过审则有2个名额）；
+   本版简化：不模拟俱乐部资质驳回，视为默认全部过审（K甲冠军直接获得1席，资格赛决出1席）。 */
 function buildSeatPlayoff(s,kglResult,prevTempSeats){
  const kglChamp=kglResult.champion;
- // K甲冠军直授 1 席 → 资格赛出 1 个名额（常态）
- // K甲冠亚军均未过审 → 资格赛出 2 个名额（本版简化：游戏中不模拟"过审"，视为全部过审）
- const slots=1; // 常态 1 个名额
+ const slots=1; // 常态 1 个名额（过审简化）
 
  const teams=[];
  // 上届 2 支 KPL 临时席位俱乐部（排除 K甲冠军——它已直授）
@@ -65,11 +74,12 @@ function buildSeatPlayoff(s,kglResult,prevTempSeats){
 }
 
 /* 模拟一场 BO7（4 胜制）
-   返回 {winner, loser, ws, ls}（ws/ls 为胜方/负方局数） */
+   返回 {winner, loser, ws, ls}（ws/ls 为胜方/负方局数）
+   使用独立 PRNG seatRandom()，杜绝污染主随机流 */
 function simBo7(pwA,pwB,nameA,nameB){
  let mw=0,ow=0;
  for(let i=1;i<=7&&mw<4&&ow<4;i++){
-  if(Math.random()<winChance(pwA,pwB))mw++;else ow++;
+  if(seatRandom()<winChance(pwA,pwB))mw++;else ow++;
  }
  return mw>ow
   ?{winner:nameA,loser:nameB,ws:mw,ls:ow}
@@ -117,16 +127,32 @@ function simSeatPlayoff(s,po){
 
  if(po.mode==='3to1RoundRobin'){
   // 3 晋 1 单循环积分赛 BO7（GUIDE §2.2）
+  // 规则同分 tiebreak：胜场积分 -> 净胜局差 -> 总胜局 -> 胜负关系
   const names=po.teams.map(t=>t.name);
-  const pts={};names.forEach(n=>pts[n]=0);
+  const pts={}, diff={}, pwWon={}, h2h={};
+  names.forEach(n=>{ pts[n]=0; diff[n]=0; pwWon[n]=0; h2h[n]={}; });
   for(let i=0;i<names.length;i++){
    for(let j=i+1;j<names.length;j++){
-    const r=simBo7(pw[names[i]],pw[names[j]],names[i],names[j]);
+    const na=names[i], nb=names[j];
+    const r=simBo7(pw[na],pw[nb],na,nb);
     pts[r.winner]++;
-    rounds.push({desc:names[i]+' vs '+names[j]+' → '+r.winner+' 胜（'+r.ws+':'+r.ls+'）'});
+    h2h[r.winner][r.loser]=1;
+    h2h[r.loser][r.winner]=-1;
+    const aWins = r.winner === na ? r.ws : r.ls;
+    const bWins = r.winner === nb ? r.ws : r.ls;
+    diff[na] += (aWins - bWins);
+    diff[nb] += (bWins - aWins);
+    pwWon[na] += aWins;
+    pwWon[nb] += bWins;
+    rounds.push({desc:na+' vs '+nb+' → '+r.winner+' 胜（'+r.ws+':'+r.ls+'）'});
    }
   }
-  const ranked=names.sort((a,b)=>pts[b]-pts[a]);
+  const ranked=names.sort((a,b)=>{
+   if(pts[b]!==pts[a]) return pts[b]-pts[a];
+   if(diff[b]!==diff[a]) return diff[b]-diff[a];
+   if(pwWon[b]!==pwWon[a]) return pwWon[b]-pwWon[a];
+   return (h2h[b][a]||0);
+  });
   return {winner:[ranked[0]],rounds,done:true};
  }
 
