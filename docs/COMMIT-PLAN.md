@@ -27,7 +27,7 @@
 1. 按**主题**拆 commit，不要一个「大杂烩」  
 2. 每次 commit 后尽量 `npm test`（或至少 `test:fast` + 相关 verify）  
 3. **`game.html`** 与最后一次源码/构建相关 commit 绑在一起，避免 CI `git diff --exit-code` 红  
-4. 工作区里的探针 / 实验 / 临时审计（`.bug-hunt/`、`OPTIMIZE-AUDIT*.md`、`bgm*` 草稿、`tests/playthrough/*`）**默认不推**，除非你要留档  
+4. 工作区里的探针 / 实验 / 临时审计（`.bug-hunt/`、`bgm*` 草稿、`tests/playthrough/*`）**默认不推**，除非你要留档  
 5. 你点头后我们再按下面顺序 `git add` + commit + push  
 
 ---
@@ -155,13 +155,13 @@ git status      # 确认 game.html 有变更
 | 路径 | 原因 |
 |---|---|
 | `.bug-hunt/` | 诊断草稿 |
-| `OPTIMIZE-AUDIT.md` / `OPTIMIZE-AUDIT-2.md` / `OPTIMIZATION-SUMMARY.md` | 审计笔记，可改造成正式 docs 再推 |
-| `ROADMAP-2026.md` / `ROADMAP-FULL-2026.md` | 路线图，确认要公开再推 |
+| ~~`OPTIMIZE-AUDIT.md` / `OPTIMIZE-AUDIT-2.md` / `OPTIMIZATION-SUMMARY.md`~~ | **2026-10-03 已删除**（过期审计笔记；若需留档可在回收站恢复） |
+| ~~`ROADMAP-2026.md` / `ROADMAP-FULL-2026.md`~~ | **2026-10-03 已删除**（过期路线图） |
 | `src/js/bgm*.js`、`bgtmp.js`、`bpm-addition.py`、`perf-monitor.js` | 未完成/实验 |
 | `tests/playthrough/*` | 手工探针，多数未挂 npm test |
 | `tests/verify-*.js` 里**已删除**的 `tests/probe-*.js` | 删除本身可以进 C2/C4；新增未挂链用例慎推 |
 
-若要把 ROADMAP/OPTIMIZE 收成公开文档，建议另开 C6：`docs/roadmap.md` + README 链接，不要和引擎修复混在一个 commit。
+（原「把 ROADMAP/OPTIMIZE 收成公开文档、另开 C6」的建议已随上述文件于 2026-10-03 删除而作废。）
 
 ---
 

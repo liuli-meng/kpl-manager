@@ -192,6 +192,7 @@ function bizOps(tag,errs,notes){
   }catch(e){errs.push(tag+' biz: '+(e&&e.message||e));}
 }
 function sim(nYears,win){
+  if(typeof installEra==='function')installEra(null);
   S=newState('后期压测','⚔️');
   fillRoster(S,'mid','star');
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
@@ -212,7 +213,7 @@ function sim(nYears,win){
     const e1=deepChk('Y'+(y+1)+'完赛');
     if(e1)errs.push(e1);
     try{bizOps('Y'+(y+1),errs,notes);}catch(e){errs.push('Y'+(y+1)+' biz外层: '+(e&&e.message||e));}
-    if(S.board&&S.board.fired&&firedAt==null){
+    if((S.board&&S.board.fired||S.seatLost)&&firedAt==null){
       firedAt=S.season;
       try{nextDay(S);}catch(e){errs.push('解约后 nextDay: '+e.message);}
       break;

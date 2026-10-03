@@ -143,12 +143,13 @@ function genSeasonPlayer(s,def){
  return p;
 }
 /* 青训递补选手定义（不占用联盟注册名额，与玩家、各队均不重名）
- 底子随赛季水涨船高（每赛季+2，封顶+14）：明星到龄退役后联盟战力不至于塌方 */
+ 底子随时代演进水涨船高：S1-S4 与首季基线完全一致，S5 起随职业化演化平滑递增，消除固定 S8 硬触顶走平 */
 function genAcademyDef(pos,usedNames,season){
  const name=typeof ACADEMY_NAMES!=='undefined'?poolName(ACADEMY_NAMES,usedNames):combName(usedNames);
  usedNames.add(name);
  const cands=heroesNow().filter(h=>h.pos[0]===pos);
- const boost=Math.min(2*((season||1)-1),14);
+ const sn=season||1;
+ const boost=sn<=4?2*(sn-1):6+Math.round((sn-4)*1.5);
  const b=v=>clamp(v+boost,40,99);
  // 位置专精底子（旧版全员 [68,68,70,72] 游走向，中路/对抗路看起来「不对位」）
  const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,68,72):[68,68,70,72];
@@ -271,13 +272,14 @@ function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额�
  return true;
 }
 /* 新星出道：生成一名新秀 def 进入联盟流转（补真实选手的退役折损）
- 底子随赛季水涨船高（每赛季+2，封顶+12）：新生代一代比一代强，联盟整体缓慢上探 */
+ 底子随时代演化水涨船高：S1-S4 与首季基线完全一致，S5 起随职业化演化平滑递增，消除固定 S7 硬触顶走平 */
  function genStarDef(s,usedNames,forcePos){
  const pos=forcePos||pick(POS_ORDER);
  const name=poolName(ACADEMY_NAMES,usedNames); // 池尽回退 combName，不再生成「新星N」
  usedNames.add(name);
  const sk=(typeof posSkillPool==='function')?pick(posSkillPool(pos)):['team','团战体系','团战属性额外+10%'];
- const boost=Math.min(2*((s.season||1)-1),12);
+ const sn=(s&&s.season)||1;
+ const boost=sn<=4?2*(sn-1):6+Math.round((sn-4)*1.4);
  const b=v=>clamp(v+boost,40,99);
  const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,74,84):[0,1,2,3].map(()=>rnd(74,84));
  return {id:'ns_'+s.season+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:['青训'],
@@ -1408,9 +1410,15 @@ function renewPlayer(s,pid,years,offerWage){
  const y=Math.min(4,Math.max(1,years||RENEW_YEARS));
  const cost=renewCostN(p,y);
  if(s.fund<cost){toast('资金不足（续约签字费 '+cost+'万）');return;}
- s.fund-=cost;
  const nw=offerWage?Math.round(offerWage):Math.round(wageOf(overall(p))*((p.val||100)/100)); // 报价成交按谈定年薪，否则按表现重定
  const wageFinal=Math.min(PLAYER_WAGE_MAX,Math.max(1,nw)); // 个人顶薪封顶
+ const hardCap=(typeof hardWageCap==='function'?hardWageCap(s):Math.round(s.wageCap*1.35));
+ const newTotalWage=weeklyWage(s)-(p.wage||0)+wageFinal;
+ if(newTotalWage>hardCap){
+  toast('续约被联盟否决：续约后全队年薪 '+newTotalWage+'万 超过硬工资帽（'+hardCap+'万 · 软帽135%），严禁超帽续约！');
+  return;
+ }
+ s.fund-=cost;
  if(wageFinal>p.wage)logEvent(s,' '+p.name+' 续约涨薪：'+p.wage+'万 → '+wageFinal+'万（表现好值得加薪）');
  else if(wageFinal<p.wage)logEvent(s,' '+p.name+' 接受降薪续约：'+p.wage+'万 → '+wageFinal+'万');
  p.wage=wageFinal;

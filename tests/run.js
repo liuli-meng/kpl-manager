@@ -113,6 +113,9 @@ const SUITES = [
   { id: 'verify-browser-ui', file: 'tests/verify-browser-ui.js', label: '浏览器真机渲染与触控门禁' },
   { id: 'verify-coach-mode', file: 'tests/verify-coach-mode.js', label: '教练身份回归与下课闸门' },
   { id: 'verify-fired-exit', file: 'tests/verify-fired-exit.js', label: '下课再就业与待业态整页收口' },
+  { id: 'verify-kpl-fidelity', file: 'tests/verify-kpl-fidelity.js', label: '真实KPL席位与名录保真度' },
+  { id: 'verify-multiseason', file: 'tests/verify-multiseason.js', label: '多赛季自然演进门禁' },
+  { id: 'verify-seat-rotation', file: 'tests/verify-seat-rotation.js', label: '临时席位轮换与名录保真度' },
   { id: 'fuzz', file: 'tests/fuzz.js', label: '模糊压测', args: ['--seed=424243'] },
 ];
 

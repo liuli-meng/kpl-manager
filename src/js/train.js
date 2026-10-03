@@ -18,6 +18,12 @@ function doTrain(s,pid,attr){
  if(blocked){toast(blocked);return;}
  if(p.energy<10){toast(`${p.name} 体力不足`);return;}
  if(s.fund<13){toast('资金不足（训练需 13万）');return;}
+ if(s.wageDefaulted>0&&Math.random()<0.5){
+  p.energy=clamp((p.energy==null||!isFinite(p.energy)?100:p.energy)-10,0,ENERGY_MAX);
+  s.trained=true;
+  logEvent(s,` 训练消极：俱乐部近期遭遇欠薪，${p.name} 训练态度消极，未能获得提升`);
+  save();renderAll();return;
+ }
  // 状态 + 个人天花板：不再保证上涨（后期不能靠刷训练无敌）
  const role=(s.mode==='player'&&typeof playerRole==='function')?playerRole(s):'rot';
  const r=(typeof trainOutcome==='function')?trainOutcome(role,p,attr):{gain:rnd(0,1),note:'训练'};

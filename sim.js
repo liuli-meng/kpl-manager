@@ -70,7 +70,7 @@ function scaleProbe(){
 const N = 200;
 console.log(vm.runInContext(HEADLESS + 'scaleProbe()', dom));
 console.log('=== 蒙特卡洛 ×'+N+'（真实三档开局，种子=真实战力）===');
-console.log('开局       均战力  进季后赛  夺冠   止步   破产   最低资金');
+console.log('开局       均战力  进季后赛  夺冠   止步   欠薪   最低资金');
 const kinds = [
   {name:'自建新队', template:null},
   {name:'AG豪门', template:'成都AG超玩会'},

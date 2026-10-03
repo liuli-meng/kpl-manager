@@ -1,4 +1,19 @@
 /* One-shot: event-driven singleGame + eventStoryLines onto clean match.js (LF endings) */
+// 危险：原地改写 src/，已废弃。其历史使命已由 match.js 的 storyRandom 实现取代。
+// 禁止在脏工作区或无参数下运行。
+if (!process.argv.includes('--apply')) {
+  console.error('[ABORT] 危险脚本：会原地改写 src/。当前历史使命已完成，默认禁止运行。如需演练请先确保工作区干净并显式传参 --apply');
+  process.exit(1);
+}
+const { execSync } = require('child_process');
+try {
+  const status = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
+  if (status) {
+    console.error('[ABORT] 工作区处于脏状态，拒绝原地改写生产代码。');
+    process.exit(1);
+  }
+} catch (e) {}
+
 const fs = require('fs');
 const p = 'src/js/match.js';
 let t = fs.readFileSync(p, 'utf8');

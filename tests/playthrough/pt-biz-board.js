@@ -1,6 +1,7 @@
-// Playtest: 经营/董事会/粉丝 — createTeam 商业帝国 → biz 全览 → 赞助升级门禁 → nextDay
+const path = require('path');
 const { launch, clearAndStart, shot } = require('./pw.js');
 
+const SHOT_DIR = process.env.SHOT_DIR || path.join(__dirname, '..', '..', 'gui-test-screenshots');
 const TEAM = '商业帝国';
 
 (async () => {
@@ -44,7 +45,7 @@ const TEAM = '商业帝国';
     if (!navBiz.ok) issues.push('goPage(biz) failed: ' + navBiz.reason);
     await page.waitForTimeout(400);
     // full page screenshot for panel layout
-    const fullBiz = 'E:/sex/gui-test-screenshots/pt_biz_full.png';
+    const fullBiz = path.join(SHOT_DIR, 'pt_biz_full.png');
     await page.screenshot({ path: fullBiz, fullPage: true });
     shots.push(fullBiz);
     console.log('SHOT', fullBiz);
@@ -188,7 +189,7 @@ const TEAM = '商业帝国';
 
     // re-screenshot biz after days
     await page.waitForTimeout(300);
-    const fullBiz2 = 'E:/sex/gui-test-screenshots/pt_biz_after_days_full.png';
+    const fullBiz2 = path.join(SHOT_DIR, 'pt_biz_after_days_full.png');
     await page.screenshot({ path: fullBiz2, fullPage: true });
     shots.push(fullBiz2);
     console.log('SHOT', fullBiz2);

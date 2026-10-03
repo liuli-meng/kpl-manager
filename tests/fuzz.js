@@ -147,14 +147,17 @@ fillRoster(S,'mid');
     dupNames=names.filter((n,i)=>names.indexOf(n)!==i);
   }catch(e){errs.push('收尾检查异常: '+e.message);}
   return JSON.stringify({season:S.season, series, fund:Math.round(S.fund), players:S.players.length,
+    seatLost: !!S.seatLost,
     dupNames:dupNames.slice(0,5), teamBad:teamBad.slice(0,5), notes:[...new Set(notes)], errs:errs.slice(0,6)});
 `);
 
 const res = JSON.parse(out);
-const T = makeTester('模糊压测 (15 赛季 × 900 步随机)');
+const T = makeTester('模糊压测 (' + res.season + ' 赛季 × 900 步随机)');
 console.log('  [' + res.season + ' 赛季 · ' + res.series + ' 场系列赛 · ' + res.players + ' 人]');
 T.check(res.errs.length === 0, '异常:\n  ' + res.errs.join('\n  '));
 T.check(res.dupNames.length === 0, '跨队重名: ' + res.dupNames.join(','));
 T.check(res.teamBad.length === 0, '球队阵容异常: ' + res.teamBad.join(','));
 T.check(res.notes.length === 0 || res.notes.every(n => n.includes('自动暂停')), '意外备注: ' + res.notes.join(' / '));
+T.check(res.season >= 15 || res.seatLost === true,
+  '模糊压测只跑了 ' + res.season + ' 赛季（目标 15）且非软终局退出');
 T.report();

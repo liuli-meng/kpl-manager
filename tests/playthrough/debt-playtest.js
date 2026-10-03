@@ -325,13 +325,10 @@ const { launch, clearAndStart, shot, call } = require('./pw');
     console.error('PLAYTEST ERROR', e);
     log('[FAIL] 脚本异常: ' + e.message);
   } finally {
-    if (browser) await browser.close();
-    // dump report
-    require('fs').writeFileSync(
-      'E:/sex/gui-test-screenshots/debt-playtest-report.txt',
-      report.join('\n'),
-      'utf8'
-    );
-    console.log('\nReport written to E:/sex/gui-test-screenshots/debt-playtest-report.txt');
+    const outDir = process.env.SHOT_DIR || require('path').join(__dirname, '..', '..', 'gui-test-screenshots');
+    try { require('fs').mkdirSync(outDir, { recursive: true }); } catch (_) {}
+    const outFile = require('path').join(outDir, 'debt-playtest-report.txt');
+    require('fs').writeFileSync(outFile, report.join('\n'), 'utf8');
+    console.log('\nReport written to ' + outFile);
   }
 })();

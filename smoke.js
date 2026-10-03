@@ -283,11 +283,11 @@ const r8 = vm.runInContext(`
   const out=[];
   renderUnion();
   out.push('战队总览+榜单渲染='+($('#page-union').innerHTML.length>1000?'OK':'异常!'));
-  const m=S.schedule[0];
+  const opp=(S.schedule&&S.schedule[0]&&S.schedule[0].opp)||(S.leagueTeams||[]).find(t=>t!==S.teamName)||'重庆狼队';
   showSquad(S.teamName);
   out.push('本队阵容弹窗='+($('#app-modal-body').innerHTML.indexOf('全队阵容')>=0?'OK':'异常!'));
-  showSquad(m.opp);
-  out.push('对手阵容弹窗('+m.opp+')='+(($('#app-modal-body').innerHTML.indexOf(m.opp)>=0&&$('#app-modal-body').innerHTML.indexOf('全队阵容')>=0)?'OK':'异常!'));
+  showSquad(opp);
+  out.push('对手阵容弹窗('+opp+')='+(($('#app-modal-body').innerHTML.indexOf(opp)>=0&&$('#app-modal-body').innerHTML.indexOf('全队阵容')>=0)?'OK':'异常!'));
   window._unionTab='young';
   renderUnion();
   out.push('新星榜切换='+($('#page-union').innerHTML.indexOf('新星榜')>=0?'OK':'异常!'));

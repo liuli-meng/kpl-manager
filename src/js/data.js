@@ -61,7 +61,23 @@ const CLUB_TIERS = {
   low_tier: { budget_scale: 0.7, wage_capacity: 'low', transfer_aggression: 0.3, commercial_focus: 0.5 },
 };
 
-// 选手年薪参考表（万/年）——wageOf 曲线与之对齐；谈判/续约展示用
+const _curve=(pts,o)=>{
+ if(o<=pts[0][0])return pts[0][1];
+ for(let i=1;i<pts.length;i++)if(o<=pts[i][0]){
+ const A=pts[i-1],B=pts[i];return Math.round(A[1]+(B[1]-A[1])*(o-A[0])/(B[0]-A[0]));
+ }
+ return pts[pts.length-1][1];
+};
+/* 总值→签约身价（万）：对齐转会封顶 1.2 亿——顶星基础身价约 6500，
+ 意愿/强挖/保护期倍率后摸到 ECON.transferCap 天花板 */
+const VALUE_PTS=[[40,60],[50,180],[60,400],[66,650],[72,1000],[76,1600],[80,2400],[84,3200],[88,4200],[92,5200],[96,6000],[99,6500]];
+const valueOf=o=>_curve(VALUE_PTS,o);
+
+/* 总值→年薪曲线（万/年）：与 PLAYER_SALARY_REAL.calculate_wage 同刻度单源；
+ 权威入口是 wageOf——迁移/scrub/生成均以 WAGE_PTS 为唯一分段线性基准 */
+const WAGE_PTS=[[40,15],[50,30],[55,42],[60,55],[66,75],[72,100],[76,125],[80,150],[85,220],[90,300],[96,360],[99,400]];
+
+// 选手年薪参考表（万/年）——以 WAGE_PTS 为权威底座，叠加年龄与人气倍率
 const PLAYER_SALARY_REAL = {
   base_salary: { rookie_17: 15, junior_19: 25, veteran_experienced: 50 },
   top_salary_by_rating: {
@@ -69,12 +85,7 @@ const PLAYER_SALARY_REAL = {
     ovr_80_84: 150, ovr_75_79: 100, ovr_below_75: 60,
   },
   get_base_by_rating: function(ovr) {
-    if(ovr >= 95) return this.top_salary_by_rating.ovr_95_plus;
-    if(ovr >= 90) return this.top_salary_by_rating.ovr_90_94;
-    if(ovr >= 85) return this.top_salary_by_rating.ovr_85_89;
-    if(ovr >= 80) return this.top_salary_by_rating.ovr_80_84;
-    if(ovr >= 75) return this.top_salary_by_rating.ovr_75_79;
-    return this.top_salary_by_rating.ovr_below_75;
+    return _curve(WAGE_PTS, ovr);
   },
   get_age_factor: function(age) {
     if(age <= 18) return 0.6;
@@ -84,7 +95,7 @@ const PLAYER_SALARY_REAL = {
     if(age <= 29) return 0.95;
     return 0.7;
   },
-  // 权威年薪：生成/迁移/scrubWages 全走这里（与 wageOf 同一曲线）
+  // 权威年薪：生成/迁移/scrubWages 全走这里（与 wageOf 单源一致）
   calculate_wage: function(overall, age, popularity) {
     let base = this.get_base_by_rating(overall);
     let age_factor = this.get_age_factor(age);
@@ -92,6 +103,13 @@ const PLAYER_SALARY_REAL = {
     return clamp(Math.round(base * age_factor * pop_factor), ECON.playerWageMin, ECON.playerWageMax);
   },
 };
+
+function wageOf(o,age,pop){
+ if(age!=null||pop!=null){
+ return PLAYER_SALARY_REAL.calculate_wage(o,age==null?22:age,pop==null?50:pop);
+ }
+ return clamp(_curve(WAGE_PTS,o),ECON.playerWageMin,ECON.playerWageMax);
+}
 
 const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 
@@ -271,26 +289,6 @@ function overall(p){
 // 三档整体上提，仍保持「金>蓝>灰」的读序：7.74 / 5.47 / 5.73:1
 function ovrColor(o){return o>=90?'#f5c877':o>=80?'#7ab0ff':'#a9b3c4';}
 function ovrCls(o){return o>=90?'ssr':o>=80?'sr':'r';} // 复用旧卡面色阶样式
-const _curve=(pts,o)=>{
- if(o<=pts[0][0])return pts[0][1];
- for(let i=1;i<pts.length;i++)if(o<=pts[i][0]){
- const A=pts[i-1],B=pts[i];return Math.round(A[1]+(B[1]-A[1])*(o-A[0])/(B[0]-A[0]));
- }
- return pts[pts.length-1][1];
-};
-/* 总值→签约身价（万）：对齐转会封顶 1.2 亿——顶星基础身价约 6500，
- 意愿/强挖/保护期倍率后摸到 ECON.transferCap 天花板 */
-const VALUE_PTS=[[40,60],[50,180],[60,400],[66,650],[72,1000],[76,1600],[80,2400],[84,3200],[88,4200],[92,5200],[96,6000],[99,6500]];
-const valueOf=o=>_curve(VALUE_PTS,o);
-/* 总值→年薪曲线（万/年）：与 PLAYER_SALARY_REAL.calculate_wage 同刻度；
- 权威入口是 wageOf——迁移/scrub/生成不得再各写一套 */
-const WAGE_PTS=[[40,15],[50,30],[55,42],[60,55],[66,75],[72,100],[76,125],[80,150],[85,220],[90,300],[96,360],[99,400]];
-function wageOf(o,age,pop){
- if(age!=null||pop!=null){
- return PLAYER_SALARY_REAL.calculate_wage(o,age==null?22:age,pop==null?50:pop);
- }
- return clamp(_curve(WAGE_PTS,o),ECON.playerWageMin,ECON.playerWageMax);
-}
 const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
  {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
 /* 赞助商：升级同时需要资金与粉丝（fans，单位万）——把"成绩 → 粉丝 → 商业"接成一条链
@@ -553,7 +551,7 @@ const KPL={GROUP_SIZE:6,ROUNDS:5,BO5:5,BO7:7,CARD:5}; // BO5/BO7：系列赛总�
 
 /* ================= 赛制旋钮（按年代可覆盖） =================
    "哪一年怎么打"里**可按年代开关**的部分收在这张表，引擎一律走 fmtOf(s) 读，不许再各处写死。
-   默认值 = 2026 现行口径（逐条出处见 E:\sex\KPL赛制对照_2026-09-19.md）。
+   默认值 = 2026 现行口径（逐条出处见 docs/KPL赛制对照_2026-09-19.md）。
    时代档要改哪一年，只往 KPL_ERAS[年].rules 里塞同名键，installEra 记下覆盖项、fmtOf 合并进 S._fmt。
 
    仍未表驱动（要改年代得动代码，别假装这张表能表达）：
@@ -1303,9 +1301,9 @@ function installEra(id){
    2027 及以后无表则回退临时席（K甲顶班）玩法。 */
 const KPL_YEAR_CHANGES={
  // 键 = 进入该自然年时应用（gameYear 刚跳到这一年）
- 2017:{in:['QGhappy','上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','YTG','WF.D'],out:[],rename:{}},
- 2018:{in:['南京Hero久竞','济南RW侠'],out:['AS仙阁','SC','MU','LK','DL火箭','BWS','VgHow','AG超玩会'],rename:{}},
- 2019:{in:['TS','西安WE','厦门VG','成都AG超玩会'],out:['BA黑凤梨','YTG','WF.D'],
+ 2017:{in:['QGhappy','上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','YTG','WF.D','JC'],out:[],rename:{}},
+ 2018:{in:['南京Hero久竞','济南RW侠'],out:['AS仙阁','sViper','SC','MU','LK','DL火箭','BWS','VgHow','AG超玩会'],rename:{}},
+ 2019:{in:['TS','西安WE','厦门VG','成都AG超玩会','长沙TES.A'],out:['BA黑凤梨','YTG','WF.D'],
   rename:{'AG超玩会':'成都AG超玩会'}}, // AG 降级一年后以「成都AG超玩会」重返（更名放在重返年，与 in 同名）
  2020:{in:['苏州KSG','杭州LGD大鹅'],out:['厦门VG'],
    rename:{'eStar':'武汉eStarPro','eStarPro':'武汉eStarPro','Hero久竞':'南京Hero久竞',
@@ -1449,9 +1447,9 @@ function _histFillRoster(s,teamName,used){
 function _histIncomingMeta(name){
  // 简表：icon / seed 档位（新军中游偏下，不跟豪门抢镜）
  const elite=['QGhappy','南京Hero久竞','TS','北京JDG'];
- const mid=['上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','济南RW侠','苏州KSG','XYG','深圳DYG'];
+ const mid=['上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','济南RW侠','苏州KSG','XYG','深圳DYG','JC','长沙TES.A'];
  const seed=elite.indexOf(name)>=0?520:mid.indexOf(name)>=0?480:430;
- const icons={'QGhappy':'翼','南京Hero久竞':'影','TS':'潮','北京JDG':'豹','上海EDG.M':'电','上海RNG.M':'冠','佛山GK':'山','BA黑凤梨':'梨','济南RW侠':'剑','苏州KSG':'虎','XYG':'仙','厦门VG':'紫','MTG':'拳','杭州LGD大鹅':'鹅','西安WE':'蝎','YTG':'拓','WF.D':'海','桐乡情久':'红','常山UUG':'牛','SC':'锋','MU':'兽','LK':'鳞','DL火箭':'箭','BWS':'盾','VgHow':'遥'};
+ const icons={'QGhappy':'翼','南京Hero久竞':'影','TS':'潮','北京JDG':'豹','上海EDG.M':'电','上海RNG.M':'冠','佛山GK':'山','BA黑凤梨':'梨','济南RW侠':'剑','苏州KSG':'虎','XYG':'仙','厦门VG':'紫','MTG':'拳','杭州LGD大鹅':'鹅','西安WE':'蝎','YTG':'拓','WF.D':'海','桐乡情久':'红','常山UUG':'牛','SC':'锋','MU':'兽','LK':'鳞','DL火箭':'箭','BWS':'盾','VgHow':'遥','JC':'竞','深圳DYG':'影','长沙TES.A':'拳'};
  return {name:name,icon:icons[name]||name.slice(0,1),power:seed};
 }
 /* 年结推进：把联盟换成「下一年」的史实成员。无表年份静默跳过。 */

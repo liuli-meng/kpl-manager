@@ -80,6 +80,7 @@ function runOneYear(win){
   return {
     season:S.season,split:S.split,phase:S.phase,
     fired:!!(S.board&&S.board.fired),
+    seatLost:!!S.seatLost,
     trust:S.board&&S.board.trust!=null?S.board.trust:null,
     annualChamp:S.annual&&S.annual.po?S.annual.po.champ:null,
     fund:S.fund,
@@ -114,6 +115,7 @@ function topUpRoster(){
   }).filter(Boolean);
 }
 function sim(kind,nYears){
+  if(typeof installEra==='function')installEra(null);
   S=newState(kind.name,'⚔️');
   if(kind.template){
     const tmpl=CLUB_TEMPLATES.find(c=>c.name===kind.template);
@@ -136,7 +138,7 @@ function sim(kind,nYears){
     const e=chk('Y'+(y+1));
     if(e){errs.push(e);break;}
     if(r.annualChamp)annualChamps++;
-    if(r.fired&&firedAt==null){
+    if((r.fired||r.seatLost)&&firedAt==null){
       firedAt=r.season;
       // 软终局：底层仍可推进（verify-board ⑨ 守 UI；这里守引擎侧）
       const day0=S.day;

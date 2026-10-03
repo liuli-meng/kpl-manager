@@ -107,6 +107,19 @@ const CLUB_TIERS = {
   low_tier: { budget_scale: 0.7, wage_capacity: 'low', transfer_aggression: 0.3, commercial_focus: 0.5 },
 };
 
+const _curve=(pts,o)=>{
+ if(o<=pts[0][0])return pts[0][1];
+ for(let i=1;i<pts.length;i++)if(o<=pts[i][0]){
+ const A=pts[i-1],B=pts[i];return Math.round(A[1]+(B[1]-A[1])*(o-A[0])/(B[0]-A[0]));
+ }
+ return pts[pts.length-1][1];
+};
+
+const VALUE_PTS=[[40,60],[50,180],[60,400],[66,650],[72,1000],[76,1600],[80,2400],[84,3200],[88,4200],[92,5200],[96,6000],[99,6500]];
+const valueOf=o=>_curve(VALUE_PTS,o);
+
+const WAGE_PTS=[[40,15],[50,30],[55,42],[60,55],[66,75],[72,100],[76,125],[80,150],[85,220],[90,300],[96,360],[99,400]];
+
 const PLAYER_SALARY_REAL = {
   base_salary: { rookie_17: 15, junior_19: 25, veteran_experienced: 50 },
   top_salary_by_rating: {
@@ -114,12 +127,7 @@ const PLAYER_SALARY_REAL = {
     ovr_80_84: 150, ovr_75_79: 100, ovr_below_75: 60,
   },
   get_base_by_rating: function(ovr) {
-    if(ovr >= 95) return this.top_salary_by_rating.ovr_95_plus;
-    if(ovr >= 90) return this.top_salary_by_rating.ovr_90_94;
-    if(ovr >= 85) return this.top_salary_by_rating.ovr_85_89;
-    if(ovr >= 80) return this.top_salary_by_rating.ovr_80_84;
-    if(ovr >= 75) return this.top_salary_by_rating.ovr_75_79;
-    return this.top_salary_by_rating.ovr_below_75;
+    return _curve(WAGE_PTS, ovr);
   },
   get_age_factor: function(age) {
     if(age <= 18) return 0.6;
@@ -137,6 +145,13 @@ const PLAYER_SALARY_REAL = {
     return clamp(Math.round(base * age_factor * pop_factor), ECON.playerWageMin, ECON.playerWageMax);
   },
 };
+
+function wageOf(o,age,pop){
+ if(age!=null||pop!=null){
+ return PLAYER_SALARY_REAL.calculate_wage(o,age==null?22:age,pop==null?50:pop);
+ }
+ return clamp(_curve(WAGE_PTS,o),ECON.playerWageMin,ECON.playerWageMax);
+}
 
 const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 
@@ -307,24 +322,6 @@ function overall(p){
 
 function ovrColor(o){return o>=90?'#f5c877':o>=80?'#7ab0ff':'#a9b3c4';}
 function ovrCls(o){return o>=90?'ssr':o>=80?'sr':'r';} // 复用旧卡面色阶样式
-const _curve=(pts,o)=>{
- if(o<=pts[0][0])return pts[0][1];
- for(let i=1;i<pts.length;i++)if(o<=pts[i][0]){
- const A=pts[i-1],B=pts[i];return Math.round(A[1]+(B[1]-A[1])*(o-A[0])/(B[0]-A[0]));
- }
- return pts[pts.length-1][1];
-};
-
-const VALUE_PTS=[[40,60],[50,180],[60,400],[66,650],[72,1000],[76,1600],[80,2400],[84,3200],[88,4200],[92,5200],[96,6000],[99,6500]];
-const valueOf=o=>_curve(VALUE_PTS,o);
-
-const WAGE_PTS=[[40,15],[50,30],[55,42],[60,55],[66,75],[72,100],[76,125],[80,150],[85,220],[90,300],[96,360],[99,400]];
-function wageOf(o,age,pop){
- if(age!=null||pop!=null){
- return PLAYER_SALARY_REAL.calculate_wage(o,age==null?22:age,pop==null?50:pop);
- }
- return clamp(_curve(WAGE_PTS,o),ECON.playerWageMin,ECON.playerWageMax);
-}
 const TRAIN_ITEMS=[{k:'lane',n:'对线',desc:'操作细节与线上压制'},{k:'farm',n:'运营',desc:'资源控制与节奏'},
  {k:'team',n:'团战',desc:'团战走位与配合'},{k:'mind',n:'心态',desc:'大赛心理素质'}];
 
@@ -1256,9 +1253,9 @@ function installEra(id){
 
 const KPL_YEAR_CHANGES={
 
- 2017:{in:['QGhappy','上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','YTG','WF.D'],out:[],rename:{}},
- 2018:{in:['南京Hero久竞','济南RW侠'],out:['AS仙阁','SC','MU','LK','DL火箭','BWS','VgHow','AG超玩会'],rename:{}},
- 2019:{in:['TS','西安WE','厦门VG','成都AG超玩会'],out:['BA黑凤梨','YTG','WF.D'],
+ 2017:{in:['QGhappy','上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','YTG','WF.D','JC'],out:[],rename:{}},
+ 2018:{in:['南京Hero久竞','济南RW侠'],out:['AS仙阁','sViper','SC','MU','LK','DL火箭','BWS','VgHow','AG超玩会'],rename:{}},
+ 2019:{in:['TS','西安WE','厦门VG','成都AG超玩会','长沙TES.A'],out:['BA黑凤梨','YTG','WF.D'],
   rename:{'AG超玩会':'成都AG超玩会'}}, // AG 降级一年后以「成都AG超玩会」重返（更名放在重返年，与 in 同名）
  2020:{in:['苏州KSG','杭州LGD大鹅'],out:['厦门VG'],
    rename:{'eStar':'武汉eStarPro','eStarPro':'武汉eStarPro','Hero久竞':'南京Hero久竞',
@@ -1393,9 +1390,9 @@ function _histFillRoster(s,teamName,used){
 function _histIncomingMeta(name){
 
  const elite=['QGhappy','南京Hero久竞','TS','北京JDG'];
- const mid=['上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','济南RW侠','苏州KSG','XYG','深圳DYG'];
+ const mid=['上海EDG.M','上海RNG.M','佛山GK','BA黑凤梨','济南RW侠','苏州KSG','XYG','深圳DYG','JC','长沙TES.A'];
  const seed=elite.indexOf(name)>=0?520:mid.indexOf(name)>=0?480:430;
- const icons={'QGhappy':'翼','南京Hero久竞':'影','TS':'潮','北京JDG':'豹','上海EDG.M':'电','上海RNG.M':'冠','佛山GK':'山','BA黑凤梨':'梨','济南RW侠':'剑','苏州KSG':'虎','XYG':'仙','厦门VG':'紫','MTG':'拳','杭州LGD大鹅':'鹅','西安WE':'蝎','YTG':'拓','WF.D':'海','桐乡情久':'红','常山UUG':'牛','SC':'锋','MU':'兽','LK':'鳞','DL火箭':'箭','BWS':'盾','VgHow':'遥'};
+ const icons={'QGhappy':'翼','南京Hero久竞':'影','TS':'潮','北京JDG':'豹','上海EDG.M':'电','上海RNG.M':'冠','佛山GK':'山','BA黑凤梨':'梨','济南RW侠':'剑','苏州KSG':'虎','XYG':'仙','厦门VG':'紫','MTG':'拳','杭州LGD大鹅':'鹅','西安WE':'蝎','YTG':'拓','WF.D':'海','桐乡情久':'红','常山UUG':'牛','SC':'锋','MU':'兽','LK':'鳞','DL火箭':'箭','BWS':'盾','VgHow':'遥','JC':'竞','深圳DYG':'影','长沙TES.A':'拳'};
  return {name:name,icon:icons[name]||name.slice(0,1),power:seed};
 }
 
@@ -3598,7 +3595,8 @@ function genAcademyDef(pos,usedNames,season){
  const name=typeof ACADEMY_NAMES!=='undefined'?poolName(ACADEMY_NAMES,usedNames):combName(usedNames);
  usedNames.add(name);
  const cands=heroesNow().filter(h=>h.pos[0]===pos);
- const boost=Math.min(2*((season||1)-1),14);
+ const sn=season||1;
+ const boost=sn<=4?2*(sn-1):6+Math.round((sn-4)*1.5);
  const b=v=>clamp(v+boost,40,99);
 
  const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,68,72):[68,68,70,72];
@@ -3722,7 +3720,8 @@ function aiAttachDef(s,pid,teamName){ // def 流入某 AI 队（位置与名额�
  const name=poolName(ACADEMY_NAMES,usedNames); // 池尽回退 combName，不再生成「新星N」
  usedNames.add(name);
  const sk=(typeof posSkillPool==='function')?pick(posSkillPool(pos)):['team','团战体系','团战属性额外+10%'];
- const boost=Math.min(2*((s.season||1)-1),12);
+ const sn=(s&&s.season)||1;
+ const boost=sn<=4?2*(sn-1):6+Math.round((sn-4)*1.4);
  const b=v=>clamp(v+boost,40,99);
  const raw=(typeof posSpecializedBase==='function')?posSpecializedBase(pos,74,84):[0,1,2,3].map(()=>rnd(74,84));
  return {id:'ns_'+s.season+'_'+Math.random().toString(36).slice(2,7),name,pos,team:null,tags:['青训'],
@@ -4816,9 +4815,15 @@ function renewPlayer(s,pid,years,offerWage){
  const y=Math.min(4,Math.max(1,years||RENEW_YEARS));
  const cost=renewCostN(p,y);
  if(s.fund<cost){toast('资金不足（续约签字费 '+cost+'万）');return;}
- s.fund-=cost;
  const nw=offerWage?Math.round(offerWage):Math.round(wageOf(overall(p))*((p.val||100)/100)); // 报价成交按谈定年薪，否则按表现重定
  const wageFinal=Math.min(PLAYER_WAGE_MAX,Math.max(1,nw)); // 个人顶薪封顶
+ const hardCap=(typeof hardWageCap==='function'?hardWageCap(s):Math.round(s.wageCap*1.35));
+ const newTotalWage=weeklyWage(s)-(p.wage||0)+wageFinal;
+ if(newTotalWage>hardCap){
+  toast('续约被联盟否决：续约后全队年薪 '+newTotalWage+'万 超过硬工资帽（'+hardCap+'万 · 软帽135%），严禁超帽续约！');
+  return;
+ }
+ s.fund-=cost;
  if(wageFinal>p.wage)logEvent(s,' '+p.name+' 续约涨薪：'+p.wage+'万 → '+wageFinal+'万（表现好值得加薪）');
  else if(wageFinal<p.wage)logEvent(s,' '+p.name+' 接受降薪续约：'+p.wage+'万 → '+wageFinal+'万');
  p.wage=wageFinal;
@@ -5448,6 +5453,12 @@ function doTrain(s,pid,attr){
  if(blocked){toast(blocked);return;}
  if(p.energy<10){toast(`${p.name} 体力不足`);return;}
  if(s.fund<13){toast('资金不足（训练需 13万）');return;}
+ if(s.wageDefaulted>0&&Math.random()<0.5){
+  p.energy=clamp((p.energy==null||!isFinite(p.energy)?100:p.energy)-10,0,ENERGY_MAX);
+  s.trained=true;
+  logEvent(s,` 训练消极：俱乐部近期遭遇欠薪，${p.name} 训练态度消极，未能获得提升`);
+  save();renderAll();return;
+ }
 
  const role=(s.mode==='player'&&typeof playerRole==='function')?playerRole(s):'rot';
  const r=(typeof trainOutcome==='function')?trainOutcome(role,p,attr):{gain:rnd(0,1),note:'训练'};
@@ -5809,18 +5820,43 @@ function sortGroup(s,g){
 }
 
 function initGroups(s){
+ if(typeof initTempSeats==='function')initTempSeats(s);
 
  let aiList=AI_TEAMS.filter(t=>t.name!==s.teamName);
+ if(!s.seatLost){
 
- if(aiList.length>17)aiList=aiList.filter(t=>t.name!=='常山UUG');
+  if(aiList.length>17){
+   const tempCand=aiList.filter(t=>typeof isFixedSeatTeam==='function'?!isFixedSeatTeam(t.name):(t.name==='常山UUG'||t.name==='桐乡情久'||t.name.includes('K甲')));
+   if(tempCand.length){
+    tempCand.sort((a,b)=>(a.power||450)-(b.power||450));
+    const dropName=tempCand[0].name;
+    aiList=aiList.filter(t=>t.name!==dropName);
+    if(typeof AI_TEAMS!=='undefined'&&Array.isArray(AI_TEAMS)){
+     const dIdx=AI_TEAMS.findIndex(t=>t.name===dropName);
+     if(dIdx>=0)AI_TEAMS.splice(dIdx,1);
+    }
+    if(Array.isArray(s.tempSeats)){
+     s.tempSeats=s.tempSeats.map(t=>t===dropName?s.teamName:t);
+     if(!s.tempSeats.includes(s.teamName)&&s.tempSeats.length<TEMP_SEAT_COUNT){
+      s.tempSeats.push(s.teamName);
+     }
+    }
+   }else{
+    aiList.sort((a,b)=>(a.power||450)-(b.power||450));
+    aiList=aiList.slice(1);
+   }
+  }
+ }
 
  const all=aiList.map(t=>{
  const r=ensureAiRosters(s,t.name);
  return {name:t.name,power:r.length?aiRosterPower(r,s,t.name):t.power};
  });
- all.push({name:s.teamName,power:s.seedPower||teamPower(s)}); // 玩家种子=开局真实战力
+ if(!s.seatLost){
+  all.push({name:s.teamName,power:s.seedPower||teamPower(s)}); // 玩家在席位上时加入
+ }
  all.sort((a,b)=>b.power-a.power);
- s.leagueTeams=all.map(x=>x.name); // 联盟注册名录（联盟页/榜单用）
+ s.leagueTeams=all.map(x=>x.name); // 联盟注册名录（恒为 18 队）
  try{applyYearFmt(s);}catch(e){}
  const st=(fmtOf(s).structure)||'sab';
 
@@ -6433,11 +6469,21 @@ function payWage(s){
  logEvent(s,' 周结总账：收入 代言+'+endorse+' · 支出 工资-'+wage+' 编制-'+ops+(reserveFee?' 储备费-'+reserveFee:'')+(tax?' 奢侈税-'+tax:'')
   +'（净 '+(endorse-spend>=0?'+':'')+(endorse-spend)+'万 · 年薪合计 '+annual+'万 / 帽 '+s.wageCap+'万）');
  if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0; // 防 NaN 写入存档（JSON 会变 null）
- if(s.fund<0){
-  s.fund=Math.max(0,s.fund);
-  s.players.forEach(p=>p.morale=clamp(p.morale-15,20,100));
-  logEvent(s,' 资金不足！拖欠工资导致全员士气大降');
+ if(s.fund<=0){
+  s.fund=0; // 真实KPL固定席无破产退赛，资金底线钳0防持久负数，但产生真实财政惩罚
+  s.wageDefaulted=(s.wageDefaulted||0)+1;
+  s.players.forEach(p=>{
+   p.morale=clamp(p.morale-15,20,100);
+   p.willingness=clamp((p.willingness==null?70:p.willingness)-10,5,100);
+  });
+  if(typeof boardRelDelta==='function'){
+   boardRelDelta(s,-6,'俱乐部现金流断流欠薪，董事会严正问责');
+  }else if(s.board){
+   s.board.trust=clamp((s.board.trust||60)-6,0,100);
+  }
+  logEvent(s,' 资金不足！现金流断流欠薪导致全员士气骤降、留队意愿动摇，董事会信任受挫');
  }else{
+   if(s.wageDefaulted>0){s.wageDefaulted=0;logEvent(s,' 财政恢复正常：欠薪惩罚解除');} // 资金恢复后重置欠薪计数器
   s.players.forEach(p=>p.morale=clamp(p.morale+3,20,100));
  }
  try{if(typeof toast==='function'&&spend>0)toast(' 周结：支出 '+spend+'万（工资+编制+税费）');}catch(e){}
@@ -6628,6 +6674,7 @@ function newSeason(s){
  }
  s.fund+=220; // 联盟赛季启动金（年度轮换只发一次）
  logEvent(s,' 联盟调整工资帽：本年薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
+ try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上（必须在清零年度积分前执行）
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
  s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过
@@ -6642,7 +6689,6 @@ function newSeason(s){
  boardApplyEffect(s); // 董事会：下赛季的干预（砍帽）或特权（追加预算）按月生效
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
  try{gcDefs(s);}catch(e){} // 年度轮换：清杯赛临时 def / 退役 def / 青训幽灵
- try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上
  try{if(typeof auditSave==='function')auditSave(s,{silent:false});}catch(e){} // 赛季末不变量巡检
  startSplit(s,'spring');
 }
@@ -6790,7 +6836,9 @@ function yearCalendarHtml(s){
  const cur=currentCalendarKey(st0);
  const curIdx=stages.findIndex(x=>x.k===cur);
  const pct=stages.length<=1?0:Math.round(Math.max(0,Math.min(stages.length-1,curIdx))/(stages.length-1)*100);
- return '<div class="panel"><h3>年度赛历 <span class="tag">2026 赛制 · '+pct+'%</span></h3>'
+ const curYr=typeof gameYear==='function'?gameYear(st0):(st0.season?2026+st0.season-1:2026);
+ const tagText=curYr>2026?`${curYr} 赛制（沿用 2026 口径 · 数据地平线）· ${pct}%`:`${curYr} 赛制 · ${pct}%`;
+ return '<div class="panel"><h3>年度赛历 <span class="tag">'+tagText+'</span></h3>'
   +'<div class="cal-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>'
   +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch;margin-top:8px">'
   +stages.map((st,i)=>{
@@ -8251,7 +8299,9 @@ function initTempSeats(s){
  if(!s)return;
 
  s.tempSeatFixed=s.tempSeatFixed||[];
- s.tempSeats=TEMP_SEAT_TEAMS.filter(n=>s.tempSeatFixed.indexOf(n)<0);
+ if(!s.tempSeats||!s.tempSeats.length){
+  s.tempSeats=TEMP_SEAT_TEAMS.filter(n=>!isFixedSeatTeam(n));
+ }
  while(s.tempSeats.length<TEMP_SEAT_COUNT){
   const incoming=KJIA_AI_TEAMS.find(n=>!AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0)
    ||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):(s.season||1)));
@@ -8267,61 +8317,134 @@ function settleTempSeats(s){
  if(!s)return;
  initTempSeats(s);
  if(!s.tempSeats||!s.tempSeats.length)return;
- s.tempSeatFixed=s.tempSeatFixed||[];
- (s.titleHistory||[]).forEach(t=>{
-  if(t&&t.champ&&isTempSeat(s,t.champ)&&s.tempSeatFixed.indexOf(t.champ)<0&&!isFixedSeatTeam(t.champ)){
 
-   s.tempSeatFixed.push(t.champ);
+ const curSeason=s.season||1;
+ s.tempSeatFixedExpiry=s.tempSeatFixedExpiry||{};
+
+ s.tempSeatFixed=(s.tempSeatFixed||[]).filter(t=>(s.tempSeatFixedExpiry[t]||0)>=curSeason);
+
+ (s.titleHistory||[]).forEach(t=>{
+  if(!t||!t.champ)return;
+  if(t._seatProtected)return;
+  if(t.season!=null&&t.season!==curSeason)return;
+  if(isTempSeat(s,t.champ)&&!isFixedSeatTeam(t.champ)){
+   t._seatProtected=true;
+   s.tempSeatFixedExpiry[t.champ]=curSeason;
+   if(s.tempSeatFixed.indexOf(t.champ)<0)s.tempSeatFixed.push(t.champ);
    try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——下赛季保留 KPL 席位，免打席位赛（非固定席）');}catch(e){}
   }
  });
- s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t)&&s.tempSeatFixed.indexOf(t)<0);
- if(s.tempSeats.length<TEMP_SEAT_COUNT){
-  TEMP_SEAT_TEAMS.forEach(n=>{
-   if(s.tempSeats.length<TEMP_SEAT_COUNT&&s.tempSeats.indexOf(n)<0&&s.tempSeatFixed.indexOf(n)<0)s.tempSeats.push(n);
-  });
- }
+
  const pts=s.annualPts||{};
+
+ s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t));
+
+ while(s.tempSeats.length>TEMP_SEAT_COUNT){
+  const droppable=s.tempSeats.filter(t=>s.tempSeatFixed.indexOf(t)<0);
+  if(!droppable.length)break;
+  droppable.sort((a,b)=>(pts[a]||0)-(pts[b]||0));
+  s.tempSeats=s.tempSeats.filter(t=>t!==droppable[0]);
+ }
+
  let worst=null,worstPts=Infinity;
  s.tempSeats.forEach(t=>{
-  const p=pts[t]||0;
+  if(s.tempSeatFixed.indexOf(t)>=0)return;
+  let p=pts[t]||0;
+  if(t===s.teamName&&(s.wageDefaulted||0)>0){
+   p-=Math.min((s.wageDefaulted||0)*15,60);
+  }
   if(p<worstPts){worstPts=p;worst=t;}
  });
- if(!worst||!s.tempSeats.length)return;
- if(s.tempSeatFixed.indexOf(worst)>=0)return;
+
  let incoming=null;
- try{
-  const k=s.kjia;
-  if(k&&k.champ&&k.champ!==kjiaMyName(s)&&!AI_TEAMS.some(t=>t.name===k.champ)){
-   incoming=k.champ;
-  }else if(k&&k.champ){
-   const rank=kjiaRank(s)||[];
-   incoming=rank.find(n=>n!==k.champ&&n!==kjiaMyName(s))||null;
-  }
- }catch(e){}
- if(!incoming){
-  incoming=KJIA_AI_TEAMS.find(n=>!AI_TEAMS.some(t=>t.name===n))||('K甲·新军'+gameYear(s));
- }
- s.tempSeats=s.tempSeats.filter(t=>t!==worst);
- if(incoming&&incoming!==s.teamName&&!isFixedSeatTeam(incoming)&&s.tempSeats.indexOf(incoming)<0&&s.tempSeatFixed.indexOf(incoming)<0)s.tempSeats.push(incoming);
- s.tempSeatLog=s.tempSeatLog||[];
- s.tempSeatLog.unshift(gameYear(s)+'：收回 '+worst+' 临时席 → '+incoming+' 顶上');
- s.tempSeatLog=s.tempSeatLog.slice(0,8);
- try{
-  logEvent(s,' 临时席变动：'+worst+' 席位收回，'+incoming+' 获得下赛季 KPL 临时席位（固定席位不降级）');
- }catch(e){}
- if(worst===s.teamName){
-  try{
+ if(worst){
+  s.tempSeats=s.tempSeats.filter(t=>t!==worst);
+  if(worst===s.teamName){
    s.seatLost=true;
-   logEvent(s,' 你的俱乐部临时席位被收回——降入 K甲。固定席位球队不会降级，升班马需用成绩保住席位');
+   try{logEvent(s,' 你的俱乐部临时席位被收回——降入 K甲。固定席位球队不会降级，升班马需用成绩保住席位');}catch(e){}
+  }
+
+  try{
+   const k=s.kjia;
+   if(k&&k.champ&&k.champ!==kjiaMyName(s)&&!AI_TEAMS.some(t=>t.name===k.champ)){
+    incoming=k.champ;
+   }else if(k&&k.champ){
+    const rank=kjiaRank(s)||[];
+    incoming=rank.find(n=>n!==k.champ&&n!==kjiaMyName(s))||null;
+   }
+  }catch(e){}
+  if(!incoming){
+   incoming=(typeof KJIA_AI_TEAMS!=='undefined'?KJIA_AI_TEAMS:[]).find(n=>
+    !AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0&&n!==worst
+   )||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):curSeason));
+  }
+
+  if(incoming&&incoming!==s.teamName&&!isFixedSeatTeam(incoming)&&s.tempSeats.indexOf(incoming)<0&&s.tempSeatFixed.indexOf(incoming)<0){
+   s.tempSeats.push(incoming);
+  }
+
+  s.tempSeatLog=s.tempSeatLog||[];
+  s.tempSeatLog.unshift((typeof gameYear==='function'?gameYear(s):curSeason)+'：收回 '+worst+' 临时席 → '+incoming+' 顶上');
+  s.tempSeatLog=s.tempSeatLog.slice(0,8);
+  try{
+   logEvent(s,' 临时席变动：'+worst+' 席位收回，'+incoming+' 获得下赛季 KPL 临时席位（固定席位不降级）');
+  }catch(e){}
+  try{
+   if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
+    logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
+    addFans(s,1,'K甲夺冠·席位资格');
+   }
   }catch(e){}
  }
- try{
-  if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
-   logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
-   addFans(s,1,'K甲夺冠·席位资格');
+
+ while(s.tempSeats.length<TEMP_SEAT_COUNT){
+  const extra=(typeof KJIA_AI_TEAMS!=='undefined'?KJIA_AI_TEAMS:[]).find(n=>
+   !AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0&&n!==worst
+  )||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):curSeason));
+  if(s.tempSeats.indexOf(extra)<0)s.tempSeats.push(extra); else break;
+ }
+
+ const newSeats=[...FIXED_SEAT_TEAMS];
+ s.tempSeats.forEach(t=>{if(newSeats.indexOf(t)<0)newSeats.push(t);});
+ const newSeatSet=new Set(newSeats);
+
+ if(typeof AI_TEAMS!=='undefined'&&Array.isArray(AI_TEAMS)){
+  for(let i=AI_TEAMS.length-1;i>=0;i--){
+   if(!newSeatSet.has(AI_TEAMS[i].name)){
+    AI_TEAMS.splice(i,1);
+   }
   }
- }catch(e){}
+  newSeats.forEach(nm=>{
+   if(!AI_TEAMS.some(t=>t.name===nm)){
+    AI_TEAMS.push({
+     name:nm,
+     icon:(typeof KPL_YEAR_ICON!=='undefined'&&KPL_YEAR_ICON[nm])||'⭐',
+     budget:550,cap:95,coach:'co4',
+     desc:nm+' · K甲升班马'
+    });
+   }
+  });
+ }
+
+ if(typeof AI_ROSTERS!=='undefined'&&AI_ROSTERS){
+  Object.keys(AI_ROSTERS).forEach(k=>{
+   if(!newSeatSet.has(k))delete AI_ROSTERS[k];
+  });
+  newSeats.forEach(nm=>{
+   if(!AI_ROSTERS[nm]){
+    const tplKey=Object.keys(AI_ROSTERS)[0];
+    AI_ROSTERS[nm]=(worst&&AI_ROSTERS[worst])
+     ?JSON.parse(JSON.stringify(AI_ROSTERS[worst]))
+     :(tplKey?JSON.parse(JSON.stringify(AI_ROSTERS[tplKey])):{p:['top19','jg10','mid18','ad18','sup19'],u:[]});
+   }
+  });
+  if(worst&&!newSeatSet.has(worst))delete AI_ROSTERS[worst];
+ }
+
+ s.leagueTeams=newSeats.slice();
+ if(s.seatLost){
+  s.leagueTeams=s.leagueTeams.filter(t=>t!==s.teamName);
+ }
 }
 function tempSeatsPanelHtml(){
  const s=S;
@@ -12882,7 +13005,7 @@ function renderHeader(){
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
  const hdPower=teamPower(S),hdWage=weeklyWage(S); // 各算一次：本函数内三处复用
  const hdWeekCost=Math.round(hdWage/ECON.payWeeks)+(typeof clubOpsCost==='function'?clubOpsCost(S):0); // 周支出预估（工资+编制）
- const fundCls=(S.fund<0)?'danger flashing':(S.fund<100)?'warning':(S.fund<500)?'caution':'healthy';
+ const fundCls=(S.fund<=0)?'danger flashing':(S.fund<100)?'warning':(S.fund<500)?'caution':'healthy';
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,44)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>

@@ -51,7 +51,7 @@ async function main() {
   const shotA = await shot(page, 'pt_cap_lineup_wage');
 
   // Header wage strip is above the fold; also capture a tighter full view
-  await page.screenshot({ path: require('path').join('E:\\sex\\gui-test-screenshots', 'pt_cap_header_wage.png'), fullPage: false });
+  await shot(page, 'pt_cap_header_wage');
 
   const aChecks = {
     scenarioCap: a.scenario === 'cap',

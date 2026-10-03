@@ -24,7 +24,7 @@
 ### 总值 → 身价 / 年薪（锚点）
 
 - 身价曲线顶格 **6500 万**（OVR99，`valueOf`；OVR85 ≈ 3450 万）；转会费全局封顶另见 transfer（`TRANSFER_CAP`＝12000 万，含意愿/强挖倍率）
-- **年薪**曲线顶格 **400 万/年**（`ECON.playerWageMax`）；注意 `wageOf` 有两条口径且未完全对齐：1 参走 `WAGE_PTS`（85→220），3 参 `wageOf(o,age,pop)` 走 `calculate_wage`（85@26岁60人气→289）
+- **年薪**曲线顶格 **400 万/年**（`ECON.playerWageMax`）；`wageOf` 与 `PLAYER_SALARY_REAL.calculate_wage` 已单源统一到 `WAGE_PTS`（85→220 基准；3 参在基准上乘年龄与人气系数，85@26岁60人气→254 万，85@22岁50人气→264 万，消灭旧阶梯断崖）
 
 ## 隐性规则
 

@@ -9,8 +9,9 @@ const { launch, clearAndStart, shot } = require('./pw.js');
 
 const SCENARIOS = ['normal', 'debt', 'exodus', 'cap', 'cursed'];
 const PAGES = ['club', 'lineup', 'market', 'train', 'league', 'kjia', 'union', 'hall', 'biz'];
-const REPORT = path.join('E:\\sex\\kpl-manager\\.bug-hunt', 'manager-report.md');
-const JSON_OUT = path.join('E:\\sex\\kpl-manager\\.bug-hunt', 'manager-bug-hunt.json');
+const ROOT = path.join(__dirname, '..', '..');
+const REPORT = path.join(ROOT, '.bug-hunt', 'manager-report.md');
+const JSON_OUT = path.join(ROOT, '.bug-hunt', 'manager-bug-hunt.json');
 
 const bugs = [];
 function bug(sc, sev, title, detail) {
@@ -1151,7 +1152,7 @@ async function main() {
 
   // Merge engine-probe findings if present
   try {
-    const engPath = path.join('E:\\sex\\kpl-manager\\.bug-hunt', 'engine-probe.json');
+    const engPath = path.join(ROOT, '.bug-hunt', 'engine-probe.json');
     if (fs.existsSync(engPath)) {
       const eng = JSON.parse(fs.readFileSync(engPath, 'utf8'));
       (eng.bugs || []).forEach(b => {

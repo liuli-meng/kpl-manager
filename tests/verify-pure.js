@@ -41,14 +41,16 @@ const out = vm.runInContext(`
     }
   }
 
-  // ④ wageOf / valueOf：单调且夹在经济刻度内
+  // ④ wageOf / valueOf：单调且夹在经济刻度内，1参基准与3参口径单源对齐
   const w40=wageOf(40), w99=wageOf(99);
+  const w40_3=wageOf(40,22,50);
   if(!(w40>=ECON.playerWageMin&&w40<=ECON.playerWageMax))fail('wageOf(40) 越界: '+w40);
   else if(!(w99>=ECON.playerWageMin&&w99<=ECON.playerWageMax))fail('wageOf(99) 越界: '+w99);
   else if(!(w99>w40))fail('wageOf 不随总值单调: 40→'+w40+' 99→'+w99);
+  else if(Math.abs(w40_3 - Math.round(w40 * 1.2)) > 1)fail('wageOf 1参与3参口径断层: 1参='+w40+' 3参='+w40_3);
   else if(!(valueOf(99)>valueOf(40)))fail('valueOf 不随总值单调');
   else if(valueOf(40)<0||valueOf(99)>ECON.transferCap)fail('valueOf 越过转会封顶');
-  else ok('④ wageOf/valueOf 单调且在经济刻度内（w40='+w40+' w99='+w99+'）');
+  else ok('④ wageOf/valueOf 单调且在经济刻度内（w40='+w40+' w40@22='+w40_3+' w99='+w99+'）');
 
   // ⑤ boardKpiTarget：按上年名次 5/10/14（中档校准，不苛求必夺冠）；首年按分组
   const t1=boardKpiTarget(2,{teamName:'A',groups:{}});

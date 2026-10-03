@@ -531,8 +531,11 @@ async function main(){
     console.log('  BP interactive:', report.checks.find(c=>c.name.includes('DOM clicks'))?.pass ? 'YES (DOM clicks advance)' : 'PARTIAL (auto APIs only)');
     console.log('  BP readable:', report.checks.find(c=>c.name.includes('BP board'))?.pass && report.checks.find(c=>c.name.includes('verdict'))?.pass ? 'YES' : 'CHECK');
     console.log('  Match ends cleanly:', report.checks.find(c=>c.name.includes('series ended'))?.pass ? 'YES' : 'CHECK');
-    require('fs').writeFileSync('E:/sex/gui-test-screenshots/mp_report.json', JSON.stringify(report, null, 2));
-    console.log('Report JSON: E:/sex/gui-test-screenshots/mp_report.json');
+    const outDir = process.env.SHOT_DIR || require('path').join(__dirname, '..', '..', 'gui-test-screenshots');
+    try { require('fs').mkdirSync(outDir, { recursive: true }); } catch (_) {}
+    const outFile = require('path').join(outDir, 'mp_report.json');
+    require('fs').writeFileSync(outFile, JSON.stringify(report, null, 2));
+    console.log('Report JSON: ' + outFile);
     console.log('==========================================');
 
   } catch(e){

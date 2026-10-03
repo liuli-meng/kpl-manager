@@ -5,11 +5,21 @@
    只读产品代码；本脚本与报告写在 .bug-hunt / tests/playthrough */
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('E:/sex/.workbuddy/tmp/node_modules/playwright-core');
+const ROOT = path.join(__dirname, '..', '..');
+const CHROME_PATHS = [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+];
+const CHROME = CHROME_PATHS.find(p => fs.existsSync(p)) || CHROME_PATHS[0];
 
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const PLAYWRIGHT_PATHS = [
+  path.join(ROOT, '..', '.workbuddy', 'tmp', 'node_modules', 'playwright-core'),
+  path.join(ROOT, 'node_modules', 'playwright-core')
+];
+const PW_DIR = PLAYWRIGHT_PATHS.find(p => fs.existsSync(p));
+const { chromium } = PW_DIR ? require(PW_DIR) : {};
+
 const BASE = process.env.KPL_BASE || 'http://127.0.0.1:8931';
-const ROOT = 'E:\\sex\\kpl-manager';
 const OUT = path.join(ROOT, '.bug-hunt');
 const SHOT_DIR = path.join(OUT, 'visual');
 const REPORT = path.join(OUT, 'visual-report.md');

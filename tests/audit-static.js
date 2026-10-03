@@ -205,6 +205,12 @@ const out = vm_run(dom, `
     if(eb.length)tplBad.push(c.name+':经济刻度'+eb.join('/'));
   });
   if(tplBad.length)R.push('俱乐部模板:'+JSON.stringify(tplBad));
+  if(typeof FIXED_SEAT_TEAMS!=='undefined'){
+    if(FIXED_SEAT_TEAMS.length!==16)R.push('固定席位必须恒为16支: '+FIXED_SEAT_TEAMS.length);
+    if(typeof TEMP_SEAT_COUNT!=='undefined'&&TEMP_SEAT_COUNT!==2)R.push('临时席位必须为2支: '+TEMP_SEAT_COUNT);
+    const fixedDup=FIXED_SEAT_TEAMS.filter((n,i)=>FIXED_SEAT_TEAMS.indexOf(n)!==i);
+    if(fixedDup.length)R.push('固定席位存在同名队: '+JSON.stringify(fixedDup));
+  }
   const coachBad=COACH_POOL.concat(ASSISTANT_POOL).filter(c=>!['lane','farm','team','mind'].includes(c.style)).map(c=>c.name);
   if(coachBad.length)R.push('教练风格:'+JSON.stringify(coachBad));
   // 历代联盟（2K 经典球队式）：安装每个时代 → 结构校验 + 时代新档全流程

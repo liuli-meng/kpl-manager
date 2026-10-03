@@ -2,7 +2,7 @@
  * 目标：统一「读当前档 / 换档 / 增量补丁 / 变更探针 / 崩溃快照」，不拦截旧代码的 s.xxx= 裸写。
  * 约定：
  *  - 业务状态本体仍是全局可变对象 S（及 f(s) 参数），本文件不做 Proxy 强制拦截
- *  - 新代码优先用 patchState(getState(), partial, meta)；旧代码继续 s.x= 亦可
+ *  - 架构预留：提供 patchState/setState/freezeStatics 薄门面供诊断探针与测试调用；业务代码维持 S.xxx 直接读写
  *  - 开发探针：localStorage km_trace=1 时记录变更环（谁改、字段、时间）
  *  - 私有函数加 _ 前缀，避免与全局门面同名（audit-static 查 function 重名）
  */

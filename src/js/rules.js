@@ -33,7 +33,9 @@ function initTempSeats(s){
  if(!s)return;
  // 升班马挂临时席（含玩家执教升班马——真实 KPL 席位可收回）；固定 16 队绝不进临时席
  s.tempSeatFixed=s.tempSeatFixed||[];
- s.tempSeats=TEMP_SEAT_TEAMS.filter(n=>s.tempSeatFixed.indexOf(n)<0);
+ if(!s.tempSeats||!s.tempSeats.length){
+  s.tempSeats=TEMP_SEAT_TEAMS.filter(n=>!isFixedSeatTeam(n));
+ }
  while(s.tempSeats.length<TEMP_SEAT_COUNT){
   const incoming=KJIA_AI_TEAMS.find(n=>!AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0)
    ||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):(s.season||1)));
@@ -50,61 +52,144 @@ function settleTempSeats(s){
  if(!s)return;
  initTempSeats(s);
  if(!s.tempSeats||!s.tempSeats.length)return;
- s.tempSeatFixed=s.tempSeatFixed||[];
+
+ const curSeason=s.season||1;
+ s.tempSeatFixedExpiry=s.tempSeatFixedExpiry||{};
+
+ // 夺冠保留席一季化（FIX-C）：清理已过期的保留条目；老档无 expiry 则视为已过期
+ s.tempSeatFixed=(s.tempSeatFixed||[]).filter(t=>(s.tempSeatFixedExpiry[t]||0)>=curSeason);
+
  (s.titleHistory||[]).forEach(t=>{
-  if(t&&t.champ&&isTempSeat(s,t.champ)&&s.tempSeatFixed.indexOf(t.champ)<0&&!isFixedSeatTeam(t.champ)){
-   // 夺冠≠转正固定席：下赛季保留席位、免打席位赛（非永久固定）
-   s.tempSeatFixed.push(t.champ);
+  if(!t||!t.champ)return;
+  if(t._seatProtected)return;
+  if(t.season!=null&&t.season!==curSeason)return;
+  if(isTempSeat(s,t.champ)&&!isFixedSeatTeam(t.champ)){
+   t._seatProtected=true;
+   s.tempSeatFixedExpiry[t.champ]=curSeason;
+   if(s.tempSeatFixed.indexOf(t.champ)<0)s.tempSeatFixed.push(t.champ);
    try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——下赛季保留 KPL 席位，免打席位赛（非固定席）');}catch(e){}
   }
  });
- s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t)&&s.tempSeatFixed.indexOf(t)<0);
- if(s.tempSeats.length<TEMP_SEAT_COUNT){
-  TEMP_SEAT_TEAMS.forEach(n=>{
-   if(s.tempSeats.length<TEMP_SEAT_COUNT&&s.tempSeats.indexOf(n)<0&&s.tempSeatFixed.indexOf(n)<0)s.tempSeats.push(n);
-  });
- }
+
  const pts=s.annualPts||{};
+
+ // 保留席仍占一个临时席，只排除它被收回；不得踢出池子（FIX-A）
+ s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t));
+
+ // 先把池子双向收敛到席位上限（只裁非保留席中积分最低者），再评选垫底
+ while(s.tempSeats.length>TEMP_SEAT_COUNT){
+  const droppable=s.tempSeats.filter(t=>s.tempSeatFixed.indexOf(t)<0);
+  if(!droppable.length)break;
+  droppable.sort((a,b)=>(pts[a]||0)-(pts[b]||0));
+  s.tempSeats=s.tempSeats.filter(t=>t!==droppable[0]);
+ }
+
+ // 垫底评选（保留席不参与评选）
  let worst=null,worstPts=Infinity;
  s.tempSeats.forEach(t=>{
-  const p=pts[t]||0;
+  if(s.tempSeatFixed.indexOf(t)>=0)return;
+  let p=pts[t]||0;
+  if(t===s.teamName&&(s.wageDefaulted||0)>0){
+   p-=Math.min((s.wageDefaulted||0)*15,60);
+  }
   if(p<worstPts){worstPts=p;worst=t;}
  });
- if(!worst||!s.tempSeats.length)return;
- if(s.tempSeatFixed.indexOf(worst)>=0)return;
+
  let incoming=null;
- try{
-  const k=s.kjia;
-  if(k&&k.champ&&k.champ!==kjiaMyName(s)&&!AI_TEAMS.some(t=>t.name===k.champ)){
-   incoming=k.champ;
-  }else if(k&&k.champ){
-   const rank=kjiaRank(s)||[];
-   incoming=rank.find(n=>n!==k.champ&&n!==kjiaMyName(s))||null;
-  }
- }catch(e){}
- if(!incoming){
-  incoming=KJIA_AI_TEAMS.find(n=>!AI_TEAMS.some(t=>t.name===n))||('K甲·新军'+gameYear(s));
- }
- s.tempSeats=s.tempSeats.filter(t=>t!==worst);
- if(incoming&&incoming!==s.teamName&&!isFixedSeatTeam(incoming)&&s.tempSeats.indexOf(incoming)<0&&s.tempSeatFixed.indexOf(incoming)<0)s.tempSeats.push(incoming);
- s.tempSeatLog=s.tempSeatLog||[];
- s.tempSeatLog.unshift(gameYear(s)+'：收回 '+worst+' 临时席 → '+incoming+' 顶上');
- s.tempSeatLog=s.tempSeatLog.slice(0,8);
- try{
-  logEvent(s,' 临时席变动：'+worst+' 席位收回，'+incoming+' 获得下赛季 KPL 临时席位（固定席位不降级）');
- }catch(e){}
- if(worst===s.teamName){
-  try{
+ if(worst){
+  s.tempSeats=s.tempSeats.filter(t=>t!==worst);
+  if(worst===s.teamName){
    s.seatLost=true;
-   logEvent(s,' 你的俱乐部临时席位被收回——降入 K甲。固定席位球队不会降级，升班马需用成绩保住席位');
+   try{logEvent(s,' 你的俱乐部临时席位被收回——降入 K甲。固定席位球队不会降级，升班马需用成绩保住席位');}catch(e){}
+  }
+
+  // 顶替队选拔：K甲冠军 > K甲排名 > KJIA_AI_TEAMS > 新军
+  try{
+   const k=s.kjia;
+   if(k&&k.champ&&k.champ!==kjiaMyName(s)&&!AI_TEAMS.some(t=>t.name===k.champ)){
+    incoming=k.champ;
+   }else if(k&&k.champ){
+    const rank=kjiaRank(s)||[];
+    incoming=rank.find(n=>n!==k.champ&&n!==kjiaMyName(s))||null;
+   }
+  }catch(e){}
+  if(!incoming){
+   incoming=(typeof KJIA_AI_TEAMS!=='undefined'?KJIA_AI_TEAMS:[]).find(n=>
+    !AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0&&n!==worst
+   )||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):curSeason));
+  }
+
+  if(incoming&&incoming!==s.teamName&&!isFixedSeatTeam(incoming)&&s.tempSeats.indexOf(incoming)<0&&s.tempSeatFixed.indexOf(incoming)<0){
+   s.tempSeats.push(incoming);
+  }
+
+  s.tempSeatLog=s.tempSeatLog||[];
+  s.tempSeatLog.unshift((typeof gameYear==='function'?gameYear(s):curSeason)+'：收回 '+worst+' 临时席 → '+incoming+' 顶上');
+  s.tempSeatLog=s.tempSeatLog.slice(0,8);
+  try{
+   logEvent(s,' 临时席变动：'+worst+' 席位收回，'+incoming+' 获得下赛季 KPL 临时席位（固定席位不降级）');
+  }catch(e){}
+  try{
+   if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
+    logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
+    addFans(s,1,'K甲夺冠·席位资格');
+   }
   }catch(e){}
  }
- try{
-  if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
-   logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
-   addFans(s,1,'K甲夺冠·席位资格');
+
+ // 补位必须放在评选与收回之后（FIX-A）
+ while(s.tempSeats.length<TEMP_SEAT_COUNT){
+  const extra=(typeof KJIA_AI_TEAMS!=='undefined'?KJIA_AI_TEAMS:[]).find(n=>
+   !AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0&&n!==worst
+  )||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):curSeason));
+  if(s.tempSeats.indexOf(extra)<0)s.tempSeats.push(extra); else break;
+ }
+
+ // 真实写回联盟状态：以 newSeats 为唯一样本源（FIX-B）
+ const newSeats=[...FIXED_SEAT_TEAMS];
+ s.tempSeats.forEach(t=>{if(newSeats.indexOf(t)<0)newSeats.push(t);});
+ const newSeatSet=new Set(newSeats);
+
+ // 1) AI_TEAMS 写回：只保留 newSeats 中的队伍；补充新进队伍
+ if(typeof AI_TEAMS!=='undefined'&&Array.isArray(AI_TEAMS)){
+  for(let i=AI_TEAMS.length-1;i>=0;i--){
+   if(!newSeatSet.has(AI_TEAMS[i].name)){
+    AI_TEAMS.splice(i,1);
+   }
   }
- }catch(e){}
+  newSeats.forEach(nm=>{
+   if(!AI_TEAMS.some(t=>t.name===nm)){
+    AI_TEAMS.push({
+     name:nm,
+     icon:(typeof KPL_YEAR_ICON!=='undefined'&&KPL_YEAR_ICON[nm])||'⭐',
+     budget:550,cap:95,coach:'co4',
+     desc:nm+' · K甲升班马'
+    });
+   }
+  });
+ }
+
+ // 2) AI_ROSTERS 写回：只保留 newSeats 中的队伍；为新进队伍生成阵容
+ if(typeof AI_ROSTERS!=='undefined'&&AI_ROSTERS){
+  Object.keys(AI_ROSTERS).forEach(k=>{
+   if(!newSeatSet.has(k))delete AI_ROSTERS[k];
+  });
+  newSeats.forEach(nm=>{
+   if(!AI_ROSTERS[nm]){
+    const tplKey=Object.keys(AI_ROSTERS)[0];
+    AI_ROSTERS[nm]=(worst&&AI_ROSTERS[worst])
+     ?JSON.parse(JSON.stringify(AI_ROSTERS[worst]))
+     :(tplKey?JSON.parse(JSON.stringify(AI_ROSTERS[tplKey])):{p:['top19','jg10','mid18','ad18','sup19'],u:[]});
+   }
+  });
+  if(worst&&!newSeatSet.has(worst))delete AI_ROSTERS[worst];
+ }
+
+ // 3) s.leagueTeams 写回：newSeats 集合（若玩家降级则移出玩家队）
+ s.leagueTeams=newSeats.slice();
+ if(s.seatLost){
+  s.leagueTeams=s.leagueTeams.filter(t=>t!==s.teamName);
+ }
 }
 function tempSeatsPanelHtml(){
  const s=S;

@@ -1,9 +1,23 @@
 /* 深挖：coach market 遮挡、train s-chip 横向出界、start modal 按钮、底部 nav 遮挡、header */
+const fs = require('fs');
 const path = require('path');
-const { chromium } = require('E:/sex/.workbuddy/tmp/node_modules/playwright-core');
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const BASE = 'http://127.0.0.1:8931';
-const SHOT = 'E:\\sex\\kpl-manager\\.bug-hunt\\visual';
+
+const ROOT = path.join(__dirname, '..', '..');
+const CHROME_PATHS = [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+];
+const CHROME = CHROME_PATHS.find(p => fs.existsSync(p)) || CHROME_PATHS[0];
+
+const PLAYWRIGHT_PATHS = [
+  path.join(ROOT, '..', '.workbuddy', 'tmp', 'node_modules', 'playwright-core'),
+  path.join(ROOT, 'node_modules', 'playwright-core')
+];
+const PW_DIR = PLAYWRIGHT_PATHS.find(p => fs.existsSync(p));
+const { chromium } = PW_DIR ? require(PW_DIR) : {};
+
+const BASE = process.env.KPL_BASE || 'http://127.0.0.1:8931';
+const SHOT = path.join(ROOT, '.bug-hunt', 'visual');
 
 const PROBE = (arg) => {
   const { kind } = arg;
@@ -332,7 +346,7 @@ const PROBE = (arg) => {
 
   await browser.close();
   require('fs').writeFileSync(
-    'E:\\sex\\kpl-manager\\.bug-hunt\\probe-deep.json',
+    path.join(ROOT, '.bug-hunt', 'probe-deep.json'),
     JSON.stringify(results, null, 2),
     'utf8'
   );

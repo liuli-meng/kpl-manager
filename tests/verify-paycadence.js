@@ -47,13 +47,24 @@ const CADENCE_TEST = vm.runInContext(`
     let payCount = 0;
     let wageSpent = 0;
     const initialNominal = weeklyWage(s);
+    s.fund = 500000; // 注入充足资金，保证发薪日不会触碰 fund=0 钳制底线
     const origPayWage = payWage;
-
     payWage = function(st) {
       payCount++;
-      const w = Math.max(0, Math.round(weeklyWage(st) / ECON.payWeeks));
-      wageSpent += w;
-      return origPayWage(st);
+      const f0 = st.fund;
+      const ops = (typeof clubOpsCost === 'function') ? clubOpsCost(st) : 0;
+      const reserveFee = (typeof cashReserveFee === 'function') ? cashReserveFee(st) : 0;
+      const endorseRaw = (st.players || []).reduce((t, p) => t + ((p.popularity || 0) * ENDORSE_PER_POP), 0) * fanMul(st, 300);
+      const endorse = Math.round(endorseRaw * idleMul(st));
+      const annual = weeklyWage(st);
+      let tax = 0;
+      if (annual > st.wageCap) {
+        tax = Math.round((annual - st.wageCap) * 0.6 / ECON.payWeeks);
+      }
+      origPayWage(st);
+      // 真实量测 s.fund 资金池变动，剔除非工资收支项后逆向捕获真实薪资扣除
+      const actualWageDeducted = (f0 - st.fund) - ops - reserveFee - tax + endorse;
+      wageSpent += actualWageDeducted;
     };
 
     function playSplit(win) {

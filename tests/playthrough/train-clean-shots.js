@@ -66,8 +66,9 @@ const { launch, clearAndStart, shot } = require('./pw.js');
     // full page shot
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(100);
-    await page.screenshot({ path: 'E:/sex/gui-test-screenshots/pt_train_23_fullpage.png', fullPage: true });
-    console.log('SHOT fullpage');
+    const fullShotPath = require('path').join(process.env.SHOT_DIR || require('path').join(__dirname, '..', '..', 'gui-test-screenshots'), 'pt_train_23_fullpage.png');
+    await page.screenshot({ path: fullShotPath, fullPage: true });
+    console.log('SHOT fullpage', fullShotPath);
 
     // list buttons again on clean page
     const btns = await page.evaluate(() => {

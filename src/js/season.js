@@ -148,18 +148,43 @@ function sortGroup(s,g){
 }
 /* 初始化分组：玩家新队进 G3（第一轮抽签组），其余按战力蛇形分 G1/G2/G3 */
 function initGroups(s){
+ if(typeof initTempSeats==='function')initTempSeats(s);
  // 玩家执教的俱乐部从 AI 池移除（如选 AG 则 AI 中没有 AG）
  let aiList=AI_TEAMS.filter(t=>t.name!==s.teamName);
- // 自建队不在 AI 名单中：自动顶替最弱队席位（KPL 18 队固定）
- if(aiList.length>17)aiList=aiList.filter(t=>t.name!=='常山UUG');
+ if(!s.seatLost){
+  // 玩家在席位上：若属于名录外自建队，顶替最弱临时席位（KPL 18 队固定：16 固定 + 2 临时）
+  if(aiList.length>17){
+   const tempCand=aiList.filter(t=>typeof isFixedSeatTeam==='function'?!isFixedSeatTeam(t.name):(t.name==='常山UUG'||t.name==='桐乡情久'||t.name.includes('K甲')));
+   if(tempCand.length){
+    tempCand.sort((a,b)=>(a.power||450)-(b.power||450));
+    const dropName=tempCand[0].name;
+    aiList=aiList.filter(t=>t.name!==dropName);
+    if(typeof AI_TEAMS!=='undefined'&&Array.isArray(AI_TEAMS)){
+     const dIdx=AI_TEAMS.findIndex(t=>t.name===dropName);
+     if(dIdx>=0)AI_TEAMS.splice(dIdx,1);
+    }
+    if(Array.isArray(s.tempSeats)){
+     s.tempSeats=s.tempSeats.map(t=>t===dropName?s.teamName:t);
+     if(!s.tempSeats.includes(s.teamName)&&s.tempSeats.length<TEMP_SEAT_COUNT){
+      s.tempSeats.push(s.teamName);
+     }
+    }
+   }else{
+    aiList.sort((a,b)=>(a.power||450)-(b.power||450));
+    aiList=aiList.slice(1);
+   }
+  }
+ }
  // 分组按真实阵容战力（与玩家 teamPower 同刻度），豪门进 G1、弱旅进 G3
  const all=aiList.map(t=>{
  const r=ensureAiRosters(s,t.name);
  return {name:t.name,power:r.length?aiRosterPower(r,s,t.name):t.power};
  });
- all.push({name:s.teamName,power:s.seedPower||teamPower(s)}); // 玩家种子=开局真实战力
+ if(!s.seatLost){
+  all.push({name:s.teamName,power:s.seedPower||teamPower(s)}); // 玩家在席位上时加入
+ }
  all.sort((a,b)=>b.power-a.power);
- s.leagueTeams=all.map(x=>x.name); // 联盟注册名录（联盟页/榜单用）
+ s.leagueTeams=all.map(x=>x.name); // 联盟注册名录（恒为 18 队）
  try{applyYearFmt(s);}catch(e){}
  const st=(fmtOf(s).structure)||'sab';
  // 'legacy' 是时代档半成品标记：按 2017 双循环（单组大循环）落组，避免掉进 S/A/B 分叉
@@ -796,11 +821,21 @@ function payWage(s){
  logEvent(s,' 周结总账：收入 代言+'+endorse+' · 支出 工资-'+wage+' 编制-'+ops+(reserveFee?' 储备费-'+reserveFee:'')+(tax?' 奢侈税-'+tax:'')
   +'（净 '+(endorse-spend>=0?'+':'')+(endorse-spend)+'万 · 年薪合计 '+annual+'万 / 帽 '+s.wageCap+'万）');
  if(typeof s.fund!=='number'||!isFinite(s.fund))s.fund=0; // 防 NaN 写入存档（JSON 会变 null）
- if(s.fund<0){
-  s.fund=Math.max(0,s.fund);
-  s.players.forEach(p=>p.morale=clamp(p.morale-15,20,100));
-  logEvent(s,' 资金不足！拖欠工资导致全员士气大降');
+ if(s.fund<=0){
+  s.fund=0; // 真实KPL固定席无破产退赛，资金底线钳0防持久负数，但产生真实财政惩罚
+  s.wageDefaulted=(s.wageDefaulted||0)+1;
+  s.players.forEach(p=>{
+   p.morale=clamp(p.morale-15,20,100);
+   p.willingness=clamp((p.willingness==null?70:p.willingness)-10,5,100);
+  });
+  if(typeof boardRelDelta==='function'){
+   boardRelDelta(s,-6,'俱乐部现金流断流欠薪，董事会严正问责');
+  }else if(s.board){
+   s.board.trust=clamp((s.board.trust||60)-6,0,100);
+  }
+  logEvent(s,' 资金不足！现金流断流欠薪导致全员士气骤降、留队意愿动摇，董事会信任受挫');
  }else{
+   if(s.wageDefaulted>0){s.wageDefaulted=0;logEvent(s,' 财政恢复正常：欠薪惩罚解除');} // 资金恢复后重置欠薪计数器
   s.players.forEach(p=>p.morale=clamp(p.morale+3,20,100));
  }
  try{if(typeof toast==='function'&&spend>0)toast(' 周结：支出 '+spend+'万（工资+编制+税费）');}catch(e){}
@@ -998,6 +1033,7 @@ function newSeason(s){
  }
  s.fund+=220; // 联盟赛季启动金（年度轮换只发一次）
  logEvent(s,' 联盟调整工资帽：本年薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
+ try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上（必须在清零年度积分前执行）
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
  s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过
@@ -1012,7 +1048,6 @@ function newSeason(s){
  boardApplyEffect(s); // 董事会：下赛季的干预（砍帽）或特权（追加预算）按月生效
  setBoardKpi(s); // 下发本赛季董事会目标（依据上一年年度积分排名）
  try{gcDefs(s);}catch(e){} // 年度轮换：清杯赛临时 def / 退役 def / 青训幽灵
- try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上
  try{if(typeof auditSave==='function')auditSave(s,{silent:false});}catch(e){} // 赛季末不变量巡检
  startSplit(s,'spring');
 }
@@ -1172,7 +1207,9 @@ function yearCalendarHtml(s){
  const cur=currentCalendarKey(st0);
  const curIdx=stages.findIndex(x=>x.k===cur);
  const pct=stages.length<=1?0:Math.round(Math.max(0,Math.min(stages.length-1,curIdx))/(stages.length-1)*100);
- return '<div class="panel"><h3>年度赛历 <span class="tag">2026 赛制 · '+pct+'%</span></h3>'
+ const curYr=typeof gameYear==='function'?gameYear(st0):(st0.season?2026+st0.season-1:2026);
+ const tagText=curYr>2026?`${curYr} 赛制（沿用 2026 口径 · 数据地平线）· ${pct}%`:`${curYr} 赛制 · ${pct}%`;
+ return '<div class="panel"><h3>年度赛历 <span class="tag">'+tagText+'</span></h3>'
   +'<div class="cal-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>'
   +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch;margin-top:8px">'
   +stages.map((st,i)=>{

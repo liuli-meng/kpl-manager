@@ -28,7 +28,6 @@
 - [x] README.md 更新 v1.0 新功能说明
 - [x] CHANGELOG.md 记录所有改进
 - [x] PROJECT-ARCHITECTURE.md 架构文档
-- [x] DEEP-OPTIMIZATION-REPORT.md 优化报告
 - [x] RELEASE-GUIDE.md (本文档)
 
 ---
@@ -262,7 +261,6 @@ https://liuli-meng.github.io/kpl-manager/
 **文档**:
 - `/docs/PROJECT-ARCHITECTURE.md`
 - `/docs/CHANGELOG.md`
-- `/DEEP-OPTIMIZATION-REPORT.md`
 
 ---
 

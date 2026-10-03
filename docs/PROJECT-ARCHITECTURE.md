@@ -264,7 +264,7 @@ hooks = [
 至少 1 项针对新功能的测试
 
 #### Step 4: 更新文档
-- 修改 ARCHITECTURE.md
+- 修改 `docs/PROJECT-ARCHITECTURE.md`（本文档）
 - 添加 API 引用
 - 更新 README 功能说明
 

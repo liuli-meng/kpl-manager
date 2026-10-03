@@ -282,7 +282,7 @@ function renderHeader(){
  const nextPay=WAGE_EVERY-(S.day%WAGE_EVERY===0?WAGE_EVERY:S.day%WAGE_EVERY);
  const hdPower=teamPower(S),hdWage=weeklyWage(S); // 各算一次：本函数内三处复用
  const hdWeekCost=Math.round(hdWage/ECON.payWeeks)+(typeof clubOpsCost==='function'?clubOpsCost(S):0); // 周支出预估（工资+编制）
- const fundCls=(S.fund<0)?'danger flashing':(S.fund<100)?'warning':(S.fund<500)?'caution':'healthy';
+ const fundCls=(S.fund<=0)?'danger flashing':(S.fund<100)?'warning':(S.fund<500)?'caution':'healthy';
  $('#header').innerHTML=`
  <div class="logo">${crest(S.icon,S.teamName,44)}</div>
  <div class="hd-name">${S.teamName}<small>${S.mode==='player'?'选手生涯 · '+(myPlayer(S)?myPlayer(S).name:'')+' · '+splitLabel(S):S.mode==='coach'?'教练生涯 · '+splitLabel(S):S.phase==='champion'?'冠军俱乐部':splitLabel(S)+' · KPL 联赛'}</small></div>

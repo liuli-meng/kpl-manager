@@ -47,9 +47,9 @@ function simSquad(kind){
 }
 function simSeason(kind){
   simSquad(kind);
-  let guard=0,broke=false;
+  let guard=0,unpaid=false;
   const minFund=[S.fund];
-  const tick=()=>{minFund.push(S.fund);if(S.fund<=0)broke=true;};
+  const tick=()=>{minFund.push(S.fund);if(S.fund<=0||(S.wageDefaulted||0)>0)unpaid=true;};
   while(!['champion','eliminated'].includes(S.phase)&&guard++<400){
     tick();
     if(S.phase==='r1'||S.phase==='r2'||S.phase==='r3'){
@@ -81,20 +81,20 @@ function simSeason(kind){
   const blow=margins.filter(m=>m>=3).length/nM;
   const avgMar=margins.reduce((t,x)=>t+x,0)/nM;
   return {phase:S.phase,champ,po:['playoff','champion'].includes(S.phase)||touchedPo,
-    minFund:Math.min.apply(null,minFund),broke,close,blow,avgMar,nSeries:margins.length};
+    minFund:Math.min.apply(null,minFund),unpaid,close,blow,avgMar,nSeries:margins.length};
 }
 function runBatch(kind,n){
-  const champs={};let po=0,broke=0,minF=1e9,powSum=0,closeSum=0,blowSum=0,marSum=0;
+  const champs={};let po=0,unpaid=0,minF=1e9,powSum=0,closeSum=0,blowSum=0,marSum=0;
   for(let i=0;i<n;i++){
     const r=simSeason(kind);
     if(r.champ){champs[r.champ]=(champs[r.champ]||0)+1;}
     if(r.po)po++;
-    if(r.minFund<=0)broke++;
+    if(r.unpaid)unpaid++;
     powSum+=teamPower(S)||0;
     if(r.minFund<minF)minF=r.minFund;
     closeSum+=r.close||0;blowSum+=r.blow||0;marSum+=r.avgMar||0;
   }
-  return {po,broke,champs,my:champs[kind.name]||0,minF,avgPow:Math.round(powSum/n),
+  return {po,unpaid,champs,my:champs[kind.name]||0,minF,avgPow:Math.round(powSum/n),
     close:closeSum/n,blow:blowSum/n,avgMar:marSum/n};
 }
 `;
@@ -107,7 +107,7 @@ const BANDS = {
   '自建新队': r => (r.po/N >= 0.15 && r.po/N <= 0.75) || `自建季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 [15%,75%]（基线 ~55%~65%：拦结构性崩坏/碾压）`,
   'AG豪门':   r => r.my/N <= 0.85 || `AG 夺冠率 ${(r.my/N*100).toFixed(0)}% 越界 ≤85%（基线 ~65%~75%：银河战舰允许强，但不能一家独大）`,
   'UUG弱旅':  r => r.po/N <= 0.78 || `UUG 季后赛率 ${(r.po/N*100).toFixed(0)}% 越界 ≤78%（基线 ~55%~65%：弱旅不应稳定碾压）`,
-  '_破产':    r => r.broke/N <= 0.06 || `破产率 ${(r.broke/N*100).toFixed(0)}% 越界 ≤6%`,
+  '_欠薪':    r => r.unpaid/N <= 0.06 || `欠薪断流率 ${(r.unpaid/N*100).toFixed(0)}% 越界 ≤6%`,
   '_焦灼率':  r => (r.close >= 0.12 && r.close <= 0.70) || `系列赛焦灼率（分差≤1）${(r.close*100).toFixed(0)}% 越界 [12%,70%]（体感：既不能全是惨案也不能全是抛硬币）`,
   '_场均分差': r => (r.avgMar >= 0.4 && r.avgMar <= 2.8) || `场均小局分差 ${r.avgMar.toFixed(2)} 越界 [0.4,2.8]（体感竞争力）`,
 };
@@ -140,13 +140,13 @@ function checkTier(name, kind, bands) {
 }
 
 console.log('=== 平衡门禁 ×' + N + '/档（三档开局 + 2017 时代档）· 种子 ' + SEED + (RANDOM_SEED ? '（随机）' : '（固定）') + ' ===');
-const t1 = checkTier('自建新队', {name:'自建新队', template:null}, [BANDS['自建新队'], BANDS['_破产'], BANDS['_焦灼率'], BANDS['_场均分差']]);
-console.log('自建新队  季后赛 ' + (t1.po/N*100).toFixed(0) + '%  破产 ' + (t1.broke/N*100).toFixed(0) + '%  最低资金 ' + t1.minF
+const t1 = checkTier('自建新队', {name:'自建新队', template:null}, [BANDS['自建新队'], BANDS['_欠薪'], BANDS['_焦灼率'], BANDS['_场均分差']]);
+console.log('自建新队  季后赛 ' + (t1.po/N*100).toFixed(0) + '%  欠薪 ' + (t1.unpaid/N*100).toFixed(0) + '%  最低资金 ' + t1.minF
  + '  焦灼 ' + (t1.close*100).toFixed(0) + '%  均分差 ' + (t1.avgMar||0).toFixed(2));
-const t2 = checkTier('AG豪门', {name:'AG豪门', template:'成都AG超玩会'}, [BANDS['AG豪门'], BANDS['_破产']]);
-console.log('AG豪门    夺冠 ' + (t2.my/N*100).toFixed(0) + '%  破产 ' + (t2.broke/N*100).toFixed(0) + '%');
-const t3 = checkTier('UUG弱旅', {name:'UUG弱旅', template:'常山UUG'}, [BANDS['UUG弱旅'], BANDS['_破产']]);
-console.log('UUG弱旅   季后赛 ' + (t3.po/N*100).toFixed(0) + '%  破产 ' + (t3.broke/N*100).toFixed(0) + '%');
+const t2 = checkTier('AG豪门', {name:'AG豪门', template:'成都AG超玩会'}, [BANDS['AG豪门'], BANDS['_欠薪']]);
+console.log('AG豪门    夺冠 ' + (t2.my/N*100).toFixed(0) + '%  欠薪 ' + (t2.unpaid/N*100).toFixed(0) + '%');
+const t3 = checkTier('UUG弱旅', {name:'UUG弱旅', template:'常山UUG'}, [BANDS['UUG弱旅'], BANDS['_欠薪']]);
+console.log('UUG弱旅   季后赛 ' + (t3.po/N*100).toFixed(0) + '%  欠薪 ' + (t3.unpaid/N*100).toFixed(0) + '%');
 
 // 时代档：2017 · QG王朝——扮演 AG超玩会（次强，时代模板名即「AG超玩会」）
 // installEra 由 simSquad 按 kind.era 自装

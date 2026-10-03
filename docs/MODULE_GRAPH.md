@@ -1,6 +1,6 @@
 # MODULE_GRAPH — 模块依赖契约（扁平 src/js）
 
-> **真相源**。`ARCHITECTURE.md` 里的 `render-*.js` / core·engine·ui 严格分层是愿景，**不是**当前结构。  
+> **真相源**。早期 `ARCHITECTURE.md`（已于 2026-10-03 移除）里描述的 `render-*.js` / core·engine·ui 严格分层是愿景，**不是**当前结构。  
 > 测试沙箱（`tests/harness.js`）**只加载 `src/js/*`**，不加载 `src/core/*`。浏览器 `game.html` 两者都拼。
 
 ## 加载顺序（`src/index.html`，build.js 按此顺序内联）

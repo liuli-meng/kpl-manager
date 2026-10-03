@@ -1,10 +1,23 @@
 // Shared playwright helper for kpl-manager playthrough agents
+const fs = require('fs');
 const path = require('path');
-const { chromium } = require('E:/sex/.workbuddy/tmp/node_modules/playwright-core');
 
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const ROOT = path.join(__dirname, '..', '..');
+const CHROME_PATHS = [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+];
+const CHROME = CHROME_PATHS.find(p => fs.existsSync(p)) || CHROME_PATHS[0];
+
+const PLAYWRIGHT_PATHS = [
+  path.join(ROOT, '..', '.workbuddy', 'tmp', 'node_modules', 'playwright-core'),
+  path.join(ROOT, 'node_modules', 'playwright-core')
+];
+const PW_DIR = PLAYWRIGHT_PATHS.find(p => fs.existsSync(p));
+const { chromium } = PW_DIR ? require(PW_DIR) : {};
+
 const BASE = process.env.KPL_BASE || 'http://127.0.0.1:8931';
-const SHOT_DIR = path.join('E:\\sex', 'gui-test-screenshots');
+const SHOT_DIR = process.env.SHOT_DIR || path.join(ROOT, '..', 'gui-test-screenshots');
 
 async function launch(opts = {}) {
   const browser = await chromium.launch({
