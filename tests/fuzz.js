@@ -54,8 +54,8 @@ const out = run(`
     if(S.leagueTeams&&S.leagueTeams.length!==18)bad.push('联盟'+S.leagueTeams.length+'队');
     if(bad.length)errs.push(where+': '+[...new Set(bad)].join(' / '));
   }
-  S=newState('压测队','⚔️');
-fillRoster(S,'mid');
+  S=newState('成都AG超玩会','焰');
+  if(!S.players||S.players.length<5)fillRoster(S,'mid');
   S.coach={...COACH_POOL.find(c=>c.id==='co12')};
   S.seedPower=400;initGroups(S);
   S.preseason=true;S.transferWindow=7;buildTransferMarket(S);refreshMarket(S);
@@ -153,11 +153,27 @@ fillRoster(S,'mid');
 
 const res = JSON.parse(out);
 const T = makeTester('模糊压测 (' + res.season + ' 赛季 × 900 步随机)');
-console.log('  [' + res.season + ' 赛季 · ' + res.series + ' 场系列赛 · ' + res.players + ' 人]');
+console.log('  [主轨迹: ' + res.season + ' 赛季 · ' + res.series + ' 场系列赛 · ' + res.players + ' 人]');
 T.check(res.errs.length === 0, '异常:\n  ' + res.errs.join('\n  '));
 T.check(res.dupNames.length === 0, '跨队重名: ' + res.dupNames.join(','));
 T.check(res.teamBad.length === 0, '球队阵容异常: ' + res.teamBad.join(','));
 T.check(res.notes.length === 0 || res.notes.every(n => n.includes('自动暂停')), '意外备注: ' + res.notes.join(' / '));
-T.check(res.season >= 15 || res.seatLost === true,
-  '模糊压测只跑了 ' + res.season + ' 赛季（目标 15）且非软终局退出');
+T.check(res.season >= 15, '主轨迹（固定席）必须跑满 15 赛季，实际 ' + res.season + ' 赛季');
+
+// 第二轨迹：自建队/临时席 软终局退出验证（出处：GUIDE §9.4）
+const { dom: dom2 } = makeDom();
+const out2 = vm.runInContext(`
+  S = newState('压测队', '⚔️');
+  fillRoster(S, 'mid');
+  initGroups(S);
+  // 他人夺冠保留，资格赛取消，验证临时席位俱乐部到期软终局
+  S.titleHistory = [{ champ: '桐乡情久', event: '春季赛', season: 1 }];
+  initKjia(S);
+  S.kjia.champ = 'K甲·苍穹';
+  settleTempSeats(S, { kglSplitResult: { champion: 'K甲·苍穹' } });
+  JSON.stringify({ seatLost: !!S.seatLost, season: S.season, reason: S.seatLostReason });
+`, dom2);
+const res2 = JSON.parse(out2);
+T.check(res2.seatLost === true, '第二轨迹（临时席自建队未获席位）必须正常软终局退出: seatLost=' + res2.seatLost + ' reason=' + res2.reason);
+
 T.report();

@@ -65,19 +65,17 @@ const out = vm.runInContext(`
     }
   }
 
-  // ③b 玩家升班马垫底 → seatLost
+  // ③b 玩家升班马未获席位 → seatLost（真实 KPL：夺冠保留取消资格赛，未获席位者到期）
   {
     const s=mk();
     s.teamName='桐乡情久';
     initTempSeats(s);
-    s.annualPts={};
-    AI_TEAMS.forEach(t=>{s.annualPts[t.name]=80;});
-    s.annualPts['桐乡情久']=0;
-    s.annualPts['常山UUG']=50;
+    s.season=1;
+    s.titleHistory=[{champ:'常山UUG',event:'春季赛',season:1}]; // 常山UUG 夺冠保留，资格赛取消
     s.kjia={champ:'K甲·苍穹'};
     settleTempSeats(s);
-    if(!s.seatLost)fail('玩家临时席垫底未触发 seatLost');
-    else log('③b 玩家升班马垫底：席位收回 seatLost=true（真实 KPL）');
+    if(!s.seatLost)fail('玩家临时席未获授予应触发 seatLost');
+    else log('③b 玩家升班马未获席位：seatLost=true（真实 KPL）');
   }
 
   // ④ 伤停无替补：必须摘出首发（不得「留在首发等人伤愈」变相延期）

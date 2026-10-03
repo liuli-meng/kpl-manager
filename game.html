@@ -6674,7 +6674,12 @@ function newSeason(s){
  }
  s.fund+=220; // 联盟赛季启动金（年度轮换只发一次）
  logEvent(s,' 联盟调整工资帽：本年薪上限 '+s.wageCap+'万 · 赛季启动金 +220万');
- try{if(typeof settleTempSeats==='function')settleTempSeats(s);}catch(e){} // 临时席收回/顶上（必须在清零年度积分前执行）
+ try{
+  if(typeof settleTempSeats==='function'&&!s._seatSettledThisSplit){
+   settleTempSeats(s,{kglSplitResult:typeof lastKjiaSplitResult==='function'?lastKjiaSplitResult(s):{},triggeredBy:'season'});
+   s._seatSettledThisSplit=true;
+  }
+ }catch(e){} // 席位结算（每赛季一次；传入刚结束的 K甲 赛段结果）
  s.annualPts={}; // 新一年：年度积分清零（春夏重新累计）
  s.yearStages=[]; // 成绩曲线同一年度清零（回顾已快照进 yearReviews）
  s._annualSettled=false; // 年结锁复位：不清则第2年起 boardSettle/履历/豪门邀约整段被跳过
@@ -6695,6 +6700,7 @@ function newSeason(s){
 
 function startSplit(s,split){
  s.split=split;s.streak=0;s.upsetBoost=0;s.fumbleBoost=0;s.stage='regular';
+ s._seatSettledThisSplit=false; // 每赛段重置席位结算守卫（GUIDE §4.4：防 newSeason+startSplit 重复结算）
 
  s._afterMatch=null;
  if(s.mode==='player'||s.mode==='coach'){ // 选手/教练：无转会期——俱乐部层面自动运转
@@ -7406,10 +7412,28 @@ function applySeasonPatch(s,upN,downN){
 <script>
 const KJIA_DAYS=30;
 const KJIA_MIN_RECALL=7; // 提前召回最少已练天数（不足则拒绝，防「下放第二天就拉回」）
-const KJIA_AI_TEAMS=['K甲·苍穹','K甲·星火','K甲·沧澜','K甲·曜石','K甲·铁鳞','K甲·游隼','K甲·雾嶂'];
+
+const KJIA_AI_DEFS=[
+ {name:'K甲·苍穹',power0:382},  // 豪门三强（与挑战者杯赛道强度对齐）
+ {name:'K甲·星火',power0:376},
+ {name:'K甲·沧澜',power0:370},
+ {name:'K甲·曜石',power0:358},
+ {name:'K甲·铁鳞',power0:352},
+ {name:'K甲·游隼',power0:346},
+ {name:'K甲·雾嶂',power0:340},
+];
+const KJIA_AI_TEAMS=KJIA_AI_DEFS.map(d=>d.name); // 向后兼容：rules.js / initTempSeats 通过名称数组引用
 const KJIA_EVERY=2; // 每 2 天一轮（7 轮=14 天，转会期 7 天内先打 3 轮）
 const KJIA_FILLER_NAMES=['冷峤','照野','束禾','闻鹿','栖迟','枕流','叩舷','扫雪','拾星','衔山','汲露','司南','执桨','引笛','泊岸','拓海','听澜','折桨','纵马','悬旌','负剑','摘星','衔烛','趁风'];
 function kjiaMyName(s){return s.teamName+'二队';}
+
+function kjiaAiPower(s,name){
+ const def=KJIA_AI_DEFS.find(d=>d.name===name);
+ const base=def?def.power0:350;
+ const k=s.kjia||{};
+ const yrs=Math.max(0,(s.season||1)-(k.baseSeason||s.season||1));
+ return Math.round(base*(1+0.01*yrs));
+}
 function kjiaSquad(s){ // 二队阵容 = K甲班底 + 下放选手（同一位置取战力高者出场，结算在 kjiaTeamPower）
  return ((s.kjia&&s.kjia.squad)||[]).concat((s.players||[]).filter(p=>p.kjia>0));
 }
@@ -7429,11 +7453,12 @@ function kjiaFiller(s,pos,used){ // 二队 K甲班底：低总值的常驻注册
  base,skill:{n:'次级联赛',t:pick(['lane','farm','team','mind']),d:'K甲班底选手，等一个上调一队的机会'},
  sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:kjiaMyName(s)+' 班底选手，常年在次级联赛征战。'});
 }
-function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
+function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲（保留 squad/seatHistory 连续性）
+ const prev=s.kjia||{};
  const my=kjiaMyName(s);
  const teams=[...KJIA_AI_TEAMS,my];
  const powers={};
- KJIA_AI_TEAMS.forEach((t,i)=>{powers[t]=i<3?rnd(360,392):rnd(328,388);}); // 苍穹/星火/沧澜为K甲豪门（与挑战者杯赛道强度对齐）
+ KJIA_AI_TEAMS.forEach(t=>{powers[t]=kjiaAiPower(s,t);}); // 固定基数 + 逐年演化（不再 rnd）
 
  const rounds=[];
  const arr=teams.slice(1);
@@ -7445,8 +7470,10 @@ function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
  }
  const tables={};teams.forEach(t=>tables[t]={w:0,l:0,pts:0,pw:0});
  const used=typeof rookieUsedNames==='function'?rookieUsedNames(s):new Set((s.players||[]).map(p=>p.name));
- const squad=POS_ORDER.map(pos=>kjiaFiller(s,pos,used));
- s.kjia={teams,powers,rounds,rd:0,day:0,tables,results:[],squad,champ:null,my};
+ const squad=prev.squad||POS_ORDER.map(pos=>kjiaFiller(s,pos,used));
+ s.kjia={teams,powers,rounds,rd:0,day:0,tables,results:[],squad,champ:null,my,
+          baseSeason:prev.baseSeason||(s.season||1),
+          seatHistory:prev.seatHistory||[]};
  return s.kjia;
 }
 
@@ -7461,6 +7488,8 @@ function ensureKjia(s){
  if(!Array.isArray(k.squad))k.squad=[];
  if(!k.powers||typeof k.powers!=='object')k.powers={};
  if(!k.my)k.my=kjiaMyName(s);
+ if(typeof k.baseSeason!=='number')k.baseSeason=s.season||1;
+ if(!Array.isArray(k.seatHistory))k.seatHistory=[];
  (k.teams||[]).forEach(t=>{if(t&&!k.tables[t])k.tables[t]={w:0,l:0,pts:0,pw:0};});
  return k;
 }
@@ -7540,6 +7569,14 @@ function finishKjiaSplit(s){
  const k=ensureKjia(s);if(!k||k.champ)return;
  const rank=kjiaRank(s);
  k.champ=rank[0];
+ k.runnerUp=rank[1]||null;
+ k.third=rank[2]||null;
+ k.fourth=rank[3]||null;
+
+ k.seatHistory=k.seatHistory||[];
+ k.seatHistory.unshift({year:typeof gameYear==='function'?gameYear(s):(s.season||1),
+   split:s.split||'spring',champion:k.champ,runnerUp:k.runnerUp,third:k.third,fourth:k.fourth});
+ k.seatHistory=k.seatHistory.slice(0,6);
  const myRank=rank.indexOf(k.my)+1;
  logEvent(s,' K甲联赛收官：'+k.champ+' 夺得本赛段冠军（'+k.my+' 名次：第'+myRank+'）');
  if(k.champ===k.my){
@@ -7651,6 +7688,189 @@ function promoteKjiaPlayer(s,id){
  logEvent(s,' K甲上调：'+p.name+'（'+POS[p.pos][0]+' · 总值'+overall(p)+' · '+p.age+'岁）从二队提拔进一线队');
  save();renderAll();
  toast(p.name+' 已提拔一线队！');
+}
+
+</script>
+<script>
+const SEAT_SETTLE_PER_SPLIT=true;   // true → startSplit 处结算；false → newSeason 处（现状）
+const SEAT_LOSS_GOES_TO_KJIA=true;  // true → 回 K甲 计积分；false → 复用 joblessGate/genJobOffers
+
+function lastKjiaSplitResult(s){
+ const k=s&&s.kjia;
+ if(!k)return {};
+
+ if(k.seatHistory&&k.seatHistory.length){
+  const h=k.seatHistory[0];
+  return {champion:h.champion,runnerUp:h.runnerUp,third:h.third,fourth:h.fourth};
+ }
+
+ if(k.champ)return {champion:k.champ,runnerUp:k.runnerUp||null,third:k.third||null,fourth:k.fourth||null};
+ return {};
+}
+
+function buildSeatPlayoff(s,kglResult,prevTempSeats){
+ const kglChamp=kglResult.champion;
+
+ const slots=1; // 常态 1 个名额
+
+ const teams=[];
+
+ (prevTempSeats||[]).forEach(t=>{
+  if(t!==kglChamp&&teams.every(x=>x.name!==t)){
+   teams.push({name:t,src:'kplTemp'});
+  }
+ });
+
+ if(kglResult.runnerUp&&teams.every(x=>x.name!==kglResult.runnerUp)){
+  teams.push({name:kglResult.runnerUp,src:'kglRunnerUp'});
+ }
+ if(kglResult.third&&teams.every(x=>x.name!==kglResult.third)){
+  teams.push({name:kglResult.third,src:'kglThird'});
+ }
+
+ if(teams.length<2&&kglResult.fourth&&teams.every(x=>x.name!==kglResult.fourth)){
+  teams.push({name:kglResult.fourth,src:'kglFourth'});
+ }
+
+ let mode='4to1Bracket'; // 默认 4 晋 1
+ if(teams.length<=2) mode='2to1Single';
+ else if(teams.length===3) mode='3to1RoundRobin';
+
+ return {teams:teams.slice(0,4),mode,slots};
+}
+
+function simBo7(pwA,pwB,nameA,nameB){
+ let mw=0,ow=0;
+ for(let i=1;i<=7&&mw<4&&ow<4;i++){
+  if(Math.random()<winChance(pwA,pwB))mw++;else ow++;
+ }
+ return mw>ow
+  ?{winner:nameA,loser:nameB,ws:mw,ls:ow}
+  :{winner:nameB,loser:nameA,ws:ow,ls:mw};
+}
+
+function seatPlayoffPower(s,name){
+
+ if(s&&s.teamName===name){
+  if(typeof teamPower==='function'){
+   const tp=teamPower(s);
+   if(tp>0)return Math.round(tp);
+  }
+  return 430;
+ }
+
+ if(typeof kjiaMyName==='function'&&name===kjiaMyName(s))return kjiaTeamPower(s);
+
+ if(typeof KJIA_AI_DEFS!=='undefined'&&KJIA_AI_DEFS.some(d=>d.name===name))return kjiaAiPower(s,name);
+
+ if(typeof AI_TEAMS!=='undefined'){
+  const t=AI_TEAMS.find(x=>x.name===name);
+  if(t)return t.power||450;
+ }
+ return 400; // 兜底
+}
+
+function simSeatPlayoff(s,po){
+ if(!po||!po.teams||po.teams.length<2)return {winner:[],rounds:[],done:true};
+ const rounds=[];
+ const pw={};
+ po.teams.forEach(t=>{pw[t.name]=seatPlayoffPower(s,t.name);});
+
+ if(po.mode==='2to1Single'){
+
+  const a=po.teams[0].name,b=po.teams[1].name;
+  const r=simBo7(pw[a],pw[b],a,b);
+  rounds.push({desc:a+' vs '+b+' → '+r.winner+' 胜（'+r.ws+':'+r.ls+'）'});
+  return {winner:[r.winner],rounds,done:true};
+ }
+
+ if(po.mode==='3to1RoundRobin'){
+
+  const names=po.teams.map(t=>t.name);
+  const pts={};names.forEach(n=>pts[n]=0);
+  for(let i=0;i<names.length;i++){
+   for(let j=i+1;j<names.length;j++){
+    const r=simBo7(pw[names[i]],pw[names[j]],names[i],names[j]);
+    pts[r.winner]++;
+    rounds.push({desc:names[i]+' vs '+names[j]+' → '+r.winner+' 胜（'+r.ws+':'+r.ls+'）'});
+   }
+  }
+  const ranked=names.sort((a,b)=>pts[b]-pts[a]);
+  return {winner:[ranked[0]],rounds,done:true};
+ }
+
+ const [t1,t2,t3,t4]=po.teams.map(t=>t.name);
+
+ const wb1=simBo7(pw[t1],pw[t4],t1,t4); // 1 vs 4
+ rounds.push({desc:'胜者组：'+t1+' vs '+t4+' → '+wb1.winner+' 胜（'+wb1.ws+':'+wb1.ls+'）'});
+ const wb2=simBo7(pw[t2],pw[t3],t2,t3); // 2 vs 3
+ rounds.push({desc:'胜者组：'+t2+' vs '+t3+' → '+wb2.winner+' 胜（'+wb2.ws+':'+wb2.ls+'）'});
+
+ const lb1=simBo7(pw[wb1.loser],pw[wb2.loser],wb1.loser,wb2.loser);
+ rounds.push({desc:'败者组：'+wb1.loser+' vs '+wb2.loser+' → '+lb1.winner+' 胜（'+lb1.ws+':'+lb1.ls+'）'});
+
+ const wf=simBo7(pw[wb1.winner],pw[wb2.winner],wb1.winner,wb2.winner);
+ rounds.push({desc:'胜者组决赛：'+wb1.winner+' vs '+wb2.winner+' → '+wf.winner+' 胜（'+wf.ws+':'+wf.ls+'）'});
+
+ const lb2=simBo7(pw[wf.loser],pw[lb1.winner],wf.loser,lb1.winner);
+ rounds.push({desc:'败者组决赛：'+wf.loser+' vs '+lb1.winner+' → '+lb2.winner+' 胜（'+lb2.ws+':'+lb2.ls+'）'});
+
+ const final=simBo7(pw[wf.winner],pw[lb2.winner],wf.winner,lb2.winner);
+ rounds.push({desc:'资格赛总决赛：'+wf.winner+' vs '+lb2.winner+' → '+final.winner+' 胜（'+final.ws+':'+final.ls+'）'});
+
+ return {winner:[final.winner],rounds,done:true};
+}
+
+function runSeatPlayoff(s,kglResult,prevTempSeats){
+ const po=buildSeatPlayoff(s,kglResult,prevTempSeats);
+ if(!po.teams.length){
+  s.seatPlayoff={cancelled:true,reason:'无合格参赛方',done:true};
+  return {winner:[],cancelled:true};
+ }
+ const result=simSeatPlayoff(s,po);
+ s.seatPlayoff={
+  year:typeof gameYear==='function'?gameYear(s):(s.season||1),
+  split:s.split||'spring',
+  teams:po.teams,
+  mode:po.mode,
+  rounds:result.rounds,
+  winner:result.winner[0]||null,
+  done:true,
+  cancelled:false
+ };
+
+ try{
+  const modeLabel=po.mode==='4to1Bracket'?'4晋1胜败组淘汰赛':(po.mode==='3to1RoundRobin'?'3晋1单循环积分赛':'2晋1单场BO7');
+  logEvent(s,' KPL 临时席位资格赛（'+modeLabel+'）：'+po.teams.map(t=>t.name).join(' / ')+' → '+result.winner[0]+' 获得临时席位');
+  result.rounds.forEach(r=>{logEvent(s,' 资格赛：'+r.desc);});
+ }catch(e){}
+ return {winner:result.winner,cancelled:false};
+}
+
+function cancelSeatPlayoff(s){
+ s.seatPlayoff={cancelled:true,reason:'临时席位俱乐部夺冠，取消本届资格赛',done:true,
+  year:typeof gameYear==='function'?gameYear(s):(s.season||1),split:s.split||'spring'};
+ try{logEvent(s,' KPL 临时席位资格赛——本届取消（临时席位俱乐部夺冠，直接保留席位）');}catch(e){}
+}
+
+function seatPlayoffPanelHtml(){
+ const s=typeof S!=='undefined'?S:null;
+ if(!s||!s.seatPlayoff)return '';
+ const po=s.seatPlayoff;
+ let html='<div class="panel"><h3>临时席位资格赛 <span class="tag">'+(po.cancelled?'已取消':'已结束')+'</span></h3>';
+ if(po.cancelled){
+  html+='<div class="hint">'+_escTxt(po.reason||'本届资格赛取消')+'</div>';
+ }else{
+  const modeLabel=po.mode==='4to1Bracket'?'4晋1 胜败组淘汰赛 BO7':(po.mode==='3to1RoundRobin'?'3晋1 单循环积分赛 BO7':'2晋1 单场 BO7');
+  html+='<div class="hint">赛制：'+modeLabel+'</div>';
+  html+='<div class="hint">参赛：'+(po.teams||[]).map(t=>_escTxt(t.name)+' <small>('+_escTxt(t.src)+')</small>').join('、')+'</div>';
+  if(po.rounds&&po.rounds.length){
+   html+='<div class="hint" style="margin-top:4px">对阵：<br>'+po.rounds.map(r=>_escTxt(r.desc)).join('<br>')+'</div>';
+  }
+  if(po.winner)html+='<div class="hint"><b>胜者：'+_escTxt(po.winner)+'</b> 获得下赛季 KPL 临时席位</div>';
+ }
+ html+='</div>';
+ return html;
 }
 
 </script>
@@ -8313,96 +8533,87 @@ function isTempSeat(s,team){
  return !!(s&&s.tempSeats&&s.tempSeats.includes(team));
 }
 
-function settleTempSeats(s){
+function settleTempSeats(s,opts){
  if(!s)return;
  initTempSeats(s);
  if(!s.tempSeats||!s.tempSeats.length)return;
+ opts=opts||{};
 
  const curSeason=s.season||1;
  s.tempSeatFixedExpiry=s.tempSeatFixedExpiry||{};
 
  s.tempSeatFixed=(s.tempSeatFixed||[]).filter(t=>(s.tempSeatFixedExpiry[t]||0)>=curSeason);
 
+ const champTeams=[];
  (s.titleHistory||[]).forEach(t=>{
   if(!t||!t.champ)return;
-  if(t._seatProtected)return;
   if(t.season!=null&&t.season!==curSeason)return;
   if(isTempSeat(s,t.champ)&&!isFixedSeatTeam(t.champ)){
-   t._seatProtected=true;
+   if(champTeams.indexOf(t.champ)<0)champTeams.push(t.champ);
    s.tempSeatFixedExpiry[t.champ]=curSeason;
    if(s.tempSeatFixed.indexOf(t.champ)<0)s.tempSeatFixed.push(t.champ);
-   try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——下赛季保留 KPL 席位，免打席位赛（非固定席）');}catch(e){}
+   try{logEvent(s,' '+t.champ+' 夺得'+(t.event||'冠军')+'——直接保留下赛季 KPL 临时席位（取消本届资格赛）');}catch(e){}
   }
  });
-
- const pts=s.annualPts||{};
 
  s.tempSeats=s.tempSeats.filter(t=>!isFixedSeatTeam(t));
 
- while(s.tempSeats.length>TEMP_SEAT_COUNT){
-  const droppable=s.tempSeats.filter(t=>s.tempSeatFixed.indexOf(t)<0);
-  if(!droppable.length)break;
-  droppable.sort((a,b)=>(pts[a]||0)-(pts[b]||0));
-  s.tempSeats=s.tempSeats.filter(t=>t!==droppable[0]);
+ const kglResult=opts.kglSplitResult||(typeof lastKjiaSplitResult==='function'?lastKjiaSplitResult(s):{});
+ const kglChamp=kglResult.champion||null;
+ const prevTempSeats=(s.tempSeats||[]).slice(); // 资格赛前的临时席快照
+
+ let awards=[];
+ if(champTeams.length){
+
+  awards=champTeams.slice(0,TEMP_SEAT_COUNT);
+  if(kglChamp&&awards.length<TEMP_SEAT_COUNT&&awards.indexOf(kglChamp)<0){
+   awards.push(kglChamp);
+  }
+  if(typeof cancelSeatPlayoff==='function')cancelSeatPlayoff(s);
+ }else{
+
+  if(kglChamp&&awards.indexOf(kglChamp)<0)awards.push(kglChamp);
+  if(typeof runSeatPlayoff==='function'){
+   const po=runSeatPlayoff(s,kglResult,prevTempSeats);
+   (po.winner||[]).forEach(n=>{if(awards.length<TEMP_SEAT_COUNT&&awards.indexOf(n)<0)awards.push(n);});
+  }
  }
 
- let worst=null,worstPts=Infinity;
- s.tempSeats.forEach(t=>{
-  if(s.tempSeatFixed.indexOf(t)>=0)return;
-  let p=pts[t]||0;
-  if(t===s.teamName&&(s.wageDefaulted||0)>0){
-   p-=Math.min((s.wageDefaulted||0)*15,60);
-  }
-  if(p<worstPts){worstPts=p;worst=t;}
- });
+ const expired=prevTempSeats.filter(t=>awards.indexOf(t)<0);
+ s.tempSeats=awards.slice(0,TEMP_SEAT_COUNT);
 
- let incoming=null;
- if(worst){
-  s.tempSeats=s.tempSeats.filter(t=>t!==worst);
-  if(worst===s.teamName){
-   s.seatLost=true;
-   try{logEvent(s,' 你的俱乐部临时席位被收回——降入 K甲。固定席位球队不会降级，升班马需用成绩保住席位');}catch(e){}
-  }
-
-  try{
-   const k=s.kjia;
-   if(k&&k.champ&&k.champ!==kjiaMyName(s)&&!AI_TEAMS.some(t=>t.name===k.champ)){
-    incoming=k.champ;
-   }else if(k&&k.champ){
-    const rank=kjiaRank(s)||[];
-    incoming=rank.find(n=>n!==k.champ&&n!==kjiaMyName(s))||null;
-   }
-  }catch(e){}
-  if(!incoming){
-   incoming=(typeof KJIA_AI_TEAMS!=='undefined'?KJIA_AI_TEAMS:[]).find(n=>
-    !AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0&&n!==worst
-   )||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):curSeason));
-  }
-
-  if(incoming&&incoming!==s.teamName&&!isFixedSeatTeam(incoming)&&s.tempSeats.indexOf(incoming)<0&&s.tempSeatFixed.indexOf(incoming)<0){
-   s.tempSeats.push(incoming);
-  }
-
-  s.tempSeatLog=s.tempSeatLog||[];
-  s.tempSeatLog.unshift((typeof gameYear==='function'?gameYear(s):curSeason)+'：收回 '+worst+' 临时席 → '+incoming+' 顶上');
-  s.tempSeatLog=s.tempSeatLog.slice(0,8);
-  try{
-   logEvent(s,' 临时席变动：'+worst+' 席位收回，'+incoming+' 获得下赛季 KPL 临时席位（固定席位不降级）');
-  }catch(e){}
-  try{
-   if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
-    logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
-    addFans(s,1,'K甲夺冠·席位资格');
-   }
-  }catch(e){}
- }
-
+ const fallback=[kglResult.runnerUp,kglResult.third,kglResult.fourth].filter(Boolean);
  while(s.tempSeats.length<TEMP_SEAT_COUNT){
-  const extra=(typeof KJIA_AI_TEAMS!=='undefined'?KJIA_AI_TEAMS:[]).find(n=>
-   !AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0&&n!==worst
-  )||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):curSeason));
+  const extra=fallback.find(n=>s.tempSeats.indexOf(n)<0&&!isFixedSeatTeam(n))
+   ||(typeof KJIA_AI_TEAMS!=='undefined'?KJIA_AI_TEAMS:[]).find(n=>
+    !AI_TEAMS.some(t=>t.name===n)&&s.tempSeats.indexOf(n)<0)
+   ||('K甲·新军'+(typeof gameYear==='function'?gameYear(s):curSeason));
   if(s.tempSeats.indexOf(extra)<0)s.tempSeats.push(extra); else break;
  }
+
+ if(expired.indexOf(s.teamName)>=0&&awards.indexOf(s.teamName)<0){
+  s.seatLost=true;
+  s.seatLostReason=(s.seatPlayoff&&!s.seatPlayoff.cancelled)?'tempSeatPlayoffLost':'tempSeatExpired';
+  try{logEvent(s,' 你的临时席位未获授予——按规则回到 K甲 参赛，日后可通过 K甲 冠军或资格赛重回 KPL');}catch(e){}
+ }
+
+ s.tempSeatLog=s.tempSeatLog||[];
+ const yr=typeof gameYear==='function'?gameYear(s):curSeason;
+ expired.forEach(t=>{
+  const rep=s.tempSeats.find(n=>prevTempSeats.indexOf(n)<0)||'(待定)';
+  s.tempSeatLog.unshift(yr+'：'+t+' 席位到期 → '+rep+' 获得下赛季 KPL 临时席位');
+ });
+ s.tempSeatLog=s.tempSeatLog.slice(0,8);
+ if(expired.length){
+  try{logEvent(s,' 临时席变动：'+expired.join('、')+' 未获授予，'+s.tempSeats.join('、')+' 获得下赛季 KPL 临时席位');}catch(e){}
+ }
+
+ try{
+  if(s.kjia&&s.kjia.champ===kjiaMyName(s)){
+   logEvent(s,' 二队 K甲夺冠——俱乐部斩获临时席位资格赛话语权（关注度+）');
+   addFans(s,1,'K甲夺冠·席位资格');
+  }
+ }catch(e){}
 
  const newSeats=[...FIXED_SEAT_TEAMS];
  s.tempSeats.forEach(t=>{if(newSeats.indexOf(t)<0)newSeats.push(t);});
@@ -8420,7 +8631,7 @@ function settleTempSeats(s){
      name:nm,
      icon:(typeof KPL_YEAR_ICON!=='undefined'&&KPL_YEAR_ICON[nm])||'⭐',
      budget:550,cap:95,coach:'co4',
-     desc:nm+' · K甲升班马'
+     desc:nm+' · K甲晋级队伍'
     });
    }
   });
@@ -8433,12 +8644,14 @@ function settleTempSeats(s){
   newSeats.forEach(nm=>{
    if(!AI_ROSTERS[nm]){
     const tplKey=Object.keys(AI_ROSTERS)[0];
-    AI_ROSTERS[nm]=(worst&&AI_ROSTERS[worst])
-     ?JSON.parse(JSON.stringify(AI_ROSTERS[worst]))
+
+    const donor=expired.find(w=>AI_ROSTERS[w]);
+    AI_ROSTERS[nm]=donor
+     ?JSON.parse(JSON.stringify(AI_ROSTERS[donor]))
      :(tplKey?JSON.parse(JSON.stringify(AI_ROSTERS[tplKey])):{p:['top19','jg10','mid18','ad18','sup19'],u:[]});
    }
   });
-  if(worst&&!newSeatSet.has(worst))delete AI_ROSTERS[worst];
+  expired.forEach(w=>{if(!newSeatSet.has(w))delete AI_ROSTERS[w];});
  }
 
  s.leagueTeams=newSeats.slice();
@@ -8450,14 +8663,19 @@ function tempSeatsPanelHtml(){
  const s=S;
  if(!s||!s.tempSeats||!s.tempSeats.length)return '';
  const atRisk=isTempSeat(s,s.teamName);
- let html=`<div class="panel"><h3>临时席位 <span class="tag">固定 16 + 临时 ${TEMP_SEAT_COUNT} · 只升不降</span></h3>
- <div class="hint" style="margin-bottom:8px"><b>升班马（常山UUG、桐乡情久）挂临时席</b>，年度成绩垫底会被收回，由 K甲/资格赛队伍顶上。老牌豪门（AG/狼队/eStar 等）是固定席，永不降级。${atRisk?'<b class="red">你执教的是升班马临时席——年度垫底有收回风险；夺冠可保留下赛季席位（免打席位赛，非固定席）。</b>':'你执教的俱乐部是固定席。'}</div>
+ let html=`<div class="panel"><h3>临时席位 <span class="tag">固定 16 + 临时 ${TEMP_SEAT_COUNT}</span></h3>
+ <div class="hint" style="margin-bottom:8px"><b>临时席位为单赛季授权</b>：K甲 该赛段冠军直授 1 席，另 1 席由资格赛（上届 2 支 KPL 临时席位俱乐部 + K甲 亚/季军）决出。老牌豪门（AG/狼队/eStar 等）是固定席，永不降级。${atRisk?'<b class="red">你执教的是临时席——夺冠可直接保留（并取消该届资格赛）；未获授予者回 K甲 参赛。</b>':'你执教的俱乐部是固定席。'}</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">${s.tempSeats.map(t=>`<span class="tag" style="border-color:var(--gold)">${crest(null,t,14)} ${t} · 临时${t===s.teamName?'（你）':''}</span>`).join('')}</div>`;
  if((s.tempSeatFixed||[]).length){
-  html+=`<div class="hint">夺冠保留下赛季席位（免打席位赛）：${s.tempSeatFixed.map(t=>_escTxt(t)).join('、')}</div>`;
+  html+=`<div class="hint">夺冠保留下赛季席位：${s.tempSeatFixed.map(t=>_escTxt(t)).join('、')}</div>`;
  }
  if((s.tempSeatLog||[]).length){
   html+=`<div class="hint">近年变动：${s.tempSeatLog.slice(0,4).map(l=>_escTxt(l)).join('<br>')}</div>`;
+ }
+
+ if(typeof seatPlayoffPanelHtml==='function'){
+  const poHtml=seatPlayoffPanelHtml();
+  if(poHtml)html+=poHtml;
  }
  html+=`</div>`;
  return html;

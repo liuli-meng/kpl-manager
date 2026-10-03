@@ -4,13 +4,36 @@
  下放（sendKjia）的选手进入二队阵容真实出战——每场生成 KDA/MVP 累计进
  p.kjiaStats / p.kjiaLog，「二队」页可查积分榜、赛程与表现数据。
  成长两条路：场上好表现小概率即时 +1；归队时 kjiaTick 结算 +2~4×2——都计入
- p.kjiaGain（成就「练级成功」依据）。平衡门禁的模拟不下放选手，本系统不触碰门禁校准区间。 */
+ p.kjiaGain（成就「练级成功」依据）。平衡门禁的模拟不下放选手，本系统不触碰门禁校准区间。
+ ── 席位改造（2026-10-03）──
+ AI 队伍从每赛段 rnd 改为固定身份 + 逐年演化（power0 固定，不再重掷）；
+ 每赛段收官留档冠/亚/季/殿军名次至 seatHistory，供资格赛取参赛方。
+ 出处：docs/GUIDE-席位与资格赛-改造指南-2026-10-03.md §4.1。 */
 const KJIA_DAYS=30;
 const KJIA_MIN_RECALL=7; // 提前召回最少已练天数（不足则拒绝，防「下放第二天就拉回」）
-const KJIA_AI_TEAMS=['K甲·苍穹','K甲·星火','K甲·沧澜','K甲·曜石','K甲·铁鳞','K甲·游隼','K甲·雾嶂'];
+// K甲 AI 队伍定义：固定身份 + 基础战力（power0 不再 rnd），逐年按 kjiaAiPower 演化
+const KJIA_AI_DEFS=[
+ {name:'K甲·苍穹',power0:382},  // 豪门三强（与挑战者杯赛道强度对齐）
+ {name:'K甲·星火',power0:376},
+ {name:'K甲·沧澜',power0:370},
+ {name:'K甲·曜石',power0:358},
+ {name:'K甲·铁鳞',power0:352},
+ {name:'K甲·游隼',power0:346},
+ {name:'K甲·雾嶂',power0:340},
+];
+const KJIA_AI_TEAMS=KJIA_AI_DEFS.map(d=>d.name); // 向后兼容：rules.js / initTempSeats 通过名称数组引用
 const KJIA_EVERY=2; // 每 2 天一轮（7 轮=14 天，转会期 7 天内先打 3 轮）
 const KJIA_FILLER_NAMES=['冷峤','照野','束禾','闻鹿','栖迟','枕流','叩舷','扫雪','拾星','衔山','汲露','司南','执桨','引笛','泊岸','拓海','听澜','折桨','纵马','悬旌','负剑','摘星','衔烛','趁风'];
 function kjiaMyName(s){return s.teamName+'二队';}
+/* K甲 AI 队战力：固定基数 power0 + 逐年 +1% 单调演化（出处：GUIDE §4.1）
+   取消每赛段 rnd(360,392) 重掷，使"K甲冠军"由身份+演化驱动，不再是抽签。 */
+function kjiaAiPower(s,name){
+ const def=KJIA_AI_DEFS.find(d=>d.name===name);
+ const base=def?def.power0:350;
+ const k=s.kjia||{};
+ const yrs=Math.max(0,(s.season||1)-(k.baseSeason||s.season||1));
+ return Math.round(base*(1+0.01*yrs));
+}
 function kjiaSquad(s){ // 二队阵容 = K甲班底 + 下放选手（同一位置取战力高者出场，结算在 kjiaTeamPower）
  return ((s.kjia&&s.kjia.squad)||[]).concat((s.players||[]).filter(p=>p.kjia>0));
 }
@@ -30,11 +53,12 @@ function kjiaFiller(s,pos,used){ // 二队 K甲班底：低总值的常驻注册
  base,skill:{n:'次级联赛',t:pick(['lane','farm','team','mind']),d:'K甲班底选手，等一个上调一队的机会'},
  sig:pick(heroesNow().filter(h=>h.pos[0]===pos)).n,career:kjiaMyName(s)+' 班底选手，常年在次级联赛征战。'});
 }
-function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
+function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲（保留 squad/seatHistory 连续性）
+ const prev=s.kjia||{};
  const my=kjiaMyName(s);
  const teams=[...KJIA_AI_TEAMS,my];
  const powers={};
- KJIA_AI_TEAMS.forEach((t,i)=>{powers[t]=i<3?rnd(360,392):rnd(328,388);}); // 苍穹/星火/沧澜为K甲豪门（与挑战者杯赛道强度对齐）
+ KJIA_AI_TEAMS.forEach(t=>{powers[t]=kjiaAiPower(s,t);}); // 固定基数 + 逐年演化（不再 rnd）
  // 舍转法单循环：8 队 7 轮 × 4 场（与 buildGroupSchedule 同一算法）
  const rounds=[];
  const arr=teams.slice(1);
@@ -46,8 +70,10 @@ function initKjia(s){ // 每个赛段（春/夏）重开一届 K甲
  }
  const tables={};teams.forEach(t=>tables[t]={w:0,l:0,pts:0,pw:0});
  const used=typeof rookieUsedNames==='function'?rookieUsedNames(s):new Set((s.players||[]).map(p=>p.name));
- const squad=POS_ORDER.map(pos=>kjiaFiller(s,pos,used));
- s.kjia={teams,powers,rounds,rd:0,day:0,tables,results:[],squad,champ:null,my};
+ const squad=prev.squad||POS_ORDER.map(pos=>kjiaFiller(s,pos,used));
+ s.kjia={teams,powers,rounds,rd:0,day:0,tables,results:[],squad,champ:null,my,
+          baseSeason:prev.baseSeason||(s.season||1),
+          seatHistory:prev.seatHistory||[]};
  return s.kjia;
 }
 /* 残缺档自愈：rounds/tables 丢失会让 kjiaDayTick 在 .length 上抛错，整条 nextDay 挂掉（赛程与转会期一起卡死）。
@@ -63,6 +89,8 @@ function ensureKjia(s){
  if(!Array.isArray(k.squad))k.squad=[];
  if(!k.powers||typeof k.powers!=='object')k.powers={};
  if(!k.my)k.my=kjiaMyName(s);
+ if(typeof k.baseSeason!=='number')k.baseSeason=s.season||1;
+ if(!Array.isArray(k.seatHistory))k.seatHistory=[];
  (k.teams||[]).forEach(t=>{if(t&&!k.tables[t])k.tables[t]={w:0,l:0,pts:0,pw:0};});
  return k;
 }
@@ -143,6 +171,14 @@ function finishKjiaSplit(s){
  const k=ensureKjia(s);if(!k||k.champ)return;
  const rank=kjiaRank(s);
  k.champ=rank[0];
+ k.runnerUp=rank[1]||null;
+ k.third=rank[2]||null;
+ k.fourth=rank[3]||null;
+ // 留档名次：供资格赛取参赛方（出处：GUIDE §4.1 ④）
+ k.seatHistory=k.seatHistory||[];
+ k.seatHistory.unshift({year:typeof gameYear==='function'?gameYear(s):(s.season||1),
+   split:s.split||'spring',champion:k.champ,runnerUp:k.runnerUp,third:k.third,fourth:k.fourth});
+ k.seatHistory=k.seatHistory.slice(0,6);
  const myRank=rank.indexOf(k.my)+1;
  logEvent(s,' K甲联赛收官：'+k.champ+' 夺得本赛段冠军（'+k.my+' 名次：第'+myRank+'）');
  if(k.champ===k.my){
